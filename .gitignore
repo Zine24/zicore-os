@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Environment / Secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# ZICORE specific
+cloudflared.exe
+output/
+data/config/zio_config.json
+data/knowledge/conversations.jsonl
+data/knowledge/documents/
+data/knowledge/document_index.json
+data/missions/*.json
+zicore-system.zip
+*.log
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node (frontend build)
+node_modules/
+package-lock.json
+
+# Docker
+docker-compose.override.yaml
+
+# Rust/native build artifacts
+native/target/
+*.o
+*.obj

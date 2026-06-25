@@ -1,0 +1,17 @@
+{
+  "tunnel": "zicore",
+  "credentials-file": "/root/.cloudflared/credentials.json",
+  "ingress": [
+    {
+      "hostname": "app.zicore.space",
+      "service": "http://localhost:3000"
+    },
+    {
+      "hostname": "api.zicore.space",
+      "service": "http://localhost:8080"
+    },
+    {
+      "service": "http_status:404"
+    }
+  ]
+}

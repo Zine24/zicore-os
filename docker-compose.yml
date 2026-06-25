@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  zicore:
+    build: .
+    ports:
+      - "8080:8080"
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      - ZICORE_MODEL_PATH=/app/models
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

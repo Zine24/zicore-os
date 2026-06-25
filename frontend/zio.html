@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIO SERVER — Remote Inference</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+
+:root{--glow:#00e5ff;--glow2:#7c4dff;--text2:#607080}
+
+#app{display:flex;height:100vh;flex-direction:column}
+
+#topBar{
+  height:42px;min-height:42px;background:rgba(6,8,14,0.96);
+  border-bottom:1px solid rgba(0,229,255,0.1);
+  display:flex;align-items:center;padding:0 12px;gap:8px;
+}
+#topBar .logo{font-size:11px;letter-spacing:5px;color:var(--glow);font-weight:700}
+#topBar .logo span{color:var(--glow2)}
+#topBar .server-info{font-size:9px;color:var(--text2);letter-spacing:1px;margin-left:12px}
+#topBar .conn-status{
+  margin-left:auto;font-size:8px;padding:3px 10px;letter-spacing:1px;
+  border:1px solid rgba(255,60,60,0.3);color:#f44;
+}
+#topBar .conn-status.online{border-color:rgba(0,229,255,0.3);color:var(--glow)}
+#topBar .config-btn{
+  font-size:8px;letter-spacing:2px;padding:4px 10px;
+  border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);
+  color:var(--glow);cursor:pointer;transition:all .2s;
+  clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
+}
+#topBar .config-btn:hover{background:rgba(0,229,255,0.1)}
+
+#main{flex:1;display:flex;overflow:hidden}
+
+#sidebar{
+  width:220px;min-width:220px;background:rgba(6,8,14,0.5);
+  border-right:1px solid rgba(0,229,255,0.08);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#sidebar .section{padding:10px;border-bottom:1px solid rgba(0,229,255,0.06)}
+#sidebar .section-title{font-size:7px;letter-spacing:2px;color:var(--text2);margin-bottom:6px;text-transform:uppercase}
+#sidebar .provider-item{
+  padding:5px 8px;margin:2px 0;font-size:10px;color:#899;cursor:pointer;
+  border:1px solid transparent;transition:all .2s;display:flex;align-items:center;gap:8px;
+}
+#sidebar .provider-item:hover{border-color:rgba(0,229,255,0.15);color:#ccc}
+#sidebar .provider-item.active{border-color:rgba(0,229,255,0.3);color:var(--glow);background:rgba(0,229,255,0.05)}
+#sidebar .provider-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+#sidebar .provider-dot.enabled{background:#0f6}
+#sidebar .provider-dot.disabled{background:#555}
+#sidebar .model-select{
+  width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:4px 6px;font-size:10px;font-family:inherit;outline:none;margin-top:4px;
+}
+#sidebar .param-group{margin:4px 0}
+#sidebar .param-label{font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:2px}
+#sidebar .param-slider{
+  width:100%;-webkit-appearance:none;height:3px;background:rgba(0,229,255,0.1);
+  border-radius:2px;outline:none;
+}
+#sidebar .param-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;background:var(--glow);border-radius:50%;cursor:pointer;
+}
+#sidebar .param-val{font-size:10px;color:var(--glow);text-align:right}
+
+#chatArea{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+#messages{
+  flex:1;overflow-y:auto;padding:16px;font-size:12px;line-height:1.6;
+}
+#messages::-webkit-scrollbar{width:3px}
+#messages::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.12)}
+.msg{margin:8px 0;max-width:85%}
+.msg.user{margin-left:auto;text-align:right}
+.msg.user .bubble{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12);display:inline-block;padding:8px 12px;border-radius:4px 4px 0 4px;text-align:left}
+.msg.zio .bubble{background:rgba(124,77,255,0.05);border:1px solid rgba(124,77,255,0.1);display:inline-block;padding:8px 12px;border-radius:4px 4px 4px 0;text-align:left}
+.msg .label{font-size:8px;letter-spacing:2px;margin-bottom:2px}
+.msg.user .label{color:rgba(0,229,255,0.6)}
+.msg.zio .label{color:rgba(124,77,255,0.6)}
+.msg .meta{font-size:8px;color:var(--text2);margin-top:2px}
+
+#inputArea{
+  padding:10px 16px;background:rgba(6,8,14,0.95);
+  border-top:1px solid rgba(0,229,255,0.08);
+  display:flex;gap:8px;align-items:flex-end;
+}
+#chatInput{
+  flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:8px 12px;font-size:12px;font-family:inherit;outline:none;
+  resize:none;max-height:100px;min-height:36px;
+}
+#chatInput:focus{border-color:rgba(0,229,255,0.25)}
+#sendBtn{
+  padding:8px 20px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);
+  color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;transition:all .2s;
+  height:36px;clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
+}
+#sendBtn:hover{background:rgba(0,229,255,0.12)}
+#sendBtn:disabled{opacity:0.4;cursor:not-allowed}
+
+#genPanel{
+  display:none;padding:10px 16px;background:rgba(6,8,14,0.95);
+  border-top:1px solid rgba(0,229,255,0.08);
+}
+#genPanel.active{display:flex;gap:8px;align-items:center}
+#genPanel select{
+  background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+#genPanel input{
+  flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+#genPanel button{
+  padding:5px 16px;background:rgba(124,77,255,0.08);border:1px solid rgba(124,77,255,0.2);
+  color:var(--glow2);cursor:pointer;font-size:9px;letter-spacing:2px;transition:all .2s;
+}
+#genPanel button:hover{background:rgba(124,77,255,0.15)}
+
+#outputPreview{
+  display:none;padding:8px 16px;background:rgba(0,0,0,0.5);
+  border-top:1px solid rgba(0,229,255,0.06);text-align:center;
+}
+#outputPreview.active{display:block}
+#outputPreview img,#outputPreview video{max-width:100%;max-height:200px;border:1px solid rgba(0,229,255,0.1)}
+#outputPreview .output-path{font-size:9px;color:var(--text2);margin-top:4px}
+
+#bottomBar{
+  height:22px;min-height:22px;background:rgba(6,8,14,0.96);
+  border-top:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 12px;font-size:8px;color:var(--text2);gap:16px;
+}
+
+/* Config Modal */
+#configModal{
+  display:none;position:fixed;inset:0;z-index:5000;
+  background:rgba(0,0,0,0.8);align-items:center;justify-content:center;
+}
+#configModal.active{display:flex}
+#configContent{
+  width:600px;max-height:80vh;background:rgba(10,14,22,0.98);
+  border:1px solid rgba(0,229,255,0.15);border-radius:4px;overflow-y:auto;
+}
+#configContent .cfg-header{
+  padding:12px 16px;border-bottom:1px solid rgba(0,229,255,0.1);
+  font-size:10px;letter-spacing:3px;color:var(--glow);display:flex;align-items:center;justify-content:space-between;
+}
+#configContent .cfg-body{padding:16px}
+#configContent .cfg-section{margin-bottom:16px}
+#configContent .cfg-title{font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;text-transform:uppercase}
+#configContent .cfg-row{display:flex;gap:8px;margin:4px 0;align-items:center}
+#configContent .cfg-label{font-size:9px;color:var(--text2);width:100px;flex-shrink:0}
+#configContent .cfg-input{
+  flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);
+  color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+#configContent .cfg-input:focus{border-color:rgba(0,229,255,0.25)}
+#configContent .cfg-toggle{
+  width:32px;height:16px;background:rgba(255,255,255,0.1);border-radius:8px;
+  cursor:pointer;position:relative;transition:all .2s;
+}
+#configContent .cfg-toggle.on{background:rgba(0,229,255,0.3)}
+#configContent .cfg-toggle::after{
+  content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;
+  background:#666;border-radius:50%;transition:all .2s;
+}
+#configContent .cfg-toggle.on::after{left:18px;background:var(--glow)}
+#configContent .cfg-close{
+  padding:3px 10px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);
+  color:var(--glow);cursor:pointer;font-size:9px;letter-spacing:1px;
+}
+#configContent .cfg-save{
+  padding:6px 20px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);
+  color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;margin-top:12px;width:100%;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topBar">
+    <button class="config-btn" onclick="if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}" style="margin-right:8px">&#9664; MENU</button>
+    <div class="logo"><span>Z</span>IO SERVER</div>
+    <div class="server-info">v3.7.0 — Remote Inference</div>
+    <div class="conn-status" id="connStatus">CONNECTING...</div>
+    <button class="config-btn" id="openConfig">CONFIG</button>
+  </div>
+
+  <div id="main">
+    <div id="sidebar">
+      <div class="section">
+        <div class="section-title">ACTIVE PROVIDER</div>
+        <div id="providerList"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">MODEL</div>
+        <select class="model-select" id="modelSelect"><option>zicore_native</option></select>
+      </div>
+      <div class="section">
+        <div class="section-title">PARAMETERS</div>
+        <div class="param-group">
+          <div class="param-label">Temperature</div>
+          <input type="range" class="param-slider" id="tempSlider" min="0" max="200" value="70">
+          <div class="param-val" id="tempVal">0.70</div>
+        </div>
+        <div class="param-group">
+          <div class="param-label">Max Tokens</div>
+          <input type="range" class="param-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256">
+          <div class="param-val" id="maxTokVal">4096</div>
+        </div>
+        <div class="param-group">
+          <div class="param-label">Top P</div>
+          <input type="range" class="param-slider" id="topPSlider" min="0" max="100" value="90">
+          <div class="param-val" id="topPVal">0.90</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">ACTIONS</div>
+        <div class="provider-item" id="btnToggleGen">
+          <div class="provider-dot enabled"></div>Media Generator
+        </div>
+        <div class="provider-item" id="btnClearChat">
+          <div class="provider-dot disabled"></div>Clear Chat
+        </div>
+        <div class="provider-item" id="btnExportChat">
+          <div class="provider-dot disabled"></div>Export Chat
+        </div>
+      </div>
+    </div>
+
+    <div id="chatArea">
+      <div id="messages">
+        <div class="msg zio"><div class="label">ZIO</div><div class="bubble">ZIO online. Remote inference ready. Send a message to begin.</div></div>
+      </div>
+      <div id="outputPreview"><div id="outputContent"></div><div class="output-path" id="outputPath"></div></div>
+      <div id="genPanel">
+        <select id="genTypeSelect">
+          <option value="image">Image</option>
+          <option value="sound">Sound</option>
+          <option value="video">Video</option>
+          <option value="3d">3D Mesh</option>
+        </select>
+        <input id="genPromptInput" placeholder="Describe what to generate...">
+        <button id="genBtn">GENERATE</button>
+      </div>
+      <div id="inputArea">
+        <textarea id="chatInput" rows="1" placeholder="Type message... (Enter to send, Shift+Enter for new line)"></textarea>
+        <button id="sendBtn">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottomBar">
+    <span>Provider: <span id="footerProvider">zicore_native</span></span>
+    <span>Model: <span id="footerModel">local</span></span>
+    <span>Latency: <span id="footerLatency">0ms</span></span>
+    <span>Messages: <span id="footerMsgCount">0</span></span>
+  </div>
+</div>
+
+<div id="configModal">
+  <div id="configContent">
+    <div class="cfg-header">
+      <span>SYSTEM CONFIGURATION</span>
+      <button class="cfg-close" id="closeConfig">CLOSE</button>
+    </div>
+    <div class="cfg-body" id="configBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var ws=null;
+  var config={providers:{},zio_engine:{},theme:'midnight'};
+  var activeProvider='zicore_native';
+  var msgCount=0;
+  var providers=[
+    {id:'zicore_native',name:'ZICORE Native',color:'#0ff'},
+    {id:'openrouter',name:'OpenRouter',color:'#f0f'},
+    {id:'ollama',name:'Ollama (Local)',color:'#0a0'},
+    {id:'openai',name:'OpenAI',color:'#0f6'},
+    {id:'anthropic',name:'Anthropic',color:'#f80'},
+    {id:'groq',name:'Groq',color:'#ff0'},
+    {id:'deepseek',name:'DeepSeek',color:'#08f'},
+    {id:'together',name:'Together AI',color:'#a0f'},
+    {id:'opencode',name:'OpenCode',color:'#0fc'},
+  ];
+
+  function init(){
+    renderProviders();
+    connectWS();
+    loadConfig();
+    setupInput();
+    setupButtons();
+    setupSliders();
+  }
+
+  function renderProviders(){
+    var pl=document.getElementById('providerList');
+    var html='';
+    providers.forEach(function(p){
+      var active=p.id===activeProvider?'active':'';
+      var enabled=config.providers[p.id]&&config.providers[p.id].enabled;
+      html+='<div class="provider-item '+active+'" data-provider="'+p.id+'">';
+      html+='<div class="provider-dot '+(enabled?'enabled':'disabled')+'" style="background:'+(enabled?p.color:'#555')+'"></div>';
+      html+=p.name+'</div>';
+    });
+    pl.innerHTML=html;
+    pl.querySelectorAll('.provider-item').forEach(function(el){
+      el.addEventListener('click',function(){
+        activeProvider=el.dataset.provider;
+        renderProviders();
+        updateModelSelect();
+        document.getElementById('footerProvider').textContent=activeProvider;
+      });
+    });
+  }
+
+  function updateModelSelect(){
+    var ms=document.getElementById('modelSelect');
+    var models=[];
+    if(activeProvider==='zicore_native'){
+      models=['zicore_native'];
+    }else if(config.providers[activeProvider]&&config.providers[activeProvider].enabled){
+      models=config.providers[activeProvider].models||[];
+    }
+    ms.innerHTML='';
+    if(models.length===0){
+      var o=document.createElement('option');
+      o.value='';o.textContent='No models available';
+      ms.appendChild(o);
+      document.getElementById('footerModel').textContent='none';
+      return;
+    }
+    models.forEach(function(m){
+      var o=document.createElement('option');
+      o.value=m;o.textContent=m;
+      ms.appendChild(o);
+    });
+    document.getElementById('footerModel').textContent=models[0]||activeProvider;
+  }
+
+  function loadConfig(){
+    fetch('/api/config').then(function(r){return r.json();}).then(function(c){
+      config=c;
+      if(c.theme)applyTheme(c.theme);
+      if(c.zio_engine){
+        var te=c.zio_engine;
+        if(te.temperature!=null){document.getElementById('tempSlider').value=te.temperature*100;document.getElementById('tempVal').textContent=te.temperature.toFixed(2);}
+        if(te.max_tokens!=null){document.getElementById('maxTokSlider').value=te.max_tokens;document.getElementById('maxTokVal').textContent=te.max_tokens;}
+        if(te.top_p!=null){document.getElementById('topPSlider').value=te.top_p*100;document.getElementById('topPVal').textContent=te.top_p.toFixed(2);}
+      }
+      updateModelSelect();
+      renderProviders();
+    }).catch(function(){});
+  }
+
+  function applyTheme(id){
+    var themes={
+      midnight:{bg:'#0a0a0f',p:'#00ffff',s:'#ff00ff'},
+      cyber:{bg:'#0d0221',p:'#0ff',s:'#f0f'},
+      matrix:{bg:'#000000',p:'#00ff00',s:'#008800'},
+      solar:{bg:'#1a0a00',p:'#ff8800',s:'#ff4400'},
+      arctic:{bg:'#0a1520',p:'#88ddff',s:'#4488cc'},
+      blood:{bg:'#0f0505',p:'#ff2222',s:'#880000'},
+      forest:{bg:'#051008',p:'#22cc66',s:'#0a5530'},
+    };
+    var t=themes[id]||themes.midnight;
+    document.body.style.background=t.bg;
+    document.documentElement.style.setProperty('--p',t.p);
+  }
+
+  function connectWS(){
+    var proto=location.protocol==='https:'?'wss':'ws';
+    ws=new WebSocket(proto+'://'+location.host+'/ws/zio');
+    ws.onopen=function(){
+      document.getElementById('connStatus').textContent='ONLINE';
+      document.getElementById('connStatus').className='conn-status online';
+    };
+    ws.onmessage=function(evt){
+      try{handleMessage(JSON.parse(evt.data));}catch(e){}
+    };
+    ws.onclose=function(){
+      document.getElementById('connStatus').textContent='OFFLINE';
+      document.getElementById('connStatus').className='conn-status';
+      setTimeout(connectWS,3000);
+    };
+    ws.onerror=function(){ws.close();};
+  }
+
+  function handleMessage(data){
+    if(data.type==='welcome'){
+      addMsg('zio',data.message);
+    }else if(data.type==='response'){
+      var outputs=data.outputs||{};
+      var reply='';
+      if(outputs.text)reply=outputs.text;
+      else if(outputs.zio_msg)reply=outputs.zio_msg;
+      else if(outputs.inference)reply='Inference ['+outputs.inference.engine+'] conf='+outputs.inference.confidence;
+      else if(outputs.trajectory)reply='Trajectory: '+outputs.trajectory.type+' dV='+outputs.trajectory.delta_v_ms+'m/s';
+      else if(outputs.aircraft)reply='Aircraft: '+outputs.aircraft.name;
+      else reply=JSON.stringify(outputs).substring(0,500);
+      addMsg('zio',reply,data.intent,data.latency_ms);
+      document.getElementById('footerLatency').textContent=(data.latency_ms||0)+'ms';
+    }else if(data.type==='generating'){
+      addMsg('system','Generating '+data.generating_type+'...');
+    }else if(data.type==='generated'){
+      var r=data.result||{};
+      if(r.file){
+        showOutput(r.file,r.filename||'output');
+      }
+      addMsg('zio','Generated: '+(r.filename||r.file||'done'));
+    }else if(data.type==='stream_start'){
+      var el=addMsg('zio','','streaming');
+    }else if(data.type==='stream_chunk'){
+      var last=document.querySelector('.msg.zio:last-child .bubble');
+      if(last)last.textContent+=data.content||'';
+      scrollChat();
+    }else if(data.type==='stream_end'){
+      addMsg('meta','intent='+data.intent+' latency='+data.latency_ms+'ms');
+    }else if(data.type==='error'){
+      addMsg('error',data.message);
+    }else if(data.type==='config'){
+      config=data.config;
+      updateModelSelect();
+      renderProviders();
+    }
+  }
+
+  function addMsg(type,text,intent,latency){
+    var m=document.getElementById('messages');
+    var d=document.createElement('div');
+    d.className='msg '+type;
+    var label=type==='user'?'YOU':type==='zio'?'ZIO':type==='system'?'SYS':'INFO';
+    var meta='';
+    if(intent)meta='intent='+intent;
+    if(latency)meta+=' latency='+latency+'ms';
+    d.innerHTML='<div class="label">'+label+'</div><div class="bubble">'+escHtml(text)+'</div>'+(meta?'<div class="meta">'+meta+'</div>':'');
+    m.appendChild(d);
+    scrollChat();
+    msgCount++;
+    document.getElementById('footerMsgCount').textContent=msgCount;
+    return d;
+  }
+
+  function scrollChat(){
+    var m=document.getElementById('messages');
+    m.scrollTop=m.scrollHeight;
+  }
+
+  function escHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function sendMsg(){
+    var inp=document.getElementById('chatInput');
+    var msg=inp.value.trim();
+    if(!msg)return;
+    inp.value='';
+    inp.style.height='36px';
+    addMsg('user',msg);
+    if(ws&&ws.readyState===WebSocket.OPEN){
+      ws.send(JSON.stringify({command:'stream',payload:{message:msg,module:activeProvider}}));
+    }else{
+      addMsg('error','Not connected to server');
+    }
+  }
+
+  function setupInput(){
+    var inp=document.getElementById('chatInput');
+    var btn=document.getElementById('sendBtn');
+    btn.addEventListener('click',sendMsg);
+    inp.addEventListener('keydown',function(e){
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}
+    });
+    inp.addEventListener('input',function(){
+      this.style.height='36px';
+      this.style.height=Math.min(this.scrollHeight,100)+'px';
+    });
+  }
+
+  function setupButtons(){
+    document.getElementById('openConfig').addEventListener('click',function(){
+      document.getElementById('configModal').classList.add('active');
+      renderConfig();
+    });
+    document.getElementById('closeConfig').addEventListener('click',function(){
+      document.getElementById('configModal').classList.remove('active');
+    });
+    document.getElementById('configModal').addEventListener('click',function(e){
+      if(e.target===this)this.classList.remove('active');
+    });
+    document.getElementById('btnToggleGen').addEventListener('click',function(){
+      document.getElementById('genPanel').classList.toggle('active');
+    });
+    document.getElementById('btnClearChat').addEventListener('click',function(){
+      document.getElementById('messages').innerHTML='';
+      addMsg('zio','Chat cleared. Ready for new messages.');
+    });
+    document.getElementById('btnExportChat').addEventListener('click',function(){
+      var msgs=document.getElementById('messages').innerText;
+      var blob=new Blob([msgs],{type:'text/plain'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='zio_chat_'+Date.now()+'.txt';
+      a.click();
+    });
+    document.getElementById('genBtn').addEventListener('click',function(){
+      var type=document.getElementById('genTypeSelect').value;
+      var prompt=document.getElementById('genPromptInput').value.trim();
+      if(!prompt)return;
+      if(ws&&ws.readyState===WebSocket.OPEN){
+        ws.send(JSON.stringify({command:'generate',payload:{type:type,prompt:prompt}}));
+        addMsg('user','[GEN '+type.toUpperCase()+'] '+prompt);
+      }
+    });
+  }
+
+  function setupSliders(){
+    document.getElementById('tempSlider').addEventListener('input',function(){
+      var v=(this.value/100).toFixed(2);
+      document.getElementById('tempVal').textContent=v;
+      saveParam('temperature',parseFloat(v));
+    });
+    document.getElementById('maxTokSlider').addEventListener('input',function(){
+      document.getElementById('maxTokVal').textContent=this.value;
+      saveParam('max_tokens',parseInt(this.value));
+    });
+    document.getElementById('topPSlider').addEventListener('input',function(){
+      var v=(this.value/100).toFixed(2);
+      document.getElementById('topPVal').textContent=v;
+      saveParam('top_p',parseFloat(v));
+    });
+  }
+
+  function saveParam(key,value){
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine[key]=value;
+    fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}).catch(function(){});
+  }
+
+  function showOutput(path,filename){
+    var op=document.getElementById('outputPreview');
+    var oc=document.getElementById('outputContent');
+    var op2=document.getElementById('outputPath');
+    op.classList.add('active');
+    op2.textContent=path;
+    var ext=(filename||path).split('.').pop().toLowerCase();
+    if(['png','jpg','jpeg','gif','bmp'].indexOf(ext)>=0){
+      oc.innerHTML='<img src="/output/'+filename+'" alt="Generated">';
+    }else if(['mp4','webm'].indexOf(ext)>=0){
+      oc.innerHTML='<video controls src="/output/'+filename+'"></video>';
+    }else if(['wav','mp3'].indexOf(ext)>=0){
+      oc.innerHTML='<audio controls src="/output/'+filename+'"></audio>';
+    }else if(['stl','obj'].indexOf(ext)>=0){
+      oc.innerHTML='<div style="padding:20px;color:#0cc">3D Model: '+filename+'</div>';
+    }else{
+      oc.innerHTML='<div style="padding:10px;color:#889">'+filename+'</div>';
+    }
+  }
+
+  function renderConfig(){
+    var body=document.getElementById('configBody');
+    var html='<div class="cfg-section"><div class="cfg-title">ZIO Engine</div>';
+    html+='<div class="cfg-row"><div class="cfg-label">Provider</div><select class="cfg-input" id="cfgProvider">';
+    providers.forEach(function(p){
+      html+='<option value="'+p.id+'"'+(p.id===activeProvider?' selected':'')+'>'+p.name+'</option>';
+    });
+    html+='</select></div></div>';
+
+    Object.keys(config.providers||{}).forEach(function(pid){
+      var p=config.providers[pid];
+      html+='<div class="cfg-section"><div class="cfg-title">'+(p.name||pid)+'</div>';
+      html+='<div class="cfg-row"><div class="cfg-label">Enabled</div>';
+      html+='<div class="cfg-toggle '+(p.enabled?'on':'')+'" data-provider="'+pid+'" onclick="this.classList.toggle(\'on\')"></div></div>';
+      html+='<div class="cfg-row"><div class="cfg-label">API Key</div>';
+      html+='<input class="cfg-input" type="password" value="'+(p.api_key||'')+'" data-provider="'+pid+'" data-field="api_key" placeholder="sk-..."></div>';
+      html+='<div class="cfg-row"><div class="cfg-label">Base URL</div>';
+      html+='<input class="cfg-input" value="'+(p.base_url||'')+'" data-provider="'+pid+'" data-field="base_url"></div>';
+      html+='<div class="cfg-row"><div class="cfg-label">Default Model</div>';
+      html+='<input class="cfg-input" value="'+(p.default_model||'')+'" data-provider="'+pid+'" data-field="default_model"></div>';
+      html+='</div>';
+    });
+
+    html+='<div class="cfg-section"><div class="cfg-title">Theme</div>';
+    html+='<div class="cfg-row"><select class="cfg-input" id="cfgTheme">';
+    ['midnight','cyber','matrix','solar','arctic','blood','forest'].forEach(function(t){
+      html+='<option value="'+t+'"'+(config.theme===t?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>';
+    });
+    html+='</select></div></div>';
+
+    html+='<button class="cfg-save" id="cfgSave">SAVE CONFIGURATION</button>';
+    body.innerHTML=html;
+
+    document.getElementById('cfgSave').addEventListener('click',function(){
+      document.querySelectorAll('.cfg-input[data-provider]').forEach(function(el){
+        var pid=el.dataset.provider;
+        var field=el.dataset.field;
+        if(pid&&field&&config.providers[pid]){
+          config.providers[pid][field]=el.value;
+        }
+      });
+      document.querySelectorAll('.cfg-toggle').forEach(function(el){
+        var pid=el.dataset.provider;
+        if(pid&&config.providers[pid]){
+          config.providers[pid].enabled=el.classList.contains('on');
+        }
+      });
+      var newTheme=document.getElementById('cfgTheme').value;
+      config.theme=newTheme;
+      applyTheme(newTheme);
+      var newProvider=document.getElementById('cfgProvider').value;
+      activeProvider=newProvider;
+      renderProviders();
+      updateModelSelect();
+      fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}).then(function(){
+        addMsg('system','Configuration saved.');
+      }).catch(function(){});
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

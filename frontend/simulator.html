@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Flight Simulator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+
+body{display:flex;flex-direction:column}
+
+.top-bar{
+  height:36px;background:rgba(6,8,14,0.96);
+  border-bottom:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 12px;gap:12px;
+  flex-shrink:0;
+}
+.top-bar .logo{font-size:11px;letter-spacing:4px;font-weight:700;color:#00e5ff}
+.top-bar .logo span{color:#7c4dff}
+.back-btn{
+  background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12);
+  color:#00e5ff;padding:3px 10px;border-radius:3px;cursor:pointer;
+  font-size:8px;letter-spacing:2px;transition:all 0.2s;
+}
+.back-btn:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.1)}
+.vehicle-select{
+  background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);
+  color:#00e5ff;padding:3px 8px;font-size:9px;font-family:inherit;
+}
+.status-badge{
+  font-size:7px;letter-spacing:2px;padding:2px 8px;
+  border:1px solid rgba(0,255,136,0.15);border-radius:3px;
+  color:#00ff88;
+}
+
+.main-area{flex:1;display:flex;overflow:hidden}
+
+.sim-viewport{
+  flex:1;position:relative;background:#000;overflow:hidden;
+}
+#simCanvas{width:100%;height:100%}
+
+.hud-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;
+}
+.hud-top{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  display:flex;gap:16px;
+}
+.hud-item{text-align:center}
+.hud-label{font-size:6px;letter-spacing:2px;color:#4a5a6a}
+.hud-value{font-size:14px;font-weight:700;color:#00e5ff;font-family:'Courier New',monospace}
+.hud-value.warn{color:#ff9800}
+.hud-value.danger{color:#f44}
+
+.hud-left{
+  position:absolute;top:50%;left:12px;transform:translateY(-50%);
+}
+.hud-right{
+  position:absolute;top:50%;right:12px;transform:translateY(-50%);
+}
+
+.attitude-indicator{
+  width:80px;height:80px;border-radius:50%;
+  border:1px solid rgba(0,229,255,0.2);
+  background:rgba(0,0,0,0.5);position:relative;overflow:hidden;
+}
+.attitude-horizon{
+  position:absolute;width:200%;height:200%;
+  left:-50%;top:-50%;
+  background:linear-gradient(to bottom,#1a3a5a 50%,#3a2a1a 50%);
+  transform-origin:center center;
+}
+.attitude-cross{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:40px;height:2px;background:#f44;
+}
+.attitude-center{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:6px;height:6px;border:1px solid #f44;border-radius:50%;
+}
+
+.compass-strip{
+  width:80px;height:24px;background:rgba(0,0,0,0.5);
+  border:1px solid rgba(0,229,255,0.15);border-radius:3px;
+  overflow:hidden;position:relative;
+}
+.compass-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:10px;font-weight:700;color:#00e5ff;
+}
+
+.hud-bottom{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  display:flex;gap:12px;
+}
+
+.side-panel{
+  width:220px;background:rgba(6,8,14,0.96);
+  border-left:1px solid rgba(0,229,255,0.08);
+  display:flex;flex-direction:column;overflow-y:auto;
+  flex-shrink:0;
+}
+.panel-section{
+  padding:8px;border-bottom:1px solid rgba(0,229,255,0.06);
+}
+.panel-title{
+  font-size:7px;letter-spacing:2px;color:#4a5a6a;
+  margin-bottom:6px;text-transform:uppercase;
+}
+.panel-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:4px;
+}
+.panel-label{font-size:8px;color:#506070}
+.panel-val{font-size:9px;color:#00e5ff;font-family:'Courier New',monospace}
+
+.ctrl-slider{
+  width:100%;height:3px;-webkit-appearance:none;
+  background:rgba(0,229,255,0.1);border-radius:2px;margin-top:2px;
+}
+.ctrl-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;
+  background:#00e5ff;border-radius:50%;cursor:pointer;
+}
+
+.ctrl-btn{
+  width:100%;padding:5px;background:rgba(0,229,255,0.06);
+  border:1px solid rgba(0,229,255,0.12);color:#00e5ff;
+  font-size:8px;letter-spacing:2px;cursor:pointer;
+  border-radius:3px;margin-top:4px;transition:all 0.2s;
+}
+.ctrl-btn:hover{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
+.ctrl-btn.active{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.3);color:#00ff88}
+.ctrl-btn.danger{border-color:rgba(244,68,68,0.2);color:#f44}
+.ctrl-btn.danger:hover{background:rgba(244,68,68,0.1)}
+
+.log-area{
+  flex:1;padding:8px;overflow-y:auto;
+  font-size:7px;font-family:'Courier New',monospace;color:#3a5a6a;
+}
+.log-entry{margin-bottom:2px}
+.log-entry .ts{color:#2a3a4a}
+.log-entry .ok{color:#0f6}
+.log-entry .warn{color:#ff9800}
+.log-entry .err{color:#f44}
+
+.controls-bar{
+  height:48px;background:rgba(6,8,14,0.96);
+  border-top:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 12px;gap:12px;
+  flex-shrink:0;
+}
+.ctrl-group{display:flex;align-items:center;gap:4px}
+.ctrl-label{font-size:7px;color:#4a5a6a;letter-spacing:1px}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <button class="back-btn" onclick="if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}">&#9664; MENU</button>
+  <div class="logo"><span>Z</span>ICORE FLIGHT SIM</div>
+  <select class="vehicle-select" id="vehicleSelect">
+    <option value="obsidiana">OBSIDIANA — Stealth Interceptor</option>
+    <option value="blackvanta">BLACKVANTA — Heavy Transport</option>
+    <option value="ziron_sigma">ZIRON SIGMA — Orbital Maneuver</option>
+    <option value="zi_voyager">ZI VOYAGER — Deep Space</option>
+  </select>
+  <div class="status-badge" id="simStatus">STANDBY</div>
+  <div style="flex:1"></div>
+  <span style="font-size:8px;color:#3a4a5a" id="simTime">T+ 00:00:00</span>
+</div>
+
+<div class="main-area">
+  <div class="sim-viewport">
+    <canvas id="simCanvas"></canvas>
+    <div class="hud-overlay">
+      <div class="hud-top">
+        <div class="hud-item"><div class="hud-label">ALTITUDE</div><div class="hud-value" id="hudAlt">0</div></div>
+        <div class="hud-item"><div class="hud-label">VELOCITY</div><div class="hud-value" id="hudVel">0</div></div>
+        <div class="hud-item"><div class="hud-label">HEADING</div><div class="hud-value" id="hudHdg">000</div></div>
+        <div class="hud-item"><div class="hud-label">VERT SPD</div><div class="hud-value" id="hudVsp">0</div></div>
+      </div>
+      <div class="hud-left">
+        <div class="attitude-indicator" id="attInd">
+          <div class="attitude-horizon" id="attHorizon"></div>
+          <div class="attitude-cross"></div>
+          <div class="attitude-center"></div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="compass-strip">
+          <div class="compass-label" id="compassLabel">N</div>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <div class="hud-item"><div class="hud-label">G-FORCE</div><div class="hud-value" id="hudGforce">1.0</div></div>
+        <div class="hud-item"><div class="hud-label">MACH</div><div class="hud-value" id="hudMach">0.00</div></div>
+        <div class="hud-item"><div class="hud-label">FUEL</div><div class="hud-value" id="hudFuel">100%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <div class="panel-section">
+      <div class="panel-title">PROPULSION</div>
+      <div class="panel-row"><span class="panel-label">Thrust</span><span class="panel-val" id="spThrust">0 kN</span></div>
+      <div class="panel-row"><span class="panel-label">Engine Temp</span><span class="panel-val" id="spEngTemp">22°C</span></div>
+      <div class="panel-row"><span class="panel-label">RPM</span><span class="panel-val" id="spRPM">0</span></div>
+      <input type="range" class="ctrl-slider" id="throttleSlider" min="0" max="100" value="0">
+      <div style="text-align:center;font-size:7px;color:#3a4a5a;margin-top:2px">THROTTLE: <span id="throttleVal" style="color:#00e5ff">0%</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">NAVIGATION</div>
+      <div class="panel-row"><span class="panel-label">LAT</span><span class="panel-val" id="spLat">0.0000</span></div>
+      <div class="panel-row"><span class="panel-label">LON</span><span class="panel-val" id="spLon">0.0000</span></div>
+      <div class="panel-row"><span class="panel-label">ALT</span><span class="panel-val" id="spAlt">0 m</span></div>
+      <div class="panel-row"><span class="panel-label">Waypoint</span><span class="panel-val" id="spWpt">—</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">POWER</div>
+      <div class="panel-row"><span class="panel-label">Battery</span><span class="panel-val" id="spBattery">100%</span></div>
+      <div class="panel-row"><span class="panel-label">Solar</span><span class="panel-val" id="spSolar">0 kW</span></div>
+      <div class="panel-row"><span class="panel-label">Draw</span><span class="panel-val" id="spDraw">0 kW</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">CONTROLS</div>
+      <button class="ctrl-btn" id="btnStartEngine">START ENGINE</button>
+      <button class="ctrl-btn" id="btnTakeoff">TAKEOFF</button>
+      <button class="ctrl-btn" id="btnLand">LAND</button>
+      <button class="ctrl-btn danger" id="btnEmergency">EMERGENCY STOP</button>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">VEHICLE INFO</div>
+      <div class="panel-row"><span class="panel-label">Type</span><span class="panel-val" id="viType">—</span></div>
+      <div class="panel-row"><span class="panel-label">Mass</span><span class="panel-val" id="viMass">—</span></div>
+      <div class="panel-row"><span class="panel-label">Max Thrust</span><span class="panel-val" id="viThrust">—</span></div>
+      <div class="panel-row"><span class="panel-label">Max Speed</span><span class="panel-val" id="viSpeed">—</span></div>
+    </div>
+    <div class="log-area" id="simLog">
+      <div class="log-entry"><span class="ts">[00:00:00]</span> <span class="ok">SIM online</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls-bar">
+  <div class="ctrl-group">
+    <span class="ctrl-label">PITCH</span>
+    <input type="range" class="ctrl-slider" id="pitchCtrl" min="-100" max="100" value="0" style="width:80px">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">ROLL</span>
+    <input type="range" class="ctrl-slider" id="rollCtrl" min="-100" max="100" value="0" style="width:80px">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">YAW</span>
+    <input type="range" class="ctrl-slider" id="yawCtrl" min="-100" max="100" value="0" style="width:80px">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">FLAPS</span>
+    <input type="range" class="ctrl-slider" id="flapsCtrl" min="0" max="100" value="0" style="width:60px">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">GEAR</span>
+    <button class="ctrl-btn" id="btnGear" style="width:auto;padding:3px 10px;margin:0">UP</button>
+  </div>
+  <div style="flex:1"></div>
+  <span style="font-size:7px;color:#2a3a4a">KEYBOARD: W/S PITCH · A/D ROLL · Q/E YAW · SPACE BRAKE</span>
+</div>
+
+<script>
+(function(){
+  var vehicles={
+    obsidiana:{name:'OBSIDIANA',type:'Stealth Interceptor',mass:'12,400 kg',maxThrust:'245 kN',maxSpeed:'Mach 3.2',fuelMax:100,dragCoeff:0.02,liftCoeff:0.8},
+    blackvanta:{name:'BLACKVANTA',type:'Heavy Transport',mass:'48,200 kg',maxThrust:'890 kN',maxSpeed:'Mach 1.8',fuelMax:100,dragCoeff:0.04,liftCoeff:1.2},
+    ziron_sigma:{name:'ZIRON SIGMA',type:'Orbital Maneuver',mass:'8,600 kg',maxThrust:'120 kN',maxSpeed:'Mach 6.0',fuelMax:100,dragCoeff:0.01,liftCoeff:0.5},
+    zi_voyager:{name:'ZI VOYAGER',type:'Deep Space',mass:'124,000 kg',maxThrust:'2,400 kN',maxSpeed:'Mach 12.0',fuelMax:100,dragCoeff:0.005,liftCoeff:0.3}
+  };
+
+  var canvas=document.getElementById('simCanvas');
+  var ctx=canvas.getContext('2d');
+  var sim={
+    running:false,engineOn:false,altitude:0,velocity:0,heading:0,
+    pitch:0,roll:0,yaw:0,vertSpd:0,gforce:1.0,fuel:100,
+    throttle:0,flaps:0,gearUp:true,lat:0,lon:0,
+    vehicle:'obsidiana',time:0,battery:100
+  };
+
+  var keys={};
+  document.addEventListener('keydown',function(e){keys[e.key.toLowerCase()]=true;});
+  document.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;});
+
+  function resize(){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight;}
+  resize();
+  window.addEventListener('resize',resize);
+
+  function updateVehicleInfo(){
+    var v=vehicles[sim.vehicle];
+    document.getElementById('viType').textContent=v.type;
+    document.getElementById('viMass').textContent=v.mass;
+    document.getElementById('viThrust').textContent=v.maxThrust;
+    document.getElementById('viSpeed').textContent=v.maxSpeed;
+  }
+
+  function addLog(msg,type){
+    var el=document.getElementById('simLog');
+    var t=String(Math.floor(sim.time/3600)).padStart(2,'0')+':'+
+          String(Math.floor((sim.time%3600)/60)).padStart(2,'0')+':'+
+          String(Math.floor(sim.time%60)).padStart(2,'0');
+    el.innerHTML+='<div class="log-entry"><span class="ts">['+t+']</span> <span class="'+type+'">'+msg+'</span></div>';
+    el.scrollTop=el.scrollHeight;
+  }
+
+  function formatTime(s){
+    return String(Math.floor(s/3600)).padStart(2,'0')+':'+
+           String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+
+           String(Math.floor(s%60)).padStart(2,'0');
+  }
+
+  function drawSim(){
+    canvas.width=canvas.clientWidth;
+    canvas.height=canvas.clientHeight;
+    var w=canvas.width,h=canvas.height;
+
+    var skyGrad=ctx.createLinearGradient(0,0,0,h);
+    if(sim.altitude>50000){
+      skyGrad.addColorStop(0,'#000008');
+      skyGrad.addColorStop(1,'#0a0a20');
+    }else if(sim.altitude>10000){
+      skyGrad.addColorStop(0,'#0a1030');
+      skyGrad.addColorStop(1,'#1a2a4a');
+    }else{
+      skyGrad.addColorStop(0,'#1a3a6a');
+      skyGrad.addColorStop(1,'#4a6a8a');
+    }
+    ctx.fillStyle=skyGrad;
+    ctx.fillRect(0,0,w,h);
+
+    if(sim.altitude>5000){
+      for(var i=0;i<60;i++){
+        var sx=(i*137+sim.heading*0.5)%w;
+        var sy=(i*97)%((h*0.6));
+        ctx.fillStyle='rgba(255,255,255,'+(0.3+Math.random()*0.4)+')';
+        ctx.fillRect(sx,sy,1,1);
+      }
+    }
+
+    var horizonY=h*0.5+sim.pitch*2;
+    ctx.save();
+    ctx.translate(w/2,horizonY);
+    ctx.rotate(sim.roll*Math.PI/180);
+
+    if(sim.altitude<50000){
+      var groundGrad=ctx.createLinearGradient(0,0,0,h);
+      if(sim.altitude<5000){
+        groundGrad.addColorStop(0,'#2a5a2a');
+        groundGrad.addColorStop(1,'#1a3a1a');
+      }else{
+        groundGrad.addColorStop(0,'#3a5a7a');
+        groundGrad.addColorStop(1,'#1a2a3a');
+      }
+      ctx.fillStyle=groundGrad;
+      ctx.fillRect(-w,h*0.3,w,h*2);
+
+      ctx.strokeStyle='rgba(0,229,255,0.15)';
+      ctx.lineWidth=1;
+      for(var gy=-5;gy<10;gy++){
+        var gyPos=gy*80+h*0.3;
+        ctx.beginPath();ctx.moveTo(-w,gyPos);ctx.lineTo(w,gyPos);ctx.stroke();
+      }
+      for(var gx=-10;gx<20;gx++){
+        var gxPos=gx*80;
+        ctx.beginPath();ctx.moveTo(gxPos,h*0.3);ctx.lineTo(gxPos,h*2);ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    ctx.strokeStyle='rgba(0,229,255,0.3)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(w/2-40,h/2);ctx.lineTo(w/2-15,h/2);
+    ctx.moveTo(w/2+15,h/2);ctx.lineTo(w/2+40,h/2);
+    ctx.moveTo(w/2,h/2-15);ctx.lineTo(w/2,h/2-5);
+    ctx.moveTo(w/2,h/2+5);ctx.lineTo(w/2,h/2+15);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(w/2,h/2,3,0,Math.PI*2);
+    ctx.fillStyle='#f44';ctx.fill();
+
+    var pitchLines=[-20,-10,10,20];
+    pitchLines.forEach(function(p){
+      var py=h/2+p*3+sim.pitch*2;
+      ctx.strokeStyle='rgba(0,229,255,0.2)';
+      ctx.beginPath();ctx.moveTo(w/2-20,py);ctx.lineTo(w/2+20,py);ctx.stroke();
+      ctx.fillStyle='rgba(0,229,255,0.3)';
+      ctx.font='7px monospace';
+      ctx.fillText(Math.abs(p)+'°',w/2+22,py+3);
+    });
+
+    ctx.fillStyle='rgba(0,229,255,0.15)';
+    ctx.font='10px monospace';
+    ctx.fillText('ALT '+Math.round(sim.altitude)+'m',12,20);
+    ctx.fillText('SPD '+Math.round(sim.velocity)+'m/s',12,34);
+    ctx.fillText('HDG '+String(Math.round(sim.heading)).padStart(3,'0')+'°',12,48);
+
+    if(sim.engineOn&&sim.throttle>0){
+      var flameY=h/2+25;
+      var flameH=10+sim.throttle*0.3;
+      var flameGrad=ctx.createRadialGradient(w/2,flameY,0,w/2,flameY+flameH,flameH);
+      flameGrad.addColorStop(0,'rgba(0,200,255,0.6)');
+      flameGrad.addColorStop(0.5,'rgba(0,100,255,0.3)');
+      flameGrad.addColorStop(1,'rgba(0,50,255,0)');
+      ctx.fillStyle=flameGrad;
+      ctx.beginPath();
+      ctx.moveTo(w/2-8,flameY);
+      ctx.lineTo(w/2+8,flameY);
+      ctx.lineTo(w/2+Math.random()*4-2,flameY+flameH);
+      ctx.lineTo(w/2+Math.random()*4-2,flameY+flameH);
+      ctx.fill();
+    }
+  }
+
+  function updateHUD(){
+    document.getElementById('hudAlt').textContent=Math.round(sim.altitude);
+    document.getElementById('hudVel').textContent=Math.round(sim.velocity);
+    document.getElementById('hudHdg').textContent=String(Math.round(sim.heading)%360).padStart(3,'0');
+    document.getElementById('hudVsp').textContent=Math.round(sim.vertSpd);
+    document.getElementById('hudGforce').textContent=sim.gforce.toFixed(1);
+    document.getElementById('hudMach').textContent=(sim.velocity/343).toFixed(2);
+    document.getElementById('hudFuel').textContent=Math.round(sim.fuel)+'%';
+
+    var fuelEl=document.getElementById('hudFuel');
+    fuelEl.className='hud-value'+(sim.fuel<20?' danger':sim.fuel<40?' warn':'');
+
+    document.getElementById('attHorizon').style.transform='rotate('+(sim.roll)+'deg) translateY('+(sim.pitch*0.5)+'px)';
+
+    var dirs=['N','NE','E','SE','S','SW','W','NW'];
+    var dirIdx=Math.round(sim.heading/45)%8;
+    document.getElementById('compassLabel').textContent=dirs[dirIdx];
+
+    document.getElementById('spThrust').textContent=Math.round(sim.throttle*2.45)+' kN';
+    document.getElementById('spEngTemp').textContent=Math.round(22+sim.throttle*8.5+sim.velocity*0.02)+'°C';
+    document.getElementById('spRPM').textContent=Math.round(sim.throttle*280);
+    document.getElementById('spLat').textContent=(sim.lat).toFixed(4);
+    document.getElementById('spLon').textContent=(sim.lon).toFixed(4);
+    document.getElementById('spAlt').textContent=Math.round(sim.altitude)+' m';
+    document.getElementById('spBattery').textContent=Math.round(sim.battery)+'%';
+    document.getElementById('spSolar').textContent=sim.altitude>10000?'4.2 kW':'0 kW';
+    document.getElementById('spDraw').textContent=Math.round(1.5+sim.throttle*3)+' kW';
+
+    document.getElementById('simTime').textContent='T+ '+formatTime(sim.time);
+  }
+
+  function simStep(dt){
+    if(!sim.running)return;
+    sim.time+=dt;
+
+    if(keys['w'])sim.pitch=Math.max(-30,sim.pitch-dt*20);
+    if(keys['s'])sim.pitch=Math.min(30,sim.pitch+dt*20);
+    if(keys['a'])sim.roll=Math.max(-45,sim.roll-dt*25);
+    if(keys['d'])sim.roll=Math.min(45,sim.roll+dt*25);
+    if(keys['q'])sim.heading=(sim.heading-dt*15+360)%360;
+    if(keys['e'])sim.heading=(sim.heading+dt*15)%360;
+    if(keys[' '])sim.throttle=Math.max(0,sim.throttle-dt*50);
+
+    if(sim.engineOn&&sim.fuel>0){
+      var thrustForce=sim.throttle*0.0245*vehicles[sim.vehicle].dragCoeff*100;
+      sim.velocity+=thrustForce*dt;
+      sim.fuel=Math.max(0,sim.fuel-sim.throttle*0.001*dt);
+      sim.battery=Math.max(0,sim.battery-sim.throttle*0.0005*dt);
+    }
+
+    var drag=vehicles[sim.vehicle].dragCoeff*sim.velocity*sim.velocity*0.0001;
+    sim.velocity=Math.max(0,sim.velocity-drag*dt);
+
+    var lift=vehicles[sim.vehicle].liftCoeff*sim.velocity*0.01;
+    sim.vertSpd=lift-sim.pitch*0.5-9.81*(sim.altitude<100?1:0.1);
+    sim.altitude=Math.max(0,sim.altitude+sim.vertSpd*dt);
+
+    if(sim.altitude<=0){
+      sim.altitude=0;sim.vertSpd=0;
+      if(sim.velocity>50)addLog('HARD LANDING','err');
+      else if(sim.velocity>10)addLog('Landing...','warn');
+    }
+
+    sim.gforce=1+sim.vertSpd*0.01+sim.pitch*0.005;
+    sim.lat+=Math.cos(sim.heading*Math.PI/180)*sim.velocity*0.00001*dt;
+    sim.lon+=Math.sin(sim.heading*Math.PI/180)*sim.velocity*0.00001*dt;
+
+    if(sim.fuel<=0){sim.throttle=0;addLog('FUEL DEPLETED','err');}
+  }
+
+  var lastTime=0;
+  function gameLoop(timestamp){
+    var dt=Math.min((timestamp-lastTime)/1000,0.05);
+    lastTime=timestamp;
+    simStep(dt);
+    drawSim();
+    updateHUD();
+    requestAnimationFrame(gameLoop);
+  }
+
+  document.getElementById('vehicleSelect').addEventListener('change',function(){
+    sim.vehicle=this.value;
+    updateVehicleInfo();
+    addLog('Vehicle: '+vehicles[sim.vehicle].name,'ok');
+  });
+
+  document.getElementById('throttleSlider').addEventListener('input',function(){
+    sim.throttle=parseInt(this.value);
+    document.getElementById('throttleVal').textContent=this.value+'%';
+  });
+
+  document.getElementById('pitchCtrl').addEventListener('input',function(){sim.pitch=parseInt(this.value)/100*30;});
+  document.getElementById('rollCtrl').addEventListener('input',function(){sim.roll=parseInt(this.value)/100*45;});
+  document.getElementById('yawCtrl').addEventListener('input',function(){sim.heading=(sim.heading+parseInt(this.value)*0.1+360)%360;});
+
+  document.getElementById('btnStartEngine').addEventListener('click',function(){
+    sim.engineOn=!sim.engineOn;
+    this.textContent=sim.engineOn?'ENGINE ON':'START ENGINE';
+    this.classList.toggle('active',sim.engineOn);
+    document.getElementById('simStatus').textContent=sim.engineOn?'ENGINE RUNNING':'STANDBY';
+    addLog(sim.engineOn?'Engine started':'Engine stopped',sim.engineOn?'ok':'warn');
+  });
+
+  document.getElementById('btnTakeoff').addEventListener('click',function(){
+    if(!sim.engineOn){addLog('Start engine first','warn');return;}
+    sim.running=true;
+    sim.throttle=80;
+    document.getElementById('throttleSlider').value=80;
+    document.getElementById('throttleVal').textContent='80%';
+    document.getElementById('simStatus').textContent='TAKEOFF';
+    document.getElementById('simStatus').style.color='#ff9800';
+    addLog('Takeoff initiated','ok');
+  });
+
+  document.getElementById('btnLand').addEventListener('click',function(){
+    sim.running=true;
+    sim.throttle=20;
+    document.getElementById('throttleSlider').value=20;
+    document.getElementById('throttleVal').textContent='20%';
+    document.getElementById('simStatus').textContent='LANDING';
+    document.getElementById('simStatus').style.color='#ff9800';
+    addLog('Landing sequence','warn');
+  });
+
+  document.getElementById('btnEmergency').addEventListener('click',function(){
+    sim.throttle=0;sim.engineOn=false;sim.running=false;
+    document.getElementById('throttleSlider').value=0;
+    document.getElementById('throttleVal').textContent='0%';
+    document.getElementById('btnStartEngine').textContent='START ENGINE';
+    document.getElementById('btnStartEngine').classList.remove('active');
+    document.getElementById('simStatus').textContent='EMERGENCY';
+    document.getElementById('simStatus').style.color='#f44';
+    addLog('EMERGENCY STOP','err');
+  });
+
+  document.getElementById('btnGear').addEventListener('click',function(){
+    sim.gearUp=!sim.gearUp;
+    this.textContent=sim.gearUp?'UP':'DOWN';
+    this.classList.toggle('active',!sim.gearUp);
+    addLog('Gear: '+(sim.gearUp?'UP':'DOWN'),'ok');
+  });
+
+  updateVehicleInfo();
+  requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
