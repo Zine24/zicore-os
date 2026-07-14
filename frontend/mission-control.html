@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +7,10 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1525;--bg4:#141c30;
+  --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1525;--bg4:#141c30;--bg5:#1a2540;
   --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;
   --text:#c8d6e5;--text2:#8899aa;--border:#1a2540;
-  --glass:rgba(10,14,26,0.85);--glass2:rgba(10,14,26,0.65);
+  --glass:rgba(10,14,26,0.9);--glass2:rgba(10,14,26,0.65);
 }
 @font-face{font-family:'Mono';src:local('Cascadia Code'),local('Consolas'),local('monospace')}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
@@ -18,167 +18,189 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.03;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.015) 2px,rgba(0,229,255,.015) 4px)}
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.012) 2px,rgba(0,229,255,.012) 4px)}
 
-.app{position:relative;z-index:2;display:grid;grid-template-columns:56px 1fr;grid-template-rows:48px 1fr 32px;height:100vh;width:100vw}
-.app.copilot-open{grid-template-columns:56px 1fr 340px}
+.app{position:relative;z-index:2;display:grid;grid-template-rows:52px 1fr 30px;height:100vh;width:100vw;overflow:hidden}
 
-.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 16px;
+/* ===== TOP BAR ===== */
+.topbar{display:flex;align-items:center;gap:16px;padding:0 20px;
   background:var(--glass);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);z-index:10}
-.topbar .logo{width:28px;height:28px;position:relative}
+.topbar .logo{width:30px;height:30px;position:relative}
 .topbar .logo svg{width:100%;height:100%}
 .topbar .brand{font-size:13px;font-weight:700;letter-spacing:3px;
   background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar .sep{width:1px;height:20px;background:var(--border);margin:0 4px}
-.topbar .page-title{font-size:12px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.topbar .sep{width:1px;height:22px;background:var(--border)}
+.topbar .mission-name{font-size:13px;font-weight:600;color:var(--text);letter-spacing:1px}
 .topbar .spacer{flex:1}
-.topbar .clock{font-family:'Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:1px}
-.topbar .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+
+.timer-box{display:flex;align-items:center;gap:14px}
+.timer-block{text-align:center}
+.timer-block .label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:2px}
+.timer-block .value{font-family:'Mono',monospace;font-size:16px;font-weight:700;letter-spacing:2px}
+.timer-block .value.cyan{color:var(--cyan)}
+.timer-block .value.green{color:var(--green)}
+.timer-block .value.purple{color:var(--purple)}
+
+.status-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;
+  background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2)}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+.status-pill span{font-size:10px;font-weight:600;letter-spacing:1px;color:var(--green)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.topbar .copilot-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:4px 10px;
-  border-radius:4px;cursor:pointer;font-size:11px;letter-spacing:1px;transition:all .2s}
-.topbar .copilot-btn:hover{border-color:var(--purple);color:var(--purple)}
-.topbar .copilot-btn.active{border-color:var(--purple);color:var(--purple);background:rgba(124,77,255,.1)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
-.nav{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;
-  align-items:center;padding:8px 0;gap:2px;backdrop-filter:blur(20px);overflow-y:auto}
-.nav-item{width:40px;height:40px;display:flex;align-items:center;justify-content:center;
-  border-radius:8px;cursor:pointer;transition:all .2s;position:relative;color:var(--text2);font-size:16px}
-.nav-item:hover{background:rgba(0,229,255,.08);color:var(--cyan)}
-.nav-item.active{background:rgba(0,229,255,.12);color:var(--cyan)}
-.nav-item.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:2px;
-  background:var(--cyan);border-radius:0 2px 2px 0}
-.nav-item .tip{position:absolute;left:52px;background:var(--bg3);color:var(--text);padding:4px 8px;
-  border-radius:4px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;z-index:100;
-  border:1px solid var(--border)}
-.nav-item:hover .tip{opacity:1}
-.nav-spacer{flex:1}
-.nav-divider{width:28px;height:1px;background:var(--border);margin:4px 0}
+/* ===== FOUR PANEL GRID ===== */
+.panels{display:grid;grid-template-columns:300px 1fr 320px;gap:2px;padding:2px;overflow:hidden}
+@media(max-width:1200px){.panels{grid-template-columns:260px 1fr 280px}}
+@media(max-width:900px){.panels{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;overflow-y:auto}}
 
-.main{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-.main::-webkit-scrollbar{width:4px}
-.main::-webkit-scrollbar-track{background:transparent}
-.main::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-
-.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;flex:1}
-
-.panel{background:var(--glass);border:1px solid var(--border);border-radius:8px;overflow:hidden;
-  backdrop-filter:blur(12px);display:flex;flex-direction:column;transition:border-color .2s}
-.panel:hover{border-color:rgba(0,229,255,.2)}
-.panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
-  border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
-.panel-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text2)}
-.panel-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:1px}
-.badge-nominal{background:rgba(0,255,136,.12);color:var(--green)}
-.badge-warning{background:rgba(255,136,0,.12);color:var(--orange)}
-.badge-critical{background:rgba(255,51,51,.12);color:var(--red)}
+.panel{background:var(--glass);border:1px solid var(--border);border-radius:6px;overflow:hidden;
+  backdrop-filter:blur(12px);display:flex;flex-direction:column}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;
+  border-bottom:1px solid var(--border);background:rgba(0,0,0,.25)}
+.panel-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2)}
+.panel-badge{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:1px}
+.badge-nom{background:rgba(0,255,136,.1);color:var(--green)}
+.badge-warn{background:rgba(255,136,0,.1);color:var(--orange)}
+.badge-crit{background:rgba(255,51,51,.1);color:var(--red)}
 .badge-info{background:rgba(0,229,255,.1);color:var(--cyan)}
-.panel-body{padding:12px 14px;flex:1;overflow-y:auto}
+.panel-body{padding:10px 12px;flex:1;overflow-y:auto}
+.panel-body::-webkit-scrollbar{width:3px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;
-  border-bottom:1px solid rgba(255,255,255,.03)}
-.stat-row:last-child{border-bottom:none}
-.stat-label{font-size:11px;color:var(--text2)}
-.stat-value{font-family:'Mono',monospace;font-size:12px;color:var(--text);font-weight:500}
-.stat-value.cyan{color:var(--cyan)}
-.stat-value.green{color:var(--green)}
-.stat-value.purple{color:var(--purple)}
-.stat-value.orange{color:var(--orange)}
-.stat-value.red{color:var(--red)}
+/* ===== LEFT PANEL: COUNTDOWN ===== */
+.countdown-list{display:flex;flex-direction:column;gap:3px}
+.cd-step{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;
+  background:rgba(0,0,0,.2);border:1px solid transparent;cursor:pointer;transition:all .15s}
+.cd-step:hover{border-color:rgba(0,229,255,.15);background:rgba(0,229,255,.03)}
+.cd-step.active{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.06)}
+.cd-step.done{border-color:rgba(0,255,136,.2);background:rgba(0,255,136,.04)}
+.cd-step.failed{border-color:rgba(255,51,51,.2);background:rgba(255,51,51,.04)}
+.cd-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;font-size:9px;transition:all .15s}
+.cd-step.done .cd-check{background:var(--green);border-color:var(--green);color:#000}
+.cd-step.active .cd-check{border-color:var(--cyan);box-shadow:0 0 6px rgba(0,229,255,.3)}
+.cd-step.failed .cd-check{background:var(--red);border-color:var(--red);color:#fff}
+.cd-time{font-family:'Mono',monospace;font-size:10px;color:var(--cyan);width:52px;flex-shrink:0;text-align:right}
+.cd-step.done .cd-time{color:var(--green)}
+.cd-label{font-size:11px;color:var(--text);flex:1}
+.cd-step.done .cd-label{color:var(--text2)}
 
-.progress-bar{height:4px;background:var(--bg);border-radius:2px;overflow:hidden;margin-top:4px}
-.progress-fill{height:100%;border-radius:2px;transition:width .5s ease}
-.progress-cyan{background:linear-gradient(90deg,var(--cyan),rgba(0,229,255,.5))}
-.progress-green{background:linear-gradient(90deg,var(--green),rgba(0,255,136,.5))}
-.progress-orange{background:linear-gradient(90deg,var(--orange),rgba(255,136,0,.5))}
-.progress-red{background:linear-gradient(90deg,var(--red),rgba(255,51,51,.5))}
+/* Crew Panel */
+.crew-section{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.crew-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.crew-slot{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:5px;
+  background:rgba(0,0,0,.25);border:1px solid var(--border);transition:border-color .15s}
+.crew-slot:hover{border-color:rgba(124,77,255,.3)}
+.crew-avatar{width:28px;height:28px;border-radius:50%;background:var(--bg4);display:flex;
+  align-items:center;justify-content:center;font-size:13px;border:1.5px solid var(--border);flex-shrink:0}
+.crew-slot.active .crew-avatar{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.2)}
+.crew-info .crew-name{font-size:10px;font-weight:600;color:var(--text)}
+.crew-info .crew-role{font-size:8px;color:var(--text2);letter-spacing:.5px}
 
-.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.module-pill{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;
-  background:rgba(0,0,0,.3);border:1px solid transparent;transition:all .2s;cursor:default}
-.module-pill:hover{border-color:var(--border)}
-.module-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.module-dot.online{background:var(--green);box-shadow:0 0 4px var(--green)}
-.module-dot.offline{background:var(--red);box-shadow:0 0 4px var(--red)}
-.module-dot.loading{background:var(--orange);box-shadow:0 0 4px var(--orange);animation:pulse 1s infinite}
-.module-name{font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ===== CENTER PANEL: TELEMETRY ===== */
+.telemetry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:8px}
+@media(max-width:1000px){.telemetry-grid{grid-template-columns:repeat(2,1fr)}}
 
-.mission-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;
-  background:rgba(0,0,0,.2);margin-bottom:6px;border-left:3px solid var(--border);transition:all .2s}
-.mission-item:hover{background:rgba(0,229,255,.04);border-left-color:var(--cyan)}
-.mission-icon{font-size:16px;width:28px;text-align:center}
-.mission-info{flex:1;min-width:0}
-.mission-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mission-phase{font-size:10px;color:var(--text2);margin-top:1px}
-.mission-status{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:.5px}
+.tg-card{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:6px;padding:12px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s}
+.tg-card:hover{border-color:rgba(0,229,255,.2)}
+.tg-ring{width:72px;height:72px;position:relative}
+.tg-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.tg-ring circle{fill:none;stroke-width:5;stroke-linecap:round}
+.tg-ring .bg{stroke:var(--bg4)}
+.tg-ring .fill{transition:stroke-dashoffset .4s ease}
+.tg-val{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Mono',monospace;font-size:13px;font-weight:700;text-align:center}
+.tg-unit{font-size:8px;color:var(--text2);margin-top:-2px}
+.tg-label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
 
-.node-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:6px;
-  background:rgba(0,0,0,.2);margin-bottom:8px;border:1px solid var(--border)}
-.node-indicator{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.node-indicator.online{background:var(--green);box-shadow:0 0 6px var(--green)}
-.node-indicator.offline{background:var(--red);box-shadow:0 0 6px var(--red)}
-.node-info{flex:1}
-.node-name{font-size:12px;font-weight:600;color:var(--text)}
-.node-detail{font-size:10px;color:var(--text2);margin-top:2px}
-.node-metric{text-align:right}
-.node-metric-val{font-family:'Mono',monospace;font-size:14px;font-weight:600;color:var(--cyan)}
-.node-metric-label{font-size:9px;color:var(--text2);margin-top:1px}
+/* Horizontal bars */
+.hbar-wrap{width:100%;margin-top:4px}
+.hbar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.hbar-label{font-size:9px;color:var(--text2);width:56px;text-align:right;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px}
+.hbar-track{flex:1;height:8px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:4px;transition:width .4s ease;position:relative}
+.hbar-fill.cyan{background:linear-gradient(90deg,var(--cyan),rgba(0,229,255,.4))}
+.hbar-fill.green{background:linear-gradient(90deg,var(--green),rgba(0,255,136,.4))}
+.hbar-fill.purple{background:linear-gradient(90deg,var(--purple),rgba(124,77,255,.4))}
+.hbar-fill.orange{background:linear-gradient(90deg,var(--orange),rgba(255,136,0,.4))}
+.hbar-fill.red{background:linear-gradient(90deg,var(--red),rgba(255,51,51,.4))}
+.hbar-val{font-family:'Mono',monospace;font-size:10px;color:var(--text);width:48px;text-align:left;flex-shrink:0}
 
-.alert-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:6px;
-  margin-bottom:6px;font-size:11px;line-height:1.4}
-.alert-item.warn{background:rgba(255,136,0,.06);border-left:3px solid var(--orange);color:var(--orange)}
-.alert-item.error{background:rgba(255,51,51,.06);border-left:3px solid var(--red);color:var(--red)}
-.alert-item.info{background:rgba(0,229,255,.06);border-left:3px solid var(--cyan);color:var(--cyan)}
-.alert-item.success{background:rgba(0,255,136,.06);border-left:3px solid var(--green);color:var(--green)}
-.alert-time{font-family:'Mono',monospace;font-size:9px;color:var(--text2);white-space:nowrap;margin-top:1px}
-.alert-text{flex:1}
+/* Mission Timeline */
+.timeline-section{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.timeline-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:8px}
+.timeline{position:relative;padding-left:18px}
+.timeline::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:8px;padding-left:10px}
+.tl-dot{position:absolute;left:-18px;top:3px;width:10px;height:10px;border-radius:50%;
+  background:var(--bg4);border:2px solid var(--border);transition:all .15s}
+.tl-item.done .tl-dot{background:var(--green);border-color:var(--green);box-shadow:0 0 6px var(--green)}
+.tl-item.active .tl-dot{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:pulse 1.5s infinite}
+.tl-item.pending .tl-dot{background:var(--bg4);border-color:var(--text2)}
+.tl-time{font-family:'Mono',monospace;font-size:9px;color:var(--cyan)}
+.tl-item.done .tl-time{color:var(--green)}
+.tl-item.pending .tl-time{color:var(--text2)}
+.tl-text{font-size:10px;color:var(--text);margin-top:1px}
+.tl-item.done .tl-text{color:var(--text2)}
+.tl-item.pending .tl-text{color:var(--text2)}
 
-.copilot-panel{background:var(--glass);border-left:1px solid var(--border);display:flex;flex-direction:column;
-  backdrop-filter:blur(20px);transition:all .3s ease}
-.copilot-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
-.copilot-header .dot{width:6px;height:6px;border-radius:50%;background:var(--purple);box-shadow:0 0 6px var(--purple)}
-.copilot-header span{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--purple)}
-.copilot-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
-.copilot-messages::-webkit-scrollbar{width:3px}
-.copilot-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.copilot-msg{max-width:90%;padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.5}
-.copilot-msg.user{align-self:flex-end;background:rgba(0,229,255,.1);color:var(--cyan);border-bottom-right-radius:2px}
-.copilot-msg.ai{align-self:flex-start;background:rgba(124,77,255,.08);color:var(--text);border-bottom-left-radius:2px}
-.copilot-msg.system{align-self:center;background:rgba(0,255,136,.06);color:var(--green);font-size:10px;
-  border:1px solid rgba(0,255,136,.15);text-align:center;max-width:95%}
-.copilot-input{display:flex;gap:6px;padding:10px;border-top:1px solid var(--border)}
-.copilot-input input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);
-  padding:8px 10px;border-radius:6px;font-size:12px;outline:none;transition:border-color .2s}
-.copilot-input input:focus{border-color:var(--purple)}
-.copilot-input input::placeholder{color:var(--text2)}
-.copilot-input button{background:var(--purple);color:#fff;border:none;padding:8px 14px;border-radius:6px;
-  cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;transition:all .2s}
-.copilot-input button:hover{background:#9066ff}
-.copilot-input button:disabled{opacity:.4;cursor:not-allowed}
+/* ===== RIGHT PANEL: SYSTEMS ===== */
+.sys-list{display:flex;flex-direction:column;gap:4px}
+.sys-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;
+  background:rgba(0,0,0,.2);transition:background .15s}
+.sys-row:hover{background:rgba(0,229,255,.03)}
+.sys-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:all .15s}
+.sys-dot.green{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sys-dot.yellow{background:var(--yellow);box-shadow:0 0 5px var(--yellow)}
+.sys-dot.red{background:var(--red);box-shadow:0 0 5px var(--red)}
+.sys-name{font-size:11px;color:var(--text);flex:1}
+.sys-status{font-size:9px;font-weight:600;letter-spacing:.5px;padding:2px 6px;border-radius:3px}
+.sys-status.ok{background:rgba(0,255,136,.08);color:var(--green)}
+.sys-status.warn{background:rgba(255,204,0,.08);color:var(--yellow)}
+.sys-status.err{background:rgba(255,51,51,.08);color:var(--red)}
 
-.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 16px;
-  background:var(--glass);border-top:1px solid var(--border);font-size:10px;color:var(--text2);
+/* Comms Panel */
+.comms-section{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.comms-log{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
+.comms-log::-webkit-scrollbar{width:2px}
+.comms-log::-webkit-scrollbar-thumb{background:var(--border)}
+.comms-entry{display:flex;gap:6px;padding:4px 6px;border-radius:3px;background:rgba(0,0,0,.15);font-size:10px}
+.comms-time{font-family:'Mono',monospace;color:var(--text2);flex-shrink:0;width:44px}
+.comms-text{color:var(--text);word-break:break-word}
+.comms-text.info{color:var(--cyan)}
+.comms-text.warn{color:var(--orange)}
+.comms-text.success{color:var(--green)}
+
+/* ===== MISSION SELECTOR ===== */
+.mission-selector{display:flex;gap:4px;flex-wrap:wrap;padding:6px 0}
+.mission-btn{padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:rgba(0,0,0,.2);
+  color:var(--text2);font-size:10px;cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.mission-btn:hover{border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.mission-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.08)}
+
+/* ===== CONTROLS ===== */
+.controls-bar{display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap}
+.ctrl-btn{padding:5px 14px;border-radius:4px;border:1px solid var(--border);background:rgba(0,0,0,.2);
+  color:var(--text);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:1px}
+.ctrl-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.ctrl-btn.primary{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan)}
+.ctrl-btn.danger{border-color:var(--red);color:var(--red)}
+.ctrl-btn.danger:hover{background:rgba(255,51,51,.1)}
+.ctrl-btn:disabled{opacity:.3;cursor:not-allowed}
+.speed-group{display:flex;gap:3px}
+.speed-btn{padding:4px 8px;border-radius:3px;border:1px solid var(--border);background:rgba(0,0,0,.2);
+  color:var(--text2);font-size:9px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Mono',monospace}
+.speed-btn:hover{border-color:var(--purple);color:var(--purple)}
+.speed-btn.active{border-color:var(--purple);color:var(--purple);background:rgba(124,77,255,.1)}
+
+/* ===== STATUS BAR ===== */
+.statusbar{display:flex;align-items:center;gap:14px;padding:0 20px;
+  background:var(--glass);border-top:1px solid var(--border);font-size:9px;color:var(--text2);
   backdrop-filter:blur(20px);letter-spacing:.5px}
 .statusbar .dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)}
 .statusbar .spacer{flex:1}
-.statusbar .tag{padding:2px 6px;border-radius:3px;background:rgba(0,229,255,.06);color:var(--cyan)}
-
-.telemetry-gauge{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px}
-.gauge-ring{width:56px;height:56px;position:relative}
-.gauge-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
-.gauge-ring circle{fill:none;stroke-width:4;stroke-linecap:round}
-.gauge-ring .bg{stroke:var(--bg)}
-.gauge-ring .fill{transition:stroke-dashoffset .5s ease}
-.gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  font-family:'Mono',monospace;font-size:11px;font-weight:700}
-.gauge-label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
-
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  height:100%;color:var(--text2);font-size:12px;gap:6px;opacity:.5}
-.empty-state .icon{font-size:24px}
-
-@media(max-width:1100px){.dashboard{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:700px){.dashboard{grid-template-columns:1fr}.app.copilot-open{grid-template-columns:56px 1fr}}
+.statusbar .tag{padding:2px 6px;border-radius:3px;background:rgba(0,229,255,.06);color:var(--cyan);font-weight:600}
 </style>
 </head>
 <body>
@@ -186,8 +208,8 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 <div class="grain"></div>
 <div class="scanline"></div>
 
-<div class="app" id="app">
-  <!-- Top Bar -->
+<div class="app">
+  <!-- ===== TOP BAR ===== -->
   <div class="topbar">
     <div class="logo">
       <svg viewBox="0 0 40 46"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg)" stroke-width="1.5"/>
@@ -195,189 +217,95 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs>
         <text x="20" y="26" text-anchor="middle" fill="url(#hg)" font-size="16" font-weight="700" font-family="sans-serif">Z</text></svg>
     </div>
-    <div class="brand">ZICORE OS</div>
+    <div class="brand">ZICORE</div>
     <div class="sep"></div>
-    <div class="page-title">Mission Control</div>
+    <div class="mission-name" id="topMissionName">MISSION CONTROL</div>
     <div class="spacer"></div>
-    <div class="status-dot"></div>
-    <div class="clock" id="clock">--:--:--</div>
+    <div class="timer-box">
+      <div class="timer-block">
+        <div class="label">T-MINUS</div>
+        <div class="value cyan" id="tMinus">T- 04:00:00</div>
+      </div>
+      <div class="timer-block">
+        <div class="label">MISSION ELAPSED</div>
+        <div class="value green" id="met">MET 00:00:00</div>
+      </div>
+      <div class="timer-block">
+        <div class="label">MISSION TIME</div>
+        <div class="value purple" id="metClock">00:00:00</div>
+      </div>
+    </div>
     <div class="sep"></div>
-    <button class="copilot-btn" id="copilotToggle" onclick="toggleCopilot()">ZIO COPILOT</button>
-  </div>
-
-  <!-- Navigation -->
-  <nav class="nav">
-    <div class="nav-item active" onclick="navTo(this,'mission-control')" title="Mission Control">
-      <span>◉</span><div class="tip">Mission Control</div>
-    </div>
-    <div class="nav-item" onclick="navTo(this,'aerospace')" title="Aerospace">
-      <span>◇</span><div class="tip">Aerospace</div>
-    </div>
-    <div class="nav-item" onclick="navTo(this,'zio')" title="ZIO AI">
-      <span>◎</span><div class="tip">ZIO AI</div>
-    </div>
-    <div class="nav-item" onclick="navTo(this,'zicore-env')" title="ZiCore Environment">
-      <span>◈</span><div class="tip">ZiCore Environment</div>
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-item" onclick="navTo(this,'games')" title="Games">
-      <span>⬡</span><div class="tip">Games</div>
-    </div>
-    <div class="nav-item" onclick="navTo(this,'multimedia')" title="Multimedia">
-      <span>⊕</span><div class="tip">Multimedia</div>
-    </div>
-    <div class="nav-item" onclick="navTo(this,'mail')" title="Mail">
-      <span>✉</span><div class="tip">Mail</div>
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-item" onclick="navTo(this,'settings')" title="Settings">
-      <span>⚙</span><div class="tip">Settings</div>
-    </div>
-    <div class="nav-spacer"></div>
-    <div class="nav-item" onclick="window.open('https://zinemotion.com.mx','_blank')" title="Portal">
-      <span>↗</span><div class="tip">Portal</div>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <div class="main" id="mainContent">
-    <div class="dashboard">
-      <!-- System Status -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">System Status</div>
-          <div class="panel-badge badge-nominal" id="sysBadge">NOMINAL</div>
-        </div>
-        <div class="panel-body">
-          <div class="stat-row"><span class="stat-label">CPU</span><span class="stat-value cyan" id="cpuVal">--%</span></div>
-          <div class="progress-bar"><div class="progress-fill progress-cyan" id="cpuBar" style="width:0%"></div></div>
-          <div class="stat-row"><span class="stat-label">Memory</span><span class="stat-value green" id="memVal">--%</span></div>
-          <div class="progress-bar"><div class="progress-fill progress-green" id="memBar" style="width:0%"></div></div>
-          <div class="stat-row"><span class="stat-label">Disk</span><span class="stat-value purple" id="diskVal">--%</span></div>
-          <div class="progress-bar"><div class="progress-fill progress-orange" id="diskBar" style="width:0%"></div></div>
-          <div class="stat-row"><span class="stat-label">Uptime</span><span class="stat-value" id="uptimeVal">--</span></div>
-          <div class="stat-row"><span class="stat-label">Provider</span><span class="stat-value cyan" id="providerVal">--</span></div>
-          <div class="stat-row"><span class="stat-label">Ollama</span><span class="stat-value" id="ollamaVal">--</span></div>
-        </div>
-      </div>
-
-      <!-- Telemetry -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Telemetry</div>
-          <div class="panel-badge badge-info">LIVE</div>
-        </div>
-        <div class="panel-body" style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px">
-          <div class="telemetry-gauge">
-            <div class="gauge-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16" stroke-width="4"/>
-              <circle class="fill" id="altGauge" cx="20" cy="20" r="16" stroke="var(--cyan)" stroke-dasharray="100.5" stroke-dashoffset="100.5"/></svg>
-              <div class="gauge-center" id="altVal" style="color:var(--cyan)">--</div></div>
-            <div class="gauge-label">Altitude</div>
-          </div>
-          <div class="telemetry-gauge">
-            <div class="gauge-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16" stroke-width="4"/>
-              <circle class="fill" id="velGauge" cx="20" cy="20" r="16" stroke="var(--green)" stroke-dasharray="100.5" stroke-dashoffset="100.5"/></svg>
-              <div class="gauge-center" id="velVal" style="color:var(--green)">--</div></div>
-            <div class="gauge-label">Velocity</div>
-          </div>
-          <div class="telemetry-gauge">
-            <div class="gauge-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16" stroke-width="4"/>
-              <circle class="fill" id="tempGauge" cx="20" cy="20" r="16" stroke="var(--orange)" stroke-dasharray="100.5" stroke-dashoffset="100.5"/></svg>
-              <div class="gauge-center" id="tempVal" style="color:var(--orange)">--</div></div>
-            <div class="gauge-label">Temp</div>
-          </div>
-          <div class="telemetry-gauge">
-            <div class="gauge-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="16" stroke-width="4"/>
-              <circle class="fill" id="battGauge" cx="20" cy="20" r="16" stroke="var(--purple)" stroke-dasharray="100.5" stroke-dashoffset="100.5"/></svg>
-              <div class="gauge-center" id="battVal" style="color:var(--purple)">--</div></div>
-            <div class="gauge-label">Battery</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Missions -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Missions</div>
-          <div class="panel-badge badge-info" id="missionCount">0</div>
-        </div>
-        <div class="panel-body" id="missionsList">
-          <div class="empty-state"><div class="icon">🚀</div>No active missions</div>
-        </div>
-      </div>
-
-      <!-- Nodes -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Nodes</div>
-          <div class="panel-badge badge-nominal" id="nodeBadge">ONLINE</div>
-        </div>
-        <div class="panel-body" id="nodesList">
-          <div class="node-card">
-            <div class="node-indicator" id="node85dot"></div>
-            <div class="node-info">
-              <div class="node-name">.85 Primary</div>
-              <div class="node-detail">Xeon E5345 · 8GB · Ubuntu</div>
-            </div>
-            <div class="node-metric">
-              <div class="node-metric-val" id="node85cpu">--</div>
-              <div class="node-metric-label">CPU</div>
-            </div>
-          </div>
-          <div class="node-card">
-            <div class="node-indicator" id="node68dot"></div>
-            <div class="node-info">
-              <div class="node-name">.68 Ollama</div>
-              <div class="node-detail">i3-550 · 13GB · 13 models</div>
-            </div>
-            <div class="node-metric">
-              <div class="node-metric-val" id="node68status">--</div>
-              <div class="node-metric-label">Status</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modules -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Modules</div>
-          <div class="panel-badge badge-nominal" id="moduleCount">0 / 0</div>
-        </div>
-        <div class="panel-body">
-          <div class="module-grid" id="moduleGrid"></div>
-        </div>
-      </div>
-
-      <!-- Alerts -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Alerts</div>
-          <div class="panel-badge badge-nominal" id="alertBadge">CLEAR</div>
-        </div>
-        <div class="panel-body" id="alertsList">
-          <div class="alert-item success"><span class="alert-text">All systems operational</span><span class="alert-time">NOW</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ZIO Copilot Panel -->
-  <div class="copilot-panel" id="copilotPanel" style="display:none">
-    <div class="copilot-header">
+    <div class="status-pill" id="statusPill">
       <div class="dot"></div>
-      <span>ZIO Copilot</span>
-    </div>
-    <div class="copilot-messages" id="copilotMessages">
-      <div class="copilot-msg system">ZIO Copilot online. Ask me about system status, missions, or engineering.</div>
-    </div>
-    <div class="copilot-input">
-      <input type="text" id="copilotInput" placeholder="Ask ZIO..." onkeydown="if(event.key==='Enter')sendCopilot()">
-      <button onclick="sendCopilot()">SEND</button>
+      <span id="statusText">NOMINAL</span>
     </div>
   </div>
 
-  <!-- Status Bar -->
+  <!-- ===== FOUR PANELS ===== -->
+  <div class="panels">
+    <!-- LEFT: Countdown + Crew -->
+    <div class="panel" style="grid-row:1/2">
+      <div class="panel-hdr">
+        <div class="panel-title">Launch Countdown</div>
+        <div class="panel-badge badge-info" id="cdBadge">STANDBY</div>
+      </div>
+      <div class="panel-body" style="flex:1;overflow-y:auto">
+        <div class="controls-bar">
+          <button class="ctrl-btn primary" id="btnStart" onclick="startCountdown()">START</button>
+          <button class="ctrl-btn" id="btnPause" onclick="pauseCountdown()" disabled>PAUSE</button>
+          <button class="ctrl-btn danger" id="btnReset" onclick="resetCountdown()">RESET</button>
+          <div style="flex:1"></div>
+          <div class="speed-group">
+            <button class="speed-btn active" onclick="setSpeed(1,this)">1x</button>
+            <button class="speed-btn" onclick="setSpeed(10,this)">10x</button>
+            <button class="speed-btn" onclick="setSpeed(100,this)">100x</button>
+            <button class="speed-btn" onclick="setSpeed(1000,this)">1000x</button>
+          </div>
+        </div>
+        <div class="countdown-list" id="countdownList"></div>
+
+        <div class="crew-section">
+          <div class="panel-title" style="margin-bottom:8px">Crew</div>
+          <div class="crew-grid" id="crewGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: Telemetry + Timeline -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Telemetry</div>
+        <div class="panel-badge badge-nom" id="telBadge">LIVE</div>
+      </div>
+      <div class="panel-body" style="flex:1;overflow-y:auto">
+        <div class="mission-selector" id="missionSelector"></div>
+        <div class="telemetry-grid" id="telemetryGrid"></div>
+        <div class="hbar-wrap" id="hbarWrap"></div>
+        <div class="timeline-section">
+          <div class="timeline-title">Mission Timeline</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Systems + Comms -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Systems Status</div>
+        <div class="panel-badge badge-nom" id="sysBadge">ALL GO</div>
+      </div>
+      <div class="panel-body" style="flex:1;overflow-y:auto">
+        <div class="sys-list" id="sysList"></div>
+        <div class="comms-section">
+          <div class="panel-title" style="margin-bottom:8px">Communications</div>
+          <div class="comms-log" id="commsLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STATUS BAR ===== -->
   <div class="statusbar">
     <div class="dot"></div>
     <span>SYS: NOMINAL</span>
@@ -392,200 +320,525 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 </div>
 
 <script>
-// Clock
-function updateClock(){
-  const now=new Date();
-  document.getElementById('clock').textContent=now.toLocaleTimeString('es-MX',{hour12:false});
-}
-setInterval(updateClock,1000);updateClock();
+// ============================
+// STATE
+// ============================
+let simRunning = false;
+let simPaused = false;
+let simSpeed = 1;
+let simTime = 0;
+let countdownSeconds = 14400;
+let totalMissionTime = 14400;
+const MISSION_SPEEDS = {1:1000,10:100,100:10,1000:1};
+let simInterval = null;
 
-// Starfield
-const canvas=document.getElementById('starfield');
-const ctx=canvas.getContext('2d');
-let stars=[];
-function initStars(){
-  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-  stars=[];
-  for(let i=0;i<80;i++) stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,
-    r:Math.random()*1.2+.3,a:Math.random(),da:Math.random()*.02-.01});
-}
-function drawStars(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  stars.forEach(s=>{
-    s.a+=s.da;if(s.a>1||s.a<.2)s.da*=-1;
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(200,220,240,${s.a})`;ctx.fill();
-  });
-  requestAnimationFrame(drawStars);
-}
-initStars();drawStars();
-window.addEventListener('resize',initStars);
+const MISSIONS = [
+  { id:'artemis', name:'Artemis III', vehicle:'SLS Block 1 + Orion', desc:'Crewed lunar landing',
+    crew:['Commander','Pilot','Mission Specialist','Flight Engineer'],
+    targets:{alt:400,vel:7800,fuel:100,batt:100,temp:22,gforce:0}},
+  { id:'mars2024', name:'Mars 2024', vehicle:'Starship Mars', desc:'Mars cargo mission',
+    crew:['Mission Director','Flight Engineer','Payload Lead','Systems Eng'],
+    targets:{alt:200,vel:11200,fuel:100,batt:100,temp:22,gforce:0}},
+  { id:'iss', name:'ISS Resupply', vehicle:'Dragon Cargo', desc:'Station resupply',
+    crew:['CAPCOM','Flight Director','Payload Officer','Logistics'],
+    targets:{alt:420,vel:7660,fuel:100,batt:100,temp:22,gforce:0}},
+  { id:'geo', name:'GEO Deploy', vehicle:'Falcon Heavy', desc:'Geostationary deployment',
+    crew:['Launch Director','Range Safety','Telemetry Officer','Booster Eng'],
+    targets:{alt:35786,vel:3070,fuel:100,batt:100,temp:22,gforce:0}},
+  { id:'gateway', name:'Lunar Gateway', vehicle:'SLS Block 1B', desc:'Gateway station delivery',
+    crew:['Commander','Pilot','Gateway Specialist','Orbital Mech'],
+    targets:{alt:7000,vel:1000,fuel:100,batt:100,temp:22,gforce:0}}
+];
+let currentMission = MISSIONS[0];
 
-// Navigation
-const routes={
-  'mission-control':null,
-  'aerospace':'/aerospace',
-  'zio':'/zio',
-  'zicore-env':'http://localhost:4000',
-  'games':'/games',
-  'multimedia':'/multimedia',
-  'mail':'/mail',
-  'settings':'/settings'
-};
-function navTo(el,route){
-  if(route==='mission-control')return;
-  window.open(routes[route],'_blank');
-}
+const CD_STEPS = [
+  {id:1, time:'T-4h00m', label:'Launch Director Go/No-Go', t:14400},
+  {id:2, time:'T-3h30m', label:'Vehicle Status Check', t:12600},
+  {id:3, time:'T-3h00m', label:'Crew Suiting Complete', t:10800},
+  {id:4, time:'T-2h30m', label:'Crew Ingress & Hatch Close', t:9000},
+  {id:5, time:'T-2h00m', label:'Fueling Authorization', t:7200},
+  {id:6, time:'T-1h30m', label:'LOX/LH2 Load Complete', t:5400},
+  {id:7, time:'T-1h00m', label:'Flight Computer Armed', t:3600},
+  {id:8, time:'T-00m30s', label:'Range Clear / Weather Go', t:1800},
+  {id:9, time:'T-00m10s', label:'Terminal Count / Auto Seq', t:600},
+  {id:10,time:'T-00m06s', label:'Engine Start Command', t:360},
+  {id:11,time:'T-00m03s', label:'Thrust Buildup Nominal', t:180},
+  {id:12,time:'T-00m00s', label:'LIFTOFF', t:0}
+];
 
-// Copilot
-let copilotOpen=false;
-function toggleCopilot(){
-  copilotOpen=!copilotOpen;
-  const app=document.getElementById('app');
-  const panel=document.getElementById('copilotPanel');
-  const btn=document.getElementById('copilotToggle');
-  if(copilotOpen){app.classList.add('copilot-open');panel.style.display='flex';btn.classList.add('active')}
-  else{app.classList.remove('copilot-open');panel.style.display='none';btn.classList.remove('active')}
-}
-async function sendCopilot(){
-  const input=document.getElementById('copilotInput');
-  const msg=input.value.trim();if(!msg)return;input.value='';
-  addMsg(msg,'user');
-  try{
-    const r=await fetch('/api/agent/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message:msg,context:'mission_control'})});
-    const d=await r.json();
-    addMsg(d.response||d.message||'No response','ai');
-  }catch(e){addMsg('Connection error','system')}
-}
-function addMsg(text,type){
-  const c=document.getElementById('copilotMessages');
-  const d=document.createElement('div');d.className='copilot-msg '+type;d.textContent=text;
-  c.appendChild(d);c.scrollTop=c.scrollHeight;
-}
+const SYSTEMS = [
+  {name:'Propulsion', status:'green', label:'NOMINAL'},
+  {name:'Navigation', status:'green', label:'NOMINAL'},
+  {name:'Communications', status:'green', label:'NOMINAL'},
+  {name:'Power Systems', status:'green', label:'NOMINAL'},
+  {name:'Thermal Control', status:'green', label:'NOMINAL'},
+  {name:'Life Support', status:'green', label:'NOMINAL'},
+  {name:'Structure', status:'green', label:'NOMINAL'},
+  {name:'Avionics', status:'green', label:'NOMINAL'},
+  {name:'Flight Computer', status:'green', label:'NOMINAL'},
+  {name:'Guidance', status:'green', label:'NOMINAL'}
+];
 
-// Data polling
-const MODULE_NAMES=['ZiCore Environment','ZIO','Materializer','Mission Control','Flight Sim','Games','Multimedia',
-  'Settings','Engineering','Telemetry','Physics','Mail','Space DB','Knowledge','Power','Nav','Comm','AI'];
+const TEL_GAUGES = [
+  {id:'alt', label:'Altitude', unit:'km', color:'var(--cyan)', max:50000},
+  {id:'vel', label:'Velocity', unit:'m/s', color:'var(--green)', max:12000},
+  {id:'gforce', label:'G-Force', unit:'G', color:'var(--purple)', max:6},
+  {id:'fuel', label:'Fuel', unit:'%', color:'var(--orange)', max:100},
+  {id:'batt', label:'Battery', unit:'%', color:'var(--cyan)', max:100},
+  {id:'temp', label:'Temp', unit:'°C', color:'var(--red)', max:200}
+];
 
-function setGauge(id,pct,max){
-  const circ=document.getElementById(id);if(!circ)return;
-  const maxOff=100.5;circ.setAttribute('stroke-dashoffset',maxOff-(maxOff*(pct/max)));
-}
+const H_BARS = [
+  {id:'fuelBar', label:'Fuel', color:'orange', max:100},
+  {id:'battBar', label:'Battery', color:'cyan', max:100},
+  {id:'oxBar', label:'LOX', color:'green', max:100},
+  {id:'pressBar', label:'Pressure', color:'purple', max:100}
+];
 
-async function pollSystem(){
-  try{
-    const r=await fetch('/api/system/stats');const d=await r.json();
-    if(d.error)return;
-    document.getElementById('cpuVal').textContent=d.cpu_percent+'%';
-    document.getElementById('memVal').textContent=d.memory_percent+'%';
-    document.getElementById('diskVal').textContent=d.disk_percent+'%';
-    document.getElementById('uptimeVal').textContent=d.uptime||'--';
-    document.getElementById('providerVal').textContent=d.active_provider||'--';
-    document.getElementById('ollamaVal').textContent=d.ollama_status?'ONLINE':'OFFLINE';
-    document.getElementById('ollamaVal').className='stat-value '+(d.ollama_status?'green':'red');
-    document.getElementById('cpuBar').style.width=d.cpu_percent+'%';
-    document.getElementById('memBar').style.width=d.memory_percent+'%';
-    document.getElementById('diskBar').style.width=d.disk_percent+'%';
-    document.getElementById('sbUptime').textContent='UPTIME: '+d.uptime;
-    document.getElementById('sbCpu').textContent='CPU: '+d.cpu_percent+'%';
-    document.getElementById('sbMem').textContent='MEM: '+d.memory_percent+'%';
-    document.getElementById('node85cpu').textContent=d.cpu_percent+'%';
-    document.getElementById('node85dot').className='node-indicator online';
-    const badge=document.getElementById('sysBadge');
-    if(d.cpu_percent>90||d.memory_percent>90){badge.textContent='CRITICAL';badge.className='panel-badge badge-critical'}
-    else if(d.cpu_percent>70||d.memory_percent>70){badge.textContent='WARNING';badge.className='panel-badge badge-warning'}
-    else{badge.textContent='NOMINAL';badge.className='panel-badge badge-nominal'}
-  }catch(e){}
+const TL_PHASES = [
+  {label:'Pre-Flight', offset:0, done:true, active:false},
+  {label:'Terminal Count', offset:3600, done:false, active:true},
+  {label:'Engine Start', offset:300, done:false, active:false},
+  {label:'Liftoff', offset:0, done:false, active:false},
+  {label:'Max Q', offset:60, done:false, active:false},
+  {label:'MECO', offset:150, done:false, active:false},
+  {label:'Stage Sep', offset:155, done:false, active:false},
+  {label:'Orbit Insertion', offset:480, done:false, active:false}
+];
+
+let telValues = {alt:0, vel:0, gforce:0, fuel:100, batt:100, temp:22, ox:100, press:95};
+let stepStates = CD_STEPS.map(() => 'pending');
+
+// ============================
+// RENDER
+// ============================
+function renderMissionSelector(){
+  const el = document.getElementById('missionSelector');
+  el.innerHTML = MISSIONS.map(m => 
+    `<button class="mission-btn${m.id===currentMission.id?' active':''}" onclick="selectMission('${m.id}')">${m.name}</button>`
+  ).join('');
 }
 
-async function pollTelemetry(){
-  try{
-    const r=await fetch('/api/telemetry');const d=await r.json();
-    if(d.error)return;
-    const alt=d.altitude||0;const vel=d.velocity||0;const temp=d.temperature||22;const batt=d.battery||100;
-    document.getElementById('altVal').textContent=alt>1000?(alt/1000).toFixed(1)+'k':Math.round(alt);
-    document.getElementById('velVal').textContent=Math.round(vel);
-    document.getElementById('tempVal').textContent=Math.round(temp)+'°';
-    document.getElementById('battVal').textContent=Math.round(batt)+'%';
-    setGauge('altGauge',Math.min(alt/50000*100,100),100);
-    setGauge('velGauge',Math.min(vel/28000*100,100),100);
-    setGauge('tempGauge',Math.min(temp/200*100,100),100);
-    setGauge('battGauge',batt,100);
-  }catch(e){}
+function renderCountdown(){
+  const el = document.getElementById('countdownList');
+  el.innerHTML = CD_STEPS.map((s,i) => {
+    const cls = stepStates[i] === 'done' ? 'done' : stepStates[i] === 'active' ? 'active' : stepStates[i] === 'failed' ? 'failed' : '';
+    const check = stepStates[i] === 'done' ? '&#10003;' : stepStates[i] === 'failed' ? '&#10007;' : '';
+    return `<div class="cd-step ${cls}" onclick="toggleStep(${i})">
+      <div class="cd-check">${check}</div>
+      <div class="cd-time">${s.time}</div>
+      <div class="cd-label">${s.label}</div>
+    </div>`;
+  }).join('');
 }
 
-async function pollMissions(){
-  try{
-    const r=await fetch('/api/missions');const d=await r.json();
-    const list=document.getElementById('missionsList');
-    const missions=d.missions||[];
-    document.getElementById('missionCount').textContent=missions.length;
-    if(!missions.length){list.innerHTML='<div class="empty-state"><div class="icon">🚀</div>No active missions</div>';return}
-    const phaseColors={planned:'var(--cyan)',active:'var(--green)',complete:'var(--text2)',failed:'var(--red)'};
-    const phaseBgs={planned:'rgba(0,229,255,.1)',active:'rgba(0,255,136,.1)',complete:'rgba(200,214,229,.08)',failed:'rgba(255,51,51,.1)'};
-    list.innerHTML=missions.map(m=>{
-      const c=phaseColors[m.phase]||'var(--text2)';const bg=phaseBgs[m.phase]||'rgba(255,255,255,.05)';
-      return`<div class="mission-item" style="border-left-color:${c}">
-        <div class="mission-icon">🚀</div>
-        <div class="mission-info"><div class="mission-name">${m.name}</div>
-        <div class="mission-phase">${m.phase} · ${m.created||''}</div></div>
-        <div class="mission-status" style="background:${bg};color:${c}">${m.phase.toUpperCase()}</div></div>`;
-    }).join('');
-  }catch(e){}
+function renderCrew(){
+  const el = document.getElementById('crewGrid');
+  const icons = ['&#9788;','&#9790;','&#9733;','&#9734;'];
+  el.innerHTML = currentMission.crew.map((c,i) => 
+    `<div class="crew-slot active">
+      <div class="crew-avatar">${icons[i]||'&#9733;'}</div>
+      <div class="crew-info"><div class="crew-name">${c}</div><div class="crew-role">SEAT ${i+1}</div></div>
+    </div>`
+  ).join('');
 }
 
-function pollNodes(){
-  document.getElementById('node85dot').className='node-indicator online';
-  document.getElementById('node68dot').className='node-indicator online';
-  document.getElementById('node68status').textContent='ON';
-  document.getElementById('node68status').style.color='var(--green)';
+function renderTelemetry(){
+  const el = document.getElementById('telemetryGrid');
+  el.innerHTML = TEL_GAUGES.map(g => {
+    const circ = 2 * Math.PI * 16;
+    return `<div class="tg-card">
+      <div class="tg-ring">
+        <svg viewBox="0 0 40 40">
+          <circle class="bg" cx="20" cy="20" r="16" stroke-width="5"/>
+          <circle class="fill" id="ring_${g.id}" cx="20" cy="20" r="16" stroke="${g.color}" stroke-dasharray="${circ}" stroke-dashoffset="${circ}"/>
+        </svg>
+        <div class="tg-val" id="val_${g.id}" style="color:${g.color}">--</div>
+      </div>
+      <div class="tg-unit" id="unit_${g.id}">${g.unit}</div>
+      <div class="tg-label">${g.label}</div>
+    </div>`;
+  }).join('');
 }
 
-async function pollModules(){
-  try{
-    const r=await fetch('/api/telemetry/modules');const d=await r.json();
-    const grid=document.getElementById('moduleGrid');
-    const mods=Array.isArray(d)?d:Object.keys(d).length?Object.entries(d).map(([k,v])=>({name:k,...v})):
-      MODULE_NAMES.map(n=>({name:n,status:'unknown'}));
-    const online=mods.filter(m=>m.status==='online'||m.active||m.online).length;
-    document.getElementById('moduleCount').textContent=online+' / '+mods.length;
-    grid.innerHTML=mods.map(m=>{
-      const s=m.status||'offline';
-      const cls=s==='online'||s==='active'?'online':s==='loading'?'loading':'offline';
-      return`<div class="module-pill"><div class="module-dot ${cls}"></div><div class="module-name">${m.name}</div></div>`;
-    }).join('');
-  }catch(e){
-    const grid=document.getElementById('moduleGrid');
-    grid.innerHTML=MODULE_NAMES.map(n=>`<div class="module-pill"><div class="module-dot offline"></div><div class="module-name">${n}</div></div>`).join('');
+function renderHBars(){
+  const el = document.getElementById('hbarWrap');
+  el.innerHTML = H_BARS.map(b => 
+    `<div class="hbar-row">
+      <div class="hbar-label">${b.label}</div>
+      <div class="hbar-track"><div class="hbar-fill ${b.color}" id="fill_${b.id}" style="width:0%"></div></div>
+      <div class="hbar-val" id="hval_${b.id}">--%</div>
+    </div>`
+  ).join('');
+}
+
+function renderTimeline(){
+  const el = document.getElementById('timeline');
+  el.innerHTML = TL_PHASES.map((p,i) => {
+    const cls = p.done ? 'done' : p.active ? 'active' : 'pending';
+    const elapsed = Math.floor(totalMissionTime - countdownSeconds + p.offset);
+    const tStr = elapsed <= 0 ? 'T+00:' + String(Math.abs(elapsed)/60).padStart(2,'0') : 'T-' + formatTime(p.offset);
+    return `<div class="tl-item ${cls}">
+      <div class="tl-dot"></div>
+      <div class="tl-time">${tStr}</div>
+      <div class="tl-text">${p.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSystems(){
+  const el = document.getElementById('sysList');
+  el.innerHTML = SYSTEMS.map((s,i) => 
+    `<div class="sys-row">
+      <div class="sys-dot ${s.status}"></div>
+      <div class="sys-name">${s.name}</div>
+      <div class="sys-status ${s.status==='green'?'ok':s.status==='yellow'?'warn':'err'}">${s.label}</div>
+    </div>`
+  ).join('');
+}
+
+function addCommsEntry(text, type='info'){
+  const el = document.getElementById('commsLog');
+  const now = new Date();
+  const time = now.toTimeString().slice(0,8);
+  const div = document.createElement('div');
+  div.className = 'comms-entry';
+  div.innerHTML = `<div class="comms-time">${time}</div><div class="comms-text ${type}">${text}</div>`;
+  el.insertBefore(div, el.firstChild);
+  if(el.children.length > 30) el.removeChild(el.lastChild);
+}
+
+function updateGauge(id, value, max){
+  const circ = 2 * Math.PI * 16;
+  const ring = document.getElementById('ring_' + id);
+  if(ring){
+    const pct = Math.min(value / max, 1);
+    ring.setAttribute('stroke-dashoffset', circ * (1 - pct));
+  }
+  const val = document.getElementById('val_' + id);
+  if(val){
+    if(id === 'alt') val.textContent = value > 1000 ? (value/1000).toFixed(1) + 'k' : Math.round(value);
+    else if(id === 'vel') val.textContent = Math.round(value).toLocaleString();
+    else if(id === 'gforce') val.textContent = value.toFixed(2);
+    else val.textContent = Math.round(value);
   }
 }
 
-function generateAlerts(){
-  const alerts=[];
-  const cpu=parseInt(document.getElementById('cpuVal').textContent)||0;
-  const mem=parseInt(document.getElementById('memVal').textContent)||0;
-  const disk=parseInt(document.getElementById('diskVal').textContent)||0;
-  if(cpu>90)alerts.push({type:'error',text:'CPU critical: '+cpu+'%'});
-  else if(cpu>70)alerts.push({type:'warn',text:'CPU elevated: '+cpu+'%'});
-  if(mem>90)alerts.push({type:'error',text:'Memory critical: '+mem+'%'});
-  else if(mem>70)alerts.push({type:'warn',text:'Memory elevated: '+mem+'%'});
-  if(disk>90)alerts.push({type:'error',text:'Disk critical: '+disk+'%'});
-  else if(disk>80)alerts.push({type:'warn',text:'Disk high: '+disk+'%'});
-  const ollama=document.getElementById('ollamaVal').textContent;
-  if(ollama==='OFFLINE')alerts.push({type:'warn',text:'Ollama server offline'});
-  if(!alerts.length)alerts.push({type:'success',text:'All systems operational'});
-  const list=document.getElementById('alertsList');
-  const badge=document.getElementById('alertBadge');
-  const hasError=alerts.some(a=>a.type==='error');
-  const hasWarn=alerts.some(a=>a.type==='warn');
-  badge.textContent=hasError?'CRITICAL':hasWarn?'WARNING':'CLEAR';
-  badge.className='panel-badge '+(hasError?'badge-critical':hasWarn?'badge-warning':'badge-nominal');
-  list.innerHTML=alerts.map(a=>`<div class="alert-item ${a.type}"><span class="alert-text">${a.text}</span><span class="alert-time">NOW</span>`).join('');
+function updateHBar(id, value, max){
+  const fill = document.getElementById('fill_' + id);
+  const hval = document.getElementById('hval_' + id);
+  if(fill) fill.style.width = Math.min(value/max*100,100) + '%';
+  if(hval) hval.textContent = Math.round(value) + '%';
 }
 
-function poll(){pollSystem();pollTelemetry();pollMissions();pollNodes();pollModules();generateAlerts()}
-poll();setInterval(poll,5000);
+// ============================
+// SIMULATION
+// ============================
+function formatTime(s){
+  s = Math.max(0, Math.floor(s));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+
+function updateSimulation(){
+  if(!simRunning || simPaused) return;
+
+  for(let i = 0; i < simSpeed; i++){
+    countdownSeconds -= 1;
+    simTime += 1;
+
+    if(countdownSeconds < 0) countdownSeconds = 0;
+
+    updateStepStates();
+    updateTelemetryValues();
+  }
+
+  updateDisplay();
+}
+
+function updateStepStates(){
+  for(let i = 0; i < CD_STEPS.length; i++){
+    if(stepStates[i] === 'done') continue;
+    if(countdownSeconds <= CD_STEPS[i].t){
+      if(countdownSeconds > CD_STEPS[i].t - 120 && i < CD_STEPS.length - 1){
+        stepStates[i] = 'active';
+      } else {
+        stepStates[i] = 'done';
+      }
+    }
+  }
+}
+
+function updateTelemetryValues(){
+  const progress = 1 - (countdownSeconds / totalMissionTime);
+  const mission = currentMission.targets;
+
+  if(countdownSeconds <= 360){
+    telValues.alt = mission.alt * Math.min(progress * 2, 1);
+    telValues.vel = mission.vel * Math.min(progress * 2, 1);
+  } else {
+    telValues.alt = Math.max(0, (1 - countdownSeconds/totalMissionTime) * 100);
+    telValues.vel = Math.max(0, (1 - countdownSeconds/totalMissionTime) * 50);
+  }
+
+  telValues.fuel = Math.max(0, mission.fuel - progress * 85);
+  telValues.ox = Math.max(0, 100 - progress * 80);
+  telValues.batt = Math.max(20, mission.batt - progress * 15);
+  telValues.press = Math.max(40, 95 - progress * 30);
+
+  if(countdownSeconds <= 360){
+    telValues.gforce = 1.5 + Math.sin(simTime * 0.05) * 0.5 + (countdownSeconds < 180 ? 2 : 0);
+  } else {
+    telValues.gforce = 1 + Math.sin(simTime * 0.02) * 0.1;
+  }
+
+  if(countdownSeconds <= 360){
+    telValues.temp = 22 + (360 - countdownSeconds) * 0.4 + Math.sin(simTime * 0.1) * 5;
+  } else {
+    telValues.temp = 22 + Math.sin(simTime * 0.05) * 2;
+  }
+
+  if(countdownSeconds === 360 && stepStates[9] !== 'done'){
+    addCommsEntry('Engine start initiated', 'info');
+  }
+  if(countdownSeconds === 180 && stepStates[10] !== 'done'){
+    addCommsEntry('Thrust buildup nominal', 'success');
+  }
+  if(countdownSeconds === 0 && stepStates[11] !== 'done'){
+    addCommsEntry('LIFTOFF! Vehicle has cleared the tower', 'success');
+    document.getElementById('topMissionName').textContent = currentMission.name.toUpperCase() + ' — IN FLIGHT';
+  }
+
+  if(Math.random() < 0.005 * simSpeed){
+    const sysIdx = Math.floor(Math.random() * SYSTEMS.length);
+    const r = Math.random();
+    if(r < 0.7){
+      SYSTEMS[sysIdx].status = 'green';
+      SYSTEMS[sysIdx].label = 'NOMINAL';
+    } else if(r < 0.92){
+      SYSTEMS[sysIdx].status = 'yellow';
+      SYSTEMS[sysIdx].label = 'CAUTION';
+      addCommsEntry(SYSTEMS[sysIdx].name + ' — caution', 'warn');
+    } else {
+      SYSTEMS[sysIdx].status = 'red';
+      SYSTEMS[sysIdx].label = 'ALERT';
+      addCommsEntry(SYSTEMS[sysIdx].name + ' — alert!', 'warn');
+    }
+  }
+}
+
+function updateDisplay(){
+  document.getElementById('tMinus').textContent = 'T- ' + formatTime(countdownSeconds);
+  document.getElementById('met').textContent = 'MET ' + formatTime(Math.max(0, totalMissionTime - countdownSeconds - totalMissionTime + countdownSeconds));
+  document.getElementById('metClock').textContent = formatTime(simTime);
+  document.getElementById('topMissionName').textContent = currentMission.name.toUpperCase() + (countdownSeconds <= 0 ? ' — IN FLIGHT' : '');
+
+  updateGauge('alt', telValues.alt, 50000);
+  updateGauge('vel', telValues.vel, 12000);
+  updateGauge('gforce', telValues.gforce, 6);
+  updateGauge('fuel', telValues.fuel, 100);
+  updateGauge('batt', telValues.batt, 100);
+  updateGauge('temp', telValues.temp, 200);
+
+  updateHBar('fuelBar', telValues.fuel, 100);
+  updateHBar('battBar', telValues.batt, 100);
+  updateHBar('oxBar', telValues.ox, 100);
+  updateHBar('pressBar', telValues.press, 100);
+
+  const doneSteps = stepStates.filter(s => s === 'done').length;
+  const cdBadge = document.getElementById('cdBadge');
+  if(countdownSeconds <= 0){
+    cdBadge.textContent = 'LIFTOFF';
+    cdBadge.className = 'panel-badge badge-nom';
+  } else if(doneSteps === CD_STEPS.length){
+    cdBadge.textContent = 'COMPLETE';
+    cdBadge.className = 'panel-badge badge-nom';
+  } else if(simRunning && !simPaused){
+    cdBadge.textContent = 'COUNTING';
+    cdBadge.className = 'panel-badge badge-info';
+  } else {
+    cdBadge.textContent = 'STANDBY';
+    cdBadge.className = 'panel-badge badge-info';
+  }
+
+  const redCount = SYSTEMS.filter(s => s.status === 'red').length;
+  const yellowCount = SYSTEMS.filter(s => s.status === 'yellow').length;
+  const sysBadge = document.getElementById('sysBadge');
+  if(redCount > 0){ sysBadge.textContent = redCount + ' ALERT'; sysBadge.className = 'panel-badge badge-crit'; }
+  else if(yellowCount > 0){ sysBadge.textContent = yellowCount + ' CAUTION'; sysBadge.className = 'panel-badge badge-warn'; }
+  else { sysBadge.textContent = 'ALL GO'; sysBadge.className = 'panel-badge badge-nom'; }
+
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  if(countdownSeconds <= 0){
+    statusPill.querySelector('.dot').style.background = 'var(--green)';
+    statusPill.style.background = 'rgba(0,255,136,.08)';
+    statusPill.style.borderColor = 'rgba(0,255,136,.2)';
+    statusText.textContent = 'IN FLIGHT';
+    statusText.style.color = 'var(--green)';
+  } else if(simRunning && !simPaused){
+    statusPill.querySelector('.dot').style.background = 'var(--cyan)';
+    statusPill.style.background = 'rgba(0,229,255,.08)';
+    statusPill.style.borderColor = 'rgba(0,229,255,.2)';
+    statusText.textContent = 'COUNTING';
+    statusText.style.color = 'var(--cyan)';
+  } else {
+    statusPill.querySelector('.dot').style.background = 'var(--green)';
+    statusPill.style.background = 'rgba(0,255,136,.08)';
+    statusPill.style.borderColor = 'rgba(0,255,136,.2)';
+    statusText.textContent = 'NOMINAL';
+    statusText.style.color = 'var(--green)';
+  }
+
+  renderCountdown();
+  renderTimeline();
+  renderSystems();
+}
+
+// ============================
+// CONTROLS
+// ============================
+function startCountdown(){
+  if(countdownSeconds <= 0) return;
+  simRunning = true;
+  simPaused = false;
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnPause').disabled = false;
+  addCommsEntry('Mission clock started at T-' + formatTime(countdownSeconds), 'info');
+  clearInterval(simInterval);
+  simInterval = setInterval(updateSimulation, MISSION_SPEEDS[simSpeed] || 1000);
+}
+
+function pauseCountdown(){
+  simPaused = !simPaused;
+  const btn = document.getElementById('btnPause');
+  btn.textContent = simPaused ? 'RESUME' : 'PAUSE';
+  addCommsEntry(simPaused ? 'Mission clock paused' : 'Mission clock resumed', 'info');
+}
+
+function resetCountdown(){
+  simRunning = false;
+  simPaused = false;
+  countdownSeconds = 14400;
+  totalMissionTime = 14400;
+  simTime = 0;
+  telValues = {alt:0, vel:0, gforce:0, fuel:100, batt:100, temp:22, ox:100, press:95};
+  stepStates = CD_STEPS.map(() => 'pending');
+  SYSTEMS.forEach(s => { s.status = 'green'; s.label = 'NOMINAL'; });
+  clearInterval(simInterval);
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnPause').disabled = true;
+  document.getElementById('btnPause').textContent = 'PAUSE';
+  document.getElementById('topMissionName').textContent = currentMission.name.toUpperCase();
+  document.getElementById('commsLog').innerHTML = '';
+  addCommsEntry('Mission reset — countdown armed', 'info');
+  updateDisplay();
+}
+
+function setSpeed(s, btn){
+  simSpeed = s;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if(simRunning && !simPaused){
+    clearInterval(simInterval);
+    simInterval = setInterval(updateSimulation, MISSION_SPEEDS[s] || 1000);
+  }
+}
+
+function toggleStep(i){
+  if(stepStates[i] === 'done'){
+    stepStates[i] = 'pending';
+  } else if(stepStates[i] === 'pending' || stepStates[i] === 'active'){
+    stepStates[i] = 'done';
+  }
+  renderCountdown();
+}
+
+function selectMission(id){
+  currentMission = MISSIONS.find(m => m.id === id) || MISSIONS[0];
+  resetCountdown();
+  renderMissionSelector();
+  renderCrew();
+  document.getElementById('topMissionName').textContent = currentMission.name.toUpperCase();
+  addCommsEntry('Mission selected: ' + currentMission.name + ' — ' + currentMission.vehicle, 'info');
+}
+
+// ============================
+// SYSTEM POLLING
+// ============================
+async function pollSystem(){
+  try{
+    const r = await fetch('/api/system/stats');
+    const d = await r.json();
+    if(d.error) return;
+    document.getElementById('sbUptime').textContent = 'UPTIME: ' + (d.uptime || '--');
+    document.getElementById('sbCpu').textContent = 'CPU: ' + d.cpu_percent + '%';
+    document.getElementById('sbMem').textContent = 'MEM: ' + d.memory_percent + '%';
+  }catch(e){}
+
+  const now = new Date();
+  document.getElementById('metClock').textContent = now.toLocaleTimeString('en-GB',{hour12:false});
+}
+
+// ============================
+// STARFIELD
+// ============================
+const canvas = document.getElementById('starfield');
+const ctx = canvas.getContext('2d');
+let stars = [];
+function initStars(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  stars = [];
+  for(let i = 0; i < 100; i++){
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.2,
+      a: Math.random(),
+      da: Math.random() * 0.02 - 0.01
+    });
+  }
+}
+function drawStars(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  stars.forEach(s => {
+    s.a += s.da;
+    if(s.a > 1 || s.a < 0.15) s.da *= -1;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(180,210,240,${s.a})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(drawStars);
+}
+initStars();
+drawStars();
+window.addEventListener('resize', initStars);
+
+// ============================
+// INIT
+// ============================
+function init(){
+  renderMissionSelector();
+  renderCountdown();
+  renderCrew();
+  renderTelemetry();
+  renderHBars();
+  renderTimeline();
+  renderSystems();
+  addCommsEntry('Mission Control initialized', 'success');
+  addCommsEntry('Vehicle: ' + currentMission.vehicle, 'info');
+  addCommsEntry('Mission: ' + currentMission.desc, 'info');
+  addCommsEntry('All systems nominal — standing by for countdown', 'success');
+  updateDisplay();
+  setInterval(pollSystem, 5000);
+  pollSystem();
+}
+
+init();
 </script>
 </body>
 </html>
