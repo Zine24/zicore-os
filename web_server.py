@@ -695,6 +695,11 @@ async def serve_solar_navigation():
     return FileResponse(str(FRONTEND_DIR / "solar-navigation.html"))
 
 
+@app.get("/zinemotion-mail")
+async def serve_zinemotion_mail():
+    return FileResponse(str(FRONTEND_DIR / "zinemotion-mail.html"))
+
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(str(FRONTEND_DIR / "portal.html"))
