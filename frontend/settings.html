@@ -141,7 +141,7 @@ select option{background:#0a0e16;color:var(--glow)}
 <div id="toast"></div>
 <script>
 var CONFIG=null;
-var PROVIDER_ORDER=['ollama','openrouter','openai','anthropic','groq','deepseek','together','opencode'];
+var PROVIDER_ORDER=['ollama','openrouter','openai','anthropic','groq','deepseek','together','opencode','tripo3d','meshy','rodin','openscad'];
 
 function switchTab(name,event){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
@@ -299,17 +299,37 @@ function renderGeneral(cfg){
 
 function renderProviders(cfg){
   var h='';
+  var PROVIDER_INFO={
+    ollama:{label:'Ollama (Local)',desc:'Modelos locales via Ollama server'},
+    openrouter:{label:'OpenRouter',desc:'Acceso a multiples modelos cloud'},
+    openai:{label:'OpenAI',desc:'GPT-4, GPT-4o, DALL-E'},
+    anthropic:{label:'Anthropic',desc:'Claude 3.5, Claude 3 Opus'},
+    groq:{label:'Groq',desc:' inference ultrarrapida (LPU)'},
+    deepseek:{label:'DeepSeek',desc:'DeepSeek V3, Coder'},
+    together:{label:'Together AI',desc:'Modelos open-source managed'},
+    opencode:{label:'OpenCode Zen',desc:'Modelos gratuitos y de pago'},
+    tripo3d:{label:'Tripo3D',desc:'Text/Image to 3D — 300 créditos gratis/mes',category:'3D GENERATORS'},
+    meshy:{label:'Meshy AI',desc:'Text/Image to 3D — tier gratis disponible',category:'3D GENERATORS'},
+    rodin:{label:'Rodin Gen-1',desc:'Image to 3D — tier gratis disponible',category:'3D GENERATORS'},
+    openscad:{label:'OpenSCAD',desc:'Motor CSG local —requiere binario en PATH',category:'CAD ENGINES'},
+  };
+  var LAST_AI_PROVIDER='opencode';
   PROVIDER_ORDER.forEach(function(pid){
+    var info=PROVIDER_INFO[pid]||{};
     var p=cfg.providers&&cfg.providers[pid]||{enabled:false,api_key:'',base_url:'',default_model:'',models:[]};
-    h+='<div class="section"><div class="section-title purple flex"><span>'+(p.name||pid).toUpperCase()+'</span>';
+    if(info.category&&pid!=='ollama'){
+      h+='<div style="margin:16px 0 8px;padding:6px 10px;border-bottom:1px solid rgba(124,77,255,0.15);font-size:8px;letter-spacing:3px;color:#b388ff">'+info.category+'</div>';
+    }
+    h+='<div class="section"><div class="section-title purple flex"><span>'+(info.label||p.name||pid).toUpperCase()+'</span>';
     h+='<div class="toggle '+(p.enabled?'on':'off')+'" id="prov_'+pid+'_enabled" onclick="toggleEl(this)"><div></div></div>';
     h+='<span class="fs-7 ls-1 text-2">'+(p.enabled?'ENABLED':'DISABLED')+'</span>';
     h+='<button class="btn btn-test fs-8 ml-auto" onclick="testProvider(\''+pid+'\')">TEST</button>';
     h+='<span class="fs-8" id="testStatus_'+pid+'"></span>';
     h+='</div>';
-    h+='<div class="grid grid-2"><label>API Key</label><input id="prov_'+pid+'_api_key" type="password" value="'+(p.api_key||'')+'" placeholder="sk-...">';
-    h+='<label>Base URL</label><input id="prov_'+pid+'_base_url" value="'+(p.base_url||'')+'">';
-    h+='<label>Default Model</label><input id="prov_'+pid+'_default_model" value="'+(p.default_model||'')+'">';
+    if(info.desc){h+='<div style="font-size:8px;color:var(--text2);margin-bottom:8px;letter-spacing:0.5px">'+info.desc+'</div>';}
+    h+='<div class="grid grid-2"><label>API Key</label><input id="prov_'+pid+'_api_key" type="password" value="'+(p.api_key||'')+'" placeholder="'+(pid==='openscad'?'No requiere — binario local':'sk-...')+'">';
+    h+='<label>Base URL</label><input id="prov_'+pid+'_base_url" value="'+(p.base_url||'')+'" placeholder="'+(pid==='openscad'?'/usr/bin/openscad':(pid==='tripo3d'?'https://api.tri3d.com':(pid==='meshy'?'https://api.meshy.ai':(pid==='rodin'?'https://zrodin.com/api':''))))+'">';
+    h+='<label>Default Model</label><input id="prov_'+pid+'_default_model" value="'+(p.default_model||'')+'" placeholder="'+(pid==='tripo3d'?'tripo_v2':(pid==='meshy'?'meshy-4':(pid==='rodin'?'rodin-v1':(pid==='openscad'?'openscad-2021':''))))+'">';
     h+='<label>Available Models</label><textarea rows="3" readonly style="color:var(--text2)">'+(p.models&&p.models.length?p.models.join('\n'):'— none configured —')+'</textarea>';
     h+='</div></div>';
   });
