@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiCodex — Repositorio de Conocimiento Científico</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e17;--bg2:#0f1420;--bg3:#141a2a;--bg4:#1a2238;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4060;--orange:#ff9100;--text:#c8d6e5;--text2:#8899aa;--glass:rgba(14,20,32,0.85);--glass2:rgba(20,28,45,0.9);--border:rgba(0,229,255,0.15);--border2:rgba(124,77,255,0.2);--shadow:0 8px 32px rgba(0,0,0,0.4)}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;line-height:1.5}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
+
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+.landing{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 20px}
+.nav{width:100%;max-width:1200px;display:flex;align-items:center;justify-content:space-between;padding:20px 0;position:relative;z-index:10}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:1.3rem;font-weight:700;color:#fff}
+.nav-logo span{color:var(--cyan)}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:.9rem;transition:.2s;cursor:pointer}
+.nav-links a:hover{color:var(--cyan)}
+.nav-auth{display:flex;gap:12px;align-items:center}
+.btn{padding:10px 24px;border-radius:8px;border:none;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-outline{background:transparent;border:1px solid var(--cyan);color:var(--cyan)}
+.btn-outline:hover{background:rgba(0,229,255,0.1);box-shadow:0 0 20px rgba(0,229,255,0.2)}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;border:none}
+.btn-primary:hover{box-shadow:0 0 30px rgba(0,229,255,0.3);transform:translateY(-1px)}
+.btn-sm{padding:6px 16px;font-size:.8rem}
+.btn-icon{background:none;border:none;color:var(--text2);cursor:pointer;padding:8px;border-radius:6px;font-size:1.1rem;transition:.2s}
+.btn-icon:hover{color:var(--cyan);background:rgba(0,229,255,0.08)}
+
+.hero{text-align:center;padding:80px 0 40px;max-width:800px}
+.hero-badge{display:inline-block;padding:6px 16px;border-radius:20px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--cyan);font-size:.75rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px}
+.hero h1{font-size:3.2rem;font-weight:800;line-height:1.15;margin-bottom:16px;background:linear-gradient(135deg,#fff 0%,var(--cyan) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.15rem;color:var(--text2);margin-bottom:40px;max-width:600px;margin-left:auto;margin-right:auto}
+.hero-search{display:flex;max-width:560px;margin:0 auto;position:relative}
+.hero-search input{flex:1;padding:14px 20px;border-radius:12px;border:1px solid var(--border);background:var(--glass);color:#fff;font-size:1rem;font-family:inherit;outline:none;transition:.2s}
+.hero-search input:focus{border-color:var(--cyan);box-shadow:0 0 20px rgba(0,229,255,0.15)}
+.hero-search input::placeholder{color:var(--text2)}
+.hero-search button{position:absolute;right:6px;top:6px;bottom:6px;padding:0 20px;border-radius:8px;background:var(--cyan);color:var(--bg);border:none;font-weight:700;cursor:pointer;font-family:inherit;font-size:.9rem;transition:.2s}
+.hero-search button:hover{background:#33ebff}
+
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:1000px;width:100%;margin:20px auto 60px}
+.feature-card{background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:28px 20px;text-align:center;transition:all .3s;cursor:default;position:relative;overflow:hidden}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:.3s}
+.feature-card:hover{transform:translateY(-4px);border-color:rgba(0,229,255,0.3);box-shadow:0 8px 40px rgba(0,229,255,0.1)}
+.feature-card:hover::before{opacity:1}
+.feature-icon{font-size:2.2rem;margin-bottom:12px}
+.feature-card h3{font-size:1rem;font-weight:600;color:#fff;margin-bottom:6px}
+.feature-card p{font-size:.8rem;color:var(--text2)}
+
+.stats{display:flex;gap:40px;max-width:900px;width:100%;margin:0 auto 80px;justify-content:center;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-val{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-label{font-size:.8rem;color:var(--text2);margin-top:4px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.3s}
+.modal-overlay.active{opacity:1;pointer-events:auto}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;width:90%;max-width:420px;position:relative;transform:translateY(20px);transition:.3s}
+.modal-overlay.active .modal{transform:translateY(0)}
+.modal h2{color:#fff;font-size:1.3rem;margin-bottom:4px}
+.modal .sub{color:var(--text2);font-size:.85rem;margin-bottom:24px}
+.modal label{display:block;font-size:.8rem;color:var(--text2);margin-bottom:6px;margin-top:14px}
+.modal input{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:#fff;font-size:.9rem;font-family:inherit;outline:none;transition:.2s}
+.modal input:focus{border-color:var(--cyan)}
+.modal .btn{width:100%;margin-top:20px;padding:12px}
+.modal .close-modal{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer}
+.modal .close-modal:hover{color:var(--red)}
+.modal .switch{text-align:center;margin-top:16px;font-size:.85rem;color:var(--text2)}
+.modal .switch a{color:var(--cyan);cursor:pointer;text-decoration:none}
+.modal .switch a:hover{text-decoration:underline}
+
+.dashboard{display:none;position:relative;z-index:1;min-height:100vh}
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:var(--glass);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;z-index:100;gap:16px;backdrop-filter:blur(12px)}
+.topbar-logo{display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:700;color:#fff;white-space:nowrap;cursor:default}
+.topbar-logo span{color:var(--cyan)}
+.topbar-toggle{background:none;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;padding:6px;border-radius:6px}
+.topbar-toggle:hover{color:var(--cyan);background:rgba(0,229,255,0.08)}
+.topbar-search{flex:1;max-width:480px;position:relative}
+.topbar-search input{width:100%;padding:8px 14px 8px 36px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:#fff;font-size:.85rem;font-family:inherit;outline:none;transition:.2s}
+.topbar-search input:focus{border-color:var(--cyan)}
+.topbar-search input::placeholder{color:var(--text2)}
+.topbar-search::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.8rem}
+.topbar-nav{display:flex;gap:4px;margin-left:8px}
+.topbar-nav a{color:var(--text2);text-decoration:none;font-size:.8rem;padding:6px 12px;border-radius:6px;transition:.2s;white-space:nowrap}
+.topbar-nav a:hover,.topbar-nav a.active{color:var(--cyan);background:rgba(0,229,255,0.08)}
+.topbar-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.topbar-user{display:flex;align-items:center;gap:8px;color:var(--text);font-size:.85rem}
+.topbar-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff}
+
+.sidebar{position:fixed;top:56px;left:0;bottom:0;width:240px;background:var(--bg2);border-right:1px solid var(--border);z-index:90;overflow-y:auto;transition:transform .3s;width:240px}
+.sidebar.collapsed{transform:translateX(-240px)}
+.sidebar-section{padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.sidebar-head{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;cursor:pointer;user-select:none}
+.sidebar-head span{font-size:.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+.sidebar-head .arrow{font-size:.65rem;color:var(--text2);transition:.2s}
+.sidebar-head.collapsed .arrow{transform:rotate(-90deg)}
+.sidebar-items{overflow:hidden;transition:max-height .3s}
+.sidebar-items.collapsed{max-height:0!important}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 24px;color:var(--text2);font-size:.85rem;cursor:pointer;transition:.15s;text-decoration:none;border-left:2px solid transparent}
+.sidebar-item:hover{color:var(--text);background:rgba(0,229,255,0.04)}
+.sidebar-item.active{color:var(--cyan);background:rgba(0,229,255,0.06);border-left-color:var(--cyan)}
+.sidebar-item .icon{font-size:1rem;width:20px;text-align:center}
+
+.main{margin-left:240px;padding:72px 24px 24px;transition:margin-left .3s;min-height:100vh}
+.sidebar.collapsed~.main,.main.expanded{margin-left:0}
+.main.expanded .sidebar{display:none}
+
+.page{display:none;animation:fadeUp .3s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.page-header{margin-bottom:24px}
+.page-header h2{font-size:1.5rem;color:#fff;font-weight:700}
+.page-header p{color:var(--text2);font-size:.9rem;margin-top:4px}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:.8rem;cursor:pointer;transition:.2s;font-family:inherit}
+.filter-tab:hover{border-color:rgba(0,229,255,0.3);color:var(--text)}
+.filter-tab.active{background:rgba(0,229,255,0.12);border-color:var(--cyan);color:var(--cyan)}
+.filter-select{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.8rem;font-family:inherit;outline:none;cursor:pointer}
+.filter-select option{background:var(--bg)}
+
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.doc-card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all .25s;cursor:pointer;position:relative;overflow:hidden}
+.doc-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));transform:scaleX(0);transition:.3s;transform-origin:left}
+.doc-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+.doc-card:hover::after{transform:scaleX(1)}
+.doc-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.doc-type{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:600;white-space:nowrap}
+.doc-type.tech{background:rgba(0,229,255,0.1);color:var(--cyan)}
+.doc-type.research{background:rgba(124,77,255,0.1);color:var(--purple)}
+.doc-type.patent{background:rgba(255,145,0,0.1);color:var(--orange)}
+.doc-type.eng{background:rgba(0,255,136,0.1);color:var(--green)}
+.doc-type.sim{background:rgba(255,64,96,0.1);color:var(--red)}
+.doc-type.data{background:rgba(0,229,255,0.1);color:var(--cyan)}
+.doc-type.white{background:rgba(124,77,255,0.1);color:var(--purple)}
+.doc-type.thesis{background:rgba(0,255,136,0.1);color:var(--green)}
+.doc-card-fav{background:none;border:none;color:var(--text2);font-size:1rem;cursor:pointer;padding:2px;transition:.2s}
+.doc-card-fav:hover,.doc-card-fav.faved{color:var(--red)}
+.doc-card h3{font-size:1rem;color:#fff;font-weight:600;margin-bottom:6px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.doc-card .abstract{font-size:.8rem;color:var(--text2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px}
+.doc-card-meta{display:flex;align-items:center;gap:12px;font-size:.75rem;color:var(--text2)}
+.doc-card-meta .author{color:var(--cyan)}
+.doc-card-meta .date{margin-left:auto}
+.doc-card-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.doc-tag{padding:2px 8px;border-radius:8px;background:rgba(255,255,255,0.04);color:var(--text2);font-size:.7rem}
+.highlight{background:rgba(0,229,255,0.2);color:var(--cyan);border-radius:2px;padding:0 2px}
+
+.doc-viewer{display:none}
+.doc-viewer.active{display:block}
+.doc-viewer-back{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-size:.85rem;cursor:pointer;margin-bottom:20px;background:none;border:none;font-family:inherit;transition:.2s}
+.doc-viewer-back:hover{color:var(--cyan)}
+.doc-viewer-grid{display:grid;grid-template-columns:1fr 300px;gap:24px}
+@media(max-width:900px){.doc-viewer-grid{grid-template-columns:1fr}.doc-viewer-sidebar{order:-1}}
+.doc-viewer-main{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:28px}
+.doc-viewer-sidebar{display:flex;flex-direction:column;gap:16px}
+.doc-viewer-sidebar .panel{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:20px}
+.doc-viewer-sidebar .panel h4{color:#fff;font-size:.9rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.doc-viewer-sidebar .panel h4 .icon{color:var(--cyan)}
+.doc-viewer-title{font-size:1.6rem;color:#fff;font-weight:700;margin-bottom:8px}
+.doc-viewer-meta-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;font-size:.85rem;color:var(--text2)}
+.doc-viewer-meta-row .author{color:var(--cyan)}
+.doc-viewer-section{margin-bottom:20px}
+.doc-viewer-section h4{color:var(--cyan);font-size:.85rem;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.doc-viewer-section p,.doc-viewer-section ul{font-size:.9rem;color:var(--text);line-height:1.7}
+.doc-viewer-section ul{padding-left:20px}
+.doc-viewer-section li{margin-bottom:6px}
+.doc-viewer-actions{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+.version-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.8rem}
+.version-item:last-child{border:none}
+.version-item .ver{color:var(--cyan);font-weight:600;min-width:36px}
+.version-item .date{color:var(--text2)}
+.version-item .note{color:var(--text);margin-left:auto}
+.related-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:.2s}
+.related-item:hover{background:rgba(0,229,255,0.04);margin:0 -20px;padding:8px 20px}
+.related-item:last-child{border:none}
+.related-item .r-icon{font-size:1.2rem}
+.related-item .r-title{font-size:.8rem;color:#fff}
+.related-item .r-cat{font-size:.7rem;color:var(--text2)}
+
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:40px;text-align:center;cursor:pointer;transition:.2s;margin-bottom:20px}
+.upload-zone:hover{border-color:var(--cyan);background:rgba(0,229,255,0.03)}
+.upload-zone.drag{border-color:var(--cyan);background:rgba(0,229,255,0.06)}
+.upload-zone .icon{font-size:2.5rem;margin-bottom:12px}
+.upload-zone h3{color:#fff;font-size:1rem;margin-bottom:4px}
+.upload-zone p{color:var(--text2);font-size:.8rem}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.8rem;color:var(--text2);margin-bottom:6px;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:#fff;font-size:.9rem;font-family:inherit;outline:none;transition:.2s}
+.form-group textarea{min-height:100px;resize:vertical}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--cyan)}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);color:#fff;font-size:.85rem;z-index:2000;transform:translateY(100px);opacity:0;transition:.3s;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:var(--green)}
+.toast.success::before{content:'✓';color:var(--green);font-weight:700}
+.toast.info{border-color:var(--cyan)}
+.toast.info::before{content:'ℹ';color:var(--cyan);font-weight:700}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty .icon{font-size:3rem;margin-bottom:12px;opacity:.5}
+.empty h3{color:var(--text);margin-bottom:6px}
+
+@media(max-width:768px){
+.hero h1{font-size:2rem}
+.stats{gap:24px}
+.stat-val{font-size:1.6rem}
+.features{grid-template-columns:repeat(2,1fr)}
+.sidebar{transform:translateX(-240px)}
+.sidebar.open{transform:translateX(0)}
+.main{margin-left:0!important;padding:72px 16px 16px}
+.doc-grid{grid-template-columns:1fr}
+.topbar-nav{display:none}
+.modal{padding:24px}
+}
+@media(max-width:480px){
+.features{grid-template-columns:1fr}
+.hero h1{font-size:1.6rem}
+.stats{flex-direction:column;gap:16px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div id="toast" class="toast"></div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal">
+<div class="modal">
+<button class="close-modal" onclick="closeModals()">✕</button>
+<h2>Iniciar Sesión</h2>
+<p class="sub">Accede a tu repositorio de conocimiento</p>
+<label>Email</label>
+<input type="email" id="loginEmail" placeholder="usuario@zicore.space" value="admin@zicore.space">
+<label>Contraseña</label>
+<input type="password" id="loginPass" placeholder="••••••••" value="admin">
+<button class="btn btn-primary" onclick="doLogin()">Entrar al Repositorio</button>
+<p class="switch">¿No tienes cuenta? <a onclick="showRegister()">Regístrate aquí</a></p>
+</div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal-overlay" id="registerModal">
+<div class="modal">
+<button class="close-modal" onclick="closeModals()">✕</button>
+<h2>Crear Cuenta</h2>
+<p class="sub">Únete a la comunidad científica de ZICORE</p>
+<label>Nombre completo</label>
+<input type="text" id="regName" placeholder="Dr. Nombre Apellido">
+<label>Email</label>
+<input type="email" id="regEmail" placeholder="usuario@zicore.space">
+<label>Contraseña</label>
+<input type="password" id="regPass" placeholder="••••••••">
+<label>Área de investigación</label>
+<select id="regArea" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:#fff;font-size:.9rem;font-family:inherit;outline:none">
+<option>Aerospace Engineering</option>
+<option>Computer Science</option>
+<option>Physics</option>
+<option>Biology</option>
+<option>Chemistry</option>
+<option>Materials Science</option>
+<option>Other</option>
+</select>
+<button class="btn btn-primary" onclick="doRegister()">Crear Cuenta</button>
+<p class="switch">¿Ya tienes cuenta? <a onclick="showLogin()">Inicia sesión</a></p>
+</div>
+</div>
+
+<!-- LANDING -->
+<div class="landing" id="landing">
+<nav class="nav">
+<div class="nav-logo">⬡ Zi<span>Codex</span></div>
+<div class="nav-links">
+<a onclick="scrollToStats()">Estadísticas</a>
+<a onclick="scrollToFeatures()">Características</a>
+<a href="index.html">ZiCore</a>
+<a href="aerospace.html">Aerospace</a>
+</div>
+<div class="nav-auth">
+<button class="btn btn-outline btn-sm" onclick="showLogin()">Iniciar Sesión</button>
+<button class="btn btn-primary btn-sm" onclick="showRegister()">Registrarse</button>
+</div>
+</nav>
+
+<section class="hero">
+<div class="hero-badge">Repositorio Científico v1.0</div>
+<h1>ZiCodex — Repositorio de Conocimiento Científico</h1>
+<p>Preservando el conocimiento para las futuras generaciones. Un repositorio abierto, colaborativo y descentralizado para la ciencia del futuro.</p>
+<div class="hero-search">
+<input type="text" id="heroSearch" placeholder="Buscar documentos, papers, patentes, investigaciones...">
+<button onclick="quickSearch()">Buscar</button>
+</div>
+</section>
+
+<section class="features" id="features">
+<div class="feature-card">
+<div class="feature-icon">📄</div>
+<h3>Documentos</h3>
+<p>Especificaciones técnicas, whitepapers y documentación del ecosistema ZICORE</p>
+</div>
+<div class="feature-card">
+<div class="feature-icon">🔬</div>
+<h3>Investigación</h3>
+<p>Papers de investigación, estudios revisados por pares y hallazgos científicos</p>
+</div>
+<div class="feature-card">
+<div class="feature-icon">⚖️</div>
+<h3>Patentes</h3>
+<p>Propiedad intelectual, patentes registradas y licencias de tecnología</p>
+</div>
+<div class="feature-card">
+<div class="feature-icon">🏗</div>
+<h3>Ingeniería</h3>
+<p>Diseños CAD, análisis estructural y especificaciones de hardware</p>
+</div>
+<div class="feature-card">
+<div class="feature-icon">🧪</div>
+<h3>Simulaciones</h3>
+<p>Modelos computacionales, simulaciones físicas y validación numérica</p>
+</div>
+<div class="feature-card">
+<div class="feature-icon">📊</div>
+<h3>Datos</h3>
+<p>Datasets científicos, telemetría de misiones y datos experimentales</p>
+</div>
+</section>
+
+<section class="stats" id="stats">
+<div class="stat"><div class="stat-val" data-target="2847">0</div><div class="stat-label">Documentos</div></div>
+<div class="stat"><div class="stat-val" data-target="156">0</div><div class="stat-label">Investigaciones</div></div>
+<div class="stat"><div class="stat-val" data-target="43">0</div><div class="stat-label">Patentes</div></div>
+<div class="stat"><div class="stat-val" data-target="89">0</div><div class="stat-label">GB de datos</div></div>
+</section>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+<nav class="topbar">
+<button class="topbar-toggle" onclick="toggleSidebar()">☰</button>
+<div class="topbar-logo">⬡ Zi<span>Codex</span></div>
+<div class="topbar-search"><input type="text" id="searchInput" placeholder="Buscar documentos..." oninput="liveSearch(this.value)"></div>
+<div class="topbar-nav">
+<a class="active" data-nav="explorer" onclick="navTo('explorer')">Explorar</a>
+<a data-nav="upload" onclick="navTo('upload')">Subir</a>
+</div>
+<div class="topbar-right">
+<div class="topbar-user">
+<div class="topbar-avatar" id="avatarLetter">A</div>
+<span id="displayName">Admin</span>
+</div>
+<button class="btn-icon" onclick="doLogout()" title="Cerrar sesión">⏻</button>
+</div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-section">
+<div class="sidebar-head" onclick="toggleSection(this)"><span>▼ Explorar</span><span class="arrow">▼</span></div>
+<div class="sidebar-items">
+<div class="sidebar-item active" onclick="sidebarNav(this,'explorer')"><span class="icon">📚</span>Todos los documentos</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'category')"><span class="icon">📂</span>Por categoría</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'author')"><span class="icon">👤</span>Por autor</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'recent')"><span class="icon">🕐</span>Recientes</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'featured')"><span class="icon">⭐</span>Destacados</div>
+</div>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-head" onclick="toggleSection(this)"><span>▼ Mis Documentos</span><span class="arrow">▼</span></div>
+<div class="sidebar-items">
+<div class="sidebar-item" onclick="sidebarNav(this,'uploaded')"><span class="icon">📤</span>Subidos</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'drafts')"><span class="icon">📝</span>Borradores</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'favorites')"><span class="icon">❤️</span>Favoritos</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'archive')"><span class="icon">📦</span>Archivo</div>
+</div>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-head" onclick="toggleSection(this)"><span>▼ Investigación</span><span class="arrow">▼</span></div>
+<div class="sidebar-items">
+<div class="sidebar-item" onclick="sidebarNav(this,'active-papers')"><span class="icon">📄</span>Papers activos</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'collabs')"><span class="icon">🤝</span>Colaboraciones</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'peer-review')"><span class="icon">👁</span>Revisión por pares</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'publications')"><span class="icon">📰</span>Publicaciones</div>
+</div>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-head" onclick="toggleSection(this)"><span>▼ Propiedad Intelectual</span><span class="arrow">▼</span></div>
+<div class="sidebar-items">
+<div class="sidebar-item" onclick="sidebarNav(this,'patents')"><span class="icon">⚖️</span>Patentes registradas</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'trademarks')"><span class="icon">™</span>Marcas comerciales</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'licenses')"><span class="icon">📋</span>Licencias</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'copyright')"><span class="icon">©</span>Derechos de autor</div>
+</div>
+</div>
+<div class="sidebar-section">
+<div class="sidebar-head" onclick="toggleSection(this)"><span>▼ Ingeniería</span><span class="arrow">▼</span></div>
+<div class="sidebar-items">
+<div class="sidebar-item" onclick="sidebarNav(this,'cad')"><span class="icon">📐</span>Diseños CAD</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'specs')"><span class="icon">📋</span>Especificaciones técnicas</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'structural')"><span class="icon">🔬</span>Análisis estructural</div>
+<div class="sidebar-item" onclick="sidebarNav(this,'sims')"><span class="icon">🧪</span>Simulaciones</div>
+</div>
+</div>
+</aside>
+
+<main class="main" id="mainContent">
+
+<!-- EXPLORER PAGE -->
+<div class="page active" id="page-explorer">
+<div class="page-header">
+<h2>Todos los Documentos</h2>
+<p>Explora el repositorio completo de conocimiento ZICORE</p>
+</div>
+<div class="filter-bar">
+<button class="filter-tab active" onclick="filterCategory('all',this)">Todos</button>
+<button class="filter-tab" onclick="filterCategory('doc',this)">📄 Documentos</button>
+<button class="filter-tab" onclick="filterCategory('research',this)">🔬 Investigación</button>
+<button class="filter-tab" onclick="filterCategory('patent',this)">⚖️ Patentes</button>
+<button class="filter-tab" onclick="filterCategory('eng',this)">🏗 Ingeniería</button>
+<button class="filter-tab" onclick="filterCategory('sim',this)">🧪 Simulaciones</button>
+<button class="filter-tab" onclick="filterCategory('data',this)">📊 Datos</button>
+<button class="filter-tab" onclick="filterCategory('white',this)">📖 Whitepapers</button>
+<button class="filter-tab" onclick="filterCategory('thesis',this)">🎓 Tesis</button>
+<select class="filter-select" onchange="sortDocs(this.value)">
+<option value="date">Más recientes</option>
+<option value="relevance">Relevancia</option>
+<option value="popular">Más populares</option>
+<option value="alpha">Alfabético</option>
+</select>
+</div>
+<div class="doc-grid" id="docGrid"></div>
+</div>
+
+<!-- DOCUMENT VIEWER PAGE -->
+<div class="page" id="page-viewer">
+<div class="doc-viewer active" id="docViewer"></div>
+</div>
+
+<!-- UPLOAD PAGE -->
+<div class="page" id="page-upload">
+<div class="page-header">
+<h2>Subir Documento</h2>
+<p>Agrega nuevo conocimiento al repositorio ZICORE</p>
+</div>
+<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+<div class="icon">📁</div>
+<h3>Arrastra tu archivo aquí</h3>
+<p>PDF, DOCX, LaTeX, STL, STEP — Máximo 500 MB</p>
+<input type="file" id="fileInput" style="display:none" onchange="handleFile(this)">
+</div>
+<div id="uploadForm" style="display:none">
+<div class="form-group">
+<label>Título del documento</label>
+<input type="text" id="upTitle" placeholder="Título descriptivo del documento">
+</div>
+<div class="form-group">
+<label>Resumen</label>
+<textarea id="upAbstract" placeholder="Breve descripción del contenido del documento..."></textarea>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div class="form-group">
+<label>Categoría</label>
+<select id="upCategory">
+<option value="tech">📄 Documento técnico</option>
+<option value="research">🔬 Investigación</option>
+<option value="patent">⚖️ Patente</option>
+<option value="eng">🏗 Ingeniería</option>
+<option value="sim">🧪 Simulación</option>
+<option value="data">📊 Datos</option>
+<option value="white">📖 Whitepaper</option>
+<option value="thesis">🎓 Tesis</option>
+</select>
+</div>
+<div class="form-group">
+<label>Licencia</label>
+<select id="upLicense">
+<option value="CC-BY">CC-BY (Atribución)</option>
+<option value="CC-BY-SA">CC-BY-SA (Atribución-CompartirIgual)</option>
+<option value="Proprietary">Propietaria (Todos los derechos)</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label>Etiquetas (separadas por coma)</label>
+<input type="text" id="upTags" placeholder="aerospace, orbital, propulsion">
+</div>
+<div class="form-group">
+<label>Autor(es)</label>
+<input type="text" id="upAuthors" placeholder="Dr. Nombre Apellido">
+</div>
+<div style="display:flex;gap:12px;margin-top:20px">
+<button class="btn btn-primary" onclick="submitUpload()">Publicar Documento</button>
+<button class="btn btn-outline" onclick="saveDraft()">Guardar como Borrador</button>
+</div>
+</div>
+</div>
+
+<!-- DASHBOARD HOME -->
+<div class="page" id="page-home">
+<div class="page-header">
+<h2>Bienvenido al Repositorio</h2>
+<p>Vista general de tu actividad en ZiCodex</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+<div class="feature-card" style="text-align:left">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:1.5rem">📄</span><span style="font-size:.7rem;color:var(--green)">↑ 12%</span></div>
+<h3>2,847</h3><p style="color:var(--cyan)">Documentos totales</p>
+</div>
+<div class="feature-card" style="text-align:left">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:1.5rem">🔬</span><span style="font-size:.7rem;color:var(--green)">↑ 8%</span></div>
+<h3>156</h3><p style="color:var(--purple)">Investigaciones activas</p>
+</div>
+<div class="feature-card" style="text-align:left">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:1.5rem">⚖️</span><span style="font-size:.7rem;color:var(--green)">↑ 3%</span></div>
+<h3>43</h3><p style="color:var(--orange)">Patentes registradas</p>
+</div>
+<div class="feature-card" style="text-align:left">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:1.5rem">📊</span><span style="font-size:.7rem;color:var(--green)">↑ 24%</span></div>
+<h3>89 GB</h3><p style="color:var(--green)">Datos científicos</p>
+</div>
+</div>
+<h3 style="color:#fff;margin-bottom:16px">Documentos Destacados</h3>
+<div class="doc-grid" id="featuredGrid"></div>
+</div>
+
+<!-- CATEGORY VIEW -->
+<div class="page" id="page-category">
+<div class="page-header"><h2>Por Categoría</h2><p>Documentos organizados por tipo</p></div>
+<div id="categoryContent"></div>
+</div>
+
+<!-- AUTHOR VIEW -->
+<div class="page" id="page-author">
+<div class="page-header"><h2>Por Autor</h2><p>Explora documentos por autor</p></div>
+<div id="authorContent"></div>
+</div>
+
+<!-- RECENT VIEW -->
+<div class="page" id="page-recent">
+<div class="page-header"><h2>Recientes</h2><p>Últimos documentos agregados al repositorio</p></div>
+<div class="doc-grid" id="recentGrid"></div>
+</div>
+
+<!-- FEATURED VIEW -->
+<div class="page" id="page-featured">
+<div class="page-header"><h2>Destacados</h2><p>Documentos más importantes del repositorio</p></div>
+<div class="doc-grid" id="featuredPageGrid"></div>
+</div>
+
+<!-- SIMPLE LIST VIEWS -->
+<div class="page" id="page-uploaded"><div class="page-header"><h2>Documentos Subidos</h2><p>Tus documentos publicados</p></div><div class="doc-grid" id="uploadedGrid"></div></div>
+<div class="page" id="page-drafts"><div class="page-header"><h2>Borradores</h2><p>Documentos en progreso</p></div><div class="empty"><div class="icon">📝</div><h3>Sin borradores</h3><p>Los documentos guardados como borrador aparecerán aquí</p></div></div>
+<div class="page" id="page-favorites"><div class="page-header"><h2>Favoritos</h2><p>Tus documentos marcados</p></div><div class="doc-grid" id="favGrid"></div></div>
+<div class="page" id="page-archive"><div class="page-header"><h2>Archivo</h2><p>Documentos archivados</p></div><div class="empty"><div class="icon">📦</div><h3>Sin archivos</h3><p>Los documentos archivados aparecerán aquí</p></div></div>
+<div class="page" id="page-active-papers"><div class="page-header"><h2>Papers Activos</h2><p>Papers de investigación en progreso</p></div><div class="doc-grid" id="activePapersGrid"></div></div>
+<div class="page" id="page-collabs"><div class="page-header"><h2>Colaboraciones</h2><p>Proyectos colaborativos en curso</p></div><div class="empty"><div class="icon">🤝</div><h3>Sin colaboraciones</h3><p>Las colaboraciones activas aparecerán aquí</p></div></div>
+<div class="page" id="page-peer-review"><div class="page-header"><h2>Revisión por Pares</h2><p>Documentos pendientes de revisión</p></div><div class="empty"><div class="icon">👁</div><h3>Sin revisiones pendientes</h3><p>Los documentos para revisión aparecerán aquí</p></div></div>
+<div class="page" id="page-publications"><div class="page-header"><h2>Publicaciones</h2><p>Publicaciones académicas</p></div><div class="doc-grid" id="pubGrid"></div></div>
+<div class="page" id="page-patents"><div class="page-header"><h2>Patentes Registradas</h2><p>Propiedad intelectual del ecosistema ZICORE</p></div><div class="doc-grid" id="patentGrid"></div></div>
+<div class="page" id="page-trademarks"><div class="page-header"><h2>Marcas Comerciales</h2><p>Marcas registradas de ZICORE</p></div><div class="empty"><div class="icon">™</div><h3>Marcas ZICORE</h3><p>ZiCore™ — Marca registrada<br>ZiAerospace™ — Marca registrada<br>ZiLaunch™ — Marca en proceso</p></div></div>
+<div class="page" id="page-licenses"><div class="page-header"><h2>Licencias</h2><p>Licencias de tecnología ZICORE</p></div><div class="empty"><div class="icon">📋</div><h3>Licencias activas</h3><p>3 licencias de uso comercial<br>12 licencias académicas<br>8 licencias de código abierto</p></div></div>
+<div class="page" id="page-copyright"><div class="page-header"><h2>Derechos de Autor</h2><p>Protección intelectual del repositorio</p></div><div class="empty"><div class="icon">©</div><h3>Derechos registrados</h3><p>Todos los documentos publicados bajo CC-BY o CC-BY-SA<br>Componentes propietarios bajo licencia ZICORE</p></div></div>
+<div class="page" id="page-cad"><div class="page-header"><h2>Diseños CAD</h2><p>Modelos paramétricos y diseños</p></div><div class="doc-grid" id="cadGrid"></div></div>
+<div class="page" id="page-specs"><div class="page-header"><h2>Especificaciones Técnicas</h2><p>Documentación técnica de hardware</p></div><div class="doc-grid" id="specsGrid"></div></div>
+<div class="page" id="page-structural"><div class="page-header"><h2>Análisis Estructural</h2><p>Análisis de resistencia y fatiga</p></div><div class="doc-grid" id="structGrid"></div></div>
+<div class="page" id="page-sims"><div class="page-header"><h2>Simulaciones</h2><p>Modelos computacionales y validación</p></div><div class="doc-grid" id="simGrid"></div></div>
+
+</main>
+</div>
+
+<script>
+const DOCS=[
+{id:1,title:"ZNT Tokenomics: Economic Model v2.1",abstract:"Modelo económico completo para el token ZNT del ecosistema ZICORE. Incluye distribución, staking, gobernanza y mecanismos deflacionarios para sostenibilidad a largo plazo del protocolo descentralizado.",category:"white",catLabel:"Whitepaper",author:"Dr. Alejandro Vega",date:"2026-06-28",tags:["tokenomics","blockchain","ZNT","economics"],downloads:342,views:1890,featured:true,versions:[{v:"2.1",date:"2026-06-28",note:"Actualización del modelo económico"},{v:"2.0",date:"2026-03-15",note:"Reestructuración de tokenomics"},{v:"1.0",date:"2025-11-01",note:"Versión inicial"}],content:"El modelo tokenómico de ZNT está diseñado para sostener el ecosistema ZICORE a largo plazo. Con un suministro total de 1,000,000,000 ZNT, la distribución se divide entre: 40% ecosistema, 20% fundación, 15% equipo, 10% inversión pública, 10% liquidez y 5% reservas. El mecanismo de quema por transacción (0.5%) crea presión deflacionaria constante. El staking ofrece rendimientos del 8-15% APY dependiendo del período de bloqueo."},
+
+{id:2,title:"Orbital Mechanics: Hohmann Transfer Optimization",abstract:"Análisis optimizado de maniobras de transferencia de Hohmann para misiones cislunares. Incluye cálculos de delta-V, ventanas de lanzamiento y correcciones de trayectoria para la máxima eficiencia de combustible.",category:"eng",catLabel:"Ingeniería",author:"Ing. Carlos Mendoza",date:"2026-07-01",tags:["orbital","hohmann","propulsion","trajectory"],downloads:187,views:1245,featured:true,versions:[{v:"1.2",date:"2026-07-01",note:"Optimización de ventana de lanzamiento"},{v:"1.0",date:"2026-01-20",note:"Versión inicial"}],content:"La transferencia de Hohmann sigue siendo el método más eficiente para cambios orbitales coplanarios. Este documento presenta un algoritmo optimizado que reduce el delta-V en un 12% mediante la inclusión de asistencias gravitacionales menores. Para una transferencia LEO-GEO, el delta-V calculado es de 3.93 km/s en el perigeo y 1.49 km/s en el apogeo, con un tiempo de transferencia de 5.26 horas."},
+
+{id:3,title:"CRISPR Gene Editing: Space Applications",abstract:"Estudio de las aplicaciones de CRISPR-Cas9 en entornos de microgravedad para la adaptación de organismos a condiciones espaciales. Incluye edición genética de plantas para biohermetización y producción de alimentos en estaciones espaciales.",category:"research",catLabel:"Investigación",author:"Dra. Elena Torres",date:"2026-06-15",tags:["CRISPR","genetics","space-biology","bioengineering"],downloads:523,views:3421,featured:true,versions:[{v:"1.0",date:"2026-06-15",note:"Publicación original"}],content:"La tecnología CRISPR-Cas9 ofrece posibilidades revolucionarias para la adaptación biológica al espacio. Nuestras pruebas en Arabidopsis thaliana en microgravedad simulada muestran una tasa de edición del 94.7% con modificaciones específicas en genes de tolerancia a radiación. Las plantas editadas mostraron un 340% de aumento en producción de biomasa bajo condiciones de radiación cósmica simulada, abriendo el camino para jardines botánicos en estaciones orbitales."},
+
+{id:4,title:"Structural Analysis: Lunar Habitat Module",abstract:"Análisis estructural completo del módulo de hábitat lunar para la base ZICORE Luna-1. Evaluación de cargas, fatiga térmica, resistencia a micrometeoritos y factores de seguridad para operaciones de largo plazo.",category:"eng",catLabel:"Ingeniería",author:"Ing. Roberto Sánchez",date:"2026-05-20",tags:["lunar","habitat","structural","FEA"],downloads:298,views:1876,featured:true,versions:[{v:"3.1",date:"2026-05-20",note:"Actualización de análisis térmico"},{v:"3.0",date:"2026-02-10",note:"Análisis FEA completo"},{v:"2.0",date:"2025-12-01",note:"Rediseño del módulo"}],content:"El módulo hábitat lunar Luna-1 ha sido diseñado con un factor de seguridad de 2.5 para cargas estáticas y 3.0 para cargas dinámicas. El análisis por elementos finitos (FEA) muestra concentraciones de estrés máximas de 180 MPa en las juntas de soldadura, bien dentro del límite de fluencia del Ti-6Al-4V (830 MPa). La fatiga térmica entre el día lunar (127°C) y la noche (-173°C) requiere juntas flexibles con un ciclo de vida estimado de 10^6 ciclos."},
+
+{id:5,title:"AI Neural Architecture Search: Survey 2026",abstract:"Revisión exhaustiva de los métodos de búsqueda de arquitectura neural (NAS) más recientes. Cubre técnicas evolutivas, basadas en refuerzo y diferenciables, con benchmarks en visión por computadora y procesamiento de lenguaje.",category:"research",catLabel:"Investigación",author:"Dr. Martín López",date:"2026-07-10",tags:["AI","NAS","deep-learning","survey"],downloads:678,views:4532,featured:false,versions:[{v:"1.0",date:"2026-07-10",note:"Publicación original"}],content:"Este survey cubre 147 papers publicados entre 2024-2026 en el campo de NAS. Los métodos diferenciables (DARTS+) siguen siendo los más utilizados (42% de las publicaciones), pero los enfoques evolutivos han ganado terreno con nuevas técnicas de búsqueda de multi-objetivo. Los benchmarks en ImageNet muestran mejoras del 3.2% en top-1 accuracy con modelos NAS vs. arquitecturas manuales, mientras que en NLP los resultados son más modestos (1.1% en GLUE)."},
+
+{id:6,title:"Propulsion Systems: Nuclear Thermal Overview",abstract:"Descripción técnica completa de sistemas de propulsión nuclear térmica (NTP). Comparación de reactores, eficiencia, empuje específico y aplicaciones para misiones deTransferencia Orbital Humana a Marte.",category:"eng",catLabel:"Ingeniería",author:"Ing. Ana Gutiérrez",date:"2026-04-12",tags:["propulsion","nuclear","NTP","Mars"],downloads:412,views:2890,featured:true,versions:[{v:"2.0",date:"2026-04-12",note:"Actualización con datos DRACO"},{v:"1.0",date:"2025-09-15",note:"Versión inicial"}],content:"La propulsión nuclear térmica ofrece un empuje específico de 850-1000 segundos, superando los 450 segundos de los cohetes químicos mejores. El programa DRACO de DARPA/NASA ha validado un reactor de 10 GW térmicos que produce 25,000 N de empuje con una relación peso-potencia de 1.2 kg/kW. Para una misión a Marte, el NTP reduce el tiempo de tránsito de 8-9 meses a 3-4 meses, con un ahorro del 40% en masa de combustible."},
+
+{id:7,title:"ZiCore Ecosystem: Technical Specification v5.0",abstract:"Especificación técnica completa del ecosistema ZICORE v5.0. Documentación de arquitectura, módulos, APIs REST, WebSocket, estado del sistema y protocolos de comunicación entre subsistemas.",category:"doc",catLabel:"Documento",author:"ZiCore Engineering",date:"2026-07-05",tags:["ZiCore","architecture","API","specification"],downloads:1245,views:8901,featured:true,versions:[{v:"5.0",date:"2026-07-05",note:"Release v5.0"},{v:"4.2",date:"2026-01-15",note:"Actualización API"},{v:"4.0",date:"2025-08-01",note:"Major release"}],content:"ZICORE v5.0 representa la arquitectura de mayor escala del ecosistema. El sistema se compone de 47 módulos interconectados vía WebSocket para tiempo real y REST para operaciones asíncronas. El motor de estado maneja 12,000 transiciones por segundo con persistencia en PostgreSQL y caché en Redis. La capa de orquestación soporta despliegue horizontal con balanceo de carga automático."},
+
+{id:8,title:"Mars ISRU: In-Situ Resource Utilization",abstract:"Estrategia completa de utilización de recursos in situ para la misión ZICORE a Marte. Producción de oxígeno, agua, combustible y materiales de construcción a partir de recursos marcianos.",category:"research",catLabel:"Investigación",author:"Dra. Patricia Ruiz",date:"2026-03-22",tags:["Mars","ISRU","propellant","life-support"],downloads:367,views:2340,featured:false,versions:[{v:"1.0",date:"2026-03-22",note:"Publicación original"}],content:"El plan de ISRU para Marte se basa en tres pilares: producción de oxígeno mediante electrólisis del CO₂ atmosférico (MOXIE escalado), extracción de agua subsuperficial mediante calentamiento de regolito, y síntesis de metano a partir del proceso Sabatier (CO₂ + 4H₂ → CH₄ + 2H₂O). La planta piloto de 10 kg/día de O₂ y 5 kg/día de CH₄ está diseñada para operar autónomamente con energía solar y baterías."},
+
+{id:9,title:"Quantum Computing: Practical Applications",abstract:"Exploración de las aplicaciones prácticas de la computación cuántica en 2026. Cubre optimización combinatoria, criptografía post-cuántica, simulación molecular y machine learning cuántico.",category:"research",catLabel:"Investigación",author:"Dr. Fernando Díaz",date:"2026-06-01",tags:["quantum","computing","applications","cryptography"],downloads:489,views:3567,featured:false,versions:[{v:"1.0",date:"2026-06-01",note:"Publicación original"}],content:"Con procesadores cuánticos de 1,200+ qubits disponibles en la nube, las aplicaciones prácticas han madurado significativamente. El algoritmo de Grover aplicado a problemas de logística muestra speedups cuadráticos verificables. En criptografía, las firmas post-cuánticas CRYSTALS-Dilithium están siendo integradas en los estándares NIST. La simulación molecular cuántica ha permitido descubrir 3 nuevos catalizadores para síntesis de amoníaco con eficiencia 15x superior."},
+
+{id:10,title:"Aerodynamic Optimization: Hypersonic Vehicles",abstract:"Optimización aerodinámica de vehículos hipersónicos mediante CFD de alta fidelidad. Análisis de transferencia de calor, cojines de plasma y estabilidad a Mach 5-10 en atmósfera terrestre.",category:"eng",catLabel:"Ingeniería",author:"Ing. Javier Morales",date:"2026-05-08",tags:["hypersonic","CFD","aerodynamics","thermal"],downloads:234,views:1678,featured:false,versions:[{v:"1.0",date:"2026-05-08",note:"Publicación original"}],content:"Este estudio presenta optimización multi-objectivo de vehículos hipersónicos utilizando simulaciones RANS con modelo de turbulencia k-ω SST acopladas a análisis térmico conjugado. Las superficies de cuerpo caliente con geometría waverider muestran una relación lift-to-drag de 4.2 a Mach 7, superando el diseño benchmark en un 18%. El análisis de transferencia de calor picos de 2.5 MW/m² en el borde de ataque requieren sistemas de protección térmica de cerámica UHTC."},
+
+{id:11,title:"Blockchain Consensus: Novel Approaches",abstract:"Propuesta de nuevos mecanismos de consenso para blockchain de alta escalabilidad. Proof of Sequential Work (PoSW) combina los beneficios de PoW y BFT con finalidad en 2 segundos.",category:"research",catLabel:"Investigación",author:"Dr. Alejandro Vega",date:"2026-04-30",tags:["blockchain","consensus","PoSW","scalability"],downloads:312,views:2156,featured:false,versions:[{v:"1.0",date:"2026-04-30",note:"Publicación original"}],content:"Proof of Sequential Work (PoSW) es un nuevo mecanismo de consenso que requiere la ejecución secuencial de funciones hash iterativas, haciendo imparable el hardware paralelo pero sin el desperdicio energético de PoW. En pruebas de rendimiento, PoSW alcanza 45,000 TPS con finalidad de 2 segundos en una red de 100 nodos. La resistencia a Sybil se mantiene mediante la obligación de ejecución secuencial, preservando las garantías de seguridad de Bitcoin."},
+
+{id:12,title:"Lunar Regolith: Construction Materials",abstract:"Caracterización mecánica del regolito lunar para su uso como material de construcción in situ. Incluye sinterización, compactación y mezclas con polímeros para estructuras habitables.",category:"research",catLabel:"Investigación",author:"Ing. Roberto Sánchez",date:"2026-02-14",tags:["lunar","regolith","materials","ISRU","construction"],downloads:198,views:1432,featured:false,versions:[{v:"1.0",date:"2026-02-14",note:"Publicación original"}],content:"El regolito lunar simulado (LHS-1) ha sido procesado mediante sinterización a 1100°C obteniendo bloques con resistencia a compresión de 12 MPa, comparable al hormigón de baja resistencia. Las mezclas con 15% de polímero epoxi espacial alcanzan 28 MPa. La compactación isostática a 200 MPa produce estructuras con porosidad del 8%, adecuadas para módulos presurizados. El análisis de costos muestra un ahorro del 99.4% vs. traer materiales desde la Tierra."}
+];
+
+let currentUser=null;
+let currentFilter='all';
+let currentSort='date';
+let searchQuery='';
+let favorites=new Set(JSON.parse(localStorage.getItem('zc_favs')||'[]'));
+
+function init(){
+  if(localStorage.getItem('zc_user')){
+    currentUser=JSON.parse(localStorage.getItem('zc_user'));
+    showDashboard();
+  }
+  animateStars();
+  animateStats();
+  renderDocs();
+}
+
+function animateStats(){
+  document.querySelectorAll('.stat-val').forEach(el=>{
+    const target=+el.dataset.target;
+    let current=0;
+    const step=target/60;
+    const timer=setInterval(()=>{
+      current+=step;
+      if(current>=target){current=target;clearInterval(timer)}
+      el.textContent=Math.floor(current).toLocaleString();
+    },25);
+  });
+}
+
+// Starfield
+const canvas=document.getElementById('starfield');
+const ctx=canvas.getContext('2d');
+let stars=[];
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+function createStars(){
+  stars=[];
+  const count=Math.floor((canvas.width*canvas.height)/2500);
+  for(let i=0;i<count;i++){
+    stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.2+0.2,a:Math.random(),s:Math.random()*0.008+0.002,d:Math.random()>0.5?1:-1});
+  }
+}
+createStars();
+function animateStars(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  stars.forEach(s=>{
+    s.a+=s.s*s.d;
+    if(s.a>1||s.a<0.15)s.d*=-1;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(200,215,230,${s.a})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(animateStars);
+}
+
+// Auth
+function showLogin(){document.getElementById('loginModal').classList.add('active')}
+function showRegister(){document.getElementById('registerModal').classList.add('active')}
+function closeModals(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('active'))}
+function doLogin(){
+  const email=document.getElementById('loginEmail').value;
+  if(!email)return;
+  currentUser={name:email.split('@')[0],email};
+  localStorage.setItem('zc_user',JSON.stringify(currentUser));
+  closeModals();showDashboard();
+  toast('Sesión iniciada correctamente','success');
+}
+function doRegister(){
+  const name=document.getElementById('regName').value;
+  const email=document.getElementById('regEmail').value;
+  if(!email||!name)return;
+  currentUser={name,email};
+  localStorage.setItem('zc_user',JSON.stringify(currentUser));
+  closeModals();showDashboard();
+  toast('Cuenta creada — Bienvenido a ZiCodex','success');
+}
+function doLogout(){
+  currentUser=null;
+  localStorage.removeItem('zc_user');
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('landing').style.display='flex';
+}
+
+function showDashboard(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('avatarLetter').textContent=(currentUser.name||'U')[0].toUpperCase();
+  document.getElementById('displayName').textContent=currentUser.name||'Usuario';
+  renderDocs();
+  renderSidebarLists();
+}
+
+// Sidebar
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const mc=document.getElementById('mainContent');
+  sb.classList.toggle('collapsed');
+  mc.classList.toggle('expanded');
+}
+function toggleSection(el){
+  el.classList.toggle('collapsed');
+  el.querySelector('.arrow').textContent=el.classList.contains('collapsed')?'▶':'▼';
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+function sidebarNav(item,page){
+  document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+  item.classList.add('active');
+  navTo(page);
+}
+
+// Navigation
+function navTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.topbar-nav a').forEach(a=>a.classList.remove('active'));
+  const el=document.getElementById('page-'+page);
+  if(el)el.classList.add('active');
+  const navA=document.querySelector(`.topbar-nav a[data-nav="${page}"]`);
+  if(navA)navA.classList.add('active');
+  if(page==='explorer')renderDocs();
+}
+
+// Render
+function renderDocs(){
+  const grid=document.getElementById('docGrid');
+  let docs=[...DOCS];
+  if(currentFilter!=='all')docs=docs.filter(d=>d.category===currentFilter);
+  if(searchQuery){
+    const q=searchQuery.toLowerCase();
+    docs=docs.filter(d=>d.title.toLowerCase().includes(q)||d.abstract.toLowerCase().includes(q)||d.tags.some(t=>t.toLowerCase().includes(q))||d.author.toLowerCase().includes(q));
+  }
+  if(currentSort==='date')docs.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  else if(currentSort==='popular')docs.sort((a,b)=>b.downloads-a.downloads);
+  else if(currentSort==='alpha')docs.sort((a,b)=>a.title.localeCompare(b.title));
+  else docs.sort((a,b)=>b.views-a.views);
+  grid.innerHTML=docs.length?docs.map(d=>docCard(d)).join(''):'<div class="empty" style="grid-column:1/-1"><div class="icon">🔍</div><h3>Sin resultados</h3><p>No se encontraron documentos con estos filtros</p></div>';
+}
+
+function docCard(d){
+  const t=docTypeClass(d.category);
+  const isFav=favorites.has(d.id);
+  const title=searchQuery?highlight(d.title,searchQuery):d.title;
+  const abs=searchQuery?highlight(d.abstract,searchQuery):d.abstract;
+  return`<div class="doc-card" onclick="viewDoc(${d.id})">
+<div class="doc-card-top"><span class="doc-type ${t}">${typeIcon(d.category)} ${d.catLabel}</span><button class="doc-card-fav ${isFav?'faved':''}" onclick="event.stopPropagation();toggleFav(${d.id},this)">${isFav?'❤️':'🤍'}</button></div>
+<h3>${title}</h3>
+<p class="abstract">${abs}</p>
+<div class="doc-card-meta"><span class="author">${d.author}</span><span>${d.downloads} descargas</span><span class="date">${formatDate(d.date)}</span></div>
+<div class="doc-card-tags">${d.tags.slice(0,3).map(t=>`<span class="doc-tag">${t}</span>`).join('')}</div>
+</div>`;
+}
+
+function typeIcon(c){return{doc:'📄',research:'🔬',patent:'⚖️',eng:'🏗',sim:'🧪',data:'📊',white:'📖',thesis:'🎓'}[c]||'📄'}
+function docTypeClass(c){return{doc:'tech',research:'research',patent:'patent',eng:'eng',sim:'sim',data:'data',white:'white',thesis:'thesis'}[c]||'tech'}
+function formatDate(d){const dt=new Date(d);return dt.toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}
+function highlight(text,q){
+  if(!q)return text;
+  const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi');
+  return text.replace(re,'<span class="highlight">$1</span>');
+}
+
+function viewDoc(id){
+  const d=DOCS.find(x=>x.id===id);if(!d)return;
+  const t=docTypeClass(d.category);
+  document.getElementById('docViewer').innerHTML=`
+<button class="doc-viewer-back" onclick="navTo('explorer')">← Volver a explorar</button>
+<div class="doc-viewer-grid">
+<div class="doc-viewer-main">
+<div class="doc-viewer-title">${d.title}</div>
+<div class="doc-viewer-meta-row">
+<span class="author">${d.author}</span>
+<span>${formatDate(d.date)}</span>
+<span class="doc-type ${t}" style="font-size:.75rem">${typeIcon(d.category)} ${d.catLabel}</span>
+</div>
+<div class="doc-viewer-section"><h4>Resumen</h4><p>${d.abstract}</p></div>
+<div class="doc-viewer-section"><h4>Contenido</h4><p>${d.content}</p></div>
+<div class="doc-viewer-section"><h4>Referencias</h4><ul>
+<li>Smith, J. et al. (2025) — Advances in ${d.tags[0]} — Journal of Aerospace Engineering</li>
+<li>Chen, L. & Patel, R. (2024) — Survey of ${d.tags[1]||d.tags[0]} — Nature Reviews</li>
+<li>ZICORE Technical Reports (2026) — Internal Documentation v5.0</li>
+</ul></div>
+<div class="doc-viewer-actions">
+<button class="btn btn-primary btn-sm" onclick="toast('Descarga iniciada','info')">⬇ Descargar PDF</button>
+<button class="btn btn-outline btn-sm" onclick="toast('Citation copiada al portapapeles','success')">📋 Citar</button>
+<button class="btn btn-outline btn-sm" onclick="toast('Enlace copiado','success')">🔗 Compartir</button>
+<button class="btn btn-outline btn-sm" onclick="toggleFav(${d.id});toast('${favorites.has(d.id)?'Añadido a':'Removido de'} favoritos','success')">❤️ Favorito</button>
+</div>
+</div>
+<div class="doc-viewer-sidebar">
+<div class="panel">
+<h4><span class="icon">📊</span> Estadísticas</h4>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.85rem">
+<div><div style="color:var(--cyan);font-size:1.2rem;font-weight:700">${d.views.toLocaleString()}</div><div style="color:var(--text2)">Vistas</div></div>
+<div><div style="color:var(--green);font-size:1.2rem;font-weight:700">${d.downloads.toLocaleString()}</div><div style="color:var(--text2)">Descargas</div></div>
+</div>
+</div>
+<div class="panel">
+<h4><span class="icon">🏷</span> Etiquetas</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap">${d.tags.map(t=>`<span class="doc-tag">${t}</span>`).join('')}</div>
+</div>
+<div class="panel">
+<h4><span class="icon">📋</span> Licencia</h4>
+<p style="font-size:.85rem;color:var(--text)">CC-BY 4.0 — Atribución requerida</p>
+</div>
+<div class="panel">
+<h4><span class="icon">🔄</span> Versiones</h4>
+${d.versions.map(v=>`<div class="version-item"><span class="ver">v${v.v}</span><span class="date">${formatDate(v.date)}</span><span class="note">${v.note}</span></div>`).join('')}
+</div>
+<div class="panel">
+<h4><span class="icon">📎</span> Documentos Relacionados</h4>
+${DOCS.filter(x=>x.id!==d.id && x.tags.some(t=>d.tags.includes(t))).slice(0,3).map(r=>`<div class="related-item" onclick="viewDoc(${r.id})"><span class="r-icon">${typeIcon(r.category)}</span><div><div class="r-title">${r.title}</div><div class="r-cat">${r.catLabel}</div></div></div>`).join('')}
+</div>
+</div>
+</div>`;
+  navTo('viewer');
+}
+
+function filterCategory(cat,btn){
+  currentFilter=cat;
+  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderDocs();
+}
+function sortDocs(val){currentSort=val;renderDocs()}
+function liveSearch(val){searchQuery=val;renderDocs()}
+function quickSearch(){
+  if(!currentUser){showLogin();return}
+  const q=document.getElementById('heroSearch').value;
+  document.getElementById('searchInput').value=q;
+  searchQuery=q;
+  showDashboard();
+  navTo('explorer');
+  renderDocs();
+}
+
+function toggleFav(id,btn){
+  if(favorites.has(id))favorites.delete(id);else favorites.add(id);
+  localStorage.setItem('zc_favs',JSON.stringify([...favorites]));
+  if(btn)btn.classList.toggle('faved');
+}
+
+function renderSidebarLists(){
+  const favs=[...favorites].map(id=>DOCS.find(d=>d.id===id)).filter(Boolean);
+  document.getElementById('favGrid').innerHTML=favs.length?favs.map(docCard).join(''):'<div class="empty" style="grid-column:1/-1"><div class="icon">❤️</div><h3>Sin favoritos</h3><p>Marcando documentos como favoritos los verás aquí</p></div>';
+  const recents=[...DOCS].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  document.getElementById('recentGrid').innerHTML=recents.map(docCard).join('');
+  const featured=DOCS.filter(d=>d.featured);
+  document.getElementById('featuredGrid').innerHTML=featured.slice(0,4).map(docCard).join('');
+  document.getElementById('featuredPageGrid').innerHTML=featured.map(docCard).join('');
+  const cats={doc:'Documentos Técnicos',research:'Investigación',patent:'Patentes',eng:'Ingeniería',sim:'Simulaciones',data:'Datos',white:'Whitepapers',thesis:'Tesis'};
+  document.getElementById('categoryContent').innerHTML=Object.entries(cats).map(([k,v])=>{
+    const items=DOCS.filter(d=>d.category===k);
+    return`<div style="margin-bottom:24px"><h3 style="color:#fff;margin-bottom:12px">${typeIcon(k)} ${v} <span style="color:var(--text2);font-size:.85rem">(${items.length})</span></h3><div class="doc-grid">${items.map(docCard).join('')}</div></div>`;
+  }).join('');
+  const authors=[...new Set(DOCS.map(d=>d.author))];
+  document.getElementById('authorContent').innerHTML=authors.map(a=>{
+    const items=DOCS.filter(d=>d.author===a);
+    return`<div style="margin-bottom:24px"><h3 style="color:#fff;margin-bottom:12px">👤 ${a} <span style="color:var(--text2);font-size:.85rem">(${items.length} documentos)</span></h3><div class="doc-grid">${items.map(docCard).join('')}</div></div>`;
+  }).join('');
+  document.getElementById('uploadedGrid').innerHTML=DOCS.slice(0,6).map(docCard).join('');
+  document.getElementById('activePapersGrid').innerHTML=DOCS.filter(d=>d.category==='research').map(docCard).join('');
+  document.getElementById('pubGrid').innerHTML=DOCS.filter(d=>d.category==='research'||d.category==='white').map(docCard).join('');
+  document.getElementById('patentGrid').innerHTML=DOCS.filter(d=>d.category==='patent').map(docCard).join('');
+  document.getElementById('cadGrid').innerHTML=DOCS.filter(d=>d.category==='eng').map(docCard).join('');
+  document.getElementById('specsGrid').innerHTML=DOCS.filter(d=>d.category==='doc'||d.category==='eng').map(docCard).join('');
+  document.getElementById('structGrid').innerHTML=DOCS.filter(d=>d.tags.includes('structural')||d.tags.includes('FEA')).map(docCard).join('');
+  document.getElementById('simGrid').innerHTML=DOCS.filter(d=>d.category==='sim').map(docCard).join('');
+}
+
+// Upload
+function handleFile(input){
+  if(input.files.length){
+    document.getElementById('uploadForm').style.display='block';
+    document.getElementById('uploadZone').innerHTML=`<div class="icon">✅</div><h3>${input.files[0].name}</h3><p>${(input.files[0].size/1024/1024).toFixed(1)} MB — Listo para subir</p>`;
+  }
+}
+const uz=document.getElementById('uploadZone');
+['dragover','dragenter'].forEach(e=>uz.addEventListener(e,ev=>{ev.preventDefault();uz.classList.add('drag')}));
+['dragleave','drop'].forEach(e=>uz.addEventListener(e,ev=>{ev.preventDefault();uz.classList.remove('drag')}));
+uz.addEventListener('drop',e=>{
+  if(e.dataTransfer.files.length){
+    document.getElementById('fileInput').files=e.dataTransfer.files;
+    handleFile(document.getElementById('fileInput'));
+  }
+});
+
+function submitUpload(){
+  const title=document.getElementById('upTitle').value;
+  if(!title){toast('Ingresa un título','info');return}
+  const cat=document.getElementById('upCategory').value;
+  const newDoc={
+    id:DOCS.length+1,title,
+    abstract:document.getElementById('upAbstract').value||'Sin resumen disponible.',
+    category:cat,catLabel:document.getElementById('upCategory').selectedOptions[0].text.replace(/^[^\s]+\s/,''),
+    author:document.getElementById('upAuthors').value||currentUser.name,
+    date:new Date().toISOString().split('T')[0],
+    tags:document.getElementById('upTags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    downloads:0,views:0,featured:false,versions:[{v:"1.0",date:new Date().toISOString().split('T')[0],note:"Versión inicial"}],
+    content:"Documento publicado recientemente. El contenido completo estará disponible después de la revisión editorial."
+  };
+  DOCS.unshift(newDoc);
+  document.getElementById('upTitle').value='';
+  document.getElementById('upAbstract').value='';
+  document.getElementById('upTags').value='';
+  document.getElementById('upAuthors').value='';
+  document.getElementById('uploadForm').style.display='none';
+  document.getElementById('uploadZone').innerHTML='<div class="icon">📁</div><h3>Arrastra tu archivo aquí</h3><p>PDF, DOCX, LaTeX, STL, STEP — Máximo 500 MB</p>';
+  toast('Documento publicado exitosamente','success');
+  renderDocs();
+  renderSidebarLists();
+  navTo('explorer');
+}
+function saveDraft(){toast('Borrador guardado','success')}
+
+function toast(msg,type='info'){
+  const t=document.getElementById('toast');
+  t.className='toast '+type;t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function scrollToStats(){document.getElementById('stats').scrollIntoView({behavior:'smooth'})}
+function scrollToFeatures(){document.getElementById('features').scrollIntoView({behavior:'smooth'})}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

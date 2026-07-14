@@ -715,6 +715,21 @@ async def serve_ecosystem():
     return FileResponse(str(FRONTEND_DIR / "ecosystem.html"))
 
 
+@app.get("/zicodex")
+async def serve_zicodex():
+    return FileResponse(str(FRONTEND_DIR / "zicodex.html"))
+
+
+@app.get("/marketplace")
+async def serve_marketplace():
+    return FileResponse(str(FRONTEND_DIR / "marketplace.html"))
+
+
+@app.get("/developer")
+async def serve_developer():
+    return FileResponse(str(FRONTEND_DIR / "developer.html"))
+
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(str(FRONTEND_DIR / "portal.html"))

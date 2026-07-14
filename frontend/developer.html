@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiCore Developer Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e17;--surface:#0d1220;--surface2:#111827;--border:#1a2332;--border2:#1e293b;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--yellow:#ffd740;--red:#ff5252;--orange:#ff9100;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--code-bg:#0c1322}
+@font-face{font-family:'Mono';src:local('SF Mono'),local('Fira Code'),local('Cascadia Code'),local('Consolas')}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;overflow-x:hidden;line-height:1.6}
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,14,23,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;height:60px}
+.nav-logo{font-size:1.1rem;font-weight:700;color:var(--cyan);text-decoration:none;display:flex;align-items:center;gap:.5rem}
+.nav-logo span{color:var(--purple)}
+.nav-links{display:flex;gap:1.5rem;margin-left:auto}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:.85rem;transition:color .2s}
+.nav-links a:hover{color:var(--cyan)}
+.nav-badge{background:var(--green);color:#000;font-size:.65rem;padding:2px 6px;border-radius:8px;font-weight:700;margin-left:4px}
+.hero{padding:8rem 2rem 4rem;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(0,229,255,0.06) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:var(--cyan);padding:.4rem 1rem;border-radius:20px;font-size:.75rem;margin-bottom:1.5rem}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.hero h1{font-size:3rem;font-weight:800;margin-bottom:.5rem;background:linear-gradient(135deg,#fff 0%,var(--cyan) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.15rem;color:var(--text2);margin-bottom:2rem;max-width:500px;margin-left:auto;margin-right:auto}
+.hero-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.hero-btn{padding:.7rem 1.5rem;border-radius:10px;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .3s;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:.5rem}
+.hero-btn.primary{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000;border:none}
+.hero-btn.primary:hover{box-shadow:0 0 30px rgba(0,229,255,0.3);transform:translateY(-2px)}
+.hero-btn.secondary{background:var(--surface);color:var(--text);border-color:var(--border)}
+.hero-btn.secondary:hover{border-color:var(--cyan);color:var(--cyan)}
+section{max-width:1100px;margin:0 auto;padding:4rem 2rem}
+.section-header{text-align:center;margin-bottom:3rem}
+.section-header h2{font-size:2rem;font-weight:700;margin-bottom:.5rem}
+.section-header p{color:var(--text2);max-width:500px;margin:0 auto}
+.gradient-text{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.endpoint-group{margin-bottom:2rem}
+.endpoint-group h3{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.endpoint-group h3 .icon{font-size:1.1rem}
+.endpoint{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:.75rem;overflow:hidden;transition:border-color .2s}
+.endpoint:hover{border-color:rgba(0,229,255,0.3)}
+.endpoint-header{display:flex;align-items:center;gap:1rem;padding:.85rem 1.2rem;cursor:pointer;user-select:none}
+.endpoint-header:hover{background:rgba(255,255,255,0.02)}
+.method{font-family:'Mono',monospace;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;min-width:50px;text-align:center}
+.method.get{background:rgba(0,255,136,0.15);color:var(--green)}
+.method.post{background:rgba(0,229,255,0.15);color:var(--cyan)}
+.method.put{background:rgba(255,209,64,0.15);color:var(--yellow)}
+.method.delete{background:rgba(255,82,82,0.15);color:var(--red)}
+.endpoint-path{font-family:'Mono',monospace;font-size:.85rem;color:var(--text)}
+.endpoint-desc{color:var(--text3);font-size:.8rem;margin-left:auto}
+.endpoint-body{padding:1rem 1.2rem;border-top:1px solid var(--border);display:none;background:var(--code-bg)}
+.endpoint.open .endpoint-body{display:block}
+.code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem;position:relative}
+.code-block-header{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2)}
+.code-block-lang{font-size:.7rem;color:var(--text3);font-family:'Mono',monospace}
+.code-block .copy-btn{background:none;border:1px solid var(--border);color:var(--text3);padding:3px 8px;border-radius:4px;font-size:.7rem;cursor:pointer;transition:all .2s}
+.code-block .copy-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.code-block .copy-btn.copied{border-color:var(--green);color:var(--green)}
+.code-block pre{padding:1rem;font-family:'Mono',monospace;font-size:.8rem;line-height:1.7;overflow-x:auto;color:var(--text2)}
+.code-block pre .kw{color:var(--purple)}
+.code-block pre .str{color:var(--green)}
+.code-block pre .num{color:var(--yellow)}
+.code-block pre .cm{color:var(--text3);font-style:italic}
+.code-block pre .fn{color:var(--cyan)}
+.code-block pre .op{color:var(--text3)}
+.code-block pre .var{color:var(--orange)}
+.tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.5rem;flex-wrap:wrap}
+.tab{padding:.4rem 1rem;border-radius:6px;font-size:.8rem;cursor:pointer;color:var(--text3);transition:all .2s;border:none;background:none;font-family:inherit}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--cyan);background:rgba(0,229,255,0.1)}
+.sdk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem}
+.sdk-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.8rem;transition:all .3s}
+.sdk-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+.sdk-card-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1rem}
+.sdk-card h3{font-size:1.1rem;font-weight:600;margin-bottom:.5rem}
+.sdk-card p{color:var(--text2);font-size:.85rem;margin-bottom:1rem}
+.sdk-install{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;font-family:'Mono',monospace;font-size:.8rem;color:var(--cyan);display:flex;align-items:center;justify-content:space-between}
+.sdk-install .copy-btn{background:none;border:1px solid var(--border);color:var(--text3);padding:2px 8px;border-radius:4px;font-size:.7rem;cursor:pointer;transition:all .2s}
+.sdk-install .copy-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.sdk-install .copy-btn.copied{border-color:var(--green);color:var(--green)}
+.sdk-features{margin-top:1rem;display:flex;flex-wrap:wrap;gap:.5rem}
+.sdk-tag{background:rgba(124,77,255,0.1);color:var(--purple);padding:2px 8px;border-radius:4px;font-size:.7rem}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+.status-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center;transition:border-color .3s}
+.status-card:hover{border-color:rgba(0,229,255,0.2)}
+.status-indicator{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:.5rem;animation:pulse 2s infinite}
+.status-indicator.up{background:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.4)}
+.status-indicator.warn{background:var(--yellow);box-shadow:0 0 8px rgba(255,209,64,0.4)}
+.status-card h4{font-size:.85rem;color:var(--text);margin-bottom:.3rem}
+.status-card .status-text{font-size:.8rem;display:flex;align-items:center;justify-content:center;gap:.3rem}
+.status-card .status-text.operational{color:var(--green)}
+.status-card .status-text.warn{color:var(--yellow)}
+.status-card .uptime{font-size:1.8rem;font-weight:700;margin:.8rem 0 .3rem;font-family:'Mono',monospace}
+.status-card .uptime-label{font-size:.75rem;color:var(--text3)}
+.uptime-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin:1rem 0}
+.uptime-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:3px;transition:width 1.5s ease}
+.timeline{position:relative;padding-left:2rem}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--border)}
+.timeline-item{position:relative;margin-bottom:1.5rem;padding-left:1rem}
+.timeline-item::before{content:'';position:absolute;left:-1.55rem;top:.4rem;width:10px;height:10px;border-radius:50%;border:2px solid var(--cyan);background:var(--bg)}
+.timeline-item.resolved::before{border-color:var(--green);background:var(--green)}
+.timeline-item h4{font-size:.85rem;font-weight:600;margin-bottom:.2rem}
+.timeline-item p{font-size:.8rem;color:var(--text3)}
+.timeline-item time{font-size:.7rem;color:var(--text3);font-family:'Mono',monospace}
+.quickstart-steps{counter-reset:step}
+.quickstart-step{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem;position:relative;padding-left:4.5rem;counter-increment:step}
+.quickstart-step::before{content:counter(step);position:absolute;left:1.5rem;top:1.5rem;width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000;font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+.quickstart-step h3{font-size:1rem;font-weight:600;margin-bottom:.5rem}
+.quickstart-step p{color:var(--text2);font-size:.85rem;margin-bottom:.75rem}
+.rate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.rate-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center;transition:all .3s;position:relative;overflow:hidden}
+.rate-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-2px)}
+.rate-card.featured{border-color:rgba(0,229,255,0.4);background:linear-gradient(135deg,rgba(0,229,255,0.05),rgba(124,77,255,0.05))}
+.rate-card.featured::before{content:'MOST POPULAR';position:absolute;top:12px;right:-30px;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000;font-size:.6rem;font-weight:700;padding:2px 30px;transform:rotate(45deg)}
+.rate-card h4{font-size:1rem;font-weight:600;margin-bottom:.3rem}
+.rate-card .rate-value{font-size:1.8rem;font-weight:700;margin:.5rem 0;font-family:'Mono',monospace}
+.rate-card .rate-unit{font-size:.75rem;color:var(--text3)}
+.rate-card .rate-price{font-size:.85rem;color:var(--text2);margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--border)}
+.webhook-event{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1rem}
+.webhook-event .event-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.webhook-event h4{font-size:.9rem;font-weight:600}
+.webhook-event p{font-size:.75rem;color:var(--text3)}
+.explorer{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.explorer-bar{background:rgba(0,0,0,0.3);padding:.8rem 1.2rem;display:flex;align-items:center;gap:1rem;border-bottom:1px solid var(--border)}
+.explorer-bar .dots{display:flex;gap:6px}
+.explorer-bar .dots span{width:10px;height:10px;border-radius:50%}
+.explorer-bar .dots span:nth-child(1){background:#ff5f57}
+.explorer-bar .dots span:nth-child(2){background:#ffbd2e}
+.explorer-bar .dots span:nth-child(3){background:#28c840}
+.explorer-bar .title{color:var(--text3);font-size:.75rem;font-family:'Mono',monospace;flex:1;text-align:center}
+.explorer-content{display:grid;grid-template-columns:1fr 1fr;min-height:300px}
+@media(max-width:768px){.explorer-content{grid-template-columns:1fr}}
+.explorer-request{border-right:1px solid var(--border);padding:1.2rem}
+.explorer-request h4,.explorer-response h4{font-size:.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:1rem}
+.explorer-response{padding:1.2rem;background:rgba(0,0,0,0.1)}
+.response-status{display:inline-flex;align-items:center;gap:.4rem;font-size:.75rem;font-family:'Mono',monospace;padding:3px 8px;border-radius:4px;margin-bottom:.75rem}
+.response-status.ok{background:rgba(0,255,136,0.1);color:var(--green)}
+.response-status.err{background:rgba(255,82,82,0.1);color:var(--red)}
+.form-row{margin-bottom:1rem}
+.form-row label{display:block;font-size:.75rem;color:var(--text3);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.5px}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .8rem;color:var(--text);font-family:'Mono',monospace;font-size:.8rem;outline:none;transition:border-color .2s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--cyan)}
+.form-row textarea{min-height:80px;resize:vertical}
+.btn-send{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000;border:none;padding:.6rem 1.5rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-send:hover{box-shadow:0 0 20px rgba(0,229,255,0.3);transform:translateY(-1px)}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;transition:all .3s}
+.feature-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-2px)}
+.feature-card .feat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:1rem}
+.feature-card h4{font-size:.95rem;font-weight:600;margin-bottom:.4rem}
+.feature-card p{font-size:.8rem;color:var(--text2)}
+footer{border-top:1px solid var(--border);padding:3rem 2rem;text-align:center;margin-top:2rem}
+footer p{color:var(--text3);font-size:.8rem}
+footer a{color:var(--cyan);text-decoration:none}
+.grid-bg{position:absolute;top:0;left:0;right:0;bottom:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .6s ease forwards}
+@media(max-width:768px){
+.hero h1{font-size:2rem}
+.nav-links{display:none}
+.explorer-content{grid-template-columns:1fr}
+.explorer-request{border-right:none;border-bottom:1px solid var(--border)}
+.endpoint-desc{display:none}
+.quickstart-step{padding-left:3.5rem}
+.quickstart-step::before{left:1rem}
+}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="app">
+<nav>
+<a href="/" class="nav-logo">⚡ <span>Zi</span>Core</a>
+<div class="nav-links">
+<a href="#api">API</a>
+<a href="#sdks">SDKs</a>
+<a href="#explorer">Explorer</a>
+<a href="#status">Status</a>
+<a href="#quickstart">Quick Start</a>
+<a href="#pricing">Pricing</a>
+<a href="/"><span class="nav-badge">LIVE</span></a>
+</div>
+</nav>
+
+<section class="hero">
+<div class="hero-badge"><span class="dot"></span> All Systems Operational</div>
+<h1>ZiCore Developer Center</h1>
+<p>Build on the most advanced aerospace and AI ecosystem. Access APIs, SDKs, and tools to integrate with ZiCore.</p>
+<div class="hero-buttons">
+<a href="#api" class="hero-btn primary">📖 API Docs</a>
+<a href="#sdks" class="hero-btn secondary">📦 SDKs</a>
+<a href="#status" class="hero-btn secondary">📊 Status</a>
+<a href="#community" class="hero-btn secondary">💬 Community</a>
+</div>
+</section>
+
+<section id="api">
+<div class="section-header">
+<h2>API <span class="gradient-text">Reference</span></h2>
+<p>RESTful endpoints with JSON payloads. Authenticate with Bearer tokens.</p>
+</div>
+
+<div class="code-block" style="margin-bottom:2rem">
+<div class="code-block-header"><span class="code-block-lang">Base URL</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>https://api.zicore.space/v1</pre>
+</div>
+
+<div class="endpoint-group">
+<h3><span class="icon">🔐</span> Authentication</h3>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/auth/login</span>
+<span class="endpoint-desc">Authenticate user and receive JWT</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"email"</span>: <span class="str">"user@zicore.space"</span>,
+  <span class="str">"password"</span>: <span class="str">"your_password"</span>
+}</pre>
+</div>
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"token"</span>: <span class="str">"eyJhbGciOiJIUzI1NiIs..."</span>,
+  <span class="str">"refresh"</span>: <span class="str">"dGhpcyBpcyBhIHJlZnJl..."</span>,
+  <span class="str">"user"</span>: {
+    <span class="str">"id"</span>: <span class="str">"usr_2x8kPmN"</span>,
+    <span class="str">"email"</span>: <span class="str">"user@zicore.space"</span>,
+    <span class="str">"tier"</span>: <span class="str">"trader"</span>
+  }
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/auth/register</span>
+<span class="endpoint-desc">Create a new developer account</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"email"</span>: <span class="str">"developer@company.com"</span>,
+  <span class="str">"password"</span>: <span class="str">"secure_password"</span>,
+  <span class="str">"name"</span>: <span class="str">"Jane Developer"</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/auth/refresh</span>
+<span class="endpoint-desc">Refresh an expired access token</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"refresh_token"</span>: <span class="str">"dGhpcyBpcyBhIHJlZnJl..."</span>
+}</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div class="endpoint-group">
+<h3><span class="icon">🤖</span> ZiCore AI</h3>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/ai/chat</span>
+<span class="endpoint-desc">Send message to ZIO AI copilot</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"message"</span>: <span class="str">"Calculate delta-v for Hohmann transfer to Mars"</span>,
+  <span class="str">"context"</span>: <span class="str">"mission_planning"</span>,
+  <span class="str">"model"</span>: <span class="str">"auto"</span>
+}</pre>
+</div>
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"reply"</span>: <span class="str">"For a Hohmann transfer from LEO to Mars orbit..."</span>,
+  <span class="str">"model_used"</span>: <span class="str">"nvidia/nemotron-3-super-120b"</span>,
+  <span class="str">"tokens"</span>: { <span class="str">"prompt"</span>: <span class="num">142</span>, <span class="str">"completion"</span>: <span class="num">893</span> },
+  <span class="str">"context"</span>: <span class="str">"mission_planning"</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/ai/completions</span>
+<span class="endpoint-desc">Raw text completion endpoint</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"prompt"</span>: <span class="str">"The orbital period of a satellite at 400km altitude is"</span>,
+  <span class="str">"max_tokens"</span>: <span class="num">256</span>,
+  <span class="str">"temperature"</span>: <span class="num">0.7</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/ai/models</span>
+<span class="endpoint-desc">List available AI models</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"models"</span>: [
+    { <span class="str">"id"</span>: <span class="str">"nemotron-3-super"</span>, <span class="str">"provider"</span>: <span class="str">"openrouter"</span>, <span class="str">"free"</span>: <span class="kw">true</span> },
+    { <span class="str">"id"</span>: <span class="str">"gemma3:1b"</span>, <span class="str">"provider"</span>: <span class="str">"ollama"</span>, <span class="str">"free"</span>: <span class="kw">true</span> }
+  ]
+}</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div class="endpoint-group">
+<h3><span class="icon">🏦</span> ZiCore Bank</h3>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/wallet/balance</span>
+<span class="endpoint-desc">Get wallet balance</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"balance"</span>: <span class="num">12543.87</span>,
+  <span class="str">"currency"</span>: <span class="str">"ZIC"</span>,
+  <span class="str">"usd_value"</span>: <span class="num">6271.43</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/wallet/transfer</span>
+<span class="endpoint-desc">Transfer between wallets</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"to"</span>: <span class="str">"usr_K8mP2nR"</span>,
+  <span class="str">"amount"</span>: <span class="num">500.00</span>,
+  <span class="str">"currency"</span>: <span class="str">"ZIC"</span>,
+  <span class="str">"memo"</span>: <span class="str">"API integration payment"</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/transactions</span>
+<span class="endpoint-desc">List transaction history</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Query Parameters</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="var">?page</span>=<span class="num">1</span>  <span class="var">&limit</span>=<span class="num">20</span>  <span class="var">&type</span>=<span class="str">all</span>  <span class="var">&from</span>=<span class="str">2026-01-01</span></pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/market/prices</span>
+<span class="endpoint-desc">Real-time market prices</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"ZIC"</span>: { <span class="str">"price"</span>: <span class="num">0.50</span>, <span class="str">"change_24h"</span>: <span class="num">+3.2</span> },
+  <span class="str">"ZIETH"</span>: { <span class="str">"price"</span>: <span class="num">2847.12</span>, <span class="str">"change_24h"</span>: <span class="num">-1.1</span> }
+}</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div class="endpoint-group">
+<h3><span class="icon">📚</span> ZiCodex Knowledge Base</h3>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/docs/search</span>
+<span class="endpoint-desc">Search knowledge base</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Query Parameters</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="var">?q</span>=<span class="str">orbital+mechanics</span>  <span class="var">&category</span>=<span class="str">engineering</span>  <span class="var">&limit</span>=<span class="num">10</span></pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/docs/:id</span>
+<span class="endpoint-desc">Get document by ID</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="fn">GET</span> /api/docs/doc_9xP2mK4
+<span class="cm">// Returns full document with metadata, content, tags</span></pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/docs/upload</span>
+<span class="endpoint-desc">Upload document to knowledge base</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="cm">Content-Type: multipart/form-data</span>
+
+<span class="var">file</span>: (binary)
+<span class="var">category</span>: <span class="str">"mission_reports"</span>
+<span class="var">tags</span>: [<span class="str">"mars"</span>, <span class="str">"trajectory"</span>, <span class="str">"2026"</span>]</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div class="endpoint-group">
+<h3><span class="icon">🛒</span> Marketplace</h3>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/marketplace/products</span>
+<span class="endpoint-desc">List marketplace products</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Query Parameters</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="var">?category</span>=<span class="str">3d_models</span>  <span class="var">&sort</span>=<span class="str">popular</span>  <span class="var">&page</span>=<span class="num">1</span></pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/marketplace/:id</span>
+<span class="endpoint-desc">Get product details</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"id"</span>: <span class="str">"prod_Lm8nP2"</span>,
+  <span class="str">"name"</span>: <span class="str">"Raptor Engine 3D Model"</span>,
+  <span class="str">"price"</span>: <span class="num">250.00</span>,
+  <span class="str">"formats"</span>: [<span class="str">"stl"</span>, <span class="str">"obj"</span>, <span class="str">"glb"</span>],
+  <span class="str">"rating"</span>: <span class="num">4.8</span>,
+  <span class="str">"downloads"</span>: <span class="num">1247</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/marketplace/purchase</span>
+<span class="endpoint-desc">Purchase a product</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"product_id"</span>: <span class="str">"prod_Lm8nP2"</span>,
+  <span class="str">"payment_method"</span>: <span class="str">"wallet"</span>
+}</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div class="endpoint-group">
+<h3><span class="icon">🧊</span> Materializer 3D Engine</h3>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method post">POST</span>
+<span class="endpoint-path">/api/3d/generate</span>
+<span class="endpoint-desc">Generate 3D model from parameters</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"type"</span>: <span class="str">"rocket"</span>,
+  <span class="str">"params"</span>: {
+    <span class="str">"height"</span>: <span class="num">10</span>,
+    <span class="str">"stages"</span>: <span class="num">2</span>,
+    <span class="str">"engine_count"</span>: <span class="num">9</span>,
+    <span class="str">"fairing_diameter"</span>: <span class="num">5.2</span>
+  },
+  <span class="str">"format"</span>: <span class="str">"glb"</span>
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/3d/templates</span>
+<span class="endpoint-desc">List available 3D templates</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"templates"</span>: [
+    <span class="str">"cube"</span>, <span class="str">"sphere"</span>, <span class="str">"cylinder"</span>, <span class="str">"cone"</span>,
+    <span class="str">"capsule"</span>, <span class="str">"rocket"</span>, <span class="str">"terrain"</span>, <span class="str">"gear"</span>,
+    <span class="str">"spacecraft_hull"</span>, <span class="str">"engine_nozzle"</span>,
+    <span class="str">"landing_legs"</span>, <span class="str">"solar_panels"</span>
+  ]
+}</pre>
+</div>
+</div>
+</div>
+<div class="endpoint" onclick="toggleEndpoint(this)">
+<div class="endpoint-header">
+<span class="method get">GET</span>
+<span class="endpoint-path">/api/3d/engines</span>
+<span class="endpoint-desc">List available generation engines</span>
+</div>
+<div class="endpoint-body">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"engines"</span>: [
+    { <span class="str">"id"</span>: <span class="str">"cadquery"</span>, <span class="str">"name"</span>: <span class="str">"CadQuery"</span>, <span class="str">"type"</span>: <span class="str">"parametric"</span> },
+    { <span class="str">"id"</span>: <span class="str">"openscad"</span>, <span class="str">"name"</span>: <span class="str">"OpenSCAD"</span>, <span class="str">"type"</span>: <span class="str">"csg"</span> },
+    { <span class="str">"id"</span>: <span class="str">"trimesh"</span>, <span class="str">"name"</span>: <span class="str">"Trimesh"</span>, <span class="str">"type"</span>: <span class="str">"mesh"</span> },
+    { <span class="str">"id"</span>: <span class="str">"picogk"</span>, <span class="str">"name"</span>: <span class="str">"PicoGK"</span>, <span class="str">"type"</span>: <span class="str">"voxel"</span> }
+  ]
+}</pre>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="sdks">
+<div class="section-header">
+<h2>Official <span class="gradient-text">SDKs</span></h2>
+<p>Start building in minutes with our official client libraries.</p>
+</div>
+<div class="sdk-grid">
+<div class="sdk-card">
+<div class="sdk-card-icon" style="background:rgba(0,229,255,0.1)">🐍</div>
+<h3>Python SDK</h3>
+<p>Full-featured Python client with async support, type hints, and automatic retries.</p>
+<div class="sdk-install">
+<span>pip install zicore-sdk</span>
+<button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+</div>
+<div class="sdk-features">
+<span class="sdk-tag">Async Support</span>
+<span class="sdk-tag">Type Hints</span>
+<span class="sdk-tag">Auto Retries</span>
+<span class="sdk-tag">Streaming</span>
+</div>
+<div class="code-block" style="margin-top:1rem">
+<div class="code-block-header"><span class="code-block-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="kw">from</span> zicore <span class="kw">import</span> ZiCore
+
+client = ZiCore(<span class="str">"your_api_key"</span>)
+
+<span class="cm"># Chat with ZIO AI</span>
+response = client.ai.<span class="fn">chat</span>(
+    message=<span class="str">"Calculate Hohmann transfer delta-v"</span>,
+    context=<span class="str">"mission_planning"</span>
+)
+<span class="fn">print</span>(response.reply)
+
+<span class="cm"># Generate 3D model</span>
+model = client.materializer.<span class="fn">generate</span>(
+    type=<span class="str">"rocket"</span>,
+    params={<span class="str">"height"</span>: <span class="num">10</span>, <span class="str">"stages"</span>: <span class="num">2</span>}
+)
+model.<span class="fn">save</span>(<span class="str">"my_rocket.glb"</span>)
+
+<span class="cm"># Check wallet balance</span>
+balance = client.wallet.<span class="fn">balance</span>()
+<span class="fn">print</span>(<span class="str">f"Balance: </span>{balance}<span class="str"> ZIC"</span>)</pre>
+</div>
+</div>
+<div class="sdk-card">
+<div class="sdk-card-icon" style="background:rgba(255,209,64,0.1)">📦</div>
+<h3>JavaScript SDK</h3>
+<p>TypeScript-first SDK for Node.js and browsers with full type definitions.</p>
+<div class="sdk-install">
+<span>npm install @zicore/sdk</span>
+<button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+</div>
+<div class="sdk-features">
+<span class="sdk-tag">TypeScript</span>
+<span class="sdk-tag">Tree-shakable</span>
+<span class="sdk-tag">Browser + Node</span>
+<span class="sdk-tag">WebSocket</span>
+</div>
+<div class="code-block" style="margin-top:1rem">
+<div class="code-block-header"><span class="code-block-lang">JavaScript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="kw">import</span> { ZiCore } <span class="kw">from</span> <span class="str">'@zicore/sdk'</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">ZiCore</span>(<span class="str">'your_api_key'</span>);
+
+<span class="cm">// Stream AI responses</span>
+<span class="kw">const</span> stream = <span class="kw">await</span> client.ai.<span class="fn">chatStream</span>({
+  message: <span class="str">'Analyze orbital insertion burn'</span>,
+  context: <span class="str">'flight_engineering'</span>
+});
+
+<span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> stream) {
+  process.stdout.<span class="fn">write</span>(chunk);
+}
+
+<span class="cm">// Search ZiCodex</span>
+<span class="kw">const</span> docs = <span class="kw">await</span> client.docs.<span class="fn">search</span>({
+  query: <span class="str">'propulsion systems'</span>,
+  category: <span class="str">'engineering'</span>
+});
+
+<span class="cm">// WebSocket for real-time telemetry</span>
+client.ws.<span class="fn">subscribe</span>(<span class="str">'telemetry'</span>, (data) => {
+  console.<span class="fn">log</span>(<span class="str">`Altitude: </span>${data.altitude}<span class="str">m`</span>);
+});</pre>
+</div>
+</div>
+<div class="sdk-card">
+<div class="sdk-card-icon" style="background:rgba(124,77,255,0.1)">🌐</div>
+<h3>REST API</h3>
+<p>Use any HTTP client. Works with curl, Postman, or any language.</p>
+<div class="sdk-install">
+<span>curl -H "Authorization: Bearer $TOKEN" api.zicore.space/v1/...</span>
+<button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+</div>
+<div class="sdk-features">
+<span class="sdk-tag">Universal</span>
+<span class="sdk-tag">No Dependencies</span>
+<span class="sdk-tag">OpenAPI Spec</span>
+<span class="sdk-tag">Webhooks</span>
+</div>
+<div class="code-block" style="margin-top:1rem">
+<div class="code-block-header"><span class="code-block-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="cm"># Login and get token</span>
+<span class="var">TOKEN</span>=$(<span class="fn">curl</span> -s -X POST https://api.zicore.space/v1/api/auth/login \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"email":"dev@co.com","password":"xxx"}'</span> | jq -r <span class="str">'.token'</span>)
+
+<span class="cm"># Chat with ZIO</span>
+<span class="fn">curl</span> -s https://api.zicore.space/v1/api/ai/chat \
+  -H <span class="str">"Authorization: Bearer $TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"message":"Hello ZIO","context":"general"}'</span>
+
+<span class="cm"># Generate 3D model</span>
+<span class="fn">curl</span> -s https://api.zicore.space/v1/api/3d/generate \
+  -H <span class="str">"Authorization: Bearer $TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"type":"rocket","params":{"height":10},"format":"glb"}'</span> \
+  -o rocket.glb</pre>
+</div>
+</div>
+</div>
+</section>
+
+<section id="explorer">
+<div class="section-header">
+<h2>API <span class="gradient-text">Explorer</span></h2>
+<p>Test API endpoints directly in the browser.</p>
+</div>
+<div class="explorer">
+<div class="explorer-bar">
+<div class="dots"><span></span><span></span><span></span></div>
+<div class="title">ZiCore API Explorer</div>
+</div>
+<div class="explorer-content">
+<div class="explorer-request">
+<h4>Request</h4>
+<div class="form-row">
+<label>Method</label>
+<select id="exp-method" onchange="updateExplorer()">
+<option value="GET">GET</option>
+<option value="POST" selected>POST</option>
+<option value="PUT">PUT</option>
+<option value="DELETE">DELETE</option>
+</select>
+</div>
+<div class="form-row">
+<label>Endpoint</label>
+<input type="text" id="exp-endpoint" value="/api/ai/chat" placeholder="/api/ai/chat">
+</div>
+<div class="form-row">
+<label>Headers</label>
+<textarea id="exp-headers" placeholder='{"Content-Type": "application/json"}'>{
+  "Content-Type": "application/json",
+  "Authorization": "Bearer eyJhbGci..."
+}</textarea>
+</div>
+<div class="form-row">
+<label>Body</label>
+<textarea id="exp-body" rows="6">{
+  "message": "Calculate delta-v for Earth to Mars transfer",
+  "context": "mission_planning"
+}</textarea>
+</div>
+<button class="btn-send" onclick="sendExplorerRequest()">Send Request</button>
+</div>
+<div class="explorer-response">
+<h4>Response</h4>
+<div id="exp-status" class="response-status ok">200 OK · 142ms</div>
+<div class="code-block" style="border:none;margin:0">
+<div class="code-block-header"><span class="code-block-lang">JSON</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre id="exp-response">{
+  <span class="str">"status"</span>: <span class="str">"success"</span>,
+  <span class="str">"data"</span>: {
+    <span class="str">"reply"</span>: <span class="str">"For a Hohmann transfer from LEO (400km) to Mars orbit:\n\n"</span>
+           + <span class="str">"• Departure Δv: 3.6 km/s\n"</span>
+           + <span class="str">"• Arrival Δv: 2.1 km/s\n"</span>
+           + <span class="str">"• Total Δv: 5.7 km/s\n"</span>
+           + <span class="str">"• Transfer time: 259 days\n"</span>
+           + <span class="str">"• C3 energy: 8.6 km²/s²"</span>,
+    <span class="str">"model_used"</span>: <span class="str">"nvidia/nemotron-3-super-120b"</span>,
+    <span class="str">"tokens"</span>: { <span class="str">"prompt"</span>: <span class="num">42</span>, <span class="str">"completion"</span>: <span class="num">156</span> },
+    <span class="str">"context"</span>: <span class="str">"mission_planning"</span>
+  }
+}</pre>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="status">
+<div class="section-header">
+<h2>System <span class="gradient-text">Status</span></h2>
+<p>Real-time status of all ZiCore services.</p>
+</div>
+<div class="status-grid">
+<div class="status-card">
+<h4>API Gateway</h4>
+<div class="status-text operational"><span class="status-indicator up"></span> Operational</div>
+<div class="uptime">99.99%</div>
+<div class="uptime-label">Uptime (30d)</div>
+<div class="uptime-bar"><div class="uptime-bar-fill" style="width:99.99%"></div></div>
+</div>
+<div class="status-card">
+<h4>AI Services</h4>
+<div class="status-text operational"><span class="status-indicator up"></span> Operational</div>
+<div class="uptime">99.97%</div>
+<div class="uptime-label">Uptime (30d)</div>
+<div class="uptime-bar"><div class="uptime-bar-fill" style="width:99.97%"></div></div>
+</div>
+<div class="status-card">
+<h4>Database</h4>
+<div class="status-text operational"><span class="status-indicator up"></span> Operational</div>
+<div class="uptime">100.00%</div>
+<div class="uptime-label">Uptime (30d)</div>
+<div class="uptime-bar"><div class="uptime-bar-fill" style="width:100%"></div></div>
+</div>
+<div class="status-card">
+<h4>CDN / Static</h4>
+<div class="status-text operational"><span class="status-indicator up"></span> Operational</div>
+<div class="uptime">99.98%</div>
+<div class="uptime-label">Uptime (30d)</div>
+<div class="uptime-bar"><div class="uptime-bar-fill" style="width:99.98%"></div></div>
+</div>
+<div class="status-card">
+<h4>3D Materializer</h4>
+<div class="status-text operational"><span class="status-indicator up"></span> Operational</div>
+<div class="uptime">99.95%</div>
+<div class="uptime-label">Uptime (30d)</div>
+<div class="uptime-bar"><div class="uptime-bar-fill" style="width:99.95%"></div></div>
+</div>
+<div class="status-card">
+<h4>Marketplace</h4>
+<div class="status-text operational"><span class="status-indicator up"></span> Operational</div>
+<div class="uptime">99.99%</div>
+<div class="uptime-label">Uptime (30d)</div>
+<div class="uptime-bar"><div class="uptime-bar-fill" style="width:99.99%"></div></div>
+</div>
+</div>
+
+<div class="timeline">
+<h3 style="margin-bottom:1.5rem;font-size:1rem">Incident History</h3>
+<div class="timeline-item resolved">
+<time>Jul 12, 2026 — 14:23 UTC</time>
+<h4>AI Model Rate Limiting</h4>
+<p>OpenRouter free tier rate limits temporarily reduced capacity. Switched to Ollama fallback. Resolved in 12 minutes.</p>
+</div>
+<div class="timeline-item resolved">
+<time>Jul 8, 2026 — 09:45 UTC</time>
+<h4>Scheduled Maintenance</h4>
+<p>Database migration for marketplace v2. API downtime: 8 minutes during off-peak hours.</p>
+</div>
+<div class="timeline-item resolved">
+<time>Jun 28, 2026 — 21:10 UTC</time>
+<h4>Cloudflare Tunnel Degradation</h4>
+<p>Intermittent 502 errors on zcs.zicore.space. Cloudflare resolved upstream issue. Duration: 23 minutes.</p>
+</div>
+</div>
+</section>
+
+<section id="quickstart">
+<div class="section-header">
+<h2>Quick <span class="gradient-text">Start</span></h2>
+<p>Go from zero to your first API call in under 5 minutes.</p>
+</div>
+<div class="quickstart-steps">
+<div class="quickstart-step">
+<h3>Install the SDK</h3>
+<p>Choose your preferred language and install the official SDK.</p>
+<div class="tabs">
+<button class="tab active" onclick="switchTab(this,'qs-python')">Python</button>
+<button class="tab" onclick="switchTab(this,'qs-js')">JavaScript</button>
+<button class="tab" onclick="switchTab(this,'qs-curl')">cURL</button>
+</div>
+<div id="qs-python">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>pip install zicore-sdk</pre>
+</div>
+</div>
+<div id="qs-js" style="display:none">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>npm install @zicore/sdk</pre>
+</div>
+</div>
+<div id="qs-curl" style="display:none">
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="cm"># cURL is pre-installed on most systems</span>
+<span class="cm"># No installation needed</span></pre>
+</div>
+</div>
+</div>
+<div class="quickstart-step">
+<h3>Get Your API Key</h3>
+<p>Register an account and generate an API key from the developer dashboard.</p>
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="kw">from</span> zicore <span class="kw">import</span> ZiCore
+
+<span class="cm"># Initialize with your API key</span>
+client = ZiCore(<span class="str">"zcs_live_your_api_key_here"</span>)</pre>
+</div>
+</div>
+<div class="quickstart-step">
+<h3>Make Your First Request</h3>
+<p>Send a message to ZIO AI and get an intelligent response.</p>
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="kw">from</span> zicore <span class="kw">import</span> ZiCore
+
+client = ZiCore(<span class="str">"zcs_live_your_api_key_here"</span>)
+
+<span class="cm"># Chat with ZIO</span>
+response = client.ai.<span class="fn">chat</span>(
+    message=<span class="str">"What is the escape velocity from Mars?"</span>,
+    context=<span class="str">"physics"</span>
+)
+
+<span class="fn">print</span>(response.reply)
+<span class="cm"># → "The escape velocity from Mars is approximately</span>
+<span class="cm">#    5.03 km/s (5,027 m/s). This is calculated using</span>
+<span class="cm">#    v = √(2GM/R) where G is the gravitational constant,</span>
+<span class="cm">#    M is Mars mass (6.417×10²³ kg), and R is Mars</span>
+<span class="cm">#    radius (3,389.5 km)."</span></pre>
+</div>
+</div>
+<div class="quickstart-step">
+<h3>Handle Authentication</h3>
+<p>API keys are passed via the Authorization header. Tokens expire after 24 hours — use refresh tokens for long sessions.</p>
+<div class="code-block">
+<div class="code-block-header"><span class="code-block-lang">python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="cm"># Automatic token refresh with the SDK</span>
+client = ZiCore(
+    api_key=<span class="str">"zcs_live_key"</span>,
+    auto_refresh=<span class="kw">True</span>  <span class="cm"># SDK handles refresh automatically</span>
+)
+
+<span class="cm"># Manual token management</span>
+tokens = client.auth.<span class="fn">login</span>(
+    email=<span class="str">"dev@company.com"</span>,
+    password=<span class="str">"secure_pass"</span>
+)
+<span class="cm"># tokens.token → access token (24h expiry)</span>
+<span class="cm"># tokens.refresh → refresh token (30d expiry)</span>
+
+<span class="cm"># Refresh when needed</span>
+new_tokens = client.auth.<span class="fn">refresh</span>(tokens.refresh)</pre>
+</div>
+</div>
+</div>
+</section>
+
+<section id="pricing">
+<div class="section-header">
+<h2>Rate <span class="gradient-text">Limits</span></h2>
+<p>Choose a plan that scales with your application.</p>
+</div>
+<div class="rate-grid">
+<div class="rate-card">
+<h4>Explorer</h4>
+<div class="rate-value" style="color:var(--text2)">100</div>
+<div class="rate-unit">requests / hour</div>
+<div class="rate-price">Free — No credit card required</div>
+</div>
+<div class="rate-card featured">
+<h4>Trader</h4>
+<div class="rate-value" style="color:var(--cyan)">1,000</div>
+<div class="rate-unit">requests / hour</div>
+<div class="rate-price">$29/mo — Priority support</div>
+</div>
+<div class="rate-card">
+<h4>Vault</h4>
+<div class="rate-value" style="color:var(--purple)">10,000</div>
+<div class="rate-unit">requests / hour</div>
+<div class="rate-price">$99/mo — Dedicated endpoints</div>
+</div>
+<div class="rate-card">
+<h4>Ultimate</h4>
+<div class="rate-value" style="color:var(--green)">∞</div>
+<div class="rate-unit">unlimited requests</div>
+<div class="rate-price">$299/mo — Custom SLA</div>
+</div>
+</div>
+</section>
+
+<section id="webhooks">
+<div class="section-header">
+<h2>Webhook <span class="gradient-text">Events</span></h2>
+<p>Get notified in real-time when events happen in your ZiCore apps.</p>
+</div>
+
+<div class="webhook-event">
+<div class="event-icon" style="background:rgba(0,255,136,0.1)">💰</div>
+<div>
+<h4>wallet.transaction.completed</h4>
+<p>Fired when a wallet transfer or payment completes successfully.</p>
+</div>
+</div>
+<div class="webhook-event">
+<div class="event-icon" style="background:rgba(0,229,255,0.1)">🤖</div>
+<div>
+<h4>ai.chat.completed</h4>
+<p>Fired when an AI chat request finishes processing and returns a response.</p>
+</div>
+</div>
+<div class="webhook-event">
+<div class="event-icon" style="background:rgba(124,77,255,0.1)">🧊</div>
+<div>
+<h4>materializer.generation.completed</h4>
+<p>Fired when a 3D model generation request finishes and the file is ready.</p>
+</div>
+</div>
+<div class="webhook-event">
+<div class="event-icon" style="background:rgba(255,209,64,0.1)">🛒</div>
+<div>
+<h4>marketplace.purchase.completed</h4>
+<p>Fired when a marketplace purchase is confirmed and product is delivered.</p>
+</div>
+</div>
+<div class="webhook-event">
+<div class="event-icon" style="background:rgba(255,82,82,0.1)">⚠️</div>
+<div>
+<h4>system.alert.triggered</h4>
+<p>Fired when a system alert or anomaly is detected on your account or services.</p>
+</div>
+</div>
+
+<div class="code-block" style="margin-top:2rem">
+<div class="code-block-header"><span class="code-block-lang">Webhook Payload Example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>{
+  <span class="str">"event"</span>: <span class="str">"wallet.transaction.completed"</span>,
+  <span class="str">"timestamp"</span>: <span class="str">"2026-07-14T12:00:00Z"</span>,
+  <span class="str">"data"</span>: {
+    <span class="str">"transaction_id"</span>: <span class="str">"txn_9xP2mK4"</span>,
+    <span class="str">"from"</span>: <span class="str">"usr_2x8kPmN"</span>,
+    <span class="str">"to"</span>: <span class="str">"usr_K8mP2nR"</span>,
+    <span class="str">"amount"</span>: <span class="num">500.00</span>,
+    <span class="str">"currency"</span>: <span class="str">"ZIC"</span>,
+    <span class="str">"status"</span>: <span class="str">"completed"</span>
+  },
+  <span class="str">"signature"</span>: <span class="str">"sha256=a1b2c3d4..."</span>
+}</pre>
+</div>
+
+<div class="code-block" style="margin-top:1rem">
+<div class="code-block-header"><span class="code-block-lang">Webhook Configuration</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><span class="cm"># Register a webhook endpoint</span>
+<span class="fn">curl</span> -X POST https://api.zicore.space/v1/api/webhooks \
+  -H <span class="str">"Authorization: Bearer $TOKEN"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "url": "https://your-app.com/webhooks/zicore",
+    "events": [
+      "wallet.transaction.completed",
+      "ai.chat.completed",
+      "marketplace.purchase.completed"
+    ],
+    "secret": "whsec_your_signing_secret"
+  }'</span></pre>
+</div>
+</section>
+
+<section id="community">
+<div class="section-header">
+<h2>Developer <span class="gradient-text">Features</span></h2>
+<p>Everything you need to build production-ready integrations.</p>
+</div>
+<div class="features-grid">
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(0,229,255,0.1)">🔐</div>
+<h4>API Key Management</h4>
+<p>Generate, rotate, and revoke API keys with fine-grained permission scopes.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(124,77,255,0.1)">📊</div>
+<h4>Usage Analytics</h4>
+<p>Monitor API usage, latency, error rates, and cost breakdowns in real-time.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(0,255,136,0.1)">🧪</div>
+<h4>Sandbox Environment</h4>
+<p>Test with simulated data and mock services before going to production.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(255,209,64,0.1)">⚡</div>
+<h4>WebSocket Streams</h4>
+<p>Real-time telemetry, AI streaming, and event subscriptions via WebSocket.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(255,82,82,0.1)">🔒</div>
+<h4>OAuth 2.0</h4>
+<p>Secure authentication with PKCE flow for third-party app integrations.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(255,145,0,0.1)">📖</div>
+<h4>OpenAPI Spec</h4>
+<p>Full OpenAPI 3.1 specification for automatic SDK generation and documentation.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(0,229,255,0.1)">🚀</div>
+<h4>CI/CD Integration</h4>
+<p>GitHub Actions, GitLab CI, and Jenkins templates for automated deployments.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(124,77,255,0.1)">💬</div>
+<h4>Developer Support</h4>
+<p>Priority support via Discord, email, and dedicated Slack channels.</p>
+</div>
+<div class="feature-card">
+<div class="feat-icon" style="background:rgba(0,255,136,0.1)">🔄</div>
+<h4>Versioned APIs</h4>
+<p>Stable versioning with 12-month deprecation cycles. Never break production.</p>
+</div>
+</div>
+</section>
+
+<footer>
+<p>Built by <a href="https://zicore.space">ZiCore</a> · <a href="#">Terms</a> · <a href="#">Privacy</a> · <a href="https://github.com/zicore">GitHub</a></p>
+<p style="margin-top:.5rem;color:var(--text3)">ZiCore Command System v5.0 — Aerospace Operating System</p>
+</footer>
+</div>
+
+<script>
+const canvas=document.getElementById('starfield'),ctx=canvas.getContext('2d');
+let stars=[],w,h;
+function resize(){w=canvas.width=innerWidth;h=canvas.height=innerHeight;initStars()}
+function initStars(){stars=[];for(let i=0;i<200;i++)stars.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.5+.3,a:Math.random(),da:Math.random()*.02-.01})}
+function drawStars(){ctx.clearRect(0,0,w,h);stars.forEach(s=>{s.a+=s.da;if(s.a>1||s.a<.1)s.da*=-1;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${s.a})`;ctx.fill()});requestAnimationFrame(drawStars)}
+resize();drawStars();addEventListener('resize',resize);
+
+function toggleEndpoint(el){el.classList.toggle('open')}
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');navigator.clipboard.writeText(pre.textContent).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}
+function copyInstall(btn){const span=btn.previousElementSibling;navigator.clipboard.writeText(span.textContent).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}
+function switchTab(btn,id){const section=btn.closest('.quickstart-step');section.querySelectorAll('.tab').forEach(t=>t.classList.remove('tab'));btn.classList.add('tab');const panels=id.split('-');const lang=panels[panels.length-1];section.querySelectorAll('[id^="qs-"]').forEach(p=>p.style.display='none');document.getElementById(id).style.display='block';section.querySelectorAll('.tab').forEach(t=>{if(t!==btn)t.classList.remove('active')});btn.classList.add('active')}
+function sendExplorerRequest(){const method=document.getElementById('exp-method').value;const endpoint=document.getElementById('exp-endpoint').value;const body=document.getElementById('exp-body').value;const statusEl=document.getElementById('exp-status');const responseEl=document.getElementById('exp-response');statusEl.className='response-status';statusEl.textContent='Sending...';setTimeout(()=>{statusEl.classList.add('ok');statusEl.textContent='200 OK · '+Math.floor(Math.random()*200+50)+'ms';const responses={'/api/ai/chat':{status:'success',data:{reply:'For a Hohmann transfer from LEO (400km) to Mars orbit:\n\n• Departure Δv: 3.6 km/s\n• Arrival Δv: 2.1 km/s\n• Total Δv: 5.7 km/s\n• Transfer time: 259 days\n• C3 energy: 8.6 km²/s²',model_used:'nvidia/nemotron-3-super-120b',tokens:{prompt:42,completion:156},context:'mission_planning'}},'/api/wallet/balance':{balance:12543.87,currency:'ZIC',usd_value:6271.43},'/api/3d/generate':{status:'generating',job_id:'job_Lm8nP2',estimated_time:'12s',format:'glb'},'/api/marketplace/products':{products:[{id:'prod_1',name:'Raptor Engine Model',price:250},{id:'prod_2',name:'Orbital Habitat Kit',price:1200}],total:47}};const data=responses[endpoint]||{message:'Endpoint response simulated',endpoint:endpoint,method:method};const formatted=JSON.stringify(data,null,2).replace(/"([^"]+)":/g,'<span class="str">"$1"</span>:').replace(/: "([^"]+)"/g,': <span class="str">"$1"</span>').replace(/: (\d+\.?\d*)/g,': <span class="num">$1</span>').replace(/: (true|false|null)/g,': <span class="kw">$1</span>');responseEl.innerHTML=formatted},500)}
+const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)';e.target.style.transition='all .6s ease'}})},{threshold:.1});
+document.querySelectorAll('.endpoint,.sdk-card,.status-card,.quickstart-step,.rate-card,.feature-card,.webhook-event').forEach(el=>{el.style.opacity='0';el.style.transform='translateY(20px)';observer.observe(el)});
+</script>
+</body>
+</html>
