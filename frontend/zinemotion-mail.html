@@ -232,7 +232,7 @@ footer p{font-size:11px;color:var(--text3);letter-spacing:1px}
     <a href="#plans">Planes</a>
     <a href="#access">Acceso</a>
   </div>
-  <div class="nav-right">
+  <div class="nav-right" id="navActions">
     <a href="#access" class="nav-btn outline">Iniciar Sesión</a>
     <a href="#access" class="nav-btn filled">Crear Cuenta</a>
   </div>
@@ -463,7 +463,8 @@ footer p{font-size:11px;color:var(--text3);letter-spacing:1px}
       <div class="folder" onclick="loadFolder('trash')"><span>🗑</span> Papelera <span class="count" id="trashCount">0</span></div>
       <div style="flex:1"></div>
       <div style="padding:12px 16px;border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)"></span> Conectado</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text2);margin-bottom:8px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)"></span> Conectado</div>
+        <button onclick="logout()" style="width:100%;padding:8px;background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.2);color:#ff4444;font-size:10px;font-family:var(--font);cursor:pointer;border-radius:4px;letter-spacing:1px;transition:all .2s;text-transform:uppercase">⏻ Cerrar sesión</button>
       </div>
     </div>
     <div class="wm-content">
@@ -554,12 +555,32 @@ function openWebmail(){
   document.getElementById('wmUserName').textContent=currentUser.username;
   document.getElementById('wmUserEmail').textContent=currentUser.email;
   document.getElementById('wmUserLabel').textContent=currentUser.email;
+  updateNavLogged();
   loadFolder('inbox');
 }
 
 function closeWebmail(){
   document.getElementById('webmailOverlay').classList.remove('active');
   currentUser=null;
+  updateNavLogged();
+}
+
+function logout(){
+  document.getElementById('webmailOverlay').classList.remove('active');
+  currentUser=null;
+  updateNavLogged();
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPass').value='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateNavLogged(){
+  const navActions=document.getElementById('navActions');
+  if(currentUser){
+    navActions.innerHTML='<span style="font-size:10px;color:var(--text2);margin-right:8px">'+currentUser.email+'</span><a href="#" class="nav-btn outline" onclick="logout();return false">⏻ Cerrar sesión</a>';
+  }else{
+    navActions.innerHTML='<a href="#access" class="nav-btn outline">Iniciar Sesión</a><a href="#access" class="nav-btn filled">Crear Cuenta</a>';
+  }
 }
 
 function showCompose(){
