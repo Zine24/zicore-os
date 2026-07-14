@@ -1,0 +1,12 @@
+{
+  "name": "zicore-emulatorjs",
+  "version": "1.0.0",
+  "description": "ZICORE Game Emulator - RetroArch web frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}

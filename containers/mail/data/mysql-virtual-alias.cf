@@ -1,0 +1,5 @@
+user = zicore_mail
+password = zicore_mail_pass_2026
+hosts = 172.20.0.2:3306
+dbname = zicore_mail
+query = SELECT destination FROM virtual_aliases WHERE source='%s' AND active=1

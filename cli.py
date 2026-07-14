@@ -63,7 +63,7 @@ Commands:
 
 
 class AgentCLI:
-    def __init__(self, api_url: str = "http://localhost:8080"):
+    def __init__(self, api_url: str = "http://localhost:4080"):
         self.api_url = api_url
         self.agent = ZICoreAgent()
         self.session_id = f"cli_{os.getpid()}"
@@ -299,7 +299,7 @@ class AgentCLI:
 
 def main():
     parser = argparse.ArgumentParser(description="ZICORE Agent CLI")
-    parser.add_argument("--url", default="http://localhost:8080", help="Backend URL")
+    parser.add_argument("--url", default="http://localhost:4080", help="Backend URL")
     parser.add_argument("--cmd", help="Run a single command and exit")
     args = parser.parse_args()
 

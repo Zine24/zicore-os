@@ -17,8 +17,8 @@ from pathlib import Path
 
 DOMAIN = "zicore.space"
 TUNNEL_NAME = "zicore"
-PORT_WEB = 3000
-PORT_API = 8080
+PORT_WEB = 4000
+PORT_API = 4080
 
 def run(cmd, check=True):
     print(f"  $ {' '.join(cmd)}")

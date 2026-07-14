@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE PAC-MAN</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'Courier New',monospace;color:#fff;overflow:hidden}
+canvas{border:2px solid #1a1a2e;image-rendering:pixelated}
+#hud{display:flex;gap:30px;margin-bottom:10px;font-size:14px;letter-spacing:2px}
+#hud .score{color:#ffeb3b}
+#hud .lives{color:#ff1744}
+#hud .level{color:#00e5ff}
+#startScreen{position:absolute;text-align:center;z-index:10}
+#startScreen h1{font-size:36px;color:#ffeb3b;text-shadow:0 0 20px #ffeb3b;margin-bottom:20px}
+#startScreen p{color:#aaa;font-size:12px;margin:5px 0}
+#startScreen .key{color:#00e5ff;font-weight:bold}
+#gameOver{position:absolute;text-align:center;z-index:10;display:none}
+#gameOver h1{font-size:36px;color:#ff1744;text-shadow:0 0 20px #ff1744;margin-bottom:10px}
+#gameOver .final{font-size:18px;color:#ffeb3b;margin:10px 0}
+#gameOver p{color:#aaa;font-size:12px}
+</style>
+</head>
+<body>
+<div id="startScreen">
+<h1>PAC-MAN</h1>
+<p>Use <span class="key">ARROW KEYS</span> or <span class="key">WASD</span> to move</p>
+<p>Eat all dots and avoid the ghosts</p>
+<p style="margin-top:20px;color:#ffeb3b">Press ENTER to start</p>
+</div>
+<div id="gameOver">
+<h1>GAME OVER</h1>
+<div class="final" id="finalScore">Score: 0</div>
+<p>Press ENTER to restart</p>
+</div>
+<div id="hud"><div class="score">SCORE: <span id="score">0</span></div><div class="lives">LIVES: <span id="lives">3</span></div><div class="level">LEVEL: <span id="level">1</span></div></div>
+<canvas id="game" width="420" height="468"></canvas>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const TILE=28,COLS=15,ROWS=16;
+let score=0,lives=3,level=1,gameState='start';
+let pacman,ghosts,dots,powerTimer=0;
+
+const MAP_TEMPLATE=[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+[1,0,1,1,0,1,0,1,0,1,0,1,1,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,1,0,1,1,0,1,0,1,1,0,1,0,1],
+[1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+[1,1,1,0,1,1,0,0,0,1,1,0,1,1,1],
+[0,0,1,0,0,0,0,0,0,0,0,0,1,0,0],
+[1,1,1,0,1,1,0,0,0,1,1,0,1,1,1],
+[1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+[1,0,1,0,1,1,0,1,0,1,1,0,1,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,1,1,0,1,0,1,0,1,0,1,1,0,1],
+[1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+function initGame(){
+let map=MAP_TEMPLATE.map(r=>[...r]);
+dots=[];
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+if(map[r][c]===0){dots.push({x:c,y:r,super:false})}
+}
+// Add some super dots
+if(dots.length>4){dots[2].super=true;dots[dots.length-3].super=true;}
+pacman={x:7,y:11,dir:{x:0,y:0},nextDir:{x:0,y:0},mouth:0,mouthDir:1};
+ghosts=[
+{x:7,y:3,color:'#ff0000',dir:{x:1,y:0},speed:1.5,name:'Blinky'},
+{x:6,y:3,color:'#ffb8ff',dir:{x:-1,y:0},speed:1.3,name:'Pinky'},
+{x:8,y:3,color:'#00ffff',dir:{x:1,y:0},speed:1.2,name:'Inky'},
+{x:7,y:4,color:'#ffb852',dir:{x:-1,y:0},speed:1.1,name:'Clyde'}
+];
+powerTimer=0;
+}
+
+function canMove(x,y){
+if(x<0||x>=COLS||y<0||y>=ROWS)return false;
+return MAP_TEMPLATE[y]&&MAP_TEMPLATE[y][x]!==1;
+}
+
+function drawMap(){
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+if(MAP_TEMPLATE[r][c]===1){
+ctx.fillStyle='#1a1a6e';
+ctx.fillRect(c*TILE,r*TILE,TILE,TILE);
+ctx.strokeStyle='#2a2a8e';
+ctx.strokeRect(c*TILE+1,r*TILE+1,TILE-2,TILE-2);
+}
+}
+}
+
+function drawDots(){
+dots.forEach(d=>{
+if(d.x===-1)return;
+if(d.super){
+ctx.fillStyle=powerTimer>0?'#fff':'#ffeb3b';
+ctx.beginPath();
+ctx.arc(d.x*TILE+TILE/2,d.y*TILE+TILE/2,6,0,Math.PI*2);
+ctx.fill();
+}else{
+ctx.fillStyle='#ffeb3b';
+ctx.fillRect(d.x*TILE+TILE/2-2,d.y*TILE+TILE/2-2,4,4);
+}
+});
+}
+
+function drawPacman(){
+let cx=pacman.x*TILE+TILE/2,cy=pacman.y*TILE+TILE/2;
+pacman.mouth+=pacman.mouthDir*0.15;
+if(pacman.mouth>0.8||pacman.mouth<0.05)pacman.mouthDir*=-1;
+let angle=Math.atan2(pacman.dir.y,pacman.dir.x);
+if(pacman.dir.x===0&&pacman.dir.y===0)angle=0;
+ctx.fillStyle='#ffeb3b';
+ctx.beginPath();
+ctx.moveTo(cx,cy);
+ctx.arc(cx,cy,TILE/2-2,angle+pacman.mouth,angle+Math.PI*2-pacman.mouth);
+ctx.closePath();
+ctx.fill();
+}
+
+function drawGhosts(){
+ghosts.forEach(g=>{
+let cx=g.x*TILE+TILE/2,cy=g.y*TILE+TILE/2;
+ctx.fillStyle=g.color;
+ctx.beginPath();
+ctx.arc(cx,cy-3,TILE/2-2,Math.PI,0);
+ctx.lineTo(cx+TILE/2-2,cy+TILE/2-2);
+ctx.lineTo(cx+TILE/2-6,cy+TILE/4);
+ctx.lineTo(cx+TILE/2-10,cy+TILE/2-2);
+ctx.lineTo(cx+TILE/2-14,cy+TILE/4);
+ctx.closePath();
+ctx.fill();
+// Eyes
+ctx.fillStyle='#fff';
+ctx.beginPath();ctx.arc(cx-4,cy-4,3,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc(cx+4,cy-4,3,0,Math.PI*2);ctx.fill();
+ctx.fillStyle=powerTimer>0?'#fff':'#22f';
+ctx.beginPath();ctx.arc(cx-4+g.dir.x*2,cy-4+g.dir.y*2,1.5,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc(cx+4+g.dir.x*2,cy-4+g.dir.y*2,1.5,0,Math.PI*2);ctx.fill();
+});
+}
+
+function movePacman(){
+let nx=pacman.x+pacman.nextDir.x,ny=pacman.y+pacman.nextDir.y;
+if(canMove(nx,ny)){pacman.dir=pacman.nextDir}
+nx=pacman.x+pacman.dir.x;ny=pacman.y+pacman.dir.y;
+if(canMove(nx,ny)){pacman.x=nx;pacman.y=ny}
+// Eat dots
+for(let i=dots.length-1;i>=0;i--){
+let d=dots[i];
+if(d.x===pacman.x&&d.y===pacman.y){
+if(d.super){score+=50;powerTimer=300;ghosts.forEach(g=>g.speed=0.7)}
+else{score+=10}
+dots.splice(i,1);
+}
+}
+}
+
+function moveGhosts(){
+if(powerTimer>0){powerTimer--;if(powerTimer<=0)ghosts.forEach((g,i)=>g.speed=[1.5,1.3,1.2,1.1][i])}
+ghosts.forEach(g=>{
+if(Math.random()<0.3){
+let dirs=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+let valid=dirs.filter(d=>canMove(g.x+d.x,g.y+d.y));
+if(valid.length>0){
+// Chase pac-man when not powered
+let best=valid[0];
+if(powerTimer<=0){
+let minD=999;
+valid.forEach(d=>{
+let dd=Math.abs(g.x+d.x-pacman.x)+Math.abs(g.y+d.y-pacman.y);
+if(dd<minD){minD=dd;best=d}
+});
+}else{
+// Run away
+let maxD=0;
+valid.forEach(d=>{
+let dd=Math.abs(g.x+d.x-pacman.x)+Math.abs(g.y+d.y-pacman.y);
+if(dd>maxD){maxD=dd;best=d}
+});
+}
+g.dir=best;
+}
+}
+let nx=g.x+g.dir.x,ny=g.y+g.dir.y;
+if(canMove(nx,ny)){g.x=nx;g.y=ny}
+});
+}
+
+function checkCollision(){
+for(let g of ghosts){
+if(g.x===pacman.x&&g.y===pacman.y){
+if(powerTimer>0){score+=200;g.x=7;g.y=3;g.dir={x:1,y:0}}
+else{lives--;if(lives<=0){gameState='gameOver';document.getElementById('finalScore').textContent='Score: '+score;document.getElementById('gameOver').style.display='block';return}
+pacman.x=7;pacman.y=11;pacman.dir={x:0,y:0};pacman.nextDir={x:0,y:0};
+}
+}
+}
+if(dots.length===0){
+level++;
+initGame();
+}
+}
+
+function gameLoop(){
+if(gameState!=='playing'){requestAnimationFrame(gameLoop);return}
+ctx.fillStyle='#000';
+ctx.fillRect(0,0,canvas.width,canvas.height);
+drawMap();drawDots();drawPacman();drawGhosts();
+movePacman();moveGhosts();checkCollision();
+document.getElementById('score').textContent=score;
+document.getElementById('lives').textContent=lives;
+document.getElementById('level').textContent=level;
+requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown',e=>{
+if(gameState==='start'&&e.key==='Enter'){
+gameState='playing';
+document.getElementById('startScreen').style.display='none';
+initGame();gameLoop();
+return;
+}
+if(gameState==='gameOver'&&e.key==='Enter'){
+gameState='playing';
+document.getElementById('gameOver').style.display='none';
+score=0;lives=3;level=1;
+initGame();
+return;
+}
+if(gameState!=='playing')return;
+switch(e.key){
+case'ArrowUp':case'w':case'W':pacman.nextDir={x:0,y:-1};e.preventDefault();break;
+case'ArrowDown':case's':case'S':pacman.nextDir={x:0,y:1};e.preventDefault();break;
+case'ArrowLeft':case'a':case'A':pacman.nextDir={x:-1,y:0};e.preventDefault();break;
+case'ArrowRight':case'd':case'D':pacman.nextDir={x:1,y:0};e.preventDefault();break;
+}
+});
+</script>
+</body>
+</html>

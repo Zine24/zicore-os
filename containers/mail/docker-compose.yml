@@ -1,0 +1,121 @@
+# ZICORE Mail Server - Main Docker Compose
+# Mail stack: Postfix + Dovecot + Rspamd + MariaDB
+# Domain: zinemotion.com.mx
+# Signed by ZineMotion
+version: "3.8"
+
+services:
+  # --- Database ---
+  mail-db:
+    image: mariadb:11
+    container_name: zicore-mail-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: zicore_mail
+      MYSQL_USER: zicore_mail
+      MYSQL_PASSWORD: ${DB_MAIL_PASSWORD}
+    volumes:
+      - mail-db:/var/lib/mysql
+    networks:
+      - mail-net
+
+  # --- Postfix (SMTP) ---
+  postfix:
+    build: ./postfix
+    container_name: zicore-postfix
+    restart: unless-stopped
+    hostname: mail.zinemotion.com.mx
+    env_file: .env
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+    volumes:
+      - mail-certs:/etc/ssl/mail
+      - mail-queue:/var/spool/postfix
+      - mail-data:/var/mail
+      - ./data/aliases:/etc/postfix/aliases
+    depends_on:
+      - mail-db
+      - rspamd
+    networks:
+      - mail-net
+
+  # --- Dovecot (IMAP/POP3) ---
+  dovecot:
+    build: ./dovecot
+    container_name: zicore-dovecot
+    restart: unless-stopped
+    hostname: mail.zinemotion.com.mx
+    env_file: .env
+    ports:
+      - "143:143"
+      - "993:993"
+      - "110:110"
+      - "995:995"
+    volumes:
+      - mail-certs:/etc/ssl/mail
+      - mail-data:/var/mail
+      - mail-sieve:/var/lib/dovecot/sieve
+      - dovecot-passdb:/etc/dovecot/passdb
+    depends_on:
+      - mail-db
+      - postfix
+    networks:
+      - mail-net
+
+  # --- Rspamd (Spam Filter) ---
+  rspamd:
+    image: rspamd/rspamd:latest
+    container_name: zicore-rspamd
+    restart: unless-stopped
+    ports:
+      - "11332:11332"
+      - "11334:11334"
+    volumes:
+      - rspamd-config:/etc/rspamd
+      - rspamd-logs:/var/log/rspamd
+    networks:
+      - mail-net
+
+  # --- Webmail (Roundcube) ---
+  webmail:
+    image: roundcube/roundcubemail:latest
+    container_name: zicore-webmail
+    restart: unless-stopped
+    ports:
+      - "9090:80"
+    environment:
+      ROUNDCUBEMAIL_DEFAULT_HOST: tls://dovecot
+      ROUNDCUBEMAIL_DEFAULT_PORT: 993
+      ROUNDCUBEMAIL_SMTP_SERVER: tls://postfix
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_DB_TYPE: mysql
+      ROUNDCUBEMAIL_DB_HOST: mail-db
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: zicore_mail
+      ROUNDCUBEMAIL_DB_PASSWORD: ${DB_MAIL_PASSWORD}
+    volumes:
+      - webmail-data:/var/roundcube/db
+    depends_on:
+      - dovecot
+      - postfix
+      - mail-db
+    networks:
+      - mail-net
+
+volumes:
+  mail-db:
+  mail-certs:
+  mail-queue:
+  mail-data:
+  mail-sieve:
+  dovecot-passdb:
+  rspamd-config:
+  rspamd-logs:
+  webmail-data:
+
+networks:
+  mail-net:
+    driver: bridge

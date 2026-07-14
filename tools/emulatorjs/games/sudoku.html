@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZICORE — Sudoku</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#0f6;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+h1{font-size:16px;letter-spacing:4px;text-shadow:0 0 10px #0f6;margin-bottom:10px}
+.info{display:flex;gap:20px;font-size:12px;margin-bottom:10px}
+.info span{color:#888}.info b{color:#0f6}
+.controls{display:flex;gap:10px;margin-bottom:15px}
+.controls button{background:#111;border:1px solid #333;color:#0f6;padding:6px 16px;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:2px;border-radius:3px}
+.controls button:hover{border-color:#0f6;background:#0f6;color:#000}
+#board{display:inline-grid;grid-template-columns:repeat(9,36px);gap:0;background:#333;padding:2px;border:2px solid #0f6;border-radius:4px}
+.cell{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;background:#1a1a2e;border:1px solid #333;user-select:none}
+.cell:nth-child(3n){border-right:2px solid #0f6}
+.cell:nth-child(9n){border-right:none}
+.cell:nth-child(n+19):nth-child(-n+27){border-bottom:2px solid #0f6}
+.cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #0f6}
+.cell.given{color:#888;font-weight:bold}
+.cell.selected{background:#0f620f6;border-color:#0f6}
+.cell.error{color:#f44}
+.cell:hover{background:#252540}
+.numpad{display:flex;gap:6px;margin-top:10px}
+.numpad button{width:36px;height:36px;background:#111;border:1px solid #333;color:#0f6;font-size:16px;cursor:pointer;border-radius:3px;font-family:inherit}
+.numpad button:hover{background:#0f6;color:#000}
+.win{color:#0f6;font-size:14px;letter-spacing:3px;text-shadow:0 0 10px #0f6;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>ZICORE SUDOKU</h1>
+<div class="info">
+  <span>DIFFICULTY: <b id="diff">EASY</b></span>
+  <span>ERRORS: <b id="errors">0</b>/3</span>
+</div>
+<div class="controls">
+  <button onclick="newSudoku('easy')">EASY</button>
+  <button onclick="newSudoku('medium')">MEDIUM</button>
+  <button onclick="newSudoku('hard')">HARD</button>
+  <button onclick="hint()">HINT</button>
+</div>
+<div id="board"></div>
+<div class="numpad">
+  <button onclick="inputNum(1)">1</button><button onclick="inputNum(2)">2</button><button onclick="inputNum(3)">3</button>
+  <button onclick="inputNum(4)">4</button><button onclick="inputNum(5)">5</button><button onclick="inputNum(6)">6</button>
+  <button onclick="inputNum(7)">7</button><button onclick="inputNum(8)">8</button><button onclick="inputNum(9)">9</button>
+  <button onclick="inputNum(0)" style="color:#f44">✕</button>
+</div>
+<div id="msg"></div>
+<script>
+var puzzle=[],solution=[],player=[],given=[],selected=null,errorCount=0,gameOver=false;
+
+function generateSudoku(){
+  var base=[[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]];
+  fillBoard(base);
+  return base;
+}
+
+function fillBoard(b){
+  for(var i=0;i<9;i++)for(var j=0;j<9;j++){
+    if(b[i][j]===0){
+      var nums=shuffle([1,2,3,4,5,6,7,8,9]);
+      for(var n of nums){
+        if(isValid(b,i,j,n)){b[i][j]=n;if(fillBoard(b))return true;b[i][j]=0;}
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
+function isValid(b,r,c,n){
+  for(var i=0;i<9;i++){if(b[r][i]===n)return false;if(b[i][c]===n)return false;}
+  var br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
+  for(var i=br;i<br+3;i++)for(var j=bc;j<bc+3;j++)if(b[i][j]===n)return false;
+  return true;
+}
+
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function newSudoku(diff){
+  gameOver=false;errorCount=0;selected=null;
+  document.getElementById('errors').textContent='0';
+  document.getElementById('msg').textContent='';
+  document.getElementById('diff').textContent=diff.toUpperCase();
+  solution=generateSudoku();
+  puzzle=solution.map(function(r){return r.slice();});
+  var remove=diff==='easy'?30:diff==='medium'?45:55;
+  var cells=[];
+  for(var i=0;i<9;i++)for(var j=0;j<9;j++)cells.push([i,j]);
+  shuffle(cells);
+  for(var k=0;k<remove&&k<cells.length;k++)puzzle[cells[k][0]][cells[k][1]]=0;
+  given=puzzle.map(function(r){return r.map(function(v){return v!==0;});});
+  player=puzzle.map(function(r){return r.slice();});
+  render();
+}
+
+function render(){
+  var el=document.getElementById('board');
+  el.innerHTML='';
+  for(var i=0;i<9;i++)for(var j=0;j<9;j++){
+    var cell=document.createElement('div');
+    cell.className='cell';
+    cell.dataset.r=i;cell.dataset.c=j;
+    if(given[i][j]){cell.classList.add('given');cell.textContent=puzzle[i][j];}
+    else if(player[i][j]!==0){
+      cell.textContent=player[i][j];
+      if(player[i][j]!==solution[i][j])cell.classList.add('error');
+    }
+    if(selected&&selected[0]===i&&selected[1]===j)cell.classList.add('selected');
+    cell.addEventListener('click',function(){
+      if(gameOver)return;
+      var r=+this.dataset.r,c=+this.dataset.c;
+      if(!given[r][c])selected=[r,c];
+      render();
+    });
+    el.appendChild(cell);
+  }
+}
+
+function inputNum(n){
+  if(gameOver||!selected)return;
+  var r=selected[0],c=selected[1];
+  player[r][c]=n;
+  if(n!==0&&n!==solution[r][c]){
+    errorCount++;
+    document.getElementById('errors').textContent=errorCount;
+    if(errorCount>=3){gameOver=true;document.getElementById('msg').innerHTML='<div style="color:#f44">GAME OVER — Too many errors</div>';}
+  }
+  if(checkWin()){gameOver=true;document.getElementById('msg').innerHTML='<div class="win">SOLVED!</div>';}
+  render();
+}
+
+function hint(){
+  if(gameOver||!selected)return;
+  var r=selected[0],c=selected[1];
+  if(!given[r][c]){player[r][c]=solution[r][c];render();}
+}
+
+function checkWin(){
+  for(var i=0;i<9;i++)for(var j=0;j<9;j++)if(player[i][j]!==solution[i][j])return false;
+  return true;
+}
+
+newSudoku('easy');
+</script>
+</body>
+</html>

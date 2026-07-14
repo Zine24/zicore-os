@@ -1,20 +1,156 @@
-version: '3.8'
+# ZICORE System - Master Docker Compose
+# All tools containerized for OS independence
+# Signed by ZineMotion
+version: "3.8"
 
 services:
-  zicore:
-    build: .
-    ports:
-      - "8080:8080"
-      - "3000:3000"
-    volumes:
-      - ./data:/app/data
-      - ./output:/app/output
-    environment:
-      - ZICORE_MODEL_PATH=/app/models
-      - PYTHONUNBUFFERED=1
+  # --- Mail Server ---
+  mail-db:
+    image: mariadb:11
+    container_name: zicore-mail-db
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-zicore_mail_root_2026}
+      MYSQL_DATABASE: zicore_mail
+      MYSQL_USER: zicore_mail
+      MYSQL_PASSWORD: ${DB_MAIL_PASSWORD:-zicore_mail_pass_2026}
+    volumes:
+      - mail-db:/var/lib/mysql
+    networks:
+      - zicore-net
+
+  postfix:
+    build: ./containers/mail/postfix
+    container_name: zicore-postfix
+    restart: unless-stopped
+    hostname: mail.zinemotion.com
+    env_file: ./containers/mail/.env
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+    volumes:
+      - mail-certs:/etc/ssl/mail
+      - mail-data:/var/mail
+    depends_on:
+      - mail-db
+    networks:
+      - zicore-net
+
+  dovecot:
+    build: ./containers/mail/dovecot
+    container_name: zicore-dovecot
+    restart: unless-stopped
+    hostname: mail.zinemotion.com
+    env_file: ./containers/mail/.env
+    ports:
+      - "143:143"
+      - "993:993"
+      - "110:110"
+      - "995:995"
+    volumes:
+      - mail-certs:/etc/ssl/mail
+      - mail-data:/var/mail
+    depends_on:
+      - mail-db
+      - postfix
+    networks:
+      - zicore-net
+
+  rspamd:
+    image: rspamd/rspamd:latest
+    container_name: zicore-rspamd
+    restart: unless-stopped
+    ports:
+      - "11332:11332"
+      - "11334:11334"
+    volumes:
+      - rspamd-config:/etc/rspamd
+    networks:
+      - zicore-net
+
+  webmail:
+    image: roundcube/roundcubemail:latest
+    container_name: zicore-webmail
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      ROUNDCUBEMAIL_DEFAULT_HOST: tls://dovecot
+      ROUNDCUBEMAIL_DEFAULT_PORT: 993
+      ROUNDCUBEMAIL_SMTP_SERVER: tls://postfix
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_DB_TYPE: mysql
+      ROUNDCUBEMAIL_DB_HOST: mail-db
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: zicore_mail
+      ROUNDCUBEMAIL_DB_PASSWORD: ${DB_MAIL_PASSWORD:-zicore_mail_pass_2026}
+    depends_on:
+      - dovecot
+      - postfix
+    networks:
+      - zicore-net
+
+  # --- EmulatorJS (Games) ---
+  emulatorjs:
+    build: ./containers/emulatorjs
+    container_name: zicore-emulatorjs
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    volumes:
+      - emulatorjs-roms:/app/roms
+    networks:
+      - zicore-net
+
+  # --- Webamp (Audio) ---
+  webamp:
+    build: ./containers/webamp
+    container_name: zicore-webamp
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+    volumes:
+      - webamp-music:/app/music
+    networks:
+      - zicore-net
+
+  # --- FileBrowser (File Manager) ---
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: zicore-filebrowser
+    restart: unless-stopped
+    ports:
+      - "4081:80"
+    volumes:
+      - /:/srv
+      - filebrowser-db:/database
+    command: --database /database/filebrowser.db --root /srv
+    networks:
+      - zicore-net
+
+  # --- Ollama (LLM) ---
+  ollama:
+    image: ollama/ollama:latest
+    container_name: zicore-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - zicore-net
+
+volumes:
+  mail-db:
+  mail-certs:
+  mail-data:
+  rspamd-config:
+  emulatorjs-roms:
+  webamp-music:
+  filebrowser-db:
+  ollama-data:
+
+networks:
+  zicore-net:
+    driver: bridge

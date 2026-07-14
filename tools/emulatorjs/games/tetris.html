@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZICORE Tetris</title>
+<style>
+body{background:#0a0a1a;color:#0f6;font-family:monospace;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center}
+canvas{border:2px solid #0f6;background:#000}
+h1{text-shadow:0 0 10px #0f6}
+.info{color:#888;font-size:12px;margin:10px}
+</style>
+</head>
+<body>
+<h1>Tetris</h1>
+<div class="info">Arrow Keys: Move/Rotate | Space: Hard Drop | P: Pause</div>
+<canvas id="c" width="250" height="500"></canvas>
+<div class="info">Score: <span id="score">0</span> | Lines: <span id="lines">0</span> | Level: <span id="level">1</span></div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const COLS=10,ROWS=20,S=25;
+const COLORS=['#0ff','#0f0','#f00','#ff0','#f0f','#00f','#f80'];
+const SHAPES=[
+  [[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],
+  [[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]]
+];
+let board,piece,pieceX,pieceY,score,lines,level,timer,running,speed;
+
+function init(){
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  score=0;lines=0;level=1;speed=500;running=true;
+  spawnPiece();
+  if(timer)clearInterval(timer);
+  timer=setInterval(tick,speed);
+  updateUI();
+}
+
+function spawnPiece(){
+  const i=Math.floor(Math.random()*SHAPES.length);
+  piece=SHAPES[i].map(r=>[...r]);
+  pieceX=Math.floor((COLS-piece[0].length)/2);
+  pieceY=0;
+  if(collides(piece,pieceX,pieceY)){
+    running=false;clearInterval(timer);
+    ctx.fillStyle='#f00';ctx.font='24px monospace';ctx.fillText('GAME OVER',30,250);
+  }
+}
+
+function collides(p,px,py){
+  for(let r=0;r<p.length;r++)
+    for(let col=0;col<p[r].length;col++)
+      if(p[r][col]){
+        const nx=px+col,ny=py+r;
+        if(nx<0||nx>=COLS||ny>=ROWS)return true;
+        if(ny>=0&&board[ny][nx])return true;
+      }
+  return false;
+}
+
+function merge(){
+  for(let r=0;r<piece.length;r++)
+    for(let col=0;col<piece[r].length;col++)
+      if(piece[r][col]){
+        const ny=pieceY+r;
+        if(ny>=0)board[ny][pieceX+col]=COLORS[SHAPES.indexOf(SHAPES.find(s=>s.length===piece.length&&s[0].length===piece[0].length))%COLORS.length];
+      }
+}
+
+function clearLines(){
+  let cleared=0;
+  for(let r=ROWS-1;r>=0;r--){
+    if(board[r].every(c=>c!==0)){
+      board.splice(r,1);board.unshift(Array(COLS).fill(0));cleared++;r++;
+    }
+  }
+  if(cleared){
+    lines+=cleared;
+    score+=[0,100,300,500,800][cleared]*level;
+    level=Math.floor(lines/10)+1;
+    speed=Math.max(100,500-level*40);
+    clearInterval(timer);timer=setInterval(tick,speed);
+    updateUI();
+  }
+}
+
+function rotate(p){
+  const rows=p.length,cols=p[0].length;
+  const rot=Array.from({length:cols},()=>Array(rows).fill(0));
+  for(let r=0;r<rows;r++)
+    for(let c=0;c<cols;c++)
+      rot[c][rows-1-r]=p[r][c];
+  return rot;
+}
+
+function tick(){
+  if(!running)return;
+  if(!collides(piece,pieceX,pieceY+1)){pieceY++;}
+  else{merge();clearLines();spawnPiece();}
+  draw();
+}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,250,500);
+  for(let r=0;r<ROWS;r++)
+    for(let c=0;c<COLS;c++)
+      if(board[r][c]){ctx.fillStyle=board[r][c];ctx.fillRect(c*S,r*S,S-1,S-1);}
+  ctx.fillStyle='#0f6';
+  for(let r=0;r<piece.length;r++)
+    for(let col=0;col<piece[r].length;col++)
+      if(piece[r][col])ctx.fillRect((pieceX+col)*S,(pieceY+r)*S,S-1,S-1);
+}
+
+function updateUI(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('lines').textContent=lines;
+  document.getElementById('level').textContent=level;
+}
+
+document.onkeydown=e=>{
+  if(e.key=='p'){running=!running;return;}
+  if(!running)return;
+  const k=e.key;
+  if(k=='ArrowLeft'&&!collides(piece,pieceX-1,pieceY))pieceX--;
+  if(k=='ArrowRight'&&!collides(piece,pieceX+1,pieceY))pieceX++;
+  if(k=='ArrowDown'&&!collides(piece,pieceX,pieceY+1)){pieceY++;score+=1;updateUI();}
+  if(k=='ArrowUp'){const r=rotate(piece);if(!collides(r,pieceX,pieceY))piece=r;}
+  if(k==' '){while(!collides(piece,pieceX,pieceY+1)){pieceY++;score+=2;}merge();clearLines();spawnPiece();updateUI();}
+  draw();
+};
+init();draw();
+</script>
+</body>
+</html>

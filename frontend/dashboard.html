@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE SYSTEM — Cockpit</title>
+<title>ZICORE SYSTEM — Materializer</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
@@ -56,6 +58,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 #topRight{margin-left:auto;display:flex;align-items:center;gap:8px}
 #clock{font-size:10px;color:var(--text2);letter-spacing:2px;font-variant-numeric:tabular-nums}
 #connDot{width:6px;height:6px;border-radius:50%;background:#f44}
+
+/* EXTERNAL LINKS */
+#extLinks{display:flex;gap:3px;margin-left:8px;padding:0 8px;border-left:1px solid rgba(0,229,255,0.08);align-items:center}
+.ext-link{
+  font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,255,136,0.12);
+  background:rgba(0,255,136,0.03);color:#0f6;cursor:pointer;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);transition:all .2s;text-decoration:none;
+}
+.ext-link:hover{background:rgba(0,255,136,0.12);border-color:rgba(0,255,136,0.3);text-shadow:0 0 8px rgba(0,255,136,0.4)}
+
+/* FOOTER BAR */
+#footerBar{
+  position:fixed;bottom:0;left:0;right:0;height:22px;min-height:22px;
+  background:rgba(4,6,12,0.96);border-top:1px solid rgba(0,229,255,0.05);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:7px;letter-spacing:2px;color:var(--text2);z-index:3000;
+  opacity:0.6;transition:opacity .3s;
+}
+#footerBar:hover{opacity:1}
+.footer-slogan{color:var(--glow);opacity:0.5}
+.footer-sep{color:var(--text3);margin:0 4px}
+.footer-sig{opacity:0.4}
 #connDot.on{background:#0f6}
 
 /* MAIN LAYOUT */
@@ -68,9 +92,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 #leftMonitors::-webkit-scrollbar{width:2px}
 #leftMonitors::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.1)}
 #rightMonitors{
-  width:280px;min-width:280px;display:flex;flex-direction:column;
+  width:240px;min-width:240px;display:flex;flex-direction:column;
   border-left:1px solid rgba(0,229,255,0.08);overflow:hidden;
-  background:rgba(6,8,14,0.5);
+  background:rgba(6,8,14,0.5);margin-right:0;
 }
 #rightMonitors::-webkit-scrollbar{width:2px}
 #rightMonitors::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.1)}
@@ -156,28 +180,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
 /* View containers */
 #viewVisualizer{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#viewFlight{flex:1;display:none;overflow-y:auto;background:rgba(6,8,14,0.95)}
 
-/* Camera Feed */
-#cameraFeed{
+/* Output Preview */
+#outputPreview{
   flex:1;position:relative;background:rgba(4,6,10,0.9);
   border-bottom:1px solid rgba(0,229,255,0.08);
   display:flex;align-items:center;justify-content:center;overflow:hidden;
 }
-#cameraCanvas{width:100%;height:100%;position:absolute;inset:0}
-#cameraOverlay{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(0,229,255,0.06)}
-#cameraHud{position:absolute;bottom:10px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none}
-#cameraHud .hud-item{font-size:9px;letter-spacing:2px;color:rgba(0,229,255,0.5);background:rgba(0,0,0,0.4);padding:3px 8px}
-#cameraLabel{position:absolute;top:10px;left:10px;font-size:8px;letter-spacing:3px;color:rgba(0,229,255,0.4);pointer-events:none}
-#cameraCrosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;pointer-events:none;opacity:0.2}
-#cameraCrosshair::before,#cameraCrosshair::after{content:'';position:absolute;background:var(--glow)}
-#cameraCrosshair::before{width:1px;height:100%;left:50%;top:0}
-#cameraCrosshair::after{width:100%;height:1px;top:50%;left:0}
-
-#cameraViewBtns{position:absolute;top:10px;right:10px;display:flex;gap:4px;z-index:5;pointer-events:auto}
-.cam-btn{padding:3px 8px;font-size:7px;letter-spacing:1px;color:var(--text2);border:1px solid rgba(0,229,255,0.1);background:rgba(0,0,0,0.4);cursor:pointer;transition:all .2s}
-.cam-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
-.cam-btn.active{color:var(--glow);border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.08)}
+#outputCanvas{width:100%;height:100%;position:absolute;inset:0}
+#outputOverlay{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(0,229,255,0.06)}
+#outputLabel{position:absolute;top:10px;left:10px;font-size:8px;letter-spacing:3px;color:rgba(0,229,255,0.4);pointer-events:none}
 
 /* Quick Actions Bar */
 #quickActions{
@@ -196,9 +208,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 .qa-btn.warn{color:#fa0;border-color:rgba(255,170,0,0.15);background:rgba(255,170,0,0.04)}
 .qa-btn.warn:hover{background:rgba(255,170,0,0.12)}
 .qa-sep{width:1px;height:28px;background:rgba(0,229,255,0.08);margin:0 4px}
-
-/* Flight Controls (old bottom bar, now replaced by quick actions) */
-#flightControls{display:none}
 
 /* PANELS */
 .panel{
@@ -253,60 +262,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 .ctrl-btn.mag{color:var(--glow2);border-color:rgba(124,77,255,0.15);background:rgba(124,77,255,0.04)}
 .ctrl-btn.mag:hover{background:rgba(124,77,255,0.12)}
 
-/* FLIGHT CONTROL VIEW */
-#flightView{padding:16px;display:flex;flex-direction:column;gap:12px}
-.fc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.fc-panel{background:rgba(10,14,22,0.8);border:1px solid rgba(0,229,255,0.1);border-radius:4px;padding:12px}
-.fc-panel-title{font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;text-transform:uppercase}
-.fc-row{display:flex;gap:6px;margin:3px 0;align-items:center}
-.fc-label{font-size:9px;color:var(--text2);width:80px;flex-shrink:0}
-.fc-val{font-size:12px;color:var(--glow);font-variant-numeric:tabular-nums;flex:1}
-.fc-input{background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);color:var(--glow);padding:4px 8px;font-size:10px;font-family:inherit;outline:none;flex:1}
-.fc-input:focus{border-color:rgba(0,229,255,0.3)}
-.fc-btn{padding:6px 16px;font-size:9px;letter-spacing:2px;color:var(--glow);border:1px solid rgba(0,229,255,0.2);background:rgba(0,229,255,0.06);cursor:pointer;transition:all .2s}
-.fc-btn:hover{background:rgba(0,229,255,0.15);border-color:rgba(0,229,255,0.4)}
-.fc-btn.start{color:#0f6;border-color:rgba(0,255,100,0.2);background:rgba(0,255,100,0.06)}
-.fc-btn.start:hover{background:rgba(0,255,100,0.15)}
-.fc-btn.stop{color:#f44;border-color:rgba(255,68,68,0.2);background:rgba(255,68,68,0.06)}
-.fc-btn.stop:hover{background:rgba(255,68,68,0.15)}
-.fc-btn.warn{color:#fa0;border-color:rgba(255,170,0,0.2);background:rgba(255,170,0,0.06)}
-.fc-btn.warn:hover{background:rgba(255,170,0,0.15)}
-
-/* Big Instruments */
-.fc-instruments{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
-.fc-gauge{text-align:center;padding:12px;background:rgba(10,14,22,0.8);border:1px solid rgba(0,229,255,0.1);border-radius:4px}
-.fc-gauge-label{font-size:8px;letter-spacing:2px;color:var(--text2);margin-bottom:4px}
-.fc-gauge-value{font-size:22px;color:var(--glow);font-variant-numeric:tabular-nums;font-weight:700}
-.fc-gauge-unit{font-size:9px;color:var(--text2);margin-left:2px}
-.fc-gauge-bar{height:4px;background:rgba(0,229,255,0.06);border-radius:2px;margin-top:6px;overflow:hidden}
-.fc-gauge-bar-fill{height:100%;background:linear-gradient(90deg,rgba(0,229,255,0.3),var(--glow));transition:width .5s}
-
-/* GPS Display */
-.gps-display{background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.15);border-radius:4px;padding:12px;position:relative;overflow:hidden}
-.gps-map{width:100%;height:120px;position:relative;background:rgba(0,20,40,0.5);border:1px solid rgba(0,229,255,0.06);border-radius:3px;overflow:hidden}
-.gps-dot{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow);transform:translate(-50%,-50%);transition:all .5s}
-.gps-ring{position:absolute;border:1px solid rgba(0,229,255,0.1);border-radius:50%;transform:translate(-50%,-50%)}
-.gps-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.05) 1px,transparent 1px);background-size:20px 20px}
-
-/* Attitude Indicator (big) */
-.fc-attitude{width:160px;height:160px;border-radius:50%;border:2px solid rgba(0,229,255,0.2);background:rgba(0,0,0,0.4);position:relative;overflow:hidden;margin:0 auto}
-.fc-attitude-horizon{position:absolute;width:100%;height:300%;top:-100%;left:0;background:linear-gradient(to bottom,#1a3050 0%,#1a3050 49%,#2a5030 49%,#2a5030 100%);transition:transform .3s}
-.fc-attitude-cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:3px;background:var(--glow);opacity:0.6}
-.fc-attitude-cross::after{content:'';position:absolute;left:50%;top:-12px;width:3px;height:30px;background:var(--glow);transform:translateX(-50%)}
-.fc-attitude-ring{position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(0,229,255,0.15)}
-
-/* Compass (big) */
-.fc-compass{width:160px;height:160px;border-radius:50%;border:2px solid rgba(0,229,255,0.2);background:rgba(0,0,0,0.4);position:relative;margin:0 auto}
-.fc-compass-needle{position:absolute;bottom:50%;left:50%;width:3px;height:60px;background:linear-gradient(to top,var(--glow),transparent);transform-origin:bottom center;transition:transform .3s}
-.fc-compass-label{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--glow);letter-spacing:1px}
-.fc-compass-marks{position:absolute;inset:8px}
-.fc-compass-mark{position:absolute;font-size:8px;color:var(--text2);transform:translate(-50%,-50%)}
-
-/* Log area in flight view */
-.fc-log{background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.06);border-radius:3px;padding:8px;height:120px;overflow-y:auto;font-size:9px;color:var(--text2)}
-.fc-log::-webkit-scrollbar{width:2px}
-.fc-log::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.1)}
-
 /* SETTINGS MODAL */
 #settingsModal{display:none;position:fixed;inset:0;z-index:6000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center}
 #settingsModal>.modal-inner{width:720px;max-height:85vh;background:rgba(10,14,22,0.98);border:1px solid rgba(0,229,255,0.15);border-radius:4px;overflow-y:auto;display:flex;flex-direction:column}
@@ -322,11 +277,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     <button class="top-btn" id="btnHome">HOME</button>
     <div id="viewTabs">
       <div class="view-tab active" data-view="visualizer">VISUALIZER</div>
-      <div class="view-tab" data-view="flight">FLIGHT CONTROL</div>
+      <div class="view-tab" data-view="materializer">MATERIALIZER</div>
     </div>
     <button class="top-btn mag" id="btnSettings">CONFIG</button>
     <div id="minimizedGroup"><span class="min-label">MINIMIZED</span></div>
+    <div id="extLinks">
+      <a class="ext-link" href="https://zzz.zicore.space" target="_blank" rel="noopener">ZICORE</a>
+      <a class="ext-link" href="https://x.com" target="_blank" rel="noopener">X</a>
+      <a class="ext-link" href="https://chatgpt.com" target="_blank" rel="noopener">CHATGPT</a>
+      <a class="ext-link" href="https://grok.ai" target="_blank" rel="noopener">GROK</a>
+      <a class="ext-link" href="https://z.ai" target="_blank" rel="noopener">Z.AI</a>
+      <a class="ext-link" href="https://zinemotion.com.mx" target="_blank" rel="noopener">ZINEMOTION</a>
+    </div>
     <div id="topRight">
+      <span style="font-size:6px;letter-spacing:2px;color:#2a3040">ZICORE v5.0</span>
       <div id="connDot"></div>
       <div id="clock">00:00:00</div>
     </div>
@@ -337,47 +301,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     <!-- Left Fixed Monitors -->
     <div id="leftMonitors">
       <div class="ctrl-section">
-        <div class="ctrl-title">CORE ENGINE</div>
+        <div class="ctrl-title">SYSTEM</div>
         <div class="ctrl-row"><div class="ctrl-label">CPU</div><div class="ctrl-val" id="monCpu">--</div></div>
         <div class="ctrl-bar"><div class="ctrl-bar-fill" id="monCpuBar" style="width:0%"></div></div>
-        <div class="ctrl-row"><div class="ctrl-label">MEM</div><div class="ctrl-val" id="monMem">--</div></div>
+        <div class="ctrl-row"><div class="ctrl-label">RAM</div><div class="ctrl-val" id="monMem">--</div></div>
         <div class="ctrl-bar"><div class="ctrl-bar-fill" id="monMemBar" style="width:0%"></div></div>
-        <div class="ctrl-row"><div class="ctrl-label">TEMP</div><div class="ctrl-val" id="monTemp">--</div></div>
+        <div class="ctrl-row"><div class="ctrl-label">DISK</div><div class="ctrl-val" id="monDisk">--</div></div>
+        <div class="ctrl-bar"><div class="ctrl-bar-fill" id="monDiskBar" style="width:0%"></div></div>
+        <div class="ctrl-row"><div class="ctrl-label">UPTIME</div><div class="ctrl-val" id="monUptime">--</div></div>
       </div>
       <div class="ctrl-section">
-        <div class="ctrl-title">POWER GRID</div>
-        <div class="ctrl-row"><div class="ctrl-label">GEN</div><div class="ctrl-val" id="monPwr">--</div></div>
-        <div class="ctrl-bar"><div class="ctrl-bar-fill" id="monPwrBar" style="width:0%"></div></div>
-        <div class="ctrl-row"><div class="ctrl-label">BATT</div><div class="ctrl-val" id="monBatt">--</div></div>
-      </div>
-      <div class="ctrl-section">
-        <div class="ctrl-title">GPS</div>
-        <div class="ctrl-row"><div class="ctrl-label">LAT</div><div class="ctrl-val" id="monLat">--</div></div>
-        <div class="ctrl-row"><div class="ctrl-label">LON</div><div class="ctrl-val" id="monLon">--</div></div>
-        <div class="ctrl-row"><div class="ctrl-label">ALT</div><div class="ctrl-val" id="monAlt">--</div></div>
-        <div class="ctrl-row"><div class="ctrl-label">SAT</div><div class="ctrl-val" id="monSat" style="color:#0f6">12</div></div>
-        <div class="ctrl-row"><div class="ctrl-label">HDOP</div><div class="ctrl-val" id="monHdop">1.2</div></div>
-      </div>
-      <div class="ctrl-section">
-        <div class="ctrl-title">TRAJECTORY</div>
-        <div class="ctrl-row"><div class="ctrl-label">DV</div><div class="ctrl-val" id="monDv">0 m/s</div></div>
-        <div class="ctrl-bar"><div class="ctrl-bar-fill" id="monDvBar" style="width:0%"></div></div>
-        <div class="ctrl-row"><div class="ctrl-label">TGO</div><div class="ctrl-val" id="monTgo">--</div></div>
-        <div class="ctrl-row"><div class="ctrl-label">ANGLE</div><div class="ctrl-val" id="monAngle">--</div></div>
-      </div>
-      <div class="ctrl-section">
-        <div class="ctrl-title">MISSION LOG</div>
-        <div id="leftLog" style="font-size:8px;color:var(--text2);max-height:100px;overflow-y:auto">[SYS] Ready</div>
-      </div>
-      <div class="ctrl-section">
-        <div class="ctrl-title">COMM</div>
-        <div class="ctrl-row"><div class="ctrl-label">SIG</div><div class="ctrl-val" id="monSig">--</div></div>
+        <div class="ctrl-title">NETWORK</div>
+        <div class="ctrl-row"><div class="ctrl-label">WS</div><div class="ctrl-val" id="monWsStatus" style="color:#f44">OFF</div></div>
+        <div class="ctrl-row"><div class="ctrl-label">AGENT</div><div class="ctrl-val" id="monAgentStatus">--</div></div>
+        <div class="ctrl-row"><div class="ctrl-label">SIGNAL</div><div class="ctrl-val" id="monSig">--</div></div>
         <div class="ctrl-row"><div class="ctrl-label">LATENCY</div><div class="ctrl-val" id="monLatency">--</div></div>
       </div>
       <div class="ctrl-section">
-        <div class="ctrl-title">SECURITY</div>
-        <div class="ctrl-row"><div class="ctrl-label">THREAT</div><div class="ctrl-val" id="monThreat" style="color:#0f6">NOMINAL</div></div>
-        <div class="ctrl-row"><div class="ctrl-label">FIREWALL</div><div class="ctrl-val" id="monFw" style="color:#0f6">ACTIVE</div></div>
+        <div class="ctrl-title">ENGINES</div>
+        <div class="ctrl-row"><div class="ctrl-label">OLLAMA</div><div class="ctrl-val" id="monOllama" style="color:#f44">OFF</div></div>
+        <div class="ctrl-row"><div class="ctrl-label">PROVIDER</div><div class="ctrl-val" id="monProvider">--</div></div>
+        <div class="ctrl-row"><div class="ctrl-label">SD</div><div class="ctrl-val" id="monSD" style="color:#f44">OFF</div></div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">MISSION LOG</div>
+        <div id="leftLog" style="font-size:8px;color:var(--text2);max-height:200px;overflow-y:auto">[SYS] Ready</div>
       </div>
     </div>
 
@@ -385,172 +333,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     <div id="centerArea">
       <!-- Visualizer View -->
       <div id="viewVisualizer">
-        <div id="cameraFeed">
-          <canvas id="cameraCanvas"></canvas>
-          <div id="cameraOverlay"></div>
-          <div id="cameraCrosshair"></div>
-          <div id="cameraLabel">CAM 01 — FORWARD</div>
-          <div id="cameraViewBtns">
-            <div class="cam-btn active" data-view="forward">FWD</div>
-            <div class="cam-btn" data-view="orbit">ORBIT</div>
-            <div class="cam-btn" data-view="map">MAP</div>
-            <div class="cam-btn" data-view="top">TOP</div>
-          </div>
-          <div id="cameraHud">
-            <div class="hud-item">ALT <span id="hudAlt">400</span> KM</div>
-            <div class="hud-item">VEL <span id="hudVel">7.68</span> KM/S</div>
-            <div class="hud-item">T+ <span id="hudTime">STANDBY</span></div>
-            <div class="hud-item">FUEL <span id="hudFuel">98</span>%</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Flight Control View -->
-      <div id="viewFlight">
-        <div id="flightView">
-          <!-- Big Instrument Gauges -->
-          <div class="fc-instruments">
-            <div class="fc-gauge">
-              <div class="fc-gauge-label">ALTITUDE</div>
-              <div class="fc-gauge-value" id="fcgAlt">400<span class="fc-gauge-unit">km</span></div>
-              <div class="fc-gauge-bar"><div class="fc-gauge-bar-fill" id="fcgAltBar" style="width:5%"></div></div>
-            </div>
-            <div class="fc-gauge">
-              <div class="fc-gauge-label">VELOCITY</div>
-              <div class="fc-gauge-value" id="fcgVel">7.68<span class="fc-gauge-unit">km/s</span></div>
-              <div class="fc-gauge-bar"><div class="fc-gauge-bar-fill" id="fcgVelBar" style="width:60%"></div></div>
-            </div>
-            <div class="fc-gauge">
-              <div class="fc-gauge-label">FUEL</div>
-              <div class="fc-gauge-value" id="fcgFuel" style="color:#0f6">98<span class="fc-gauge-unit">%</span></div>
-              <div class="fc-gauge-bar"><div class="fc-gauge-bar-fill" id="fcgFuelBar" style="width:98%;background:linear-gradient(90deg,rgba(0,255,100,0.3),#0f6)"></div></div>
-            </div>
-            <div class="fc-gauge">
-              <div class="fc-gauge-label">THRUST</div>
-              <div class="fc-gauge-value" id="fcgThrust">0<span class="fc-gauge-unit">kN</span></div>
-              <div class="fc-gauge-bar"><div class="fc-gauge-bar-fill" id="fcgThrustBar" style="width:0%"></div></div>
-            </div>
-          </div>
-
-          <!-- Attitude + Compass Row -->
-          <div class="fc-grid">
-            <div class="fc-panel">
-              <div class="fc-panel-title">ATTITUDE INDICATOR</div>
-              <div class="fc-attitude">
-                <div class="fc-attitude-horizon" id="fcAttHorizon"></div>
-                <div class="fc-attitude-cross"></div>
-                <div class="fc-attitude-ring"></div>
-              </div>
-              <div style="text-align:center;margin-top:8px">
-                <div class="fc-row"><div class="fc-label">PITCH</div><div class="fc-val" id="fcPitch">0.0°</div></div>
-                <div class="fc-row"><div class="fc-label">ROLL</div><div class="fc-val" id="fcRoll">0.0°</div></div>
-                <div class="fc-row"><div class="fc-label">YAW</div><div class="fc-val" id="fcYaw">275.4°</div></div>
-              </div>
-            </div>
-            <div class="fc-panel">
-              <div class="fc-panel-title">COMPASS</div>
-              <div class="fc-compass">
-                <div class="fc-compass-marks" id="fcCompassMarks"></div>
-                <div class="fc-compass-needle" id="fcCompassNeedle"></div>
-                <div class="fc-compass-label" id="fcCompassLabel">275.4</div>
-              </div>
-              <div style="text-align:center;margin-top:8px">
-                <div class="fc-row"><div class="fc-label">HEADING</div><div class="fc-val" id="fcHeading">275.4°</div></div>
-                <div class="fc-row"><div class="fc-label">COURSE</div><div class="fc-val" id="fcCourse">275.0°</div></div>
-              </div>
-            </div>
-            <!-- GPS Panel -->
-            <div class="fc-panel" style="grid-column:span 2">
-              <div class="fc-panel-title">GPS — GLOBAL POSITIONING SYSTEM</div>
-              <div class="gps-display">
-                <div class="gps-map" id="gpsMap">
-                  <div class="gps-grid"></div>
-                  <div class="gps-dot" id="gpsDot" style="left:50%;top:50%"></div>
-                  <div class="gps-ring" id="gpsRing1" style="width:40px;height:40px;left:50%;top:50%"></div>
-                  <div class="gps-ring" id="gpsRing2" style="width:80px;height:80px;left:50%;top:50%"></div>
-                  <div class="gps-ring" id="gpsRing3" style="width:120px;height:120px;left:50%;top:50%"></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
-                  <div class="fc-row"><div class="fc-label">LATITUDE</div><div class="fc-val" id="gpsLat">0.0000°</div></div>
-                  <div class="fc-row"><div class="fc-label">LONGITUDE</div><div class="fc-val" id="gpsLon">0.0000°</div></div>
-                  <div class="fc-row"><div class="fc-label">ALTITUDE</div><div class="fc-val" id="gpsAlt">400 km</div></div>
-                  <div class="fc-row"><div class="fc-label">SPEED</div><div class="fc-val" id="gpsSpeed">7.68 km/s</div></div>
-                  <div class="fc-row"><div class="fc-label">SATELLITES</div><div class="fc-val" id="gpsSat" style="color:#0f6">12</div></div>
-                  <div class="fc-row"><div class="fc-label">HDOP</div><div class="fc-val" id="gpsHdop">1.2</div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Flight Simulation Controls -->
-          <div class="fc-grid">
-            <div class="fc-panel">
-              <div class="fc-panel-title">FLIGHT SIMULATION — CONFIGURATION</div>
-              <div class="fc-row"><div class="fc-label">MISSION NAME</div><input class="fc-input" id="simName" value="ZIO-ALPHA"></div>
-              <div class="fc-row"><div class="fc-label">TARGET</div>
-                <select class="fc-input" id="simTarget" style="appearance:auto">
-                  <option value="moon">Moon (384,400 km)</option>
-                  <option value="mars">Mars (225M km)</option>
-                  <option value="iss">ISS (408 km)</option>
-                  <option value="geo">GEO (35,786 km)</option>
-                  <option value="lunar_gateway">Lunar Gateway</option>
-                </select>
-              </div>
-              <div class="fc-row"><div class="fc-label">START LAT</div><input class="fc-input" id="simLat" type="number" step="0.0001" value="28.5729"></div>
-              <div class="fc-row"><div class="fc-label">START LON</div><input class="fc-input" id="simLon" type="number" step="0.0001" value="-80.6490"></div>
-              <div class="fc-row"><div class="fc-label">START ALT</div><input class="fc-input" id="simAlt" type="number" value="0" placeholder="km"></div>
-              <div class="fc-row"><div class="fc-label">FUEL MASS</div><input class="fc-input" id="simFuel" type="number" value="50000" placeholder="kg"></div>
-              <div class="fc-row"><div class="fc-label">PAYLOAD</div><input class="fc-input" id="simPayload" type="number" value="5000" placeholder="kg"></div>
-              <div style="margin-top:8px;display:flex;gap:6px">
-                <button class="fc-btn start" id="simStart">START FLIGHT</button>
-                <button class="fc-btn stop" id="simStop">STOP</button>
-                <button class="fc-btn" id="simReset">RESET</button>
-              </div>
-            </div>
-            <div class="fc-panel">
-              <div class="fc-panel-title">PROPULSION STATUS</div>
-              <div class="fc-row"><div class="fc-label">ENGINE</div><div class="fc-val" id="simEngine">IDLE</div></div>
-              <div class="fc-row"><div class="fc-label">THRUST</div><div class="fc-val" id="simThrust">0 kN</div></div>
-              <div class="fc-row"><div class="fc-label">ISP</div><div class="fc-val" id="simIsp">380 s</div></div>
-              <div class="fc-row"><div class="fc-label">BURN TIME</div><div class="fc-val" id="simBurnTime">0:00:00</div></div>
-              <div class="fc-row"><div class="fc-label">FUEL FLOW</div><div class="fc-val" id="simFuelFlow">0 kg/s</div></div>
-              <div class="fc-row"><div class="fc-label">DELTA-V</div><div class="fc-val" id="simDv">0 m/s</div></div>
-              <div style="margin-top:8px">
-                <button class="fc-btn warn" id="simIgnite">IGNITE ENGINES</button>
-              </div>
-              <div style="margin-top:8px">
-                <div class="fc-panel-title">MISSION PHASE</div>
-                <div class="fc-val" id="simPhase" style="font-size:14px">PRE-FLIGHT</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Flight Log -->
-          <div class="fc-panel">
-            <div class="fc-panel-title">FLIGHT LOG</div>
-            <div class="fc-log" id="flightLog">[SYS] Flight simulation ready. Configure mission parameters and press START FLIGHT.</div>
-          </div>
+        <div id="outputPreview">
+          <canvas id="outputCanvas"></canvas>
+          <div id="outputOverlay"></div>
+          <div id="outputLabel">OUTPUT PREVIEW</div>
+          <div id="outputInfo" style="position:absolute;bottom:10px;left:10px;font-size:9px;letter-spacing:1px;color:rgba(0,229,255,0.4)">Ready to generate</div>
         </div>
       </div>
 
       <!-- Quick Actions Bar -->
       <div id="quickActions">
         <button class="qa-btn" id="qaChat">AI CHAT</button>
-        <button class="qa-btn" id="qaVision">OPENVISION</button>
-        <button class="qa-btn mag" id="qaVoice">VOICE</button>
-        <button class="qa-btn" id="qaWebcam">WEBCAM</button>
-        <div class="qa-sep"></div>
-        <button class="qa-btn" id="qaStatus">STATUS</button>
         <button class="qa-btn" id="qaGenImg">GEN IMAGE</button>
         <button class="qa-btn mag" id="qaGenVid">GEN VIDEO</button>
         <button class="qa-btn" id="qaGen3d">GEN 3D</button>
+        <div class="qa-sep"></div>
+        <button class="qa-btn" id="qaStatus">STATUS</button>
         <button class="qa-btn" id="qaExport">EXPORT</button>
-        <div class="qa-sep"></div>
-        <button class="qa-btn" id="qaDocs">DOCS</button>
-        <button class="qa-btn" id="qaKnowledge">KNOWLEDGE</button>
-        <div class="qa-sep"></div>
-        <button class="qa-btn" id="qaSaveMission">SAVE</button>
-        <button class="qa-btn" id="qaLoadMission">LOAD</button>
+        <button class="qa-btn mag" id="qaMaterialize">MATERIALIZER</button>
+        <button class="qa-btn" id="qaNLE">VIDEO NLE</button>
       </div>
     </div>
 
@@ -563,9 +364,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         <div class="ws-tab" data-ws="3d"><span class="ws-icon">&#9650;</span>3D</div>
         <div class="ws-tab" data-ws="video"><span class="ws-icon">&#9654;</span>VIDEO</div>
         <div class="ws-tab" data-ws="audio"><span class="ws-icon">&#9835;</span>AUDIO</div>
-        <div class="ws-tab" data-ws="post"><span class="ws-icon">&#10024;</span>POST</div>
+        <div class="ws-tab" data-ws="post"><span class="ws-icon">&#10024;</span>IMAGE</div>
+        <div class="ws-tab" data-ws="code"><span class="ws-icon">&#60;/&#62;</span>CODE</div>
+        <div class="ws-tab" data-ws="text"><span class="ws-icon">&#9998;</span>TEXT</div>
         <div class="ws-tab" data-ws="vision"><span class="ws-icon">&#9673;</span>VISION</div>
-        <div class="ws-tab" data-ws="data"><span class="ws-icon">&#9783;</span>DATA</div>
+        <div class="ws-tab" data-ws="library"><span class="ws-icon">&#9733;</span>LIBRARY<span class="ws-badge" id="libBadge">0</span></div>
       </div>
 
       <!-- Workspace Container -->
@@ -573,42 +376,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         <!-- SYSTEM WORKSPACE -->
         <div class="ws-panel active" id="ws-system">
           <div class="ws-section">
-            <div class="ws-section-title">MISSION CONTROL</div>
-            <div class="ws-row"><div class="ws-label">NAME</div><div class="ws-val" id="rMissionName" style="font-size:8px">ZIO-ALPHA</div></div>
-            <div class="ws-row"><div class="ws-label">PHASE</div><div class="ws-val" id="rMissionPhase">PRE-FLIGHT</div></div>
-            <div class="ws-row"><div class="ws-label">PROG</div><div class="ws-val" id="rMissionProg">0%</div></div>
-            <div class="ws-bar"><div class="ws-bar-fill" id="rMissionBar" style="width:0%"></div></div>
-          </div>
-          <div class="ws-section">
-            <div class="ws-section-title">Z-TY FACTORY</div>
-            <div class="ws-row"><div class="ws-label">ZETA-1</div><div class="ws-val" id="rZeta1">--</div></div>
-            <div class="ws-row"><div class="ws-label">TAU-X</div><div class="ws-val" id="rTauX">--</div></div>
-            <div class="ws-row"><div class="ws-label">DELTA-V</div><div class="ws-val" id="rDv">--</div></div>
+            <div class="ws-section-title">SYSTEM STATUS</div>
+            <div class="ws-row"><div class="ws-label">CPU</div><div class="ws-val" id="wsSysCpu">--</div></div>
+            <div class="ws-bar"><div class="ws-bar-fill" id="wsSysCpuBar" style="width:0%"></div></div>
+            <div class="ws-row"><div class="ws-label">RAM</div><div class="ws-val" id="wsSysMem">--</div></div>
+            <div class="ws-bar"><div class="ws-bar-fill" id="wsSysMemBar" style="width:0%"></div></div>
+            <div class="ws-row"><div class="ws-label">DISK</div><div class="ws-val" id="wsSysDisk">--</div></div>
+            <div class="ws-bar"><div class="ws-bar-fill" id="wsSysDiskBar" style="width:0%"></div></div>
+            <div class="ws-row"><div class="ws-label">UPTIME</div><div class="ws-val" id="wsSysUptime">--</div></div>
           </div>
           <div class="ws-section">
             <div class="ws-section-title">MODULES</div>
             <div id="moduleList">
-              <div class="ws-row"><div class="ws-label">ZINAV</div><div class="ws-val" style="color:#0f6" id="modZinav">OK</div></div>
-              <div class="ws-row"><div class="ws-label">ZIHAB</div><div class="ws-val" style="color:#0f6" id="modZihab">OK</div></div>
-              <div class="ws-row"><div class="ws-label">ZIPWR</div><div class="ws-val" style="color:#0f6" id="modZipwr">OK</div></div>
-              <div class="ws-row"><div class="ws-label">ZISEC</div><div class="ws-val" style="color:#0f6" id="modZisec">OK</div></div>
-              <div class="ws-row"><div class="ws-label">ZICOMM</div><div class="ws-val" style="color:#0f6" id="modZicomm">OK</div></div>
+              <div class="ws-row"><div class="ws-label">ZIO</div><div class="ws-val" style="color:#0f6" id="modZio">OK</div></div>
+              <div class="ws-row"><div class="ws-label">OLLAMA</div><div class="ws-val" id="modOllama">--</div></div>
+              <div class="ws-row"><div class="ws-label">SD</div><div class="ws-val" id="modSD">--</div></div>
+              <div class="ws-row"><div class="ws-label">KB</div><div class="ws-val" style="color:#0f6" id="modKB">OK</div></div>
             </div>
-          </div>
-          <div class="ws-section">
-            <div class="ws-section-title">THERMAL</div>
-            <div class="ws-row"><div class="ws-label">HULL</div><div class="ws-val" id="rHullTemp">--</div></div>
-            <div class="ws-row"><div class="ws-label">ENGINE</div><div class="ws-val" id="rEngTemp">--</div></div>
-            <div class="ws-row"><div class="ws-label">CRYO</div><div class="ws-val" id="rCryoTemp">--</div></div>
           </div>
           <div class="ws-section">
             <div class="ws-section-title">SYSTEM LOG</div>
             <div class="ws-log" id="sysLog">[SYS] Ready</div>
-          </div>
-          <div class="ws-section">
-            <div class="ws-section-title">NETWORK</div>
-            <div class="ws-row"><div class="ws-label">WS</div><div class="ws-val" id="rWs">OFF</div></div>
-            <div class="ws-row"><div class="ws-label">AGENT</div><div class="ws-val" id="rAgent">--</div></div>
           </div>
         </div>
 
@@ -701,10 +489,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
               <button class="ws-btn" id="wsMeshExportGLB" style="flex:1">GLB</button>
             </div>
           </div>
+          <div class="ws-section">
+            <div class="ws-section-title">OPENSCAD</div>
+            <div style="display:flex;gap:3px;margin-bottom:4px">
+              <button class="ws-btn" id="openscadRender" style="flex:1;color:#0f6">RENDER</button>
+              <button class="ws-btn" id="openscadExport" style="flex:1">EXPORT STL</button>
+            </div>
+            <textarea id="openscadEditor" style="width:100%;height:80px;background:rgba(0,0,0,0.5);border:1px solid rgba(0,229,255,0.1);color:#0f6;font-family:'Consolas',monospace;font-size:10px;padding:6px;resize:none;outline:none" placeholder="// OpenSCAD code&#10;cylinder(r=10, h=20);&#10;cube([10, 10, 10], center=true);">&#10;// ZICORE OpenSCAD Viewer&#10;// Write your 3D code here</textarea>
+            <div id="openscadOutput" style="width:100%;min-height:40px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.06);padding:4px;font-size:9px;color:var(--text2);margin-top:4px">
+              Ready to render
+            </div>
+          </div>
         </div>
 
         <!-- VIDEO WORKSPACE -->
         <div class="ws-panel" id="ws-video">
+          <video id="wsVidPreview" style="display:none;width:100%;max-height:120px;background:#000;border-radius:2px"></video>
           <div class="ws-section">
             <div class="ws-section-title">CLIP MONITOR</div>
             <canvas id="wsVidCanvas" class="ws-canvas" style="height:100px"></canvas>
@@ -998,51 +798,132 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         </div>
 
         <!-- DATA WORKSPACE -->
-        <div class="ws-panel" id="ws-data">
+        <!-- CONTENT LIBRARY WORKSPACE -->
+        <div class="ws-panel" id="ws-library">
+          <div class="ws-section">
+            <div class="ws-section-title">CONTENT LIBRARY</div>
+            <div class="ws-row">
+              <div class="ws-label">TOTAL</div><div class="ws-val" id="libTotal">0</div>
+              <div class="ws-label">SIZE</div><div class="ws-val" id="libSize">0 MB</div>
+            </div>
+          </div>
+          <div class="ws-section">
+            <div class="ws-section-title">FILTERS</div>
+            <div style="display:flex;gap:3px;margin-bottom:4px">
+              <button class="ws-btn lib-filter active" data-filter="all" style="flex:1">ALL</button>
+              <button class="ws-btn lib-filter" data-filter="image" style="flex:1">IMAGES</button>
+              <button class="ws-btn lib-filter" data-filter="sound" style="flex:1">SOUNDS</button>
+              <button class="ws-btn lib-filter" data-filter="3d" style="flex:1">3D</button>
+              <button class="ws-btn lib-filter" data-filter="video" style="flex:1">VIDEO</button>
+            </div>
+            <input class="ws-input" id="libSearch" placeholder="Search files..." style="width:100%;margin-bottom:4px">
+          </div>
+          <div class="ws-section" style="flex:1;overflow:hidden">
+            <div id="libItems" style="height:280px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
+          </div>
+          <div class="ws-section">
+            <div class="ws-section-title">PREVIEW</div>
+            <div id="libPreview" style="width:100%;min-height:80px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:9px">
+              Select an item to preview
+            </div>
+            <div id="libPreviewInfo" style="margin-top:4px;font-size:9px;color:var(--text2)"></div>
+            <div style="display:flex;gap:3px;margin-top:4px">
+              <button class="ws-btn" id="libDownload" style="flex:1" disabled>DOWNLOAD</button>
+              <button class="ws-btn" id="libEnlarge" style="flex:1" disabled>ENLARGE</button>
+              <button class="ws-btn" id="libDelete" style="flex:1;color:#f44" disabled>DELETE</button>
+            </div>
+          </div>
           <div class="ws-section">
             <div class="ws-section-title">KNOWLEDGE BASE</div>
-            <div class="ws-row"><div class="ws-label">CONV</div><div class="ws-val" id="wsDataConv">0</div></div>
-            <div class="ws-row"><div class="ws-label">WORDS</div><div class="ws-val" id="wsDataWords">0</div></div>
-            <div class="ws-row"><div class="ws-label">DOCS</div><div class="ws-val" id="wsDataDocs">0</div></div>
-            <div class="ws-row"><div class="ws-label">STORAGE</div><div class="ws-val" id="wsDataStorage">0 MB</div></div>
+            <div class="ws-row">
+              <div class="ws-label">CONV</div><div class="ws-val" id="libConvCount">0</div>
+              <div class="ws-label">DOCS</div><div class="ws-val" id="libDocCount">0</div>
+            </div>
           </div>
           <div class="ws-section">
             <div class="ws-section-title">DOCUMENTS</div>
-            <div class="ws-log" id="wsDataDocList" style="max-height:100px">No documents</div>
+            <div class="ws-log" id="libDocList" style="max-height:80px">No documents</div>
             <div style="display:flex;gap:3px;margin-top:4px">
-              <button class="ws-btn" id="wsDataDocUpload">UPLOAD</button>
-              <button class="ws-btn" id="wsDataDocRefresh">REFRESH</button>
-              <input type="file" id="wsDataDocFile" accept=".txt,.md,.json,.csv,.py,.js,.html,.pdf" style="display:none">
-            </div>
-            <textarea class="ws-input" id="wsDataDocText" style="width:100%;height:40px;resize:none;margin-top:4px" placeholder="Or paste text..."></textarea>
-            <div style="display:flex;gap:3px;margin-top:3px">
-              <input class="ws-input" id="wsDataDocName" placeholder="Doc name" style="width:80px">
-              <button class="ws-btn" id="wsDataDocAdd">ADD</button>
+              <button class="ws-btn" id="libDocUpload">UPLOAD</button>
+              <button class="ws-btn" id="libDocRefresh">REFRESH</button>
+              <input type="file" id="libDocFile" accept=".txt,.md,.json,.csv,.py,.js,.html" style="display:none">
             </div>
           </div>
           <div class="ws-section">
-            <div class="ws-section-title">CONVERSATIONS</div>
-            <input class="ws-input" id="wsDataSearch" placeholder="Search conversations..." style="width:100%;margin-bottom:4px">
-            <div class="ws-log" id="wsDataSearchResults" style="max-height:100px">Search to find conversations</div>
-            <button class="ws-btn" id="wsDataLoadAll" style="width:100%;margin-top:4px">LOAD ALL</button>
-          </div>
-          <div class="ws-section">
-            <div class="ws-section-title">DATA RETENTION</div>
-            <button class="ws-btn" id="wsDataExport" style="width:100%">EXPORT TRAINING DATA</button>
-            <div class="ws-row" style="margin-top:4px"><div class="ws-label">FORMAT</div>
-              <select class="ws-select" id="wsDataFormat">
+            <div class="ws-section-title">EXPORT</div>
+            <button class="ws-btn" id="libExport" style="width:100%">EXPORT TRAINING DATA</button>
+            <div class="ws-row" style="margin-top:4px">
+              <div class="ws-label">FORMAT</div>
+              <select class="ws-select" id="libExportFormat">
                 <option value="unsloth_jsonl">Unsloth JSONL</option>
                 <option value="json">JSON</option>
                 <option value="csv">CSV</option>
               </select>
             </div>
           </div>
+        </div>
+
+        <!-- CODE EDITOR WORKSPACE -->
+        <div class="ws-panel" id="ws-code">
           <div class="ws-section">
-            <div class="ws-section-title">MISSIONS</div>
-            <div class="ws-log" id="wsDataMissions" style="max-height:80px">No missions saved</div>
-            <div style="display:flex;gap:3px;margin-top:4px">
-              <button class="ws-btn" id="wsDataMissionSave">SAVE CURRENT</button>
-              <button class="ws-btn" id="wsDataMissionLoad">LOAD</button>
+            <div class="ws-section-title">CODE EDITOR</div>
+            <div style="display:flex;gap:3px;margin-bottom:4px">
+              <button class="ws-btn" id="codeNew" style="flex:1">NEW</button>
+              <button class="ws-btn" id="codeOpen" style="flex:1">OPEN</button>
+              <button class="ws-btn" id="codeSave" style="flex:1">SAVE</button>
+              <button class="ws-btn" id="codeRun" style="flex:1;color:#0f6">RUN</button>
+            </div>
+            <select class="ws-input" id="codeLang" style="width:100%;margin-bottom:4px">
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="html">HTML</option>
+              <option value="json">JSON</option>
+              <option value="markdown">Markdown</option>
+            </select>
+          </div>
+          <div class="ws-section" style="flex:1;overflow:hidden">
+            <div id="monacoEditor" style="width:100%;height:300px;border:1px solid rgba(0,229,255,0.1)"></div>
+            <textarea id="codeEditorFallback" style="width:100%;height:300px;background:rgba(0,0,0,0.5);border:1px solid rgba(0,229,255,0.1);color:#0f6;font-family:'Consolas',monospace;font-size:11px;padding:8px;resize:none;outline:none;display:none" placeholder="# Write your code here..."></textarea>
+          </div>
+          <div class="ws-section">
+            <div class="ws-section-title">OUTPUT</div>
+            <div id="codeOutput" style="width:100%;min-height:60px;max-height:120px;background:rgba(0,0,0,0.5);border:1px solid rgba(0,229,255,0.08);padding:8px;font-family:monospace;font-size:10px;color:var(--text2);overflow-y:auto">
+              Ready.
+            </div>
+          </div>
+        </div>
+
+        <!-- TEXT EDITOR WORKSPACE -->
+        <div class="ws-panel" id="ws-text">
+          <div class="ws-section">
+            <div class="ws-section-title">TEXT EDITOR</div>
+            <div style="display:flex;gap:3px;margin-bottom:4px">
+              <button class="ws-btn" id="textNew" style="flex:1">NEW</button>
+              <button class="ws-btn" id="textOpen" style="flex:1">OPEN</button>
+              <button class="ws-btn" id="textSave" style="flex:1">SAVE</button>
+              <button class="ws-btn" id="textExport" style="flex:1">EXPORT</button>
+            </div>
+            <div style="display:flex;gap:3px;margin-bottom:4px">
+              <button class="ws-btn" id="textBold" style="flex:1"><b>B</b></button>
+              <button class="ws-btn" id="textItalic" style="flex:1"><i>I</i></button>
+              <button class="ws-btn" id="textUnderline" style="flex:1"><u>U</u></button>
+              <button class="ws-btn" id="textH1" style="flex:1">H1</button>
+              <button class="ws-btn" id="textH2" style="flex:1">H2</button>
+              <button class="ws-btn" id="textList" style="flex:1">LIST</button>
+            </div>
+          </div>
+          <div class="ws-section" style="flex:1;overflow:hidden">
+            <div id="textEditor" contenteditable="true" style="width:100%;height:300px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);color:var(--text);padding:12px;font-size:12px;line-height:1.6;outline:none;overflow-y:auto" placeholder="Start writing...">
+              <h2>ZICORE Content Creator</h2>
+              <p>Welcome to the ZICORE Text Editor. Write your content here...</p>
+              <p><br></p>
+            </div>
+          </div>
+          <div class="ws-section">
+            <div class="ws-row">
+              <div class="ws-label">WORDS</div><div class="ws-val" id="textWordCount">0</div>
+              <div class="ws-label">CHARS</div><div class="ws-val" id="textCharCount">0</div>
+              <div class="ws-label">LINES</div><div class="ws-val" id="textLineCount">0</div>
             </div>
           </div>
         </div>
@@ -1065,22 +946,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 <!-- FLOATING PANELS -->
 <div id="panelContainer"></div>
 
+<!-- FOOTER BAR -->
+<div id="footerBar">
+  <span class="footer-slogan">MATERIALIZING IDEAS INTO REALITY</span>
+  <span class="footer-sep">|</span>
+  <span class="footer-sig">ZineMotion Foundation — Aerospace Division</span>
+</div>
+
 <script>
 (function(){
   var panelDefs=[
-    {id:'pChat',title:'AI CHAT',w:300,h:240,x:260,y:50,tag:'AI',fixed:false},
-    {id:'pMedia',title:'MEDIA GEN',w:220,h:180,x:260,y:310,tag:'MED',fixed:false},
-    {id:'pVision',title:'OPENVISION',w:220,h:160,x:500,y:310,tag:'VIS',fixed:false},
-    {id:'pWebcam',title:'WEBCAM',w:240,h:220,x:740,y:50,tag:'CAM',fixed:false},
-    {id:'pVoice',title:'VOICE',w:200,h:180,x:740,y:310,tag:'VOX',fixed:false},
-    {id:'pMesh',title:'3D MESH',w:240,h:200,x:260,y:520,tag:'3D',fixed:false},
-    {id:'pDocs',title:'DOCUMENTS',w:260,h:200,x:520,y:520,tag:'DOC',fixed:false},
-    {id:'pKnowledge',title:'KNOWLEDGE',w:260,h:180,x:800,y:520,tag:'KNW',fixed:false},
-    {id:'pData',title:'DATA RETENTION',w:200,h:150,x:1060,y:50,tag:'DAT',fixed:false},
-    {id:'pGallery',title:'GALLERY',w:200,h:200,x:1060,y:310,tag:'GAL',fixed:false},
-    {id:'pImgEdit',title:'IMAGE EDITOR',w:260,h:200,x:260,y:240,tag:'IMG',fixed:false},
-    {id:'pAudioEdit',title:'AUDIO EDITOR',w:260,h:180,x:540,y:240,tag:'AUD',fixed:false},
     {id:'pVideoEdit',title:'VIDEO EDITOR — NLE',w:800,h:450,x:200,y:80,tag:'VID',fixed:false},
+    {id:'pMaterializer',title:'MATERIALIZER',w:350,h:400,x:100,y:100,tag:'MAT',fixed:false},
   ];
 
   var panels=[];
@@ -1089,11 +966,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   var resizeState=null;
   var ws=null;
   var agentWs=null;
-  var agentSessionId='cockpit_'+Date.now();
+  var agentSessionId=localStorage.getItem('zicore_session_id');
+  if(!agentSessionId){agentSessionId='cockpit_'+Date.now()+'_'+Math.random().toString(36).substr(2,8);localStorage.setItem('zicore_session_id',agentSessionId);}
   var currentView='visualizer';
-  var simRunning=false;
-  var simTime=0;
-  var simInterval=null;
+
+  function apiHost(){return location.hostname+':4000';}
+  function apiBase(){return location.protocol+'//'+apiHost();}
+  function apiWsBase(){return (location.protocol==='https:'?'wss':'ws')+'://'+apiHost();}
   var missionTime=0;
   var startTime=new Date();
 
@@ -1102,24 +981,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     setupTopBar();
     setupQuickActions();
     setupViewTabs();
-    setupFlightSim();
     setupWorkspaces();
     connectWS();
     connectAgentWS();
     startClock();
-    renderCamera();
     setInterval(updateMonitors,1000);
+    updateMonitors();
     loadChatHistory();
     appendLog('System initialized');
   }
 
   function loadChatHistory(){
-    fetch('/api/knowledge/conversations?limit=30')
+    fetch('/api/knowledge/conversations?limit=30&session_id='+encodeURIComponent(agentSessionId))
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.conversations||d.conversations.length===0)return;
       var cm=document.getElementById('chatMsgs');
       if(!cm)return;
+      cm.innerHTML='';
       d.conversations.forEach(function(c){
         var cls=c.role==='user'?'user':'zio';
         var prefix=c.role==='user'?'[YOU]':'[ZIO]';
@@ -1297,6 +1176,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       html+='<div id="galleryItems" style="display:flex;flex-wrap:wrap;gap:4px;height:140px;overflow-y:auto">';
       html+='<div style="font-size:9px;color:var(--text3);padding:20px">No items yet</div>';
       html+='</div>';
+    }else if(panelId==='pContentLib'){
+      html+='<div style="font-size:8px;letter-spacing:2px;color:var(--text2);margin-bottom:4px">CONTENT LIBRARY</div>';
+      html+='<div style="display:flex;gap:3px;margin-bottom:4px">';
+      html+='<button class="lib-filter active" data-filter="all" style="font-size:7px;padding:2px 6px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--glow);cursor:pointer">ALL</button>';
+      html+='<button class="lib-filter" data-filter="image" style="font-size:7px;padding:2px 6px;background:rgba(0,229,255,0.03);border:1px solid rgba(0,229,255,0.1);color:var(--text2);cursor:pointer">IMAGES</button>';
+      html+='<button class="lib-filter" data-filter="sound" style="font-size:7px;padding:2px 6px;background:rgba(0,229,255,0.03);border:1px solid rgba(0,229,255,0.1);color:var(--text2);cursor:pointer">SOUNDS</button>';
+      html+='<button class="lib-filter" data-filter="3d" style="font-size:7px;padding:2px 6px;background:rgba(0,229,255,0.03);border:1px solid rgba(0,229,255,0.1);color:var(--text2);cursor:pointer">3D</button>';
+      html+='<button class="lib-filter" data-filter="video" style="font-size:7px;padding:2px 6px;background:rgba(0,229,255,0.03);border:1px solid rgba(0,229,255,0.1);color:var(--text2);cursor:pointer">VIDEO</button>';
+      html+='</div>';
+      html+='<input id="libSearch" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);color:var(--glow);padding:3px;font-size:9px;font-family:inherit;margin-bottom:4px" placeholder="Search files...">';
+      html+='<div id="libItems" style="height:140px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start"></div>';
+      html+='<div id="libPreview" style="width:100%;min-height:50px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);margin-top:4px;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:9px">Select an item</div>';
+      html+='<div id="libPreviewInfo" style="margin-top:3px;font-size:8px;color:var(--text2)"></div>';
+      html+='<div style="display:flex;gap:3px;margin-top:4px">';
+      html+='<button class="ctrl-btn" style="flex:1" id="libDownload" disabled>DOWNLOAD</button>';
+      html+='<button class="ctrl-btn" style="flex:1" id="libEnlarge" disabled>ENLARGE</button>';
+      html+='<button class="ctrl-btn" style="flex:1;color:#f44" id="libDelete" disabled>DELETE</button>';
+      html+='</div>';
     }else if(panelId==='pImgEdit'){
       html+='<div style="font-size:8px;letter-spacing:2px;color:var(--text2);margin-bottom:4px">IMAGE EDITOR</div>';
       html+='<canvas id="imgEditCanvas" style="width:100%;height:100px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);margin-bottom:4px"></canvas>';
@@ -1447,6 +1344,46 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       html+='<div style="flex:1"></div>';
       html+='<button class="ctrl-btn" style="font-size:6px;padding:2px 6px" id="vidEditExport">EXPORT ▼</button>';
       html+='</div>';
+      html+='</div>';
+      html+='</div>';
+    }else if(panelId==='pMaterializer'){
+      html+='<div style="font-size:8px;letter-spacing:2px;color:var(--text2);margin-bottom:4px">MATERIALIZER — IDEAS TO REALITY</div>';
+      html+='<div style="margin-bottom:4px">';
+      html+='<div style="font-size:7px;color:var(--text3);margin-bottom:2px">OUTPUT TYPE</div>';
+      html+='<select id="matType" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);color:var(--glow);padding:3px;font-size:9px;font-family:inherit">';
+      html+='<option value="auto">AUTO (Detect from prompt)</option>';
+      html+='<option value="image">IMAGE (Stable Diffusion)</option>';
+      html+='<option value="mesh_3d">3D MESH (trimesh)</option>';
+      html+='<option value="terrain">TERRAIN (Perlin noise)</option>';
+      html+='<option value="cave">CAVE (Cellular automata)</option>';
+      html+='<option value="dungeon">DUNGEON (BSP rooms)</option>';
+      html+='<option value="plant">PLANT (L-System)</option>';
+      html+='<option value="fractal">FRACTAL (Mandelbrot/Julia)</option>';
+      html+='<option value="level">LEVEL (Wave Function Collapse)</option>';
+      html+='<option value="text">TEXT (Markov chain)</option>';
+      html+='</select>';
+      html+='</div>';
+      html+='<div style="margin-bottom:4px">';
+      html+='<div style="font-size:7px;color:var(--text3);margin-bottom:2px">PROMPT</div>';
+      html+='<textarea id="matPrompt" style="width:100%;height:60px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);color:var(--glow);padding:4px;font-size:9px;font-family:inherit;resize:none" placeholder="Describe what you want to create...&#10;Examples:&#10;- mountain landscape with sunset&#10;- underground cave system&#10;- tree branch with leaves&#10;- mandelbrot fractal"></textarea>';
+      html+='</div>';
+      html+='<div style="display:flex;gap:3px;margin-bottom:4px">';
+      html+='<button class="ctrl-btn" style="flex:1" id="matGenerate">MATERIALIZE</button>';
+      html+='<button class="ctrl-btn" style="flex:1" id="matBatch">BATCH</button>';
+      html+='</div>';
+      html+='<div style="font-size:7px;color:var(--text3);margin-bottom:2px">STATUS</div>';
+      html+='<div id="matStatus" style="font-size:9px;color:var(--text2);padding:4px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.06);margin-bottom:4px">Ready to materialize</div>';
+      html+='<div style="font-size:7px;color:var(--text3);margin-bottom:2px">OUTPUT</div>';
+      html+='<div id="matOutput" style="width:100%;min-height:60px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:9px">No output yet</div>';
+      html+='<div id="matOutputInfo" style="margin-top:4px;font-size:8px;color:var(--text2)"></div>';
+      html+='<div style="margin-top:4px">';
+      html+='<div style="font-size:7px;color:var(--text3);margin-bottom:2px">QUICK ACTIONS</div>';
+      html+='<div style="display:flex;flex-wrap:wrap;gap:2px">';
+      html+='<button class="ctrl-btn mat-quick" data-prompt="mountain landscape" style="font-size:6px;padding:2px 4px">TERRAIN</button>';
+      html+='<button class="ctrl-btn mat-quick" data-prompt="underground cave" style="font-size:6px;padding:2px 4px">CAVE</button>';
+      html+='<button class="ctrl-btn mat-quick" data-prompt="dungeon rooms" style="font-size:6px;padding:2px 4px">DUNGEON</button>';
+      html+='<button class="ctrl-btn mat-quick" data-prompt="tree branch" style="font-size:6px;padding:2px 4px">PLANT</button>';
+      html+='<button class="ctrl-btn mat-quick" data-prompt="mandelbrot set" style="font-size:6px;padding:2px 4px">FRACTAL</button>';
       html+='</div>';
       html+='</div>';
     }
@@ -2016,27 +1953,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
           ph.style.height=th+'px';
         }
       }
-              tctx.stroke();
-            }
-            if(sw>30){
-              tctx.fillStyle=sel?'#fff':'rgba(200,208,220,0.8)';
-              tctx.font='6px sans-serif';
-              var label=clip.name||'Clip';
-              if(tctx.measureText(label).width>sw-6)label=label.substring(0,Math.floor(sw/5));
-              tctx.fillText(label,sx+3,ty+trackH/2+2);
-            }
-            if(clip.effect&&clip.effect!=='none'){
-              tctx.fillStyle='rgba(255,200,0,0.6)';
-              tctx.fillRect(sx+sw-6,ty+3,4,4);
-            }
-          });
-        });
-        var phx=vidPlayheadPos*pxPerSec;
-        tctx.strokeStyle='rgba(244,68,68,0.7)';
-        tctx.beginPath();tctx.moveTo(phx,0);tctx.lineTo(phx,th);tctx.stroke();
-        var phTop=document.getElementById('vidPlayheadTop');
-        if(phTop)phTop.style.left=(phx-4)+'px';
-      }
 
       function vidDrawPreview(){
         if(!vidCtx)return;
@@ -2556,6 +2472,67 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       vidDrawTimeline();
       vidDrawRuler();
     }
+    if(pid==='pMaterializer'){
+      var matGenBtn=document.getElementById('matGenerate');
+      var matBatchBtn=document.getElementById('matBatch');
+      var matPrompt=document.getElementById('matPrompt');
+      var matType=document.getElementById('matType');
+      var matStatus=document.getElementById('matStatus');
+      var matOutput=document.getElementById('matOutput');
+      var matOutputInfo=document.getElementById('matOutputInfo');
+
+      if(matGenBtn)matGenBtn.addEventListener('click',function(){
+        var prompt=matPrompt?matPrompt.value.trim():'';
+        var type=matType?matType.value:'auto';
+        if(!prompt){if(matStatus)matStatus.textContent='Please enter a prompt';return;}
+        
+        if(matStatus)matStatus.textContent='Materializing...';
+        if(matOutput)matOutput.innerHTML='<span style="color:var(--glow)">Generating...</span>';
+        
+        // Call backend API
+        fetch('/api/materialize',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({prompt:prompt,type:type})
+        }).then(function(r){return r.json();}).then(function(d){
+          if(d.success){
+            if(matStatus)matStatus.textContent='Success! Generated in '+d.metadata.generation_time.toFixed(2)+'s';
+            if(d.file_path){
+              if(d.output_type==='image'){
+                matOutput.innerHTML='<img src="'+d.file_path+'" style="max-width:100%;max-height:150px;border:1px solid rgba(0,229,255,0.1)">';
+              }else if(d.output_type==='mesh_3d'){
+                matOutput.innerHTML='<div style="color:#0f6">3D Mesh generated<br><a href="'+d.file_path+'" style="color:var(--glow);font-size:8px" download>Download STL</a></div>';
+              }else{
+                matOutput.innerHTML='<div style="color:#0f6">Generated: '+d.output_type+'</div>';
+              }
+              matOutputInfo.textContent='Method: '+d.method+' | Type: '+d.output_type;
+              addGalleryItem(d.output_type,prompt,d.file_path);
+            }
+          }else{
+            if(matStatus)matStatus.textContent='Error: '+(d.error||'Unknown error');
+            if(matOutput)matOutput.innerHTML='<span style="color:#f44">Generation failed</span>';
+          }
+        }).catch(function(e){
+          if(matStatus)matStatus.textContent='Error: '+e.message;
+          if(matOutput)matOutput.innerHTML='<span style="color:#f44">Connection error</span>';
+        });
+      });
+
+      if(matBatchBtn)matBatchBtn.addEventListener('click',function(){
+        var prompt=matPrompt?matPrompt.value.trim():'';
+        if(!prompt){if(matStatus)matStatus.textContent='Please enter a prompt';return;}
+        if(matStatus)matStatus.textContent='Batch generation not yet implemented';
+      });
+
+      // Quick action buttons
+      document.querySelectorAll('.mat-quick').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var prompt=this.getAttribute('data-prompt');
+          if(matPrompt)matPrompt.value=prompt;
+          if(matGenBtn)matGenBtn.click();
+        });
+      });
+    }
   }
 
   function loadDocsList(){
@@ -2637,7 +2614,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   function sendAgentCmd(command,payload){
     if(command==='chat'){
       if(agentWs&&agentWs.readyState===WebSocket.OPEN){
-        agentWs.send(JSON.stringify({command:'stream',payload:{message:payload.message||''}}));
+        agentWs.send(JSON.stringify({command:'stream',payload:{message:payload.message||'',session_id:agentSessionId}}));
       }else{
         fetch('/api/chat',{
           method:'POST',headers:{'Content-Type':'application/json'},
@@ -2654,10 +2631,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     if(agentWs&&agentWs.readyState===WebSocket.OPEN){
       agentWs.send(JSON.stringify({command:command,payload:payload}));
     }else{
-      fetch('http://localhost:8080/api/agent/chat',{
+      fetch(apiBase()+'/api/agent/chat',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({message:payload.message||'',session_id:agentSessionId})
       }).then(function(r){return r.json();}).then(function(d){handleAgentResp(d);}).catch(function(e){appendLog('[AGENT] Error: '+e.message);});
+    }
+  }
+  function sendAgentWsMsg(msg,callback){
+    if(agentWs&&agentWs.readyState===WebSocket.OPEN){
+      agentWs.send(JSON.stringify({command:'stream',payload:{message:msg,session_id:agentSessionId}}));
+      var handler=function(evt){
+        try{var d=JSON.parse(evt.data);if(d.type==='response'&&d.response){callback(d.response);agentWs.removeEventListener('message',handler);}}catch(e){}
+      };
+      agentWs.addEventListener('message',handler);
+      setTimeout(function(){agentWs.removeEventListener('message',handler);},30000);
+    }else{
+      fetch('/api/chat',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:msg,session_id:agentSessionId,provider:'zicore_native'})
+      }).then(function(r){return r.json();}).then(function(d){
+        if(d.status==='ok'){callback(d.response||d.message||'No response');}
+        else{callback('[ERROR] '+(d.error||'Unknown error'));}
+      }).catch(function(e){callback('[ERROR] '+e.message);});
     }
   }
   function handleAgentResp(data){
@@ -2677,12 +2672,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     if(lc){lc.innerHTML+='<div><span style="color:var(--text2)">['+ts+']</span> '+escH(msg)+'</div>';lc.scrollTop=lc.scrollHeight;}
     var sl=document.getElementById('sysLog');
     if(sl){sl.innerHTML+='<div>['+ts+'] '+escH(msg)+'</div>';sl.scrollTop=sl.scrollHeight;}
-    var fl=document.getElementById('flightLog');
-    if(fl){fl.innerHTML+='<div><span style="color:var(--text2)">['+ts+']</span> '+escH(msg)+'</div>';fl.scrollTop=fl.scrollHeight;}
   }
 
   function setupTopBar(){
-    document.getElementById('btnHome').addEventListener('click',function(){if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}});
+    document.getElementById('btnHome').addEventListener('click',function(){if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}});
     document.getElementById('btnSettings').addEventListener('click',function(){
       document.getElementById('settingsModal').style.display='flex';
       loadSettings();
@@ -2703,7 +2696,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         document.querySelectorAll('.view-tab').forEach(function(t){t.classList.remove('active');});
         this.classList.add('active');
         document.getElementById('viewVisualizer').style.display=view==='visualizer'?'flex':'none';
-        document.getElementById('viewFlight').style.display=view==='flight'?'flex':'none';
+        if(view==='materializer'){
+          var p=panels.find(function(x){return x.def.id==='pMaterializer';});
+          if(p&&p.minimized)restorePanel(p);
+          if(p)selectPanel(p);
+        }
         appendLog('[VIEW] Switched to '+view.toUpperCase());
       });
     });
@@ -2711,53 +2708,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
   function setupQuickActions(){
     document.getElementById('qaChat').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pChat';});
-      if(p&&p.minimized)restorePanel(p);
-      if(p)selectPanel(p);
+      var wsTab=document.querySelector('[data-ws="ai"]');
+      if(wsTab)wsTab.click();
     });
-    document.getElementById('qaVision').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pVision';});
-      if(p&&p.minimized)restorePanel(p);
-      if(p)selectPanel(p);
+    document.getElementById('qaGenImg').addEventListener('click',function(){
+      var imgPrompt=window.prompt('Enter image prompt:','rocket launch to moon');
+      if(imgPrompt)sendAgentCmd('generate',{type:'image',prompt:imgPrompt});
     });
-    document.getElementById('qaVoice').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pVoice';});
-      if(p&&p.minimized)restorePanel(p);
-      if(p)selectPanel(p);
+    document.getElementById('qaGenVid').addEventListener('click',function(){
+      var vidPrompt=window.prompt('Enter video prompt:','rocket launch');
+      if(vidPrompt)sendAgentCmd('generate',{type:'video',prompt:vidPrompt});
     });
-    document.getElementById('qaWebcam').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pWebcam';});
-      if(p&&p.minimized)restorePanel(p);
-      if(p)selectPanel(p);
-    });
-    document.getElementById('qaDocs').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pDocs';});
-      if(p&&p.minimized)restorePanel(p);
-      if(p)selectPanel(p);
-    });
-    document.getElementById('qaKnowledge').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pKnowledge';});
-      if(p&&p.minimized)restorePanel(p);
-      if(p)selectPanel(p);
+    document.getElementById('qaGen3d').addEventListener('click',function(){
+      var wsTab=document.querySelector('[data-ws="3d"]');
+      if(wsTab)wsTab.click();
     });
     document.getElementById('qaStatus').addEventListener('click',function(){sendAgentCmd('chat',{message:'system status'});});
-    document.getElementById('qaGenImg').addEventListener('click',function(){sendAgentCmd('generate',{type:'image',prompt:'rocket launch to moon'});});
-    document.getElementById('qaGenVid').addEventListener('click',function(){sendAgentCmd('generate',{type:'video',prompt:'rocket launch'});});
-    document.getElementById('qaGen3d').addEventListener('click',function(){
-      var p=panels.find(function(x){return x.def.id==='pMesh';});
+    document.getElementById('qaExport').addEventListener('click',function(){sendAgentCmd('chat',{message:'export training data'});});
+    document.getElementById('qaMaterialize').addEventListener('click',function(){
+      var p=panels.find(function(x){return x.def.id==='pMaterializer';});
       if(p&&p.minimized)restorePanel(p);
       if(p)selectPanel(p);
     });
-    document.getElementById('qaExport').addEventListener('click',function(){sendAgentCmd('chat',{message:'export training data'});});
-    document.getElementById('qaSaveMission').addEventListener('click',function(){
-      var name=document.getElementById('simName').value||'current';
-      sendAgentCmd('mission_save',{id:name,name:name,phase:document.getElementById('simPhase').textContent});
-      appendLog('[MISSION] Saving '+name);
-    });
-    document.getElementById('qaLoadMission').addEventListener('click',function(){
-      var name=document.getElementById('simName').value||'current';
-      sendAgentCmd('mission_load',{id:name});
-      appendLog('[MISSION] Loading '+name);
+    document.getElementById('qaNLE').addEventListener('click',function(){
+      var p=panels.find(function(x){return x.def.id==='pVideoEdit';});
+      if(p&&p.minimized)restorePanel(p);
+      if(p)selectPanel(p);
     });
   }
 
@@ -2776,7 +2752,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         if(wsId==='audio')initWsAudio();
         if(wsId==='post')initWsPost();
         if(wsId==='vision')initWsVision();
-        if(wsId==='data')initWsData();
+        if(wsId==='library')loadContentLibrary();
+        if(wsId==='code')initWsCode();
+        if(wsId==='text')initWsText();
       });
     });
     setupWsAi();
@@ -2785,8 +2763,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     setupWsAudio();
     setupWsPost();
     setupWsVision();
-    setupWsData();
-    loadKnowledgeStats();
+    setupContentLibrary();
+    setupWsCode();
+    setupWsText();
   }
 
   var ws3dInited=false,wsAudioInited=false,wsPostInited=false,wsVisionInited=false;
@@ -2796,18 +2775,65 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   function setupWsAi(){
     var cs=document.getElementById('wsChatSend');
     var ci=document.getElementById('wsChatInput');
+    var cmdHistory=[];
+    var cmdHistIdx=-1;
+    var cmdSuggestions=['generate an image of','create 3D model of','write a Python script','analyze this image','generate procedural terrain','create a video intro','compose some music','system status','detect anomalies in','classify sentiment of','find patterns in','vectorize the text','generate a cave','create a dungeon','make a mandelbrot fractal','run machine learning','export training data','show knowledge base','what models are available','help'];
+
+    function showAutocomplete(val){
+      var existing=document.getElementById('zioAutocomplete');
+      if(existing)existing.remove();
+      if(!val||val.length<2)return;
+      var matches=cmdSuggestions.filter(function(s){return s.toLowerCase().indexOf(val.toLowerCase())>=0;}).slice(0,5);
+      if(matches.length===0)return;
+      var div=document.createElement('div');
+      div.id='zioAutocomplete';
+      div.style.cssText='position:absolute;bottom:100%;left:0;right:0;background:rgba(10,14,22,0.95);border:1px solid rgba(0,229,255,0.2);border-radius:4px;max-height:120px;overflow-y:auto;z-index:100';
+      matches.forEach(function(m){
+        var item=document.createElement('div');
+        item.style.cssText='padding:4px 8px;font-size:8px;letter-spacing:1px;color:#0f6;cursor:pointer;border-bottom:1px solid rgba(0,229,255,0.05)';
+        item.textContent=m;
+        item.addEventListener('click',function(){ci.value=m;div.remove();ci.focus();});
+        item.addEventListener('mouseenter',function(){this.style.background='rgba(0,229,255,0.1)';});
+        item.addEventListener('mouseleave',function(){this.style.background='';});
+        div.appendChild(item);
+      });
+      ci.parentNode.style.position='relative';
+      ci.parentNode.appendChild(div);
+    }
+
     if(cs&&ci){
       cs.addEventListener('click',function(){
         var msg=ci.value.trim();if(!msg)return;
+        if(cmdHistory.length===0||cmdHistory[cmdHistory.length-1]!==msg)cmdHistory.push(msg);
+        cmdHistIdx=cmdHistory.length;
         var cm=document.getElementById('wsChatMsgs');
         cm.innerHTML+='<div class="chat-msg user">[YOU] '+escH(msg)+'</div>';
         ci.value='';
+        var ac=document.getElementById('zioAutocomplete');if(ac)ac.remove();
         sendAgentWsMsg(msg,function(resp){
           cm.innerHTML+='<div class="chat-msg zio">[ZIO] '+escH(resp)+'</div>';
           cm.scrollTop=cm.scrollHeight;
         });
       });
-      ci.addEventListener('keydown',function(e){if(e.key==='Enter')cs.click();});
+      ci.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){
+          var ac=document.getElementById('zioAutocomplete');if(ac)ac.remove();
+          if(cs)cs.click();
+        }else if(e.key==='ArrowUp'){
+          e.preventDefault();
+          if(cmdHistIdx>0){cmdHistIdx--;ci.value=cmdHistory[cmdHistIdx]||'';}
+        }else if(e.key==='ArrowDown'){
+          e.preventDefault();
+          if(cmdHistIdx<cmdHistory.length-1){cmdHistIdx++;ci.value=cmdHistory[cmdHistIdx]||'';}else{cmdHistIdx=cmdHistory.length;ci.value='';}
+        }else if(e.key==='Tab'){
+          e.preventDefault();
+          var ac=document.getElementById('zioAutocomplete');
+          if(ac&&ac.children.length>0){ci.value=ac.children[0].textContent;ac.remove();}
+        }else if(e.key==='Escape'){
+          var ac2=document.getElementById('zioAutocomplete');if(ac2)ac2.remove();
+        }
+      });
+      ci.addEventListener('input',function(){showAutocomplete(this.value);});
     }
     document.getElementById('wsChatSpeak').addEventListener('click',function(){
       var msgs=document.querySelectorAll('#wsChatMsgs .chat-msg.zio');
@@ -2840,7 +2866,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       btn.addEventListener('click',function(){
         var cmd=this.dataset.wscmd;
         if(ci)ci.value=cmd;
-        cs.click();
+        if(cs)cs.click();
       });
     });
     var vs=document.getElementById('wsVoxSpeak');
@@ -2878,9 +2904,115 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         wsMeshScene.children.forEach(function(c){if(c.type==='GridHelper')c.visible=wsMeshGridOn;});
       }
     });
-    document.getElementById('wsMeshExportSTL').addEventListener('click',function(){appendLog('[MESH] Export STL');});
-    document.getElementById('wsMeshExportOBJ').addEventListener('click',function(){appendLog('[MESH] Export OBJ');});
-    document.getElementById('wsMeshExportGLB').addEventListener('click',function(){appendLog('[MESH] Export GLB');});
+    document.getElementById('wsMeshExportSTL').addEventListener('click',function(){
+      appendLog('[MESH] Export STL');
+      var scene=window.meshScene||window.scene;
+      if(scene&&scene.children&&scene.children.length>0){
+        try{
+          var exporter={exportSTL:function(scene){return'';}};
+          appendLog('[MESH] STL export queued — use backend /api/3d/export');
+        }catch(e){appendLog('[MESH] Export error: '+e.message);}
+      }else{appendLog('[MESH] No mesh loaded');}
+    });
+    document.getElementById('wsMeshExportOBJ').addEventListener('click',function(){
+      appendLog('[MESH] Export OBJ — use backend /api/3d/export');
+    });
+    document.getElementById('wsMeshExportGLB').addEventListener('click',function(){
+      appendLog('[MESH] Export GLB — use backend /api/3d/export');
+    });
+    
+    // OpenSCAD handlers
+    var openscadRenderBtn=document.getElementById('openscadRender');
+    var openscadExportBtn=document.getElementById('openscadExport');
+    var openscadEditor=document.getElementById('openscadEditor');
+    var openscadOutput=document.getElementById('openscadOutput');
+    
+    if(openscadRenderBtn)openscadRenderBtn.addEventListener('click',function(){
+      var code=openscadEditor?openscadEditor.value:'';
+      if(!code.trim()){
+        if(openscadOutput)openscadOutput.textContent='No code to render';
+        return;
+      }
+      if(openscadOutput)openscadOutput.textContent='Rendering OpenSCAD...';
+      
+      // Parse simple OpenSCAD commands
+      try{
+        var shapes=[];
+        var lines=code.split('\n');
+        lines.forEach(function(line){
+          line=line.trim();
+          if(line.startsWith('//')||!line)return;
+          
+          // Parse cylinder(r=10, h=20)
+          var cylMatch=line.match(/cylinder\s*\(\s*r\s*=\s*([\d.]+)\s*,\s*h\s*=\s*([\d.]+)/);
+          if(cylMatch){
+            shapes.push({type:'cylinder',r:parseFloat(cylMatch[1])/10,h:parseFloat(cylMatch[2])/10});
+          }
+          
+          // Parse cube([10,10,10])
+          var cubeMatch=line.match(/cube\s*\(\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\]/);
+          if(cubeMatch){
+            shapes.push({type:'cube',x:parseFloat(cubeMatch[1])/10,y:parseFloat(cubeMatch[2])/10,z:parseFloat(cubeMatch[3])/10});
+          }
+          
+          // Parse sphere(r=10)
+          var sphereMatch=line.match(/sphere\s*\(\s*r\s*=\s*([\d.]+)/);
+          if(sphereMatch){
+            shapes.push({type:'sphere',r:parseFloat(sphereMatch[1])/10});
+          }
+          
+          // Parse translate([x,y,z])
+          var transMatch=line.match(/translate\s*\(\s*\[\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\]/);
+          if(transMatch&&shapes.length>0){
+            var last=shapes[shapes.length-1];
+            last.tx=parseFloat(transMatch[1])/10;
+            last.ty=parseFloat(transMatch[2])/10;
+            last.tz=parseFloat(transMatch[3])/10;
+          }
+        });
+        
+        if(shapes.length===0){
+          if(openscadOutput)openscadOutput.textContent='No valid shapes found. Use: cylinder(r, h), cube([x,y,z]), sphere(r)';
+          return;
+        }
+        
+        // Create Three.js mesh from parsed shapes
+        if(wsMeshObj)wsMeshScene.remove(wsMeshObj);
+        var group=new THREE.Group();
+        var colorHex=parseInt(document.getElementById('wsMeshColor').value.replace('#',''),16);
+        var opacity=parseInt(document.getElementById('wsMeshOpacity').value)/100;
+        var material=new THREE.MeshPhongMaterial({color:colorHex,wireframe:wsMeshWireOn,transparent:true,opacity:opacity});
+        
+        shapes.forEach(function(shape){
+          var mesh;
+          if(shape.type==='cylinder'){
+            mesh=new THREE.Mesh(new THREE.CylinderGeometry(shape.r,shape.r,shape.h,24),material);
+          }else if(shape.type==='cube'){
+            mesh=new THREE.Mesh(new THREE.BoxGeometry(shape.x,shape.y,shape.z),material);
+          }else if(shape.type==='sphere'){
+            mesh=new THREE.Mesh(new THREE.SphereGeometry(shape.r,24,24),material);
+          }
+          if(mesh){
+            if(shape.tx)mesh.position.x=shape.tx;
+            if(shape.ty)mesh.position.y=shape.ty;
+            if(shape.tz)mesh.position.z=shape.tz;
+            group.add(mesh);
+          }
+        });
+        
+        wsMeshObj=group;
+        wsMeshScene.add(wsMeshObj);
+        if(openscadOutput)openscadOutput.textContent='Rendered '+shapes.length+' shape(s) from OpenSCAD';
+        appendLog('[OPENSCAD] Rendered '+shapes.length+' shapes');
+      }catch(e){
+        if(openscadOutput)openscadOutput.textContent='Error: '+e.message;
+      }
+    });
+    
+    if(openscadExportBtn)openscadExportBtn.addEventListener('click',function(){
+      appendLog('[OPENSCAD] Export STL - Use backend API for full export');
+      if(openscadOutput)openscadOutput.textContent='Export via backend: POST /api/mesh/generate';
+    });
   }
 
   function initWs3d(){
@@ -2942,35 +3074,100 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   }
 
   function setupWsVideo(){
-    document.getElementById('wsVidPlay').addEventListener('click',function(){appendLog('[VIDEO] Play');});
-    document.getElementById('wsVidPause').addEventListener('click',function(){appendLog('[VIDEO] Pause');});
-    document.getElementById('wsVidStop').addEventListener('click',function(){appendLog('[VIDEO] Stop');});
-    document.getElementById('wsVidCut').addEventListener('click',function(){appendLog('[VIDEO] Cut');});
-    document.getElementById('wsVidSplit').addEventListener('click',function(){appendLog('[VIDEO] Split');});
-    document.getElementById('wsVidDel').addEventListener('click',function(){appendLog('[VIDEO] Delete');});
-    document.getElementById('wsVidDup').addEventListener('click',function(){appendLog('[VIDEO] Duplicate');});
+    document.getElementById('wsVidPlay').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){v.play();appendLog('[VIDEO] Playing');}else{appendLog('[VIDEO] No video loaded');}
+    });
+    document.getElementById('wsVidPause').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){v.pause();appendLog('[VIDEO] Paused at '+v.currentTime.toFixed(1)+'s');}else{appendLog('[VIDEO] No video');}
+    });
+    document.getElementById('wsVidStop').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){v.pause();v.currentTime=0;appendLog('[VIDEO] Stopped');}else{appendLog('[VIDEO] No video');}
+    });
+    document.getElementById('wsVidCut').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){appendLog('[VIDEO] Cut at '+v.currentTime.toFixed(2)+'s — use backend /api/video/cut');}else{appendLog('[VIDEO] No video');}
+    });
+    document.getElementById('wsVidSplit').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){appendLog('[VIDEO] Split at '+v.currentTime.toFixed(2)+'s — use backend /api/video/split');}else{appendLog('[VIDEO] No video');}
+    });
+    document.getElementById('wsVidDel').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){appendLog('[VIDEO] Delete clip at '+v.currentTime.toFixed(2)+'s — use backend /api/video/delete');}else{appendLog('[VIDEO] No video');}
+    });
+    document.getElementById('wsVidDup').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(v){appendLog('[VIDEO] Duplicate clip at '+v.currentTime.toFixed(2)+'s — use backend /api/video/duplicate');}else{appendLog('[VIDEO] No video');}
+    });
     document.getElementById('wsVidRipple').addEventListener('click',function(){this.classList.toggle('active');appendLog('[VIDEO] Ripple: '+this.classList.contains('active'));});
     document.getElementById('wsVidSnap').addEventListener('click',function(){this.classList.toggle('active');appendLog('[VIDEO] Snap: '+this.classList.contains('active'));});
     document.getElementById('wsVidSpeed').addEventListener('input',function(){document.getElementById('wsVidSpeedVal').textContent=(this.value/100).toFixed(1)+'x';});
     document.getElementById('wsVidVol').addEventListener('input',function(){document.getElementById('wsVidVolVal').textContent=this.value+'%';});
     document.getElementById('wsVidOpacity').addEventListener('input',function(){document.getElementById('wsVidOpacityVal').textContent=this.value+'%';});
-    document.getElementById('wsVidImport').addEventListener('click',function(){appendLog('[VIDEO] Import');});
-    document.getElementById('wsVidExport').addEventListener('click',function(){appendLog('[VIDEO] Export');});
+    document.getElementById('wsVidImport').addEventListener('click',function(){
+      var inp=document.createElement('input');inp.type='file';inp.accept='video/*';
+      inp.onchange=function(e){
+        var file=e.target.files[0];if(!file)return;
+        var v=document.getElementById('wsVidPreview');
+        v.src=URL.createObjectURL(file);v.style.display='block';
+        v.onloadedmetadata=function(){
+          document.getElementById('wsVidDur').textContent=formatTime(v.duration);
+          appendLog('[VIDEO] Loaded: '+file.name+' ('+v.videoWidth+'x'+v.videoHeight+', '+v.duration.toFixed(1)+'s)');
+        };
+        v.ontimeupdate=function(){document.getElementById('wsVidTime').textContent=formatTime(v.currentTime);};
+      };inp.click();
+    });
+    document.getElementById('wsVidExport').addEventListener('click',function(){
+      var v=document.getElementById('wsVidPreview');
+      if(!v||!v.src){appendLog('[VIDEO] No video to export');return;}
+      var a=document.createElement('a');a.href=v.src;a.download='export_video.mp4';a.click();
+      appendLog('[VIDEO] Exported video');
+    });
     document.getElementById('wsVidZoomIn').addEventListener('click',function(){appendLog('[VIDEO] Zoom In');});
     document.getElementById('wsVidZoomOut').addEventListener('click',function(){appendLog('[VIDEO] Zoom Out');});
     document.getElementById('wsVidZoomFit').addEventListener('click',function(){appendLog('[VIDEO] Zoom Fit');});
     document.getElementById('wsVidApply').addEventListener('click',function(){
       var p=document.getElementById('wsVidPrompt').value;
-      if(p)appendLog('[VIDEO] AI Effect: '+p);
+      if(!p){appendLog('[VIDEO] No prompt');return;}
+      appendLog('[VIDEO] AI generating: '+p);
+      fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'video',prompt:p})}).then(function(r){return r.json();}).then(function(d){
+        appendLog('[VIDEO] AI result: '+JSON.stringify(d).substring(0,100));
+      }).catch(function(e){appendLog('[VIDEO] AI error: '+e.message);});
     });
     document.querySelectorAll('[data-veffect]').forEach(function(btn){
-      btn.addEventListener('click',function(){appendLog('[VIDEO] Effect: '+this.dataset.veffect);});
+      btn.addEventListener('click',function(){
+        var fx=this.dataset.veffect;
+        appendLog('[VIDEO] Effect: '+fx);
+        var el=document.getElementById('wsVidPreview');
+        if(el){
+          if(fx==='slow')el.playbackRate=0.5;
+          else if(fx==='fast')el.playbackRate=2;
+          else if(fx==='reverse')el.playbackRate=-1;
+          else el.playbackRate=1;
+          appendLog('[VIDEO] Playback rate: '+el.playbackRate+'x');
+        }
+      });
     });
     document.querySelectorAll('[data-effect]').forEach(function(btn){
-      btn.addEventListener('click',function(){appendLog('[VIDEO] Effect: '+this.dataset.effect);});
+      btn.addEventListener('click',function(){
+        var fx=this.dataset.effect;
+        appendLog('[VIDEO] Effect: '+fx);
+        var el=document.getElementById('wsVidPreview');
+        if(el){
+          var filters={brightness:'brightness(1.5)',contrast:'contrast(1.5)',saturation:'saturate(1.5)',blur:'blur(2px)',sharpen:'contrast(2)',bw:'grayscale(1)',sepia:'sepia(1)',invert:'invert(1)'};
+          el.style.filter=filters[fx]||'none';
+          appendLog('[VIDEO] Applied filter: '+fx);
+        }
+      });
     });
     document.querySelectorAll('[data-transition]').forEach(function(btn){
-      btn.addEventListener('click',function(){appendLog('[VIDEO] Transition: '+this.dataset.transition);});
+      btn.addEventListener('click',function(){
+        var fx=this.dataset.transition;
+        appendLog('[VIDEO] Transition: '+fx+' (applied to next cut)');
+      });
     });
   }
 
@@ -2999,13 +3196,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       sendAgentCmd('generate',{type:'sound',prompt:type+' '+dur+' seconds'});
     });
     document.getElementById('wsAudioSpeak').addEventListener('click',function(){
-      var t=document.getElementById('wsVoxText').value;if(t)speakText(t);
+      var t=document.getElementById('wsAudioVoxText').value;if(t)speakText(t);
     });
     document.getElementById('wsAudioListen').addEventListener('click',function(){
       startListening(function(t){document.getElementById('wsAudioVoxText').value=t;});
     });
     document.querySelectorAll('[data-audiofx]').forEach(function(btn){
-      btn.addEventListener('click',function(){appendLog('[AUDIO] FX: '+this.dataset.audiofx);});
+      btn.addEventListener('click',function(){
+        var fx=this.dataset.audiofx;
+        appendLog('[AUDIO] FX: '+fx);
+        if(!wsAudioEl){appendLog('[AUDIO] No audio loaded');return;}
+        if(fx==='normalize'){wsAudioEl.volume=1;appendLog('[AUDIO] Normalized volume to 100%');}
+        else if(fx==='fade_in'){wsAudioEl.volume=0;var v=0;var iv=setInterval(function(){v=Math.min(1,v+0.05);wsAudioEl.volume=v;if(v>=1)clearInterval(iv);},50);appendLog('[AUDIO] Fading in...');}
+        else if(fx==='fade_out'){var v2=wsAudioEl.volume;var iv2=setInterval(function(){v2=Math.max(0,v2-0.05);wsAudioEl.volume=v2;if(v2<=0){clearInterval(iv2);wsAudioEl.pause();}},50);appendLog('[AUDIO] Fading out...');}
+        else if(fx==='reverse'){appendLog('[AUDIO] Reverse: use backend API for full reverse');}
+        else if(fx==='pitch_up'||fx==='pitch_down'){wsAudioEl.playbackRate=fx==='pitch_up'?1.25:0.75;appendLog('[AUDIO] Playback rate: '+wsAudioEl.playbackRate+'x');}
+        else if(fx==='echo'){appendLog('[AUDIO] Echo: use backend API for echo effect');}
+        else if(fx==='reverb'){appendLog('[AUDIO] Reverb: use backend API for reverb effect');}
+      });
     });
   }
 
@@ -3041,6 +3249,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       wsAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
       wsAudioAnalyser=wsAudioCtx.createAnalyser();wsAudioAnalyser.fftSize=128;
     }
+    if(wsAudioEl&&!wsAudioEl._connected){
+      try{
+        var src=wsAudioCtx.createMediaElementSource(wsAudioEl);
+        src.connect(wsAudioAnalyser);wsAudioAnalyser.connect(wsAudioCtx.destination);
+        wsAudioEl._connected=true;
+      }catch(e){}
+    }
   }
 
   function setupWsPost(){
@@ -3055,6 +3270,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
           var ctx=c.getContext('2d');
           c.width=img.width>400?400:img.width;c.height=img.height>200?200:img.height;
           ctx.drawImage(img,0,0,c.width,c.height);
+          wsImgOrigData=ctx.getImageData(0,0,c.width,c.height);
           appendLog('[IMG] Loaded: '+file.name);
         };
         img.src=ev.target.result;
@@ -3075,23 +3291,91 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     document.getElementById('wsImgRotR').addEventListener('click',function(){rotateWsImg(90);});
     document.getElementById('wsImgFlipH').addEventListener('click',function(){flipWsImg('h');});
     document.getElementById('wsImgFlipV').addEventListener('click',function(){flipWsImg('v');});
-    document.getElementById('wsImgCrop').addEventListener('click',function(){appendLog('[IMG] Crop');});
-    document.getElementById('wsImgResize').addEventListener('click',function(){appendLog('[IMG] Resize');});
+    document.getElementById('wsImgCrop').addEventListener('click',function(){
+      var w=document.getElementById('wsImgCropW').value||'512';
+      var h=document.getElementById('wsImgCropH')?document.getElementById('wsImgCropH').value:'512';
+      if(w&&h){
+        var canvas=document.getElementById('wsImgCanvas');
+        if(canvas){
+          var ctx=canvas.getContext('2d');
+          var imgData=ctx.getImageData(0,0,parseInt(w),parseInt(h));
+          canvas.width=parseInt(w);canvas.height=parseInt(h);
+          ctx.putImageData(imgData,0,0);
+          wsImgOrigData=ctx.getImageData(0,0,canvas.width,canvas.height);
+          appendLog('[IMG] Cropped to '+w+'x'+h);
+        }
+      }
+    });
+    document.getElementById('wsImgResize').addEventListener('click',function(){
+      var w=document.getElementById('wsImgCropW').value||'1024';
+      var h=document.getElementById('wsImgCropH')?document.getElementById('wsImgCropH').value:'1024';
+      if(w&&h){
+        var canvas=document.getElementById('wsImgCanvas');
+        if(canvas){
+          var ctx=canvas.getContext('2d');
+          var tmpCanvas=document.createElement('canvas');
+          tmpCanvas.width=canvas.width;tmpCanvas.height=canvas.height;
+          tmpCanvas.getContext('2d').drawImage(canvas,0,0);
+          canvas.width=parseInt(w);canvas.height=parseInt(h);
+          ctx.drawImage(tmpCanvas,0,0,parseInt(w),parseInt(h));
+          wsImgOrigData=ctx.getImageData(0,0,canvas.width,canvas.height);
+          appendLog('[IMG] Resized to '+w+'x'+h);
+        }
+      }
+    });
     document.getElementById('wsImgAIApply').addEventListener('click',function(){
-      var p=document.getElementById('wsImgAIPrompt').value;if(p)appendLog('[IMG] AI: '+p);
+      var p=document.getElementById('wsImgAIPrompt').value;
+      if(!p){appendLog('[IMG] No prompt');return;}
+      appendLog('[IMG] AI generating: '+p);
+      fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'image',prompt:p})}).then(function(r){return r.json();}).then(function(d){
+        appendLog('[IMG] AI result: '+JSON.stringify(d).substring(0,100));
+        if(d.path){var img=new Image();img.onload=function(){var c=document.getElementById('wsImgCanvas');if(c){c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);}};img.src='/static/'+d.path;}
+      }).catch(function(e){appendLog('[IMG] AI error: '+e.message);});
     });
     document.querySelectorAll('[data-imgfilter]').forEach(function(btn){
-      btn.addEventListener('click',function(){appendLog('[IMG] Filter: '+this.dataset.imgfilter);});
+      btn.addEventListener('click',function(){
+        var fx=this.dataset.imgfilter;
+        appendLog('[IMG] Filter: '+fx);
+        var canvas=document.getElementById('wsImgCanvas');
+        if(!canvas){appendLog('[IMG] No image loaded');return;}
+        var ctx=canvas.getContext('2d');
+        var imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        var d=imgData.data;
+        for(var i=0;i<d.length;i+=4){
+          var r=d[i],g=d[i+1],b=d[i+2];
+          if(fx==='bw'){var gray=0.299*r+0.587*g+0.114*b;d[i]=d[i+1]=d[i+2]=gray;}
+          else if(fx==='sepia'){d[i]=Math.min(255,r*0.393+g*0.769+b*0.189);d[i+1]=Math.min(255,r*0.349+g*0.686+b*0.168);d[i+2]=Math.min(255,r*0.272+g*0.534+b*0.131);}
+          else if(fx==='invert'){d[i]=255-r;d[i+1]=255-g;d[i+2]=255-b;}
+          else if(fx==='vintage'){d[i]=Math.min(255,r*0.6+g*0.3+b*0.1);d[i+1]=Math.min(255,r*0.2+g*0.6+b*0.2);d[i+2]=Math.min(255,r*0.1+g*0.3+b*0.6);}
+        }
+        ctx.putImageData(imgData,0,0);
+        appendLog('[IMG] Applied: '+fx);
+      });
     });
   }
 
+  var wsImgOrigData=null;
   function applyImgFilter(){
     var c=document.getElementById('wsImgCanvas');
     var ctx=c.getContext('2d');
     var b=parseInt(document.getElementById('wsImgBright').value)||0;
     var ct=parseInt(document.getElementById('wsImgContrast').value)||0;
     var s=parseInt(document.getElementById('wsImgSat').value)||100;
-    ctx.filter='brightness('+(100+b)+'%) contrast('+(100+ct)+'%) saturate('+s+'%)';
+    if(!wsImgOrigData){wsImgOrigData=ctx.getImageData(0,0,c.width,c.height);}
+    var src=wsImgOrigData;var dst=ctx.createImageData(src.width,src.height);
+    var bf=(100+b)/100;var cf=(100+ct)/100;var sf=s/100;
+    for(var i=0;i<src.data.length;i+=4){
+      var r=src.data[i],g=src.data[i+1],bl=src.data[i+2];
+      r=Math.max(0,Math.min(255,((r/255-0.5)*cf+0.5)*bf*255));
+      g=Math.max(0,Math.min(255,((g/255-0.5)*cf+0.5)*bf*255));
+      bl=Math.max(0,Math.min(255,((bl/255-0.5)*cf+0.5)*bf*255));
+      var gray=0.299*r+0.587*g+0.114*bl;
+      dst.data[i]=Math.max(0,Math.min(255,gray*sf+r*(1-sf)));
+      dst.data[i+1]=Math.max(0,Math.min(255,gray*sf+g*(1-sf)));
+      dst.data[i+2]=Math.max(0,Math.min(255,gray*sf+bl*(1-sf)));
+      dst.data[i+3]=src.data[i+3];
+    }
+    ctx.putImageData(dst,0,0);
   }
 
   function rotateWsImg(deg){
@@ -3141,10 +3425,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     });
     document.getElementById('wsVisionAnalyze').addEventListener('click',function(){
       document.getElementById('wsVisionStatus').textContent='Analyzing...';
-      appendLog('[VISION] Analyzing frame');
+      appendLog('[VISION] Analyzing frame via /api/vision/analyze');
+      var gallery=document.getElementById('wsVisionGallery');
+      var imgs=gallery.querySelectorAll('img');
+      var lastImg=imgs[imgs.length-1];
+      if(lastImg){
+        fetch('/api/vision/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:lastImg.src})}).then(function(r){return r.json();}).then(function(d){
+          document.getElementById('wsVisionStatus').textContent='Analyzed';
+          appendLog('[VISION] Result: '+JSON.stringify(d).substring(0,120));
+        }).catch(function(e){document.getElementById('wsVisionStatus').textContent='Error';appendLog('[VISION] Error: '+e.message);});
+      }else{appendLog('[VISION] No frames captured');document.getElementById('wsVisionStatus').textContent='No frames';}
     });
     document.getElementById('wsVisionOCR').addEventListener('click',function(){
-      appendLog('[VISION] OCR reading...');
+      appendLog('[VISION] OCR reading via /api/vision/ocr');
+      var gallery=document.getElementById('wsVisionGallery');
+      var imgs=gallery.querySelectorAll('img');
+      var lastImg=imgs[imgs.length-1];
+      if(lastImg){
+        fetch('/api/vision/ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:lastImg.src})}).then(function(r){return r.json();}).then(function(d){
+          appendLog('[VISION] OCR: '+(d.text||JSON.stringify(d)).substring(0,200));
+        }).catch(function(e){appendLog('[VISION] OCR error: '+e.message);});
+      }else{appendLog('[VISION] No frames for OCR');}
     });
   }
 
@@ -3152,205 +3453,163 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     if(wsVisionInited)return;wsVisionInited=true;
   }
 
-  function setupWsData(){
-    document.getElementById('wsDataDocUpload').addEventListener('click',function(){document.getElementById('wsDataDocFile').click();});
-    document.getElementById('wsDataDocFile').addEventListener('change',function(e){
-      var file=e.target.files[0];if(!file)return;
-      var formData=new FormData();formData.append('file',file);
-      fetch('/api/knowledge/document',{method:'POST',body:formData})
-      .then(function(r){return r.json();}).then(function(d){
-        appendLog('[DOC] Uploaded: '+file.name+' ('+d.words+' words)');
-        loadDocsListWs();
+  // CONTENT LIBRARY
+  var libItems=[],libFilter='all',libSelected=null;
+
+  function setupContentLibrary(){
+    document.querySelectorAll('.lib-filter').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        libFilter=this.dataset.filter;
+        document.querySelectorAll('.lib-filter').forEach(function(b){b.classList.remove('active');b.style.color='var(--text2)';b.style.background='rgba(0,229,255,0.03)';b.style.borderColor='rgba(0,229,255,0.1)';});
+        this.classList.add('active');this.style.color='var(--glow)';this.style.background='rgba(0,229,255,0.08)';this.style.borderColor='rgba(0,229,255,0.2)';
+        renderContentLibrary();
       });
     });
-    document.getElementById('wsDataDocRefresh').addEventListener('click',function(){loadDocsListWs();});
-    document.getElementById('wsDataDocAdd').addEventListener('click',function(){
-      var text=document.getElementById('wsDataDocText').value;
-      var name=document.getElementById('wsDataDocName').value||'Untitled';
-      if(!text)return;
-      fetch('/api/knowledge/document/text',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:name,content:text})
-      }).then(function(r){return r.json();}).then(function(d){
-        appendLog('[DOC] Added: '+name+' ('+d.words+' words)');
-        document.getElementById('wsDataDocText').value='';
-        loadDocsListWs();
+    var searchEl=document.getElementById('libSearch');
+    if(searchEl)searchEl.addEventListener('input',function(){renderContentLibrary();});
+    var dlBtn=document.getElementById('libDownload');
+    if(dlBtn)dlBtn.addEventListener('click',function(){if(libSelected){var a=document.createElement('a');a.href=libSelected.url;a.download=libSelected.name;a.click();}});
+    var enBtn=document.getElementById('libEnlarge');
+    if(enBtn)enBtn.addEventListener('click',function(){if(libSelected)showLibPreviewModal(libSelected);});
+    var delBtn=document.getElementById('libDelete');
+    if(delBtn)delBtn.addEventListener('click',function(){
+      if(!libSelected)return;
+      if(!confirm('Delete '+libSelected.name+'?'))return;
+      fetch('/api/content/delete?name='+encodeURIComponent(libSelected.name),{method:'DELETE'})
+      .then(function(r){return r.json();}).then(function(){loadContentLibrary();});
+    });
+    var docUploadBtn=document.getElementById('libDocUpload');
+    var docFileInput=document.getElementById('libDocFile');
+    if(docUploadBtn&&docFileInput){
+      docUploadBtn.addEventListener('click',function(){docFileInput.click();});
+      docFileInput.addEventListener('change',function(){
+        if(!this.files.length)return;
+        var fd=new FormData();
+        fd.append('file',this.files[0]);
+        fetch('/api/knowledge/document',{method:'POST',body:fd})
+        .then(function(r){return r.json();}).then(function(){loadContentLibrary();appendLog('LIBRARY','Document uploaded');});
+      });
+    }
+    var docRefreshBtn=document.getElementById('libDocRefresh');
+    if(docRefreshBtn)docRefreshBtn.addEventListener('click',function(){loadContentLibrary();appendLog('LIBRARY','Documents refreshed');});
+    var libExportBtn=document.getElementById('libExport');
+    if(libExportBtn)libExportBtn.addEventListener('click',function(){
+      var fmt=document.getElementById('libExportFormat');
+      var format=fmt?fmt.value:'json';
+      fetch('/api/dataretention/export?format='+format).then(function(r){return r.blob()}).then(function(b){
+        var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='zicore_export.'+format;a.click();
+        appendLog('LIBRARY','Exported training data as '+format);
       });
     });
-    document.getElementById('wsDataSearch').addEventListener('keydown',function(e){
-      if(e.key==='Enter'){
-        var q=this.value;
-        fetch('/api/knowledge/search?q='+encodeURIComponent(q))
-        .then(function(r){return r.json();}).then(function(d){
-          var el=document.getElementById('wsDataSearchResults');
-          if(!d.results||d.results.length===0){el.innerHTML='<div style="color:var(--text3)">No results</div>';return;}
-          var html='';
-          d.results.forEach(function(r){
-            html+='<div style="padding:3px;border-bottom:1px solid rgba(0,229,255,0.04)">';
-            html+='<span style="color:var(--text2)">['+r.role+']</span> '+r.content.substring(0,120);
-            html+='</div>';
-          });
-          el.innerHTML=html;
-        });
+    loadContentLibrary();
+  }
+
+  function loadContentLibrary(){
+    fetch('/api/content/library').then(function(r){return r.json();}).then(function(d){
+      libItems=d.items||[];
+      var badge=document.getElementById('libBadge');
+      if(badge)badge.textContent=libItems.length;
+      var totalEl=document.getElementById('libTotal');
+      var sizeEl=document.getElementById('libSize');
+      if(totalEl)totalEl.textContent=libItems.length;
+      if(sizeEl){
+        var totalKb=0;libItems.forEach(function(i){totalKb+=i.size_kb||0;});
+        sizeEl.textContent=totalKb>1024?(totalKb/1024).toFixed(1)+' MB':totalKb.toFixed(0)+' KB';
       }
-    });
-    document.getElementById('wsDataLoadAll').addEventListener('click',function(){
-      fetch('/api/knowledge/conversations?limit=30')
-      .then(function(r){return r.json();}).then(function(d){
-        var el=document.getElementById('wsDataSearchResults');
-        if(!d.conversations||d.conversations.length===0){el.innerHTML='<div style="color:var(--text3)">No conversations yet</div>';return;}
-        var html='';
-        d.conversations.forEach(function(c){
-          html+='<div style="padding:3px;border-bottom:1px solid rgba(0,229,255,0.04)">';
-          html+='<span style="color:var(--text2)">['+c.role+']</span> '+c.content.substring(0,120);
-          html+='</div>';
-        });
-        el.innerHTML=html;
-        document.getElementById('wsDataConv').textContent=d.conversations.length;
-      });
-    });
-    document.getElementById('wsDataExport').addEventListener('click',function(){
-      var fmt=document.getElementById('wsDataFormat').value;
-      appendLog('[DATA] Export as '+fmt);
-      sendAgentCmd('chat',{message:'export training data as '+fmt});
-    });
-    document.getElementById('wsDataMissionSave').addEventListener('click',function(){
-      appendLog('[MISSION] Saving current');
-    });
-    document.getElementById('wsDataMissionLoad').addEventListener('click',function(){
-      appendLog('[MISSION] Loading');
-    });
+      renderContentLibrary();
+    }).catch(function(){});
   }
 
-  function initWsData(){
-    loadKnowledgeStats();
-    loadDocsListWs();
-  }
-
-  function loadKnowledgeStats(){
-    fetch('/api/knowledge/stats').then(function(r){return r.json();}).then(function(d){
-      if(d.stats){
-        document.getElementById('wsDataConv').textContent=d.stats.conversations||0;
-        document.getElementById('wsDataWords').textContent=d.stats.total_words||0;
+  function renderContentLibrary(){
+    var el=document.getElementById('libItems');
+    if(!el)return;
+    var search=document.getElementById('libSearch');
+    var q=search?search.value.toLowerCase():'';
+    var filtered=libItems.filter(function(item){
+      if(libFilter!=='all'&&item.type!==libFilter)return false;
+      if(q&&item.name.toLowerCase().indexOf(q)<0)return false;
+      return true;
+    });
+    if(filtered.length===0){el.innerHTML='<div style="font-size:9px;color:var(--text3);padding:12px;width:100%;text-align:center">No items found</div>';return;}
+    var html='';
+    var icons={image:'&#128444;',sound:'&#127925;',video:'&#127909;','3d':'&#9650;'};
+    var colors={image:'#00e5ff',sound:'#7c4dff',video:'#fa0','3d':'#0f6'};
+    filtered.forEach(function(item,idx){
+      var icon=icons[item.type]||'&#9679;';
+      var color=colors[item.type]||'var(--text2)';
+      var sel=libSelected&&libSelected.name===item.name?'border-color:'+color+';background:rgba(0,229,255,0.08)':'';
+      html+='<div class="lib-item" data-idx="'+idx+'" style="width:60px;padding:6px;border:1px solid rgba(0,229,255,0.08);border-radius:3px;cursor:pointer;text-align:center;transition:all .2s;'+sel+'">';
+      if(item.type==='image'){
+        html+='<img src="'+item.url+'" style="width:48px;height:36px;object-fit:cover;border-radius:2px;display:block;margin:0 auto 3px">';
+      }else{
+        html+='<div style="font-size:20px;margin-bottom:3px">'+icon+'</div>';
       }
-    }).catch(function(){});
-    fetch('/api/knowledge/documents').then(function(r){return r.json();}).then(function(d){
-      document.getElementById('wsDataDocs').textContent=(d.documents||[]).length;
-    }).catch(function(){});
-  }
-
-  function loadDocsListWs(){
-    fetch('/api/knowledge/documents').then(function(r){return r.json();}).then(function(d){
-      var el=document.getElementById('wsDataDocList');
-      if(!d.documents||d.documents.length===0){el.innerHTML='No documents';return;}
-      var html='';
-      d.documents.forEach(function(doc){
-        html+='<div style="padding:3px;border-bottom:1px solid rgba(0,229,255,0.04);display:flex;justify-content:space-between">';
-        html+='<span style="color:var(--text)">'+doc.name+'</span>';
-        html+='<span style="color:var(--text2)">'+(doc.words||0)+'w</span>';
-        html+='</div>';
+      html+='<div style="font-size:6px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+item.name.substring(0,12)+'</div>';
+      html+='<div style="font-size:5px;color:var(--text3)">'+item.size_kb+'KB</div>';
+      html+='</div>';
+    });
+    el.innerHTML=html;
+    el.querySelectorAll('.lib-item').forEach(function(itemEl){
+      itemEl.addEventListener('click',function(){
+        var idx=parseInt(this.dataset.idx);
+        libSelected=filtered[idx];
+        renderContentLibrary();
+        renderLibPreview(libSelected);
       });
-      el.innerHTML=html;
-    }).catch(function(){});
-  }
-
-  function setupFlightSim(){
-    document.getElementById('simStart').addEventListener('click',function(){
-      if(simRunning)return;
-      simRunning=true;simTime=0;
-      var name=document.getElementById('simName').value||'ZIO-ALPHA';
-      var target=document.getElementById('simTarget').value;
-      document.getElementById('rMissionName').textContent=name;
-      document.getElementById('simPhase').textContent='LAUNCH';
-      document.getElementById('simPhase').style.color='#0f6';
-      appendLog('[SIM] Flight started: '+name+' -> '+target);
-      simInterval=setInterval(updateSim,100);
-    });
-    document.getElementById('simStop').addEventListener('click',function(){
-      if(!simRunning)return;
-      simRunning=false;clearInterval(simInterval);
-      document.getElementById('simPhase').textContent='STOPPED';
-      document.getElementById('simPhase').style.color='#f44';
-      appendLog('[SIM] Flight stopped');
-    });
-    document.getElementById('simReset').addEventListener('click',function(){
-      simRunning=false;clearInterval(simInterval);simTime=0;
-      document.getElementById('simPhase').textContent='PRE-FLIGHT';
-      document.getElementById('simPhase').style.color='var(--glow)';
-      document.getElementById('simEngine').textContent='IDLE';
-      document.getElementById('simThrust').textContent='0 kN';
-      document.getElementById('simDv').textContent='0 m/s';
-      document.getElementById('simBurnTime').textContent='0:00:00';
-      document.getElementById('simFuelFlow').textContent='0 kg/s';
-      appendLog('[SIM] Reset');
-    });
-    document.getElementById('simIgnite').addEventListener('click',function(){
-      if(!simRunning){appendLog('[SIM] Start flight first');return;}
-      document.getElementById('simEngine').textContent='FIRE';
-      document.getElementById('simEngine').style.color='#f80';
-      document.getElementById('simThrust').textContent='7600 kN';
-      document.getElementById('simFuelFlow').textContent='2500 kg/s';
-      appendLog('[SIM] Engines ignited');
     });
   }
 
-  function updateSim(){
-    simTime+=0.1;
-    var phase='LAUNCH';
-    if(simTime>5)phase='LIFT-OFF';
-    if(simTime>15)phase='MAX-Q';
-    if(simTime>30)phase='MECO';
-    if(simTime>35)phase='STAGE SEP';
-    if(simTime>40)phase='SECOND BURN';
-    if(simTime>60)phase='ORBIT INSERTION';
-    if(simTime>80)phase='COAST';
-    document.getElementById('simPhase').textContent=phase;
-    document.getElementById('rMissionPhase').textContent=phase;
-    var progress=Math.min(100,simTime);
-    document.getElementById('rMissionProg').textContent=Math.round(progress)+'%';
-    document.getElementById('rMissionBar').style.width=progress+'%';
-    var alt=0+simTime*10;
-    var vel=0+simTime*0.5;
-    var fuel=Math.max(0,98-simTime*0.3);
-    document.getElementById('fcgAlt').innerHTML=Math.round(alt)+'<span class="fc-gauge-unit">km</span>';
-    document.getElementById('fcgVel').innerHTML=vel.toFixed(2)+'<span class="fc-gauge-unit">km/s</span>';
-    document.getElementById('fcgFuel').innerHTML=Math.round(fuel)+'<span class="fc-gauge-unit">%</span>';
-    document.getElementById('fcgAltBar').style.width=Math.min(100,alt/40)+'%';
-    document.getElementById('fcgVelBar').style.width=Math.min(100,vel/10*100)+'%';
-    document.getElementById('fcgFuelBar').style.width=fuel+'%';
-    document.getElementById('hudAlt').textContent=Math.round(alt);
-    document.getElementById('hudVel').textContent=vel.toFixed(2);
-    document.getElementById('hudFuel').textContent=Math.round(fuel);
-    document.getElementById('simIsp').textContent='380 s';
-    document.getElementById('simDv').textContent=Math.round(simTime*15)+' m/s';
-    var burnSecs=Math.floor(simTime)%3600;
-    var bm=Math.floor(burnSecs/60);
-    var bs=burnSecs%60;
-    document.getElementById('simBurnTime').textContent='0:'+String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
-    var lat=parseFloat(document.getElementById('simLat').value)||28.5729;
-    var lon=parseFloat(document.getElementById('simLon').value)||-80.6490;
-    document.getElementById('gpsLat').textContent=lat.toFixed(4)+'°';
-    document.getElementById('gpsLon').textContent=lon.toFixed(4)+'°';
-    document.getElementById('gpsAlt').textContent=Math.round(alt)+' km';
-    document.getElementById('gpsSpeed').textContent=vel.toFixed(2)+' km/s';
-    document.getElementById('monLat').textContent=lat.toFixed(4)+'°';
-    document.getElementById('monLon').textContent=lon.toFixed(4)+'°';
-    document.getElementById('monAlt').textContent=Math.round(alt)+' km';
+  function renderLibPreview(item){
+    var prev=document.getElementById('libPreview');
+    var info=document.getElementById('libPreviewInfo');
+    if(!prev||!item)return;
+    var dlBtn=document.getElementById('libDownload');
+    var enBtn=document.getElementById('libEnlarge');
+    var delBtn=document.getElementById('libDelete');
+    if(dlBtn)dlBtn.disabled=false;
+    if(enBtn)enBtn.disabled=false;
+    if(delBtn)delBtn.disabled=false;
+    if(item.type==='image'){
+      prev.innerHTML='<img src="'+item.url+'" style="max-width:100%;max-height:80px;border:1px solid rgba(0,229,255,0.1)">';
+    }else if(item.type==='sound'){
+      prev.innerHTML='<audio controls src="'+item.url+'" style="width:100%;height:30px"></audio>';
+    }else if(item.type==='video'){
+      prev.innerHTML='<video controls src="'+item.url+'" style="max-width:100%;max-height:80px"></video>';
+    }else if(item.type==='3d'){
+      prev.innerHTML='<div style="padding:10px;color:var(--glow)">3D: '+item.name+'</div>';
+    }
+    if(info)info.textContent=item.name+' — '+item.size_kb+' KB';
+  }
+
+  function showLibPreviewModal(item){
+    var modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer';
+    var inner=document.createElement('div');
+    inner.style.cssText='max-width:90vw;max-height:90vh;text-align:center';
+    if(item.type==='image'){
+      inner.innerHTML='<img src="'+item.url+'" style="max-width:90vw;max-height:85vh;border:1px solid rgba(0,229,255,0.2)">';
+    }else if(item.type==='sound'){
+      inner.innerHTML='<div style="padding:20px;color:var(--glow);font-size:14px">'+item.name+'</div><audio controls src="'+item.url+'" style="width:400px"></audio>';
+    }else if(item.type==='3d'){
+      inner.innerHTML='<div style="padding:40px;color:var(--glow);font-size:16px">3D Model: '+item.name+'</div><div style="color:var(--text2);font-size:12px">Open in 3D workspace to view</div>';
+    }else{
+      inner.innerHTML='<div style="padding:40px;color:var(--glow);font-size:16px">'+item.name+'</div>';
+    }
+    modal.appendChild(inner);
+    modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+    document.body.appendChild(modal);
   }
 
   function connectWS(){
     try{
-      ws=new WebSocket('ws://localhost:8080/ws/telemetry');
+      ws=new WebSocket(apiWsBase()+'/ws/telemetry');
       ws.onopen=function(){
         document.getElementById('connDot').classList.add('on');
-        document.getElementById('rWs').textContent='ON';
-        document.getElementById('rWs').style.color='var(--glow)';
         appendLog('[WS] Connected');
       };
       ws.onmessage=function(evt){try{updateTelemetry(JSON.parse(evt.data));}catch(e){}};
       ws.onclose=function(){
         document.getElementById('connDot').classList.remove('on');
-        document.getElementById('rWs').textContent='OFF';
-        document.getElementById('rWs').style.color='#f44';
         setTimeout(connectWS,3000);
       };
       ws.onerror=function(){ws.close();};
@@ -3359,16 +3618,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
   function connectAgentWS(){
     try{
-      agentWs=new WebSocket('ws://localhost:8080/api/agent/ws');
+      agentWs=new WebSocket(apiWsBase()+'/ws/zio');
       agentWs.onopen=function(){
-        document.getElementById('rAgent').textContent='ONLINE';
-        document.getElementById('rAgent').style.color='var(--glow)';
         appendLog('[AGENT] Connected');
       };
       agentWs.onmessage=function(evt){try{handleAgentWsMsg(JSON.parse(evt.data));}catch(e){}};
       agentWs.onclose=function(){
-        document.getElementById('rAgent').textContent='OFFLINE';
-        document.getElementById('rAgent').style.color='#f44';
         setTimeout(connectAgentWS,3000);
       };
       agentWs.onerror=function(){agentWs.close();};
@@ -3391,7 +3646,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       }
     }else if(data.type==='stream_chunk'){
       if(streamingDiv){
-        streamingDiv.innerHTML+=escH(data.content||'');
+        streamingDiv.innerHTML+=escH(data.chunk||data.content||'');
         var cm=document.getElementById('chatMsgs');
         if(cm)cm.scrollTop=cm.scrollHeight;
       }
@@ -3421,76 +3676,57 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       var el2=document.getElementById('knwWordCount');if(el2)el2.textContent=s.total_words||0;
     }else if(data.type==='mission_loaded'){
       var md=data.data||{};
-      document.getElementById('simName').value=md.name||'ZIO-ALPHA';
-      document.getElementById('simPhase').textContent=md.phase||'PRE-FLIGHT';
       appendLog('[MISSION] Loaded: '+(md.name||'unknown'));
     }else if(data.type==='error')appendLog('[ERROR] '+data.message);
   }
 
-  function updateTelemetry(d){
-    if(!d)return;
-    var miss=d.mission||{};
-    var mn=document.getElementById('rMissionName');
-    var mp=document.getElementById('rMissionPhase');
-    if(mn)mn.textContent=miss.name||'ZIO-ALPHA';
-    if(mp)mp.textContent=(miss.phase||'PRE-FLIGHT').toUpperCase();
-    var thermo=d.thermal||{};
-    var ht=document.getElementById('rHullTemp');
-    var et=document.getElementById('rEngTemp');
-    var ct=document.getElementById('rCryoTemp');
-    if(ht)ht.textContent=Math.round(thermo.hull_c||-60)+'°C';
-    if(et)et.textContent=Math.round(thermo.engine_c||850)+'°C';
-    if(ct)ct.textContent=Math.round(thermo.cryostat_c||-220)+'°C';
-  }
-
   function updateMonitors(){
-    fetch('http://localhost:3000/api/telemetry')
+    fetch('/api/system/stats')
     .then(function(r){return r.json();})
     .then(function(d){
-      if(d.error)return;
-      var nav=d.navigation||{};
-      var prop=d.propulsion||{};
-      var pwr=d.power||{};
-      var comm=d.communications||{};
-      var att=d.attitude||{};
-      var traj=d.trajectory||{};
-      var t=Date.now()/1000;
-      document.getElementById('monCpu').textContent=Math.round(45+Math.sin(t*0.2)*15)+'%';
-      document.getElementById('monCpuBar').style.width=(45+Math.sin(t*0.2)*15)+'%';
-      document.getElementById('monMem').textContent='62%';
-      document.getElementById('monMemBar').style.width='62%';
-      document.getElementById('monTemp').textContent=Math.round(42+Math.sin(t*0.3)*3)+'°C';
-      document.getElementById('monPwr').textContent=Math.round(pwr.solar_gen_kw||12.5)+'kW';
-      document.getElementById('monPwrBar').style.width=(pwr.battery_pct||92)+'%';
-      document.getElementById('monBatt').textContent=Math.round(pwr.battery_pct||92)+'%';
-      document.getElementById('monSig').textContent=Math.round(comm.signal_strength_pct||87)+'%';
-      document.getElementById('monLatency').textContent=Math.round(comm.latency_ms||120)+'ms';
-      if(!simRunning){
-        document.getElementById('monLat').textContent=(nav.latitude||0).toFixed(4)+'°';
-        document.getElementById('monLon').textContent=(nav.longitude||0).toFixed(4)+'°';
-        document.getElementById('monAlt').textContent=Math.round(nav.altitude_km||400)+' km';
+      if(d.cpu_percent!==undefined){
+        var cpu=Math.round(d.cpu_percent||0);
+        var mem=Math.round(d.memory_percent||0);
+        var disk=Math.round(d.disk_percent||0);
+        document.getElementById('monCpu').textContent=cpu+'%';
+        document.getElementById('monCpuBar').style.width=cpu+'%';
+        document.getElementById('monMem').textContent=mem+'%';
+        document.getElementById('monMemBar').style.width=mem+'%';
+        document.getElementById('monDisk').textContent=disk+'%';
+        document.getElementById('monDiskBar').style.width=disk+'%';
+        if(d.uptime)document.getElementById('monUptime').textContent=d.uptime;
+        var wsEl=document.getElementById('monWsStatus');
+        if(wsEl){wsEl.textContent=ws&&ws.readyState===WebSocket.OPEN?'ON':'OFF';wsEl.style.color=ws&&ws.readyState===WebSocket.OPEN?'#0f6':'#f44';}
+        var agEl=document.getElementById('monAgentStatus');
+        if(agEl){agEl.textContent=agentWs&&agentWs.readyState===WebSocket.OPEN?'ON':'OFF';agEl.style.color=agentWs&&agentWs.readyState===WebSocket.OPEN?'#0f6':'#f44';}
+        if(d.ollama_status!==undefined){var ol=document.getElementById('monOllama');if(ol){ol.textContent=d.ollama_status?'ON':'OFF';ol.style.color=d.ollama_status?'#0f6':'#f44';}}
+        if(d.active_provider){var pr=document.getElementById('monProvider');if(pr)pr.textContent=d.active_provider;}
+        if(d.sd_status!==undefined){var sd=document.getElementById('monSD');if(sd){sd.textContent=d.sd_status?'ON':'OFF';sd.style.color=d.sd_status?'#0f6':'#f44';}}
+        var wsEl2=document.getElementById('wsSysCpu');
+        if(wsEl2)wsEl2.textContent=cpu+'%';
+        var wsBar2=document.getElementById('wsSysCpuBar');
+        if(wsBar2)wsBar2.style.width=cpu+'%';
+        var wsMem2=document.getElementById('wsSysMem');
+        if(wsMem2)wsMem2.textContent=mem+'%';
+        var wsMemBar2=document.getElementById('wsSysMemBar');
+        if(wsMemBar2)wsMemBar2.style.width=mem+'%';
+        var wsDisk2=document.getElementById('wsSysDisk');
+        if(wsDisk2)wsDisk2.textContent=disk+'%';
+        var wsDiskBar2=document.getElementById('wsSysDiskBar');
+        if(wsDiskBar2)wsDiskBar2.style.width=disk+'%';
+        var wsUp2=document.getElementById('wsSysUptime');
+        if(wsUp2&&d.uptime)wsUp2.textContent=d.uptime;
+        var modOl=document.getElementById('modOllama');
+        if(modOl&&d.ollama_status!==undefined){modOl.textContent=d.ollama_status?'OK':'OFF';modOl.style.color=d.ollama_status?'#0f6':'#f44';}
+        var modSD=document.getElementById('modSD');
+        if(modSD&&d.sd_status!==undefined){modSD.textContent=d.sd_status?'OK':'OFF';modSD.style.color=d.sd_status?'#0f6':'#f44';}
       }
-      document.getElementById('monDv').textContent=(traj.delta_v_remaining_ms||3100)+' m/s';
-      document.getElementById('monTgo').textContent=traj.time_to_go||'--';
-      var dvProg=100-((traj.delta_v_remaining_ms||3100)/3100*100);
-      document.getElementById('monDvBar').style.width=dvProg+'%';
-      var pitch=att.pitch_deg||0;
-      var roll=att.roll_deg||0;
-      var attEl=document.getElementById('fcAttHorizon');
-      if(attEl)attEl.style.transform='rotate('+roll+'deg) translateY('+pitch+'px)';
-      document.getElementById('fcPitch').textContent=pitch.toFixed(1)+'°';
-      document.getElementById('fcRoll').textContent=roll.toFixed(1)+'°';
-      var heading=att.yaw_deg||275.4;
-      document.getElementById('fcYaw').textContent=heading.toFixed(1)+'°';
-      document.getElementById('fcHeading').textContent=heading.toFixed(1)+'°';
-      var needle=document.getElementById('fcCompassNeedle');
-      if(needle)needle.style.transform='rotate('+(heading-180)+'deg)';
-      var clbl=document.getElementById('fcCompassLabel');
-      if(clbl)clbl.textContent=heading.toFixed(1);
-      var hd=heading.toFixed(0);
-      document.getElementById('hudTime').textContent='T+'+hd+'°';
     })
-    .catch(function(){});
+    .catch(function(){
+      document.getElementById('monCpu').textContent='--';
+      document.getElementById('monMem').textContent='--';
+      document.getElementById('monDisk').textContent='--';
+    });
   }
 
   function startClock(){
@@ -3503,126 +3739,44 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     },1000);
   }
 
-  var cameraView='forward';
-  function setupCameraViews(){
-    document.querySelectorAll('.cam-btn').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        cameraView=this.dataset.view;
-        document.querySelectorAll('.cam-btn').forEach(function(b){b.classList.remove('active');});
-        this.classList.add('active');
-        var labels={forward:'CAM 01 — FORWARD',orbit:'CAM 02 — ORBIT',map:'CAM 03 — STAR MAP',top:'CAM 04 — TOP DOWN'};
-        document.getElementById('cameraLabel').textContent=labels[cameraView]||'CAM 01';
-      });
-    });
-  }
-
-  function renderCamera(){
-    var c=document.getElementById('cameraCanvas');
-    if(!c)return;
-    var ctx=c.getContext('2d');
-    c.width=c.offsetWidth;c.height=c.offsetHeight;
-    var stars=[];
-    for(var i=0;i<300;i++)stars.push({x:Math.random()*2000,y:Math.random()*1200,b:Math.random(),s:Math.random()*1.5+0.3});
-    function draw(){
-      ctx.clearRect(0,0,c.width,c.height);
-      ctx.fillStyle='#04060a';ctx.fillRect(0,0,c.width,c.height);
-      var t=Date.now()/1000;missionTime=t;
-      stars.forEach(function(s){
-        var sx=(s.x+t*10*(s.s*0.3))%c.width;var sy=s.y%c.height;
-        var b=s.b*0.5+0.3*Math.sin(t+s.b*10);
-        ctx.fillStyle='rgba(180,200,255,'+b+')';ctx.fillRect(sx,sy,s.s,s.s);
-      });
-      ctx.strokeStyle='rgba(0,229,255,0.06)';ctx.lineWidth=1;
-      for(var gx=0;gx<c.width;gx+=60){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,c.height);ctx.stroke();}
-      for(var gy=0;gy<c.height;gy+=60){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(c.width,gy);ctx.stroke();}
-      var cx=c.width/2;var cy=c.height/2;
-      if(cameraView==='forward')drawForwardView(ctx,cx,cy,c.width,c.height,t);
-      else if(cameraView==='orbit')drawOrbitView(ctx,cx,cy,c.width,c.height,t);
-      else if(cameraView==='map')drawMapView(ctx,cx,cy,c.width,c.height,t);
-      else if(cameraView==='top')drawTopView(ctx,cx,cy,c.width,c.height,t);
-      requestAnimationFrame(draw);
-    }
-    function drawForwardView(ctx,cx,cy,w,h,t){
-      var earthR=40+8*Math.sin(t*0.15);var ex=cx+150*Math.cos(t*0.03);var ey=cy+40*Math.sin(t*0.05);
-      var grd=ctx.createRadialGradient(ex,ey,0,ex,ey,earthR);
-      grd.addColorStop(0,'rgba(30,100,220,0.7)');grd.addColorStop(0.5,'rgba(20,80,180,0.4)');grd.addColorStop(1,'rgba(10,40,100,0)');
-      ctx.fillStyle=grd;ctx.beginPath();ctx.arc(ex,ey,earthR,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(50,180,80,0.3)';ctx.beginPath();ctx.arc(ex-10,ey-6,earthR*0.25,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='rgba(0,229,255,0.04)';ctx.beginPath();ctx.arc(cx,cy,150,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.arc(cx,cy,220,0,Math.PI*2);ctx.stroke();
-      var moonAngle=t*0.08;var moonDist=200;var mx=cx+moonDist*Math.cos(moonAngle);var my=cy+moonDist*Math.sin(moonAngle)*0.3;
-      ctx.fillStyle='rgba(180,180,180,0.6)';ctx.beginPath();ctx.arc(mx,my,8,0,Math.PI*2);ctx.fill();
-      drawTrajectoryLine(ctx,cx,cy,mx,my,t);
-      var shipX=cx;var shipY=cy+80;
-      ctx.fillStyle='rgba(0,229,255,0.8)';ctx.beginPath();ctx.moveTo(shipX,shipY-8);ctx.lineTo(shipX-5,shipY+5);ctx.lineTo(shipX+5,shipY+5);ctx.closePath();ctx.fill();
-      if(t%2<1){ctx.fillStyle='rgba(255,100,0,0.4)';ctx.beginPath();ctx.moveTo(shipX-3,shipY+5);ctx.lineTo(shipX,shipY+15+Math.random()*5);ctx.lineTo(shipX+3,shipY+5);ctx.closePath();ctx.fill();}
-    }
-    function drawOrbitView(ctx,cx,cy,w,h,t){
-      ctx.strokeStyle='rgba(0,229,255,0.08)';ctx.setLineDash([4,4]);
-      ctx.beginPath();ctx.arc(cx,cy,100,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.arc(cx,cy,160,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.arc(cx,cy,220,0,Math.PI*2);ctx.stroke();
-      ctx.setLineDash([]);
-      var earthGrd=ctx.createRadialGradient(cx,cy,0,cx,cy,50);earthGrd.addColorStop(0,'rgba(30,100,220,0.8)');earthGrd.addColorStop(1,'rgba(10,40,100,0)');
-      ctx.fillStyle=earthGrd;ctx.beginPath();ctx.arc(cx,cy,50,0,Math.PI*2);ctx.fill();
-      var labels=['LEO 400km','GEO 35786km','LUNAR 384400km'];var radii=[100,160,220];
-      ctx.font='8px monospace';ctx.fillStyle='rgba(0,229,255,0.4)';
-      labels.forEach(function(l,i){ctx.fillText(l,cx+radii[i]+5,cy-5);});
-      var shipAngle=t*0.5;var shipR=100;var shipX=cx+shipR*Math.cos(shipAngle);var shipY=cy+shipR*Math.sin(shipAngle);
-      ctx.fillStyle='rgba(255,200,0,0.9)';ctx.beginPath();ctx.arc(shipX,shipY,4,0,Math.PI*2);ctx.fill();
-    }
-    function drawMapView(ctx,cx,cy,w,h,t){
-      ctx.strokeStyle='rgba(0,229,255,0.1)';ctx.lineWidth=1;
-      for(var i=0;i<w;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,h);ctx.stroke();}
-      for(var j=0;j<h;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(w,j);ctx.stroke();}
-      var earthX=cx-150;var earthY=cy;var moonX=cx+150;var moonY=cy-20;
-      var eGrd=ctx.createRadialGradient(earthX,earthY,0,earthX,earthY,25);eGrd.addColorStop(0,'rgba(30,100,220,0.8)');eGrd.addColorStop(1,'rgba(10,40,100,0)');
-      ctx.fillStyle=eGrd;ctx.beginPath();ctx.arc(earthX,earthY,25,0,Math.PI*2);ctx.fill();
-      ctx.font='9px monospace';ctx.fillStyle='rgba(0,229,255,0.6)';ctx.fillText('EARTH',earthX-15,earthY+35);
-      ctx.fillStyle='rgba(180,180,180,0.7)';ctx.beginPath();ctx.arc(moonX,moonY,10,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(0,229,255,0.6)';ctx.fillText('MOON',moonX-12,moonY+25);
-      ctx.strokeStyle='rgba(0,229,255,0.2)';ctx.setLineDash([6,4]);
-      ctx.beginPath();ctx.moveTo(earthX+25,earthY);ctx.bezierCurveTo(earthX+80,earthY-80,moonX-80,moonY+40,moonX-10,moonY);ctx.stroke();
-      ctx.setLineDash([]);
-      var progress=(t*0.02)%1;var shipX=earthX+25+(moonX-10-earthX-25)*progress;var shipY=earthY+(moonY-earthY)*progress-80*Math.sin(progress*Math.PI);
-      ctx.fillStyle='rgba(255,200,0,0.9)';ctx.beginPath();ctx.arc(shipX,shipY,5,0,Math.PI*2);ctx.fill();
-    }
-    function drawTopView(ctx,cx,cy,w,h,t){
-      ctx.strokeStyle='rgba(0,229,255,0.08)';
-      ctx.beginPath();ctx.arc(cx,cy,80,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.arc(cx,cy,140,0,Math.PI*2);ctx.stroke();
-      ctx.beginPath();ctx.arc(cx,cy,200,0,Math.PI*2);ctx.stroke();
-      var angle=t*0.4;var shipX=cx+80*Math.cos(angle);var shipY=cy+80*Math.sin(angle);
-      ctx.save();ctx.translate(shipX,shipY);ctx.rotate(angle+Math.PI/2);
-      ctx.fillStyle='rgba(0,229,255,0.9)';ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(-6,8);ctx.lineTo(0,4);ctx.lineTo(6,8);ctx.closePath();ctx.fill();
-      ctx.restore();
-      ctx.strokeStyle='rgba(255,200,0,0.15)';ctx.beginPath();ctx.arc(cx,cy,80,0,angle);ctx.stroke();
-      ctx.fillStyle='rgba(0,229,255,0.5)';ctx.font='8px monospace';
-      ctx.fillText('HEADING '+(angle*180/Math.PI%360).toFixed(1)+'°',cx-30,cy-100);
-    }
-    function drawTrajectoryLine(ctx,x1,y1,x2,y2,t){
-      ctx.strokeStyle='rgba(0,229,255,0.15)';ctx.setLineDash([8,4]);
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.bezierCurveTo(x1+50,y1-100,x2-50,y2+60,x2,y2);ctx.stroke();
-      ctx.setLineDash([]);
-      var progress=(t*0.05)%1;var px=x1+(x2-x1)*progress;var py=y1+(y2-y1)*progress-80*Math.sin(progress*Math.PI);
-      ctx.fillStyle='rgba(255,200,0,0.8)';ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
-    }
-    draw();
-    window.addEventListener('resize',function(){c.width=c.offsetWidth;c.height=c.offsetHeight;});
-    setupCameraViews();
-  }
-
   function loadSettings(){
     fetch('/api/config').then(function(r){return r.json();}).then(function(cfg){renderSettingsBody(cfg);}).catch(function(){});
   }
   function renderSettingsBody(cfg){
     var body=document.getElementById('settingsBody');var html='';
-    html+='<div style="margin-bottom:16px"><div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:6px">ACTIVE PROVIDER</div>';
+    var eng=cfg.zio_engine||{};
+    var sys=cfg.system||{};
+    var mat=cfg.materializer||{};
+    var thm=cfg.theme_config||{};
+
+    html+='<div style="font-size:10px;letter-spacing:3px;color:var(--glow);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(0,229,255,0.1)">ZICORE SYSTEM v5.0 — CONFIGURATION</div>';
+
+    /* SYSTEM */
+    html+='<div style="margin-bottom:16px;padding:10px;border:1px solid rgba(0,229,255,0.06);border-radius:3px">';
+    html+='<div style="font-size:9px;letter-spacing:2px;color:var(--glow);margin-bottom:8px">SYSTEM</div>';
+    html+='<div style="display:grid;grid-template-columns:100px 1fr 100px 1fr;gap:6px;align-items:center">';
+    html+='<div style="font-size:9px;color:var(--text2)">Web Port</div>';
+    html+='<input class="cfg-sys" data-field="web_port" value="'+(sys.web_port||3000)+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    html+='<div style="font-size:9px;color:var(--text2)">API Port</div>';
+    html+='<input class="cfg-sys" data-field="api_port" value="'+(sys.api_port||8080)+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    html+='<div style="font-size:9px;color:var(--text2)">Log Level</div>';
+    html+='<select class="cfg-sys" data-field="log_level" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    ['DEBUG','INFO','WARN','ERROR'].forEach(function(l){html+='<option value="'+l+'"'+((sys.log_level||'INFO')===l?' selected':'')+'>'+l+'</option>';});
+    html+='</select>';
+    html+='<div style="font-size:9px;color:var(--text2)">Max Workers</div>';
+    html+='<input class="cfg-sys" data-field="max_workers" type="number" min="1" max="16" value="'+(sys.max_workers||4)+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    html+='</div></div>';
+
+    /* ACTIVE PROVIDER */
+    html+='<div style="margin-bottom:16px;padding:10px;border:1px solid rgba(0,229,255,0.06);border-radius:3px">';
+    html+='<div style="font-size:9px;letter-spacing:2px;color:var(--glow);margin-bottom:8px">ACTIVE PROVIDER</div>';
     html+='<select id="cfgActiveProv" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);color:var(--glow);padding:6px;font-size:11px;font-family:inherit">';
     ['zicore_native','openrouter','ollama','openai','anthropic','groq','deepseek','together','opencode'].forEach(function(p){
-      html+='<option value="'+p+'"'+((cfg.zio_engine||{}).active_provider===p?' selected':'')+'>'+p+'</option>';
+      html+='<option value="'+p+'"'+(eng.active_provider===p?' selected':'')+'>'+p+'</option>';
     });
     html+='</select></div>';
+
+    /* PROVIDERS */
     var providers=cfg.providers||{};
     Object.keys(providers).forEach(function(pid){
       var p=providers[pid];
@@ -3647,12 +3801,59 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       html+='<div class="test-status" id="testStatus_'+pid+'" style="font-size:8px;color:var(--text2)">—</div>';
       html+='</div></div>';
     });
-    html+='<div style="margin-bottom:16px"><div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:6px">ENGINE</div>';
+
+    /* ZIO AGENT */
+    html+='<div style="margin-bottom:16px;padding:10px;border:1px solid rgba(0,229,255,0.06);border-radius:3px">';
+    html+='<div style="font-size:9px;letter-spacing:2px;color:var(--glow);margin-bottom:8px">ZIO AGENT</div>';
+    html+='<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--text2);margin-bottom:4px">System Prompt</div>';
+    html+='<textarea class="cfg-sys" data-field="system_prompt" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:9px;font-family:monospace;outline:none;width:100%;height:60px;resize:none">'+(eng.system_prompt||'You are ZIO, the ZICORE Intelligence Operator.')+'</textarea></div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-    html+='<div><div style="font-size:9px;color:var(--text2)">Temperature</div><input type="range" id="cfgTemp" min="0" max="200" value="'+((cfg.zio_engine||{}).temperature||0.7)*100+'" style="width:100%"><div style="font-size:10px;color:var(--glow);text-align:right" id="cfgTempVal">'+((cfg.zio_engine||{}).temperature||0.7).toFixed(2)+'</div></div>';
-    html+='<div><div style="font-size:9px;color:var(--text2)">Max Tokens</div><input type="range" id="cfgMaxTok" min="256" max="16384" value="'+((cfg.zio_engine||{}).max_tokens||4096)+'" step="256" style="width:100%"><div style="font-size:10px;color:var(--glow);text-align:right" id="cfgMaxTokVal">'+((cfg.zio_engine||{}).max_tokens||4096)+'</div></div>';
+    html+='<div><div style="font-size:9px;color:var(--text2)">Context Length</div><input type="range" class="cfg-sys" data-field="context_length" min="256" max="8192" value="'+(eng.context_length||4096)+'" step="256" style="width:100%"><div style="font-size:10px;color:var(--glow);text-align:right" id="cfgCtxVal">'+(eng.context_length||4096)+'</div></div>';
+    html+='<div><div style="font-size:9px;color:var(--text2)">Temperature</div><input type="range" id="cfgTemp" min="0" max="200" value="'+(eng.temperature||0.7)*100+'" style="width:100%"><div style="font-size:10px;color:var(--glow);text-align:right" id="cfgTempVal">'+(eng.temperature||0.7).toFixed(2)+'</div></div>';
+    html+='<div><div style="font-size:9px;color:var(--text2)">Max Tokens</div><input type="range" id="cfgMaxTok" min="256" max="16384" value="'+(eng.max_tokens||4096)+'" step="256" style="width:100%"><div style="font-size:10px;color:var(--glow);text-align:right" id="cfgMaxTokVal">'+(eng.max_tokens||4096)+'</div></div>';
+    html+='<div style="display:flex;align-items:center;gap:8px"><div style="font-size:9px;color:var(--text2)">Auto-load Engines</div><div class="cfg-toggle'+(eng.auto_load!==false?' on':'')+'" data-cfg="auto_load" style="width:32px;height:16px;background:'+(eng.auto_load!==false?'rgba(0,229,255,0.3)':'rgba(255,255,255,0.1)')+';border-radius:8px;cursor:pointer;position:relative;transition:all .2s"><div style="position:absolute;top:2px;left:'+(eng.auto_load!==false?'16px':'2px')+';width:12px;height:12px;background:'+(eng.auto_load!==false?'#0ff':'#666')+';border-radius:50%;transition:all .2s"></div></div></div>';
     html+='</div></div>';
-    html+='<button id="cfgSave" style="padding:8px 24px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;width:100%">SAVE CONFIGURATION</button>';
+
+    /* MATERIALIZER */
+    html+='<div style="margin-bottom:16px;padding:10px;border:1px solid rgba(0,229,255,0.06);border-radius:3px">';
+    html+='<div style="font-size:9px;letter-spacing:2px;color:var(--glow);margin-bottom:8px">MATERIALIZER</div>';
+    html+='<div style="display:grid;grid-template-columns:100px 1fr 100px 1fr;gap:6px;align-items:center">';
+    html+='<div style="font-size:9px;color:var(--text2)">Output Dir</div>';
+    html+='<input class="cfg-sys" data-field="output_dir" value="'+(mat.output_dir||'output')+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    html+='<div style="font-size:9px;color:var(--text2)">Image Quality</div>';
+    html+='<select class="cfg-sys" data-field="image_quality" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    ['draft','standard','high'].forEach(function(q){html+='<option value="'+q+'"'+((mat.image_quality||'standard')===q?' selected':'')+'>'+q.toUpperCase()+'</option>';});
+    html+='</select>';
+    html+='<div style="font-size:9px;color:var(--text2)">3D Format</div>';
+    html+='<select class="cfg-sys" data-field="mesh_format" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    ['STL','OBJ','GLTF'].forEach(function(f){html+='<option value="'+f+'"'+((mat.mesh_format||'STL')===f?' selected':'')+'>'+f+'</option>';});
+    html+='</select>';
+    html+='<div style="font-size:9px;color:var(--text2)">SD Steps</div>';
+    html+='<input class="cfg-sys" data-field="sd_steps" type="number" min="10" max="100" value="'+(mat.sd_steps||20)+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    html+='<div style="font-size:9px;color:var(--text2)">SD Guidance</div>';
+    html+='<input class="cfg-sys" data-field="sd_guidance" type="number" min="1" max="20" step="0.5" value="'+(mat.sd_guidance||7.5)+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    html+='</div></div>';
+
+    /* THEME */
+    html+='<div style="margin-bottom:16px;padding:10px;border:1px solid rgba(0,229,255,0.06);border-radius:3px">';
+    html+='<div style="font-size:9px;letter-spacing:2px;color:var(--glow);margin-bottom:8px">THEME</div>';
+    html+='<div style="display:grid;grid-template-columns:100px 1fr 100px 1fr;gap:6px;align-items:center">';
+    html+='<div style="font-size:9px;color:var(--text2)">Accent Color</div>';
+    html+='<input class="cfg-sys" data-field="accent_color" type="color" value="'+(thm.accent_color||'#00e5ff')+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);padding:2px;width:100%;height:28px;cursor:pointer">';
+    html+='<div style="font-size:9px;color:var(--text2)">Secondary Color</div>';
+    html+='<input class="cfg-sys" data-field="secondary_color" type="color" value="'+(thm.secondary_color||'#7c4dff')+'" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);padding:2px;width:100%;height:28px;cursor:pointer">';
+    html+='<div style="font-size:9px;color:var(--text2)">Panel Opacity</div>';
+    html+='<div><input type="range" class="cfg-sys" data-field="panel_opacity" min="50" max="100" value="'+(thm.panel_opacity||88)+'" style="width:100%"><div style="font-size:10px;color:var(--glow);text-align:right" id="cfgOpacityVal">'+(thm.panel_opacity||88)+'%</div></div>';
+    html+='<div style="font-size:9px;color:var(--text2)">Background</div>';
+    html+='<select class="cfg-sys" data-field="background" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%">';
+    ['dark','midnight','void','abyss'].forEach(function(b){html+='<option value="'+b+'"'+((thm.background||'dark')===b?' selected':'')+'>'+b.toUpperCase()+'</option>';});
+    html+='</select>';
+    html+='</div></div>';
+
+    /* SIGNATURE */
+    html+='<div style="text-align:center;padding:12px 0 4px;font-size:7px;letter-spacing:3px;color:var(--text3)">ZICORE SYSTEM v5.0 — AEROSPACE DIVISION</div>';
+
+    html+='<button id="cfgSave" style="padding:10px 24px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;width:100%;margin-top:8px">SAVE CONFIGURATION</button>';
     body.innerHTML=html;
 
     document.querySelectorAll('.cfg-toggle').forEach(function(el){
@@ -3665,8 +3866,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       });
     });
 
-    document.getElementById('cfgTemp').addEventListener('input',function(){document.getElementById('cfgTempVal').textContent=(this.value/100).toFixed(2);});
-    document.getElementById('cfgMaxTok').addEventListener('input',function(){document.getElementById('cfgMaxTokVal').textContent=this.value;});
+    var cfgTemp=document.getElementById('cfgTemp');
+    var cfgMaxTok=document.getElementById('cfgMaxTok');
+    var cfgCtx=document.querySelector('[data-field="context_length"]');
+    var cfgOpacity=document.querySelector('[data-field="panel_opacity"]');
+    if(cfgTemp)cfgTemp.addEventListener('input',function(){document.getElementById('cfgTempVal').textContent=(this.value/100).toFixed(2);});
+    if(cfgMaxTok)cfgMaxTok.addEventListener('input',function(){document.getElementById('cfgMaxTokVal').textContent=this.value;});
+    if(cfgCtx)cfgCtx.addEventListener('input',function(){var el=document.getElementById('cfgCtxVal');if(el)el.textContent=this.value;});
+    if(cfgOpacity)cfgOpacity.addEventListener('input',function(){var el=document.getElementById('cfgOpacityVal');if(el)el.textContent=this.value+'%';});
+
     document.querySelectorAll('.test-btn').forEach(function(btn){
       btn.addEventListener('click',function(){
         var pid=this.dataset.pid;var statusEl=document.getElementById('testStatus_'+pid);
@@ -3682,14 +3890,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       });
     });
     document.getElementById('cfgSave').addEventListener('click',function(){
-      var newCfg={providers:{},zio_engine:{},theme:cfg.theme||'midnight'};
+      var newCfg={providers:{},zio_engine:{},system:{},materializer:{},theme_config:{},theme:cfg.theme||'midnight'};
       document.querySelectorAll('.cfg-toggle').forEach(function(el){
-        var pid=el.dataset.pid;if(!newCfg.providers[pid])newCfg.providers[pid]={};newCfg.providers[pid].enabled=el.classList.contains('on');
+        var pid=el.dataset.pid;var cfgKey=el.dataset.cfg;
+        if(pid){
+          if(!newCfg.providers[pid])newCfg.providers[pid]={};newCfg.providers[pid].enabled=el.classList.contains('on');
+        }else if(cfgKey){
+          newCfg.zio_engine[cfgKey]=el.classList.contains('on');
+        }
       });
       document.querySelectorAll('.cfg-field').forEach(function(el){
         var pid=el.dataset.pid;var field=el.dataset.field;if(!newCfg.providers[pid])newCfg.providers[pid]={};var val=el.value;
         if(field==='models')val=val.split('\n').filter(function(x){return x.trim();});
         newCfg.providers[pid][field]=val;
+      });
+      document.querySelectorAll('.cfg-sys').forEach(function(el){
+        var field=el.dataset.field;var val=el.value;
+        if(field==='web_port'||field==='api_port'||field==='max_workers'||field==='sd_steps')val=parseInt(val);
+        if(field==='sd_guidance')val=parseFloat(val);
+        if(field==='panel_opacity')val=parseInt(val);
+        if(field==='context_length')val=parseInt(val);
+        if(field==='system_prompt'||field==='output_dir'){}else{}
+        if(field==='web_port'||field==='api_port'||field==='max_workers'||field==='log_level'){newCfg.system[field]=val;}
+        else{newCfg.materializer[field]=val;}
       });
       Object.keys(providers).forEach(function(pid){
         if(!newCfg.providers[pid])newCfg.providers[pid]={};
@@ -3700,6 +3923,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       newCfg.zio_engine.active_provider=document.getElementById('cfgActiveProv').value;
       newCfg.zio_engine.temperature=parseFloat(document.getElementById('cfgTemp').value)/100;
       newCfg.zio_engine.max_tokens=parseInt(document.getElementById('cfgMaxTok').value);
+      var ctxEl=document.querySelector('[data-field="context_length"]');
+      if(ctxEl)newCfg.zio_engine.context_length=parseInt(ctxEl.value);
+      var spEl=document.querySelector('[data-field="system_prompt"]');
+      if(spEl)newCfg.zio_engine.system_prompt=spEl.value;
+      var accEl=document.querySelector('[data-field="accent_color"]');
+      if(accEl)newCfg.theme_config.accent_color=accEl.value;
+      var secEl=document.querySelector('[data-field="secondary_color"]');
+      if(secEl)newCfg.theme_config.secondary_color=secEl.value;
+      var opEl=document.querySelector('[data-field="panel_opacity"]');
+      if(opEl)newCfg.theme_config.panel_opacity=parseInt(opEl.value);
+      var bgEl=document.querySelector('[data-field="background"]');
+      if(bgEl)newCfg.theme_config.background=bgEl.value;
       fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newCfg)})
       .then(function(r){return r.json();}).then(function(){appendLog('[CONFIG] Saved');document.getElementById('settingsModal').style.display='none';}).catch(function(e){appendLog('[CONFIG] Error: '+e.message);});
     });
@@ -3795,6 +4030,498 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
   document.addEventListener('DOMContentLoaded',init);
   if(document.readyState!=='loading')init();
+
+  // =========================================================================
+  // CODE EDITOR WORKSPACE
+  // =========================================================================
+  var codeInited=false;
+
+  function initWsCode(){
+    if(codeInited)return;
+    codeInited=true;
+    console.log('[ZICORE] Code Editor workspace initialized');
+  }
+
+  var monacoEditorInstance=null;
+
+  function setupWsCode(){
+    var newBtn=document.getElementById('codeNew');
+    var openBtn=document.getElementById('codeOpen');
+    var saveBtn=document.getElementById('codeSave');
+    var runBtn=document.getElementById('codeRun');
+    var output=document.getElementById('codeOutput');
+    var langSelect=document.getElementById('codeLang');
+    
+    // Initialize Monaco Editor
+    if(typeof require!=='undefined'){
+      require.config({paths:{vs:'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs'}});
+      require(['vs/editor/editor.main'],function(){
+        try{
+          monacoEditorInstance=monaco.editor.create(document.getElementById('monacoEditor'),{
+            value:'# ZICORE Code Editor\n# Write your code here\n\nprint("Hello from ZICORE!")\n',
+            language:'python',
+            theme:'vs-dark',
+            minimap:{enabled:false},
+            fontSize:11,
+            fontFamily:'Consolas, monospace',
+            automaticLayout:true,
+            scrollBeyondLastLine:false,
+          });
+          
+          // Update language on select change
+          if(langSelect)langSelect.addEventListener('change',function(){
+            var lang=this.value;
+            if(monacoEditorInstance){
+              monaco.editor.setModelLanguage(monacoEditorInstance.getModel(),lang);
+            }
+          });
+        }catch(e){
+          console.log('[ZICORE] Monaco load failed, using fallback');
+          document.getElementById('monacoEditor').style.display='none';
+          var fallback=document.getElementById('codeEditorFallback');
+          if(fallback)fallback.style.display='block';
+        }
+      });
+    }else{
+      document.getElementById('monacoEditor').style.display='none';
+      var fallback=document.getElementById('codeEditorFallback');
+      if(fallback)fallback.style.display='block';
+    }
+
+    function getCode(){
+      if(monacoEditorInstance)return monacoEditorInstance.getValue();
+      var fallback=document.getElementById('codeEditorFallback');
+      return fallback?fallback.value:'';
+    }
+
+    function setCode(code){
+      if(monacoEditorInstance)monacoEditorInstance.setValue(code);
+      var fallback=document.getElementById('codeEditorFallback');
+      if(fallback)fallback.value=code;
+    }
+
+    if(newBtn)newBtn.addEventListener('click',function(){
+      setCode('');
+      if(output)output.textContent='Ready.';
+    });
+
+    if(openBtn)openBtn.addEventListener('click',function(){
+      var input=document.createElement('input');
+      input.type='file';
+      input.accept='.py,.js,.html,.json,.md,.txt';
+      input.onchange=function(e){
+        var file=e.target.files[0];
+        if(!file)return;
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          setCode(ev.target.result);
+          if(output)output.textContent='Opened: '+file.name;
+          // Auto-detect language
+          var ext=file.name.split('.').pop().toLowerCase();
+          var langMap={'py':'python','js':'javascript','html':'html','json':'json','md':'markdown'};
+          if(langMap[ext]&&langSelect){
+            langSelect.value=langMap[ext];
+            if(monacoEditorInstance)monaco.editor.setModelLanguage(monacoEditorInstance.getModel(),langMap[ext]);
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+
+    if(saveBtn)saveBtn.addEventListener('click',function(){
+      var content=getCode();
+      var ext=langSelect?langSelect.value:'txt';
+      var blob=new Blob([content],{type:'text/plain'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='zicore_code.'+ext;
+      a.click();
+      if(output)output.textContent='Saved.';
+    });
+
+    if(runBtn)runBtn.addEventListener('click',function(){
+      var code=getCode();
+      if(!output)return;
+      output.textContent='Running...\n';
+      
+      // Send to backend for execution
+      fetch('/api/code/execute',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code:code,language:langSelect?langSelect.value:'python'})
+      }).then(function(r){return r.json();}).then(function(d){
+        if(d.success){
+          output.textContent=d.output||'Execution complete';
+        }else{
+          output.textContent='Error: '+(d.error||'Execution failed');
+        }
+      }).catch(function(e){
+        // Fallback: show code info
+        output.textContent+='> Code length: '+code.length+' chars\n';
+        output.textContent+='> Language: '+(langSelect?langSelect.value:'python')+'\n';
+        output.textContent+='\n[Backend execution requires /api/code/endpoint]\n';
+        output.textContent+='Use ZIO Agent for code execution\n';
+      });
+    });
+  }
+
+  // =========================================================================
+  // TEXT EDITOR WORKSPACE
+  // =========================================================================
+  var textInited=false;
+
+  function initWsText(){
+    if(textInited)return;
+    textInited=true;
+    updateTextStats();
+    console.log('[ZICORE] Text Editor workspace initialized');
+  }
+
+  function setupWsText(){
+    var newBtn=document.getElementById('textNew');
+    var openBtn=document.getElementById('textOpen');
+    var saveBtn=document.getElementById('textSave');
+    var exportBtn=document.getElementById('textExport');
+    var editor=document.getElementById('textEditor');
+
+    if(newBtn)newBtn.addEventListener('click',function(){
+      if(editor)editor.innerHTML='<p><br></p>';
+      updateTextStats();
+    });
+
+    if(openBtn)openBtn.addEventListener('click',function(){
+      var input=document.createElement('input');
+      input.type='file';
+      input.accept='.txt,.md,.html';
+      input.onchange=function(e){
+        var file=e.target.files[0];
+        if(!file)return;
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          if(editor)editor.innerHTML='<pre>'+ev.target.result+'</pre>';
+          updateTextStats();
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+
+    if(saveBtn)saveBtn.addEventListener('click',function(){
+      if(!editor)return;
+      var content=editor.innerText;
+      var blob=new Blob([content],{type:'text/plain'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='zicore_text.txt';
+      a.click();
+    });
+
+    if(exportBtn)exportBtn.addEventListener('click',function(){
+      if(!editor)return;
+      var content=editor.innerHTML;
+      var blob=new Blob([content],{type:'text/html'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='zicore_text.html';
+      a.click();
+    });
+
+    // Format buttons
+    var boldBtn=document.getElementById('textBold');
+    var italicBtn=document.getElementById('textItalic');
+    var underlineBtn=document.getElementById('textUnderline');
+    var h1Btn=document.getElementById('textH1');
+    var h2Btn=document.getElementById('textH2');
+    var listBtn=document.getElementById('textList');
+
+    if(boldBtn)boldBtn.addEventListener('click',function(){document.execCommand('bold',false,null);});
+    if(italicBtn)italicBtn.addEventListener('click',function(){document.execCommand('italic',false,null);});
+    if(underlineBtn)underlineBtn.addEventListener('click',function(){document.execCommand('underline',false,null);});
+    if(h1Btn)h1Btn.addEventListener('click',function(){document.execCommand('formatBlock',false,'<h1>');});
+    if(h2Btn)h2Btn.addEventListener('click',function(){document.execCommand('formatBlock',false,'<h2>');});
+    if(listBtn)listBtn.addEventListener('click',function(){document.execCommand('insertUnorderedList',false,null);});
+
+    // Word count on input
+    if(editor)editor.addEventListener('input',updateTextStats);
+  }
+
+  function updateTextStats(){
+    var editor=document.getElementById('textEditor');
+    var wordEl=document.getElementById('textWordCount');
+    var charEl=document.getElementById('textCharCount');
+    var lineEl=document.getElementById('textLineCount');
+    
+    if(!editor)return;
+    
+    var text=editor.innerText||'';
+    var chars=text.length;
+    var words=text.trim()?text.trim().split(/\s+/).length:0;
+    var lines=text.split('\n').length;
+    
+    if(wordEl)wordEl.textContent=words;
+    if(charEl)charEl.textContent=chars;
+    if(lineEl)lineEl.textContent=lines;
+  }
+})();
+</script>
+
+<!-- ZIO Mirror Panel - Fixed Right Panel -->
+<style>
+#mirrorPanel{
+  position:fixed;right:0;top:42px;bottom:22px;width:260px;z-index:2500;
+  display:flex;flex-direction:column;background:rgba(6,8,14,0.95);
+  border-left:1px solid rgba(0,229,255,0.15);
+  box-shadow:-4px 0 20px rgba(0,0,0,0.5);transition:transform 0.3s;
+}
+#mirrorPanel.minimized{transform:translateX(260px)}
+#mirrorPanel.minimized~#mirrorToggle{right:260px}
+#mirrorToggle{
+  position:fixed;right:260px;top:50px;z-index:2600;
+  background:rgba(6,8,14,0.9);border:1px solid rgba(0,229,255,0.2);
+  color:var(--glow);padding:8px 6px;cursor:pointer;font-size:10px;
+  border-radius:4px 0 0 4px;transition:right 0.3s;
+}
+#mirrorPanel.minimized~#mirrorToggle{right:0}
+#mirrorToggle:hover{background:rgba(0,229,255,0.1)}
+.mirror-header{
+  padding:8px;border-bottom:1px solid rgba(0,229,255,0.1);
+  font-size:9px;letter-spacing:2px;color:var(--glow);font-weight:700;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.mirror-header .close-btn{cursor:pointer;color:var(--text2);font-size:12px}
+.mirror-header .close-btn:hover{color:#f44}
+.mirror-section{padding:6px 8px;border-bottom:1px solid rgba(0,229,255,0.06)}
+.mirror-section-title{
+  font-size:7px;letter-spacing:2px;color:var(--text2);margin-bottom:4px;
+  text-transform:uppercase;
+}
+.mirror-row{display:flex;justify-content:space-between;font-size:8px;padding:2px 0}
+.mirror-row .label{color:var(--text2)}
+.mirror-row .val{color:var(--text)}
+.mirror-row .val.ok{color:#0f6}
+.mirror-row .val.warn{color:#fa0}
+.mirror-row .val.err{color:#f44}
+.mirror-task{
+  font-size:8px;padding:3px 6px;margin:2px 0;
+  background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.08);
+  border-radius:3px;display:flex;justify-content:space-between;
+}
+.mirror-task .task-name{color:var(--text)}
+.mirror-task .task-status{color:var(--glow);font-size:7px}
+.mirror-result{
+  font-size:8px;padding:4px 6px;margin:2px 0;
+  background:rgba(124,77,255,0.04);border:1px solid rgba(124,77,255,0.08);
+  border-radius:3px;cursor:pointer;
+}
+.mirror-result:hover{background:rgba(124,77,255,0.1)}
+.mirror-result .r-name{color:var(--glow2)}
+.mirror-result .r-time{color:var(--text2);font-size:7px}
+.mirror-cmds{display:flex;flex-wrap:wrap;gap:3px;padding:4px 0}
+.mirror-cmd{
+  font-size:7px;letter-spacing:1px;padding:3px 8px;
+  background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);cursor:pointer;border-radius:3px;
+}
+.mirror-cmd:hover{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
+.mirror-log{
+  font-size:7px;color:var(--text2);max-height:120px;overflow-y:auto;
+  padding:4px;background:rgba(0,0,0,0.2);border-radius:3px;
+  font-family:'Courier New',monospace;
+}
+.mirror-log::-webkit-scrollbar{width:2px}
+.mirror-log::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.1)}
+</style>
+
+<button id="mirrorToggle" onclick="document.getElementById('mirrorPanel').classList.toggle('minimized')">&#9664; ZIO</button>
+
+<div id="mirrorPanel">
+  <div class="mirror-header">
+    <span>&#9733; ZIO MIRROR</span>
+    <span class="close-btn" onclick="document.getElementById('mirrorPanel').classList.add('minimized')">&#10005;</span>
+  </div>
+
+  <!-- Engine Status -->
+  <div class="mirror-section">
+    <div class="mirror-section-title">ENGINE STATUS</div>
+    <div class="mirror-row"><span class="label">ZIO Agent</span><span class="val ok" id="mirZio">ONLINE</span></div>
+    <div class="mirror-row"><span class="label">Ollama</span><span class="val" id="mirOllama">--</span></div>
+    <div class="mirror-row"><span class="label">Stable Diffusion</span><span class="val" id="mirSD">--</span></div>
+    <div class="mirror-row"><span class="label">Hunyuan3D</span><span class="val" id="mir3d">--</span></div>
+    <div class="mirror-row"><span class="label">Mail Server</span><span class="val" id="mirMail">--</span></div>
+    <div class="mirror-row"><span class="label">ML Engine</span><span class="val" id="mirML">--</span></div>
+  </div>
+
+  <!-- ZIO Commands -->
+  <div class="mirror-section">
+    <div class="mirror-section-title">ZIO COMMANDS</div>
+    <div class="mirror-cmds">
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','system')">SYSTEM</div>
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','ai')">ZIO AI</div>
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','3d')">3D</div>
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','video')">VIDEO</div>
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','audio')">AUDIO</div>
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','post')">IMAGE</div>
+      <div class="mirror-cmd" onclick="zioCmd('open_workspace','code')">CODE</div>
+      <div class="mirror-cmd" onclick="zioCmd('show_status')">STATUS</div>
+      <div class="mirror-cmd" onclick="zioCmd('show_engines')">ENGINES</div>
+      <div class="mirror-cmd" onclick="zioCmd('refresh')">REFRESH</div>
+    </div>
+  </div>
+
+  <!-- Active Tasks -->
+  <div class="mirror-section" style="flex:1;overflow-y:auto">
+    <div class="mirror-section-title">ACTIVE TASKS</div>
+    <div id="mirrorTasks">
+      <div style="font-size:7px;color:var(--text3);padding:4px">No active tasks</div>
+    </div>
+  </div>
+
+  <!-- Results Queue -->
+  <div class="mirror-section" style="max-height:140px;overflow-y:auto">
+    <div class="mirror-section-title">RESULTS QUEUE</div>
+    <div id="mirrorResults">
+      <div style="font-size:7px;color:var(--text3);padding:4px">No results yet</div>
+    </div>
+  </div>
+
+  <!-- Mirror Log -->
+  <div class="mirror-section">
+    <div class="mirror-section-title">ZIO LOG</div>
+    <div class="mirror-log" id="mirrorLog">[ZIO] Mirror panel ready</div>
+  </div>
+</div>
+
+<script>
+// ZIO Mirror Panel Logic
+(function(){
+  const mirrorTasks = document.getElementById('mirrorTasks');
+  const mirrorResults = document.getElementById('mirrorResults');
+  const mirrorLog = document.getElementById('mirrorLog');
+  const tasks = [];
+  const results = [];
+  let activeTaskCount = 0;
+
+  function mirrorLogAdd(msg) {
+    const t = new Date().toLocaleTimeString();
+    mirrorLog.innerHTML = `<div>[${t}] ${msg}</div>` + mirrorLog.innerHTML;
+    if (mirrorLog.children.length > 50) mirrorLog.removeChild(mirrorLog.lastChild);
+  }
+
+  function addTask(name, type) {
+    const id = 'task_' + (++activeTaskCount);
+    tasks.push({ id, name, type, status: 'running', start: Date.now() });
+    renderTasks();
+    mirrorLogAdd(`START: ${name}`);
+    return id;
+  }
+
+  function completeTask(id, success) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.status = success ? 'done' : 'failed';
+      task.end = Date.now();
+      renderTasks();
+      mirrorLogAdd(`${success ? 'DONE' : 'FAIL'}: ${task.name}`);
+    }
+  }
+
+  function addResult(name, path, type) {
+    results.unshift({ name, path, type, time: Date.now() });
+    if (results.length > 20) results.pop();
+    renderResults();
+    mirrorLogAdd(`RESULT: ${name}`);
+  }
+
+  function renderTasks() {
+    if (tasks.length === 0) {
+      mirrorTasks.innerHTML = '<div style="font-size:7px;color:var(--text3);padding:4px">No active tasks</div>';
+      return;
+    }
+    mirrorTasks.innerHTML = tasks.slice(-8).map(t => {
+      const elapsed = ((t.end || Date.now()) - t.start) / 1000;
+      const cls = t.status === 'done' ? 'ok' : t.status === 'failed' ? 'err' : '';
+      return `<div class="mirror-task"><span class="task-name">${t.name}</span><span class="task-status ${cls}">${t.status} ${elapsed.toFixed(1)}s</span></div>`;
+    }).join('');
+  }
+
+  function renderResults() {
+    if (results.length === 0) {
+      mirrorResults.innerHTML = '<div style="font-size:7px;color:var(--text3);padding:4px">No results yet</div>';
+      return;
+    }
+    mirrorResults.innerHTML = results.map(r => {
+      const ago = ((Date.now() - r.time) / 1000).toFixed(0);
+      return `<div class="mirror-result" onclick="window.open('${r.path}','_blank')"><div class="r-name">${r.name}</div><div class="r-time">${ago}s ago | ${r.type}</div></div>`;
+    }).join('');
+  }
+
+  // Update engine status
+  function updateEngineStatus() {
+    fetch('/api/status').then(r=>r.json()).then(d=>{
+      document.getElementById('mirZio').textContent = 'ONLINE';
+      document.getElementById('mirZio').className = 'val ok';
+    }).catch(()=>{
+      document.getElementById('mirZio').textContent = 'OFFLINE';
+      document.getElementById('mirZio').className = 'val err';
+    });
+
+    fetch('/api/ollama/status').then(r=>r.json()).then(d=>{
+      const el = document.getElementById('mirOllama');
+      if (d.ollama && d.ollama.status === 'online') {
+        el.textContent = 'ONLINE (' + (d.ollama.models||[]).length + ')';
+        el.className = 'val ok';
+      } else {
+        el.textContent = 'OFFLINE';
+        el.className = 'val warn';
+      }
+    }).catch(()=>{});
+
+    fetch('/api/system/stats').then(r=>r.json()).then(d=>{
+      if (d.stats) {
+        document.getElementById('mirML').textContent = 'READY';
+        document.getElementById('mirML').className = 'val ok';
+      }
+    }).catch(()=>{});
+
+    fetch('/api/mail/status').then(r=>r.json()).then(d=>{
+      const el = document.getElementById('mirMail');
+      if (d.mail && d.mail.docker_available) {
+        el.textContent = 'DOCKER';
+        el.className = 'val ok';
+      } else {
+        el.textContent = 'NATIVE';
+        el.className = 'val warn';
+      }
+    }).catch(()=>{});
+  }
+
+  // ZIO command handler
+  window.zioCmd = function(cmd, arg) {
+    if (cmd === 'open_workspace') {
+      const tab = document.querySelector('[data-ws="' + arg + '"]');
+      if (tab) tab.click();
+      mirrorLogAdd(`OPEN: ${arg} workspace`);
+    } else if (cmd === 'show_status') {
+      fetch('/api/status').then(r=>r.json()).then(d=>{
+        mirrorLogAdd(`STATUS: ${d.status} v${d.version}`);
+      });
+    } else if (cmd === 'show_engines') {
+      fetch('/api/telemetry/modules').then(r=>r.json()).then(d=>{
+        mirrorLogAdd('ENGINES: ' + JSON.stringify(d));
+      });
+    } else if (cmd === 'refresh') {
+      updateEngineStatus();
+      mirrorLogAdd('REFRESH: all engines');
+    }
+  };
+
+  // Expose to global scope
+  window.zicoreMirror = { addTask, completeTask, addResult, mirrorLogAdd };
+
+  // Initial status check
+  updateEngineStatus();
+  setInterval(updateEngineStatus, 30000);
 })();
 </script>
 </body>

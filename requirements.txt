@@ -5,7 +5,39 @@ pydantic>=2.0
 Pillow>=10.0
 numpy>=1.24
 trimesh>=3.20
-pyttsx3>=2.90
+httpx>=0.25
 pytest>=7.0
 pytest-asyncio>=0.21
-httpx>=0.25
+
+# Stable Diffusion (CPU mode)
+diffusers[torch]>=0.25.0
+transformers>=4.35.0
+accelerate>=0.25.0
+safetensors>=0.4.0
+torch>=2.0.0
+
+# Procedural Generation
+scipy>=1.10.0
+
+# 3D Tools Stack (CPU-compatible)
+# Parametric CAD (OpenCASCADE kernel)
+cadquery>=2.8.0
+build123d>=0.11.0
+solidpython2>=2.1.0
+
+# Mesh Processing
+open3d-cpu>=0.18.0
+pymeshlab>=2025.7
+
+# Voxel/Implicit Modeling
+picopie>=0.7.0
+
+# Lattice/Voronoi (optional)
+# gmsh  # for lattice300
+
+# Cloud AI 3D (API keys required)
+tripo3d>=0.4.0
+
+# ZICORE Materializer Engine
+# Author: ZineMotion Foundation — Aerospace Division
+# Version: 5.0.0

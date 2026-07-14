@@ -5,14 +5,37 @@ import time
 import json
 import logging
 import hashlib
+import os
+import shlex
+import subprocess
 from typing import Optional, Dict, Any, List, Callable
 from pathlib import Path
 from collections import defaultdict
 
 logger = logging.getLogger("zicore.agent.state")
 
-STATE_DIR = Path(__file__).parent.parent.parent.parent / "data" / "agent_state"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+STATE_DIR = PROJECT_ROOT / "data" / "agent_state"
 STATE_DIR.mkdir(parents=True, exist_ok=True)
+
+DENIED_PATH_PARTS = {
+    ".git", ".agents", ".codex", ".pytest_cache", "__pycache__",
+    "node_modules", ".venv", "venv", "env", "dist", "build",
+}
+MAX_READ_BYTES = 1_000_000
+MAX_WRITE_BYTES = 500_000
+
+
+def _workspace_path(path: str = ".") -> Path:
+    raw = Path(path or ".")
+    p = raw if raw.is_absolute() else PROJECT_ROOT / raw
+    resolved = p.resolve()
+    if resolved != PROJECT_ROOT and PROJECT_ROOT not in resolved.parents:
+        raise ValueError("Path outside zicore-system workspace is not allowed")
+    parts = {part.lower() for part in resolved.relative_to(PROJECT_ROOT).parts}
+    if parts & DENIED_PATH_PARTS:
+        raise ValueError("Path is inside a protected workspace directory")
+    return resolved
 
 
 class ToolRegistry:
@@ -137,10 +160,14 @@ class AgentSession:
         self.tools.register("read_file", self._tool_read_file, "Read a file", {"path": str})
         self.tools.register("write_file", self._tool_write_file, "Write a file", {"path": str, "content": str})
         self.tools.register("list_files", self._tool_list_files, "List files in directory", {"path": str})
-        self.tools.register("run_command", self._tool_run_command, "Run a shell command", {"command": str})
+        self.tools.register("run_command", self._tool_run_command, "Run an allowlisted workspace command", {"command": str})
         self.tools.register("calculate", self._tool_calculator, "Evaluate math expression", {"expression": str})
         self.tools.register("timestamp", self._tool_timestamp, "Get current timestamp", {})
         self.tools.register("random", self._tool_random, "Generate random number", {"min": float, "max": float})
+        self.tools.register("generate_image", self._tool_generate_image, "Generate image through ZIO", {"prompt": str})
+        self.tools.register("generate_sound", self._tool_generate_sound, "Generate sound through ZIO", {"prompt": str})
+        self.tools.register("generate_video", self._tool_generate_video, "Generate video through ZIO", {"prompt": str})
+        self.tools.register("generate_3d", self._tool_generate_3d, "Generate 3D mesh through ZIO", {"prompt": str})
 
     def _tool_infer(self, module: str = "zinav", instruction: str = "status", **kw):
         return {"module": module, "instruction": instruction, "status": "queued"}
@@ -175,32 +202,38 @@ class AgentSession:
     def _tool_read_file(self, path: str = "", **kw):
         """Read file contents."""
         try:
-            p = Path(path)
+            p = _workspace_path(path)
             if not p.exists():
                 return {"error": f"File not found: {path}"}
-            if p.stat().st_size > 1_000_000:
-                return {"error": "File too large (>1MB)"}
+            if not p.is_file():
+                return {"error": "Path is not a file"}
+            if p.stat().st_size > MAX_READ_BYTES:
+                return {"error": f"File too large (>{MAX_READ_BYTES} bytes)"}
             content = p.read_text(encoding="utf-8", errors="replace")
-            return {"path": str(p), "content": content[:10000], "size": p.stat().st_size}
+            return {"path": str(p.relative_to(PROJECT_ROOT)), "content": content[:10000], "size": p.stat().st_size}
         except Exception as e:
             return {"error": str(e)}
 
     def _tool_write_file(self, path: str = "", content: str = "", **kw):
         """Write content to a file."""
         try:
-            p = Path(path)
+            if len(content.encode("utf-8")) > MAX_WRITE_BYTES:
+                return {"error": f"Content too large (>{MAX_WRITE_BYTES} bytes)"}
+            p = _workspace_path(path)
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(content, encoding="utf-8")
-            return {"path": str(p), "size": len(content), "status": "written"}
+            return {"path": str(p.relative_to(PROJECT_ROOT)), "size": len(content), "status": "written"}
         except Exception as e:
             return {"error": str(e)}
 
     def _tool_list_files(self, path: str = ".", **kw):
         """List files in a directory."""
         try:
-            p = Path(path)
+            p = _workspace_path(path)
             if not p.exists():
                 return {"error": f"Directory not found: {path}"}
+            if not p.is_dir():
+                return {"error": "Path is not a directory"}
             entries = []
             for item in sorted(p.iterdir())[:50]:
                 entries.append({
@@ -208,16 +241,30 @@ class AgentSession:
                     "type": "dir" if item.is_dir() else "file",
                     "size": item.stat().st_size if item.is_file() else 0,
                 })
-            return {"path": str(p), "entries": entries, "count": len(entries)}
+            return {"path": str(p.relative_to(PROJECT_ROOT)), "entries": entries, "count": len(entries)}
         except Exception as e:
             return {"error": str(e)}
 
     def _tool_run_command(self, command: str = "", **kw):
-        """Run a shell command."""
-        import subprocess
+        """Run a small allowlist of non-destructive workspace commands."""
         try:
+            args = shlex.split(command, posix=(os.name != "nt"))
+            if not args:
+                return {"error": "Empty command"}
+            allowed = (
+                args[:2] == ["python", "-m"] and len(args) >= 3 and args[2] in {"pytest", "compileall"}
+            ) or args[0] in {"pytest", "rg"} or (
+                args[0] == "git" and len(args) > 1 and args[1] in {"status", "diff", "log", "show"}
+            ) or (
+                args[:2] == ["npm", "run"] and len(args) > 2 and args[2] in {"build", "test"}
+            )
+            if not allowed:
+                return {"error": "Command not allowed for ZIO tool execution", "allowed": [
+                    "python -m pytest", "python -m compileall", "pytest", "rg",
+                    "git status/diff/log/show", "npm run build/test",
+                ]}
             result = subprocess.run(
-                command, shell=True, capture_output=True, text=True, timeout=30
+                args, shell=False, cwd=str(PROJECT_ROOT), capture_output=True, text=True, timeout=30
             )
             return {
                 "command": command,
@@ -227,6 +274,34 @@ class AgentSession:
             }
         except subprocess.TimeoutExpired:
             return {"error": "Command timed out (30s)"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _tool_generate_image(self, prompt: str = "", **kw):
+        try:
+            from agent.generator import generator
+            return generator.generate_image(prompt or "zicore system")
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _tool_generate_sound(self, prompt: str = "", **kw):
+        try:
+            from agent.generator import generator
+            return generator.generate_sound(prompt or "zicore tone")
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _tool_generate_video(self, prompt: str = "", **kw):
+        try:
+            from agent.generator import generator
+            return generator.generate_video(prompt or "zicore sequence")
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _tool_generate_3d(self, prompt: str = "", **kw):
+        try:
+            from agent.generator import generator
+            return generator.generate_3d(prompt or "zicore model")
         except Exception as e:
             return {"error": str(e)}
 

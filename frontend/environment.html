@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiEnvironment — Kernel Architecture</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1424;--bg4:#141a2e;
+    --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;
+    --L0:#ffffff;--L1:#9D00FF;--L2:#00FFAA;--L3:#FFCC00;--L4:#FF2A00;--L5:#C800FF;
+    --text:#c8d6e5;--text2:#8899aa;--border:rgba(0,229,255,0.12);
+  }
+  html{font-size:14px}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+  
+  /* TOPBAR */
+  .topbar{display:flex;align-items:center;gap:16px;padding:12px 24px;background:linear-gradient(180deg,rgba(0,229,255,0.06),transparent);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+  .back-btn{background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);padding:6px 16px;border-radius:4px;cursor:pointer;font-size:0.85rem;font-family:inherit;transition:all .2s}
+  .back-btn:hover{background:rgba(0,229,255,0.18);border-color:var(--cyan)}
+  .topbar-logo{display:flex;flex-direction:column;margin-left:8px}
+  .topbar-logo h1{font-size:1.3rem;font-weight:700;letter-spacing:4px;color:var(--cyan);text-shadow:0 0 20px rgba(0,229,255,0.4)}
+  .topbar-logo span{font-size:0.7rem;color:var(--purple);letter-spacing:2px;text-transform:uppercase}
+  .topbar-clock{margin-left:auto;font-family:'Courier New',monospace;color:var(--cyan);font-size:1.1rem;letter-spacing:2px;text-shadow:0 0 8px rgba(0,229,255,0.3)}
+  .topbar-clock small{color:var(--text2);font-size:0.75rem;letter-spacing:1px}
+
+  /* STATS BAR */
+  .stats-bar{display:flex;align-items:center;gap:24px;padding:10px 24px;background:rgba(0,229,255,0.03);border-bottom:1px solid var(--border);font-size:0.8rem;letter-spacing:1px;color:var(--text2)}
+  .stats-bar .stat{display:flex;align-items:center;gap:6px}
+  .stats-bar .stat .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+  .stats-bar .stat strong{color:var(--cyan);font-weight:600}
+  .stats-sep{width:1px;height:16px;background:var(--border)}
+
+  /* MAIN CONTENT */
+  .main{max-width:1400px;margin:0 auto;padding:24px}
+  .level-section{margin-bottom:36px}
+  .level-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:8px 0}
+  .level-bar{width:4px;height:32px;border-radius:2px}
+  .level-header h2{font-size:1rem;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+  .level-header .node-count{margin-left:auto;font-size:0.75rem;color:var(--text2);padding:3px 10px;border:1px solid var(--border);border-radius:10px}
+
+  /* NODE GRID */
+  .node-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .node-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;position:relative;overflow:hidden;transition:all .3s}
+  .node-card:hover{border-color:rgba(0,229,255,0.35);box-shadow:0 0 20px rgba(0,229,255,0.08);transform:translateY(-2px)}
+  .node-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:8px 0 0 8px}
+  .node-card .node-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+  .node-id{font-family:'Courier New',monospace;font-size:0.95rem;font-weight:700;letter-spacing:1px}
+  .node-status{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;margin-top:4px;animation:pulse 2s infinite}
+  .node-class{font-size:0.7rem;color:var(--text2);margin-bottom:8px;font-family:'Courier New',monospace;letter-spacing:0.5px}
+  .node-caps{list-style:none;display:flex;flex-wrap:wrap;gap:4px}
+  .node-caps li{font-size:0.68rem;padding:2px 8px;border-radius:3px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.1);color:var(--text2)}
+  .node-badges{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
+  .badge{font-size:0.6rem;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+  .badge-core{background:rgba(0,229,255,0.12);color:var(--cyan);border:1px solid rgba(0,229,255,0.2)}
+  .badge-ai{background:rgba(124,77,255,0.12);color:var(--purple);border:1px solid rgba(124,77,255,0.2)}
+  .badge-infra{background:rgba(255,42,0,0.12);color:var(--L4);border:1px solid rgba(255,42,0,0.2)}
+  .badge-ops{background:rgba(255,204,0,0.12);color:var(--L3);border:1px solid rgba(255,204,0,0.2)}
+  .badge-cog{background:rgba(0,255,170,0.12);color:var(--L2);border:1px solid rgba(0,255,170,0.2)}
+  .badge-trans{background:rgba(200,0,255,0.12);color:var(--L5);border:1px solid rgba(200,0,255,0.2)}
+  .badge-sec{background:rgba(157,0,255,0.12);color:var(--L1);border:1px solid rgba(157,0,255,0.2)}
+
+  /* Level-specific card accents */
+  .level-0 .node-card::before{background:var(--L0)}
+  .level-0 .node-id{color:var(--L0)}
+  .level-1 .node-card::before{background:var(--L1)}
+  .level-1 .node-id{color:var(--L1)}
+  .level-2 .node-card::before{background:var(--L2)}
+  .level-2 .node-id{color:var(--L2)}
+  .level-3 .node-card::before{background:var(--L3)}
+  .level-3 .node-id{color:var(--L3)}
+  .level-4 .node-card::before{background:var(--L4)}
+  .level-4 .node-id{color:var(--L4)}
+  .level-5 .node-card::before{background:var(--L5)}
+  .level-5 .node-id{color:var(--L5)}
+
+  /* SERVICES */
+  .services-section{margin-top:48px;padding:24px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+  .services-section h2{font-size:0.9rem;font-weight:600;letter-spacing:2px;color:var(--cyan);margin-bottom:16px;text-transform:uppercase}
+  .services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .svc{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:8px;transition:all .2s}
+  .svc:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.04)}
+  .svc .svc-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);flex-shrink:0}
+  .svc .svc-name{font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text);letter-spacing:0.5px}
+
+  /* STATUS BAR */
+  .status-bar{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;gap:16px;padding:8px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.95),rgba(4,6,12,0.9));border-top:1px solid var(--border);z-index:100;backdrop-filter:blur(12px);font-size:0.72rem}
+  .status-bar .sb-label{color:var(--cyan);font-family:'Courier New',monospace;letter-spacing:1px;font-weight:600}
+  .status-bar .sb-ver{color:var(--text2);font-family:'Courier New',monospace;letter-spacing:0.5px}
+  .status-bar .sb-pills{display:flex;gap:6px;margin-left:auto}
+  .sb-pill{padding:2px 8px;border-radius:3px;font-size:0.62rem;font-weight:600;letter-spacing:0.5px;border:1px solid}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.2);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.35)}
+
+  body{padding-bottom:48px}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes scanline{0%{top:-100%}100%{top:200%}}
+
+  .node-card .scanline{position:absolute;top:-100%;left:0;width:100%;height:60px;background:linear-gradient(180deg,transparent,rgba(0,229,255,0.03),transparent);animation:scanline 6s linear infinite;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="back-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}">&#9664; PORTAL</button>
+  <div class="topbar-logo">
+    <h1>ZIENVIRONMENT</h1>
+    <span>Nucleo Neuronal Operativo Distribuido</span>
+  </div>
+  <div class="topbar-clock">
+    <div id="clock">00:00:00</div>
+    <small id="clock-date">2026-07-11</small>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat"><span class="dot"></span><strong>21</strong> NODOS</div>
+  <div class="stats-sep"></div>
+  <div class="stat"><strong>6</strong> NIVELES</div>
+  <div class="stats-sep"></div>
+  <div class="stat"><strong>16</strong> SERVICIOS</div>
+  <div class="stats-sep"></div>
+  <div class="stat"><span class="dot"></span> ACTIVO</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- LEVEL 0 — KERNEL -->
+  <div class="level-section level-0">
+    <div class="level-header">
+      <div class="level-bar" style="background:var(--L0)"></div>
+      <h2 style="color:var(--L0)">Level 0 — KERNEL</h2>
+      <span style="color:var(--text2);font-size:0.75rem;font-style:italic">Primordial Core</span>
+      <span class="node-count">5 nodos</span>
+    </div>
+    <div class="node-grid">
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiCoreKernel</span><span class="node-status"></span></div>
+        <div class="node-class">class KernelCore</div>
+        <ul class="node-caps"><li>Boot sequencing</li><li>Heartbeat engine</li><li>Orchestration</li></ul>
+        <div class="node-badges"><span class="badge badge-core">CRITICAL</span><span class="badge badge-core">ROOT</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiORCHESTRATOR</span><span class="node-status"></span></div>
+        <div class="node-class">class Orchestrator</div>
+        <ul class="node-caps"><li>Lifecycle management</li><li>Task scheduling</li><li>Auto-recovery</li></ul>
+        <div class="node-badges"><span class="badge badge-core">CRITICAL</span><span class="badge badge-core">SCHEDULER</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiEVENT</span><span class="node-status"></span></div>
+        <div class="node-class">class EventBus</div>
+        <ul class="node-caps"><li>Neural pub/sub bus</li><li>Event routing</li><li>Async dispatch</li></ul>
+        <div class="node-badges"><span class="badge badge-core">EVENTS</span><span class="badge badge-core">PUBSUB</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiSTATE</span><span class="node-status"></span></div>
+        <div class="node-class">class StateStore</div>
+        <ul class="node-caps"><li>Global state store</li><li>Checkpoint snapshots</li><li>State sync</li></ul>
+        <div class="node-badges"><span class="badge badge-core">STATE</span><span class="badge badge-core">SYNC</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiREGISTRY</span><span class="node-status"></span></div>
+        <div class="node-class">class NodeRegistry</div>
+        <ul class="node-caps"><li>Node directory</li><li>Service discovery</li><li>Health tracking</li></ul>
+        <div class="node-badges"><span class="badge badge-core">DIRECTORY</span><span class="badge badge-core">DISCOVERY</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVEL 1 — SECURITY & EXISTENCE -->
+  <div class="level-section level-1">
+    <div class="level-header">
+      <div class="level-bar" style="background:var(--L1)"></div>
+      <h2 style="color:var(--L1)">Level 1 — SECURITY & EXISTENCE</h2>
+      <span class="node-count">4 nodos</span>
+    </div>
+    <div class="node-grid">
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiGATEWAY</span><span class="node-status"></span></div>
+        <div class="node-class">class Gateway</div>
+        <ul class="node-caps"><li>Request routing</li><li>Load balancing</li><li>TLS termination</li></ul>
+        <div class="node-badges"><span class="badge badge-sec">GATEWAY</span><span class="badge badge-sec">RATE LIMIT</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiSECURITY</span><span class="node-status"></span></div>
+        <div class="node-class">class SecurityEngine</div>
+        <ul class="node-caps"><li>Access control (RBAC)</li><li>Audit logging</li><li>Threat detection</li></ul>
+        <div class="node-badges"><span class="badge badge-sec">FIREWALL</span><span class="badge badge-sec">AUDIT</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiIDENTITY</span><span class="node-status"></span></div>
+        <div class="node-class">class IdentityManager</div>
+        <ul class="node-caps"><li>User/role mgmt</li><li>Session tokens</li><li>MFA enforcement</li></ul>
+        <div class="node-badges"><span class="badge badge-sec">IAM</span><span class="badge badge-sec">MFA</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiCRYPT</span><span class="node-status"></span></div>
+        <div class="node-class">class CryptoEngine</div>
+        <ul class="node-caps"><li>Encryption/signing</li><li>Token minting</li><li>Blockchain ledger</li></ul>
+        <div class="node-badges"><span class="badge badge-sec">ENCRYPT</span><span class="badge badge-sec">BLOCKCHAIN</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVEL 2 — COGNITION & MEMORY -->
+  <div class="level-section level-2">
+    <div class="level-header">
+      <div class="level-bar" style="background:var(--L2)"></div>
+      <h2 style="color:var(--L2)">Level 2 — COGNITION & MEMORY</h2>
+      <span class="node-count">4 nodos</span>
+    </div>
+    <div class="node-grid">
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiAI</span><span class="node-status"></span></div>
+        <div class="node-class">class AIEngine</div>
+        <ul class="node-caps"><li>Inference pipeline</li><li>Anomaly detection</li><li>Prediction models</li></ul>
+        <div class="node-badges"><span class="badge badge-cog">ML</span><span class="badge badge-cog">INFERENCE</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiDATA</span><span class="node-status"></span></div>
+        <div class="node-class">class DataEngine</div>
+        <ul class="node-caps"><li>Config templates</li><li>Historical data</li><li>Model registry</li></ul>
+        <div class="node-badges"><span class="badge badge-cog">DATA</span><span class="badge badge-cog">REGISTRY</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiMEMORY</span><span class="node-status"></span></div>
+        <div class="node-class">class MemoryEngine</div>
+        <ul class="node-caps"><li>Episodic memory</li><li>Semantic patterns</li><li>Memory consolidation</li></ul>
+        <div class="node-badges"><span class="badge badge-cog">MEMORY</span><span class="badge badge-cog">PATTERNS</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiVOICE</span><span class="node-status"></span></div>
+        <div class="node-class">class VoiceEngine</div>
+        <ul class="node-caps"><li>Speech recognition</li><li>NLP processing</li><li>TTS synthesis</li></ul>
+        <div class="node-badges"><span class="badge badge-cog">NLP</span><span class="badge badge-cog">TTS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVEL 3 — OPERATION & CONTROL -->
+  <div class="level-section level-3">
+    <div class="level-header">
+      <div class="level-bar" style="background:var(--L3)"></div>
+      <h2 style="color:var(--L3)">Level 3 — OPERATION & CONTROL</h2>
+      <span class="node-count">3 nodos</span>
+    </div>
+    <div class="node-grid">
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiMONITOR</span><span class="node-status"></span></div>
+        <div class="node-class">class MonitorEngine</div>
+        <ul class="node-caps"><li>Real-time metrics</li><li>Alert engine</li><li>Distributed tracing</li></ul>
+        <div class="node-badges"><span class="badge badge-ops">METRICS</span><span class="badge badge-ops">TRACING</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiPANELS</span><span class="node-status"></span></div>
+        <div class="node-class">class PanelManager</div>
+        <ul class="node-caps"><li>Dashboard renderer</li><li>SCADA integration</li><li>Widget framework</li></ul>
+        <div class="node-badges"><span class="badge badge-ops">DASHBOARD</span><span class="badge badge-ops">SCADA</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiSIMULATION</span><span class="node-status"></span></div>
+        <div class="node-class">class SimulationEngine</div>
+        <ul class="node-caps"><li>Energy simulation</li><li>Structural analysis</li><li>Scenario modeling</li></ul>
+        <div class="node-badges"><span class="badge badge-ops">SIM</span><span class="badge badge-ops">SCENARIO</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVEL 4 — PHYSICAL INFRASTRUCTURE -->
+  <div class="level-section level-4">
+    <div class="level-header">
+      <div class="level-bar" style="background:var(--L4)"></div>
+      <h2 style="color:var(--L4)">Level 4 — PHYSICAL INFRASTRUCTURE</h2>
+      <span class="node-count">5 nodos</span>
+    </div>
+    <div class="node-grid">
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiATOMEX</span><span class="node-status"></span></div>
+        <div class="node-class">class AtomExchange</div>
+        <ul class="node-caps"><li>State mapping</li><li>Energy transport</li><li>Atomic composition</li></ul>
+        <div class="node-badges"><span class="badge badge-infra">PHYSICS</span><span class="badge badge-infra">MATERIAL</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiBANK</span><span class="node-status"></span></div>
+        <div class="node-class">class BankEngine</div>
+        <ul class="node-caps"><li>Wallet management</li><li>Smart contracts</li><li>ZNT exchange</li></ul>
+        <div class="node-badges"><span class="badge badge-infra">ECONOMY</span><span class="badge badge-infra">ZNT</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiENERGY</span><span class="node-status"></span></div>
+        <div class="node-class">class EnergyGrid</div>
+        <ul class="node-caps"><li>Generation mgmt</li><li>Distribution grid</li><li>Load forecasting</li></ul>
+        <div class="node-badges"><span class="badge badge-infra">POWER</span><span class="badge badge-infra">GRID</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiHOST</span><span class="node-status"></span></div>
+        <div class="node-class">class HostManager</div>
+        <ul class="node-caps"><li>Server orchestration</li><li>Container mgmt</li><li>Storage & LB</li></ul>
+        <div class="node-badges"><span class="badge badge-infra">SERVERS</span><span class="badge badge-infra">CONTAINERS</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiNET</span><span class="node-status"></span></div>
+        <div class="node-class">class NetworkEngine</div>
+        <ul class="node-caps"><li>Proxy & tunnels</li><li>Packet routing</li><li>Bandwidth mgmt</li></ul>
+        <div class="node-badges"><span class="badge badge-infra">NETWORK</span><span class="badge badge-infra">PROXY</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVEL 5 — TRANSCENDENTAL EXPANSION -->
+  <div class="level-section level-5">
+    <div class="level-header">
+      <div class="level-bar" style="background:var(--L5)"></div>
+      <h2 style="color:var(--L5)">Level 5 — TRANSCENDENTAL EXPANSION</h2>
+      <span class="node-count">5 nodos</span>
+    </div>
+    <div class="node-grid">
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiAGENT</span><span class="node-status"></span></div>
+        <div class="node-class">class AgentEngine</div>
+        <ul class="node-caps"><li>AI code generation</li><li>Autonomous dev</li><li>Task delegation</li></ul>
+        <div class="node-badges"><span class="badge badge-trans">AGENT</span><span class="badge badge-trans">AUTONOMOUS</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiCRYOGEN</span><span class="node-status"></span></div>
+        <div class="node-class">class CryoEngine</div>
+        <ul class="node-caps"><li>Cryogenic preservation</li><li>Thermal stability</li><li>Biometric monitoring</li></ul>
+        <div class="node-badges"><span class="badge badge-trans">CRYO</span><span class="badge badge-trans">BIOMETRIC</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiGENESIS</span><span class="node-status"></span></div>
+        <div class="node-class">class GenesisEngine</div>
+        <ul class="node-caps"><li>Structural regeneration</li><li>Biostructure modeling</li><li>Tissue restore</li></ul>
+        <div class="node-badges"><span class="badge badge-trans">BIO</span><span class="badge badge-trans">REGEN</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiMIND</span><span class="node-status"></span></div>
+        <div class="node-class">class MindEngine</div>
+        <ul class="node-caps"><li>Neural mapping</li><li>Cognitive modeling</li><li>Consciousness sim</li></ul>
+        <div class="node-badges"><span class="badge badge-trans">NEURAL</span><span class="badge badge-trans">COGNITIVE</span></div>
+      </div>
+      <div class="node-card">
+        <div class="scanline"></div>
+        <div class="node-top"><span class="node-id">ZiPULSE</span><span class="node-status"></span></div>
+        <div class="node-class">class PulseEngine</div>
+        <ul class="node-caps"><li>Urban grid control</li><li>Water & mobility</li><li>Smart city mgmt</li></ul>
+        <div class="node-badges"><span class="badge badge-trans">SMART CITY</span><span class="badge badge-trans">URBAN</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICES SECTION -->
+  <div class="services-section">
+    <h2>16 SERVICIOS</h2>
+    <div class="services-grid">
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">agent</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">api</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">blender</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">data-bridge</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">dns</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">exchange</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">files</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">grpc</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">llm_hf</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">mail</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">manager</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">messaging</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">mqtt</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">settings</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">voice</span></div>
+      <div class="svc"><span class="svc-dot"></span><span class="svc-name">websocket</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <span class="sb-label">ZIENVIRONMENT</span>
+  <span class="sb-sep" style="width:1px;height:14px;background:var(--border)"></span>
+  <span class="sb-ver">KERNEL v0.1.0-prime</span>
+  <div class="sb-pills">
+    <span class="sb-pill" style="color:var(--L0);border-color:var(--L0);background:rgba(255,255,255,0.06)">L0 KERNEL</span>
+    <span class="sb-pill" style="color:var(--L1);border-color:var(--L1);background:rgba(157,0,255,0.08)">L1 SECURITY</span>
+    <span class="sb-pill" style="color:var(--L2);border-color:var(--L2);background:rgba(0,255,170,0.08)">L2 COGNITION</span>
+    <span class="sb-pill" style="color:var(--L3);border-color:var(--L3);background:rgba(255,204,0,0.08)">L3 OPERATION</span>
+    <span class="sb-pill" style="color:var(--L4);border-color:var(--L4);background:rgba(255,42,0,0.08)">L4 INFRA</span>
+    <span class="sb-pill" style="color:var(--L5);border-color:var(--L5);background:rgba(200,0,255,0.08)">L5 TRANSCEND</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  function updateClock(){
+    const now=new Date();
+    const h=String(now.getHours()).padStart(2,'0');
+    const m=String(now.getMinutes()).padStart(2,'0');
+    const s=String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').textContent=h+':'+m+':'+s;
+    const y=now.getFullYear();
+    const mo=String(now.getMonth()+1).padStart(2,'0');
+    const d=String(now.getDate()).padStart(2,'0');
+    document.getElementById('clock-date').textContent=y+'-'+mo+'-'+d;
+  }
+  updateClock();
+  setInterval(updateClock,1000);
+})();
+</script>
+</body>
+</html>

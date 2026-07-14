@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Arkanoid</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1e;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'Courier New',monospace;color:#fff;overflow:hidden}
+canvas{border:2px solid #1a1a3e}
+#hud{display:flex;gap:30px;margin-bottom:10px;font-size:14px;letter-spacing:2px}
+#hud .score{color:#00e5ff}
+#hud .lives{color:#ff1744}
+#hud .level{color:#ffeb3b}
+#startScreen{position:absolute;text-align:center;z-index:10}
+#startScreen h1{font-size:36px;color:#ffeb3b;text-shadow:0 0 20px #ffeb3b;margin-bottom:20px}
+#startScreen p{color:#aaa;font-size:12px;margin:5px 0}
+#gameOver{position:absolute;text-align:center;z-index:10;display:none}
+#gameOver h1{font-size:36px;color:#ff1744;text-shadow:0 0 20px #ff1744;margin-bottom:10px}
+#gameOver .final{font-size:18px;color:#ffeb3b;margin:10px 0}
+</style>
+</head>
+<body>
+<div id="startScreen">
+<h1>ARKANOID</h1>
+<p>Use <span style="color:#ffeb3b;font-weight:bold">MOUSE</span> or <span style="color:#ffeb3b;font-weight:bold">A/D</span> to move paddle</p>
+<p>Break all the bricks!</p>
+<p style="margin-top:20px;color:#ffeb3b">Press ENTER to start</p>
+</div>
+<div id="gameOver">
+<h1>GAME OVER</h1>
+<div class="final" id="finalScore">Score: 0</div>
+<p>Press ENTER to restart</p>
+</div>
+<div id="hud"><div class="score">SCORE: <span id="score">0</span></div><div class="lives">LIVES: <span id="lives">3</span></div><div class="level">LEVEL: <span id="level">1</span></div></div>
+<canvas id="game" width="480" height="400"></canvas>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=480,H=400;
+let score=0,lives=3,level=1,gameState='start';
+let paddle,ball,bricks,powerups=[];
+
+const BRICK_COLORS=['#ff1744','#ff5722','#ff9100','#ffeb3b','#76ff03','#00e5ff','#7c4dff'];
+
+function initGame(){
+paddle={x:W/2,w:80,h:12,speed:8};
+ball={x:W/2,y:H-60,vx:3*(Math.random()>0.5?1:-1),vy:-3,r:5};
+bricks=[];powerups=[];
+let cols=10,rows=5,bw=W/cols-4,bh=16;
+for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+bricks.push({x:4+c*(bw+4),y:40+r*(bh+4),w:bw,h:bh,color:BRICK_COLORS[r%BRICK_COLORS.length],hp:rows-r>3?1:rows-r});
+}
+}
+
+function drawPaddle(){
+ctx.fillStyle='#00e5ff';
+ctx.shadowColor='#00e5ff';ctx.shadowBlur=10;
+ctx.fillRect(paddle.x-paddle.w/2,H-30,paddle.w,paddle.h);
+ctx.shadowBlur=0;
+}
+
+function drawBall(){
+ctx.fillStyle='#ffeb3b';
+ctx.shadowColor='#ffeb3b';ctx.shadowBlur=10;
+ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();
+ctx.shadowBlur=0;
+}
+
+function drawBricks(){
+bricks.forEach(b=>{
+ctx.fillStyle=b.color;
+ctx.shadowColor=b.color;ctx.shadowBlur=5;
+ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.shadowBlur=0;
+// Highlight
+ctx.fillStyle='rgba(255,255,255,0.2)';
+ctx.fillRect(b.x,b.y,b.w,b.h/3);
+});
+}
+
+function drawPowerups(){
+powerups.forEach(p=>{
+ctx.fillStyle=p.type==='wide'?'#00e5ff':p.type==='multi'?'#ffeb3b':'#76ff03';
+ctx.fillRect(p.x-8,p.y-4,16,8);
+ctx.fillStyle='#fff';ctx.font='8px Courier';ctx.textAlign='center';
+ctx.fillText(p.type==='wide'?'W':p.type==='multi'?'M':'S',p.x,p.y+3);
+});
+}
+
+function update(){
+if(gameState!=='playing')return;
+// Ball
+ball.x+=ball.vx;ball.y+=ball.vy;
+// Wall bounce
+if(ball.x<ball.r||ball.x>W-ball.r)ball.vx*=-1;
+if(ball.y<ball.r){ball.vy*=-1}
+// Paddle
+if(ball.y+ball.r>=H-30&&ball.y+ball.r<=H-18&&ball.x>paddle.x-paddle.w/2&&ball.x<paddle.x+paddle.w/2){
+ball.vy=-Math.abs(ball.vy);
+let offset=(ball.x-paddle.x)/(paddle.w/2);
+ball.vx=offset*5;
+}
+// Bottom
+if(ball.y>H+10){
+lives--;
+if(lives<=0){gameState='gameOver';document.getElementById('finalScore').textContent='Score: '+score;document.getElementById('gameOver').style.display='block';return}
+ball.x=paddle.x;ball.y=H-60;ball.vx=3*(Math.random()>0.5?1:-1);ball.vy=-3;
+}
+// Bricks
+bricks.forEach((b,i)=>{
+if(ball.x+ball.r>b.x&&ball.x-ball.r<b.x+b.w&&ball.y+ball.r>b.y&&ball.y-ball.r<b.y+b.h){
+ball.vy*=-1;b.hp--;
+if(b.hp<=0){
+score+=10*(BRICK_COLORS.indexOf(b.color)+1);
+if(Math.random()<0.2)powerups.push({x:b.x+b.w/2,y:b.y+b.h/2,type:['wide','multi','slow'][Math.floor(Math.random()*3)],vy:2});
+bricks.splice(i,1);
+}
+}
+});
+// Powerups
+powerups.forEach((p,i)=>{
+p.y+=p.vy;
+if(p.y>H){powerups.splice(i,1);return}
+if(p.y+4>=H-30&&p.x>paddle.x-paddle.w/2-8&&p.x<paddle.x+paddle.w/2+8){
+if(p.type==='wide')paddle.w=Math.min(140,paddle.w+30);
+if(p.type==='slow'){ball.vx*=0.7;ball.vy*=0.7}
+powerups.splice(i,1);
+}
+});
+// Level complete
+if(bricks.length===0){level++;initGame()}
+}
+
+function draw(){
+ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,W,H);
+drawBricks();drawPaddle();drawBall();drawPowerups();
+document.getElementById('score').textContent=score;
+document.getElementById('lives').textContent=lives;
+document.getElementById('level').textContent=level;
+}
+
+function gameLoop(){
+if(gameState!=='playing'){requestAnimationFrame(gameLoop);return}
+update();draw();
+requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown',e=>{
+if(gameState==='start'&&e.key==='Enter'){gameState='playing';document.getElementById('startScreen').style.display='none';initGame();gameLoop();return}
+if(gameState==='gameOver'&&e.key==='Enter'){gameState='playing';document.getElementById('gameOver').style.display='none';score=0;lives=3;level=1;initGame();return}
+});
+document.addEventListener('mousemove',e=>{
+if(gameState!=='playing')return;
+let rect=canvas.getBoundingClientRect();
+paddle.x=((e.clientX-rect.left)/rect.width)*W;
+paddle.x=Math.max(paddle.w/2,Math.min(W-paddle.w/2,paddle.x));
+});
+document.addEventListener('keydown',e=>{
+if(gameState!=='playing')return;
+if(e.key==='a'||e.key==='ArrowLeft')paddle.x=Math.max(paddle.w/2,paddle.x-paddle.speed);
+if(e.key==='d'||e.key==='ArrowRight')paddle.x=Math.min(W-paddle.w/2,paddle.x+paddle.speed);
+});
+</script>
+</body>
+</html>

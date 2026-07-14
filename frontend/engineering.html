@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Engineering</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--panel:rgba(10,15,30,0.85);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;--orange:#ff9100;--text:#c8d6e5;--dim:#5a6a7a;--border:rgba(0,229,255,0.12);--glow:0 0 12px rgba(0,229,255,0.15)}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:linear-gradient(180deg,rgba(8,12,24,0.98),rgba(4,6,12,0.95));border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;z-index:1000;gap:12px}
+.back-btn{background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;transition:all .2s}
+.back-btn:hover{background:rgba(0,229,255,0.18);box-shadow:var(--glow)}
+.logo{font-size:18px;font-weight:700;color:var(--cyan);letter-spacing:3px;text-transform:uppercase;white-space:nowrap}
+.tab-nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;flex-shrink:1}
+.tab-btn{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:var(--dim);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;letter-spacing:1px;text-transform:uppercase;transition:all .2s;white-space:nowrap}
+.tab-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.15)}
+.tab-btn.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,229,255,0.08);box-shadow:0 0 10px rgba(0,229,255,0.12)}
+.clock{font-family:'JetBrains Mono','Consolas',monospace;font-size:12px;color:var(--cyan);white-space:nowrap;min-width:80px;text-align:right}
+.main{margin-top:56px;margin-bottom:36px;flex:1;padding:20px}
+.section{display:none}
+.section.active{display:block}
+.section-title{font-size:14px;font-weight:600;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;padding-left:4px;border-left:3px solid var(--cyan);padding-left:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;transition:all .3s}
+.card:hover{border-color:rgba(0,229,255,0.25);box-shadow:var(--glow)}
+.card-title{font-size:15px;font-weight:600;color:#e0e8f0;margin-bottom:2px}
+.card-formula{font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;color:var(--purple);margin-bottom:14px;opacity:0.85}
+.input-group{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.input-row{display:flex;gap:8px;align-items:center}
+.input-row label{font-size:11px;color:var(--dim);min-width:90px;text-align:right}
+.input-row input,.input-row select{flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:7px 10px;border-radius:5px;font-family:'JetBrains Mono','Consolas',monospace;font-size:12px;transition:border-color .2s}
+.input-row input:focus,.input-row select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 6px rgba(0,229,255,0.2)}
+.input-row input::placeholder{color:rgba(255,255,255,0.18)}
+.calc-btn{width:100%;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(124,77,255,0.12));border:1px solid rgba(0,229,255,0.3);color:var(--cyan);padding:8px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:6px;transition:all .2s}
+.calc-btn:hover{background:linear-gradient(135deg,rgba(0,229,255,0.25),rgba(124,77,255,0.2));box-shadow:0 0 14px rgba(0,229,255,0.2)}
+.result-box{margin-top:12px;padding:12px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.06);border-radius:6px;display:none}
+.result-box.visible{display:block}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.result-row:last-child{border-bottom:none}
+.result-label{font-size:11px;color:var(--dim)}
+.result-value{font-family:'JetBrains Mono','Consolas',monospace;font-size:13px;font-weight:600}
+.result-value.safe{color:var(--green)}
+.result-value.warn{color:var(--orange)}
+.result-value.danger{color:var(--red)}
+.result-value.info{color:var(--cyan)}
+.statusbar{position:fixed;bottom:0;left:0;right:0;height:36px;background:linear-gradient(0deg,rgba(8,12,24,0.98),rgba(4,6,12,0.92));border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;z-index:1000;gap:8px}
+.statusbar .label{font-size:10px;color:var(--cyan);letter-spacing:2px;font-weight:600;text-transform:uppercase}
+.statusbar .pills{display:flex;gap:6px;margin-left:auto;overflow-x:auto}
+.statusbar .pill{font-size:9px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.04);color:var(--dim);letter-spacing:1px;border:1px solid rgba(255,255,255,0.06)}
+.statusbar .pill.active{color:var(--cyan);border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06)}
+.launch-sim{position:relative;width:100%;aspect-ratio:1;background:radial-gradient(circle,rgba(0,20,40,0.9),rgba(4,6,12,0.98));border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.launch-sim canvas{width:100%;height:100%}
+.planet-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}
+.planet-card{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center;cursor:pointer;transition:all .2s}
+.planet-card:hover,.planet-card.selected{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,229,255,0.15)}
+.planet-card .name{font-size:13px;font-weight:600;color:#e0e8f0;margin-bottom:4px}
+.planet-card .detail{font-size:10px;color:var(--dim)}
+.planet-card .color{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+select option{background:#0a0f1e;color:var(--text)}
+@media(max-width:768px){.grid{grid-template-columns:1fr}.tab-nav{gap:2px}.tab-btn{padding:5px 8px;font-size:10px}.clock{display:none}.input-row{flex-direction:column;align-items:stretch}.input-row label{text-align:left;min-width:auto}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="back-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}">&#9664; PORTAL</button>
+  <div class="logo">ENGINEERING</div>
+  <nav class="tab-nav" id="tabNav">
+    <button class="tab-btn active" data-tab="estructural">Estructural</button>
+    <button class="tab-btn" data-tab="aerodinamica">Aerodinamica</button>
+    <button class="tab-btn" data-tab="propulsion">Propulsion</button>
+    <button class="tab-btn" data-tab="orbital">Orbital</button>
+    <button class="tab-btn" data-tab="energia">Energia</button>
+    <button class="tab-btn" data-tab="masa">Masa</button>
+    <button class="tab-btn" data-tab="algebra">Algebra</button>
+    <button class="tab-btn" data-tab="trig">Trigonometria</button>
+    <button class="tab-btn" data-tab="fisica">Fisica</button>
+    <button class="tab-btn" data-tab="quimica">Quimica</button>
+    <button class="tab-btn" data-tab="launch">Lanzamiento</button>
+  </nav>
+  <div class="clock" id="clock"></div>
+</div>
+
+<div class="main">
+
+<!-- ESTRUCTURAL -->
+<div class="section active" id="sec-estructural">
+  <div class="section-title">Structural Analysis</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Normal Stress</div>
+      <div class="card-formula">&sigma; = F / A</div>
+      <div class="input-group">
+        <div class="input-row"><label>Force (N)</label><input type="number" id="stress-f" placeholder="10000"></div>
+        <div class="input-row"><label>Area (m²)</label><input type="number" id="stress-a" placeholder="0.002" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcStress()">Calculate</button>
+      <div class="result-box" id="res-stress"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Euler Buckling</div>
+      <div class="card-formula">Pcr = π²·E·I / (K·L)²</div>
+      <div class="input-group">
+        <div class="input-row"><label>Modulus E (GPa)</label><input type="number" id="buck-e" placeholder="200" step="any"></div>
+        <div class="input-row"><label>Moment I (cm⁴)</label><input type="number" id="buck-i" placeholder="500" step="any"></div>
+        <div class="input-row"><label>Length L (m)</label><input type="number" id="buck-l" placeholder="3" step="any"></div>
+        <div class="input-row"><label>K factor</label><input type="number" id="buck-k" placeholder="1" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcBuckling()">Calculate</button>
+      <div class="result-box" id="res-buckling"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Safety Factor</div>
+      <div class="card-formula">n = &sigma;y / &sigma;applied</div>
+      <div class="input-group">
+        <div class="input-row"><label>Yield Stress (MPa)</label><input type="number" id="sf-sy" placeholder="250" step="any"></div>
+        <div class="input-row"><label>Applied Stress (MPa)</label><input type="number" id="sf-sa" placeholder="150" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcSafetyFactor()">Calculate</button>
+      <div class="result-box" id="res-sf"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Beam Deflection (Cantilever)</div>
+      <div class="card-formula">&delta; = F·L³ / (3·E·I)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Force (N)</label><input type="number" id="beam-f" placeholder="500" step="any"></div>
+        <div class="input-row"><label>Length (m)</label><input type="number" id="beam-l" placeholder="2" step="any"></div>
+        <div class="input-row"><label>Modulus E (GPa)</label><input type="number" id="beam-e" placeholder="200" step="any"></div>
+        <div class="input-row"><label>Moment I (cm⁴)</label><input type="number" id="beam-i" placeholder="300" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcDeflection()">Calculate</button>
+      <div class="result-box" id="res-beam"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AERODINAMICA -->
+<div class="section" id="sec-aerodinamica">
+  <div class="section-title">Aerodynamics</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Lift Force</div>
+      <div class="card-formula">L = ½ · ρ · v² · S · C_L</div>
+      <div class="input-group">
+        <div class="input-row"><label>Density ρ (kg/m³)</label><input type="number" id="lift-rho" placeholder="1.225" step="any"></div>
+        <div class="input-row"><label>Velocity (m/s)</label><input type="number" id="lift-v" placeholder="70" step="any"></div>
+        <div class="input-row"><label>Wing Area S (m²)</label><input type="number" id="lift-s" placeholder="28" step="any"></div>
+        <div class="input-row"><label>Coeff. C_L</label><input type="number" id="lift-cl" placeholder="0.5" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcLift()">Calculate</button>
+      <div class="result-box" id="res-lift"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Drag Force</div>
+      <div class="card-formula">D = ½ · ρ · v² · S · C_D</div>
+      <div class="input-group">
+        <div class="input-row"><label>Density ρ (kg/m³)</label><input type="number" id="drag-rho" placeholder="1.225" step="any"></div>
+        <div class="input-row"><label>Velocity (m/s)</label><input type="number" id="drag-v" placeholder="70" step="any"></div>
+        <div class="input-row"><label>Wing Area S (m²)</label><input type="number" id="drag-s" placeholder="28" step="any"></div>
+        <div class="input-row"><label>Coeff. C_D</label><input type="number" id="drag-cd" placeholder="0.03" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcDrag()">Calculate</button>
+      <div class="result-box" id="res-drag"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Mach Number</div>
+      <div class="card-formula">M = v / a &nbsp;(a = √(γ·R·T))</div>
+      <div class="input-group">
+        <div class="input-row"><label>Velocity (m/s)</label><input type="number" id="mach-v" placeholder="340" step="any"></div>
+        <div class="input-row"><label>Temp T (K)</label><input type="number" id="mach-t" placeholder="288.15" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMach()">Calculate</button>
+      <div class="result-box" id="res-mach"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Dynamic Pressure</div>
+      <div class="card-formula">q = ½ · ρ · v²</div>
+      <div class="input-group">
+        <div class="input-row"><label>Density ρ (kg/m³)</label><input type="number" id="qp-rho" placeholder="1.225" step="any"></div>
+        <div class="input-row"><label>Velocity (m/s)</label><input type="number" id="qp-v" placeholder="100" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcDynPressure()">Calculate</button>
+      <div class="result-box" id="res-qp"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROPULSION -->
+<div class="section" id="sec-propulsion">
+  <div class="section-title">Propulsion</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Thrust</div>
+      <div class="card-formula">F = ṁ·v_e + A_e·(p_e − p_a)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Mass flow (kg/s)</label><input type="number" id="thrust-md" placeholder="20" step="any"></div>
+        <div class="input-row"><label>Exhaust vel (m/s)</label><input type="number" id="thrust-ve" placeholder="3000" step="any"></div>
+        <div class="input-row"><label>Nozzle area (m²)</label><input type="number" id="thrust-ae" placeholder="0.5" step="any"></div>
+        <div class="input-row"><label>p_exit (Pa)</label><input type="number" id="thrust-pe" placeholder="15000" step="any"></div>
+        <div class="input-row"><label>p_amb (Pa)</label><input type="number" id="thrust-pa" placeholder="101325" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcThrust()">Calculate</button>
+      <div class="result-box" id="res-thrust"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Specific Impulse</div>
+      <div class="card-formula">Isp = F / (ṁ · g₀)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Thrust F (N)</label><input type="number" id="isp-f" placeholder="60000" step="any"></div>
+        <div class="input-row"><label>Mass flow (kg/s)</label><input type="number" id="isp-md" placeholder="20" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcIsp()">Calculate</button>
+      <div class="result-box" id="res-isp"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Delta-V (Tsiolkovsky)</div>
+      <div class="card-formula">Δv = Isp · g₀ · ln(m₀ / m_f)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Isp (s)</label><input type="number" id="deltav-isp" placeholder="320" step="any"></div>
+        <div class="input-row"><label>Initial mass (kg)</label><input type="number" id="deltav-m0" placeholder="50000" step="any"></div>
+        <div class="input-row"><label>Final mass (kg)</label><input type="number" id="deltav-mf" placeholder="15000" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcDeltaV()">Calculate</button>
+      <div class="result-box" id="res-deltav"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Thrust-to-Weight Ratio</div>
+      <div class="card-formula">TWR = T / (m · g)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Thrust (N)</label><input type="number" id="twr-t" placeholder="750000" step="any"></div>
+        <div class="input-row"><label>Mass (kg)</label><input type="number" id="twr-m" placeholder="50000" step="any"></div>
+        <div class="input-row"><label>Gravity (m/s²)</label><input type="number" id="twr-g" placeholder="9.81" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcTWR()">Calculate</button>
+      <div class="result-box" id="res-twr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ORBITAL -->
+<div class="section" id="sec-orbital">
+  <div class="section-title">Orbital Mechanics</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Orbital Velocity</div>
+      <div class="card-formula">v = √(G·M / r)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Body mass (kg)</label><input type="number" id="ov-m" placeholder="5.972e24" step="any"></div>
+        <div class="input-row"><label>Orbit radius (km)</label><input type="number" id="ov-r" placeholder="6771" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcOrbVel()">Calculate</button>
+      <div class="result-box" id="res-ov"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Escape Velocity</div>
+      <div class="card-formula">v_e = √(2·G·M / r)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Body mass (kg)</label><input type="number" id="ev-m" placeholder="5.972e24" step="any"></div>
+        <div class="input-row"><label>Radius (km)</label><input type="number" id="ev-r" placeholder="6371" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcEscVel()">Calculate</button>
+      <div class="result-box" id="res-ev"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Hohmann Transfer</div>
+      <div class="card-formula">Δv₁, Δv₂, T_transfer</div>
+      <div class="input-group">
+        <div class="input-row"><label>Body mass (kg)</label><input type="number" id="hm-m" placeholder="5.972e24" step="any"></div>
+        <div class="input-row"><label>r₁ (km)</label><input type="number" id="hm-r1" placeholder="6771" step="any"></div>
+        <div class="input-row"><label>r₂ (km)</label><input type="number" id="hm-r2" placeholder="42164" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcHohmann()">Calculate</button>
+      <div class="result-box" id="res-hm"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sphere of Influence</div>
+      <div class="card-formula">SOI = a · (m_planet / m_star)^(2/5)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Semi-major a (km)</label><input type="number" id="soi-a" placeholder="149597870" step="any"></div>
+        <div class="input-row"><label>Planet mass (kg)</label><input type="number" id="soi-mp" placeholder="5.972e24" step="any"></div>
+        <div class="input-row"><label>Star mass (kg)</label><input type="number" id="soi-ms" placeholder="1.989e30" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcSOI()">Calculate</button>
+      <div class="result-box" id="res-soi"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ENERGIA -->
+<div class="section" id="sec-energia">
+  <div class="section-title">Power Systems</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Solar Panel Power</div>
+      <div class="card-formula">P = η · A · G · PR</div>
+      <div class="input-group">
+        <div class="input-row"><label>Efficiency η (%)</label><input type="number" id="solar-eff" placeholder="22" step="any"></div>
+        <div class="input-row"><label>Area A (m²)</label><input type="number" id="solar-a" placeholder="10" step="any"></div>
+        <div class="input-row"><label>Irradiance G (W/m²)</label><input type="number" id="solar-g" placeholder="1361" step="any"></div>
+        <div class="input-row"><label>Perf. ratio PR</label><input type="number" id="solar-pr" placeholder="0.85" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcSolar()">Calculate</button>
+      <div class="result-box" id="res-solar"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Battery Capacity</div>
+      <div class="card-formula">E = V · Ah = P · t</div>
+      <div class="input-group">
+        <div class="input-row"><label>Voltage (V)</label><input type="number" id="bat-v" placeholder="28" step="any"></div>
+        <div class="input-row"><label>Capacity (Ah)</label><input type="number" id="bat-ah" placeholder="100" step="any"></div>
+        <div class="input-row"><label>Load Power (W)</label><input type="number" id="bat-p" placeholder="50" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcBattery()">Calculate</button>
+      <div class="result-box" id="res-bat"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Power Budget</div>
+      <div class="card-formula">P_gen vs P_load → Margin</div>
+      <div class="input-group">
+        <div class="input-row"><label>Power gen (W)</label><input type="number" id="pb-gen" placeholder="300" step="any"></div>
+        <div class="input-row"><label>Power load (W)</label><input type="number" id="pb-load" placeholder="200" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcPowerBudget()">Calculate</button>
+      <div class="result-box" id="res-pb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MASA -->
+<div class="section" id="sec-masa">
+  <div class="section-title">Mass Budget</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Mass Budget Breakdown</div>
+      <div class="card-formula">Sum all components + margins</div>
+      <div class="input-group">
+        <div class="input-row"><label>Structure (kg)</label><input type="number" id="mb-str" placeholder="2000" step="any"></div>
+        <div class="input-row"><label>Propulsion dry (kg)</label><input type="number" id="mb-prop" placeholder="3000" step="any"></div>
+        <div class="input-row"><label>Fuel mass (kg)</label><input type="number" id="mb-fuel" placeholder="15000" step="any"></div>
+        <div class="input-row"><label>Payload (kg)</label><input type="number" id="mb-pay" placeholder="5000" step="any"></div>
+        <div class="input-row"><label>Crew + equipment (kg)</label><input type="number" id="mb-crew" placeholder="800" step="any"></div>
+        <div class="input-row"><label>Margins (%)</label><input type="number" id="mb-marg" placeholder="10" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMassBudget()">Calculate</button>
+      <div class="result-box" id="res-mb"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Mass Fraction</div>
+      <div class="card-formula">μ = m_struct / m_total</div>
+      <div class="input-group">
+        <div class="input-row"><label>Structural mass (kg)</label><input type="number" id="mf-ms" placeholder="2000" step="any"></div>
+        <div class="input-row"><label>Total mass (kg)</label><input type="number" id="mf-mt" placeholder="25000" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMassFraction()">Calculate</button>
+      <div class="result-box" id="res-mf"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ALGEBRA -->
+<div class="section" id="sec-algebra">
+  <div class="section-title">Algebra</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Quadratic Equation</div>
+      <div class="card-formula">ax² + bx + c = 0 → x = (-b ± √(b²-4ac)) / 2a</div>
+      <div class="input-group">
+        <div class="input-row"><label>a</label><input type="number" id="quad-a" placeholder="1" step="any"></div>
+        <div class="input-row"><label>b</label><input type="number" id="quad-b" placeholder="-5" step="any"></div>
+        <div class="input-row"><label>c</label><input type="number" id="quad-c" placeholder="6" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcQuadratic()">Solve</button>
+      <div class="result-box" id="res-quad"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Linear System (2×2)</div>
+      <div class="card-formula">a₁x + b₁y = c₁<br>a₂x + b₂y = c₂</div>
+      <div class="input-group">
+        <div class="input-row"><label>a₁</label><input type="number" id="ls2-a1" placeholder="2" step="any"></div>
+        <div class="input-row"><label>b₁</label><input type="number" id="ls2-b1" placeholder="3" step="any"></div>
+        <div class="input-row"><label>c₁</label><input type="number" id="ls2-c1" placeholder="8" step="any"></div>
+        <div class="input-row"><label>a₂</label><input type="number" id="ls2-a2" placeholder="1" step="any"></div>
+        <div class="input-row"><label>b₂</label><input type="number" id="ls2-b2" placeholder="-1" step="any"></div>
+        <div class="input-row"><label>c₂</label><input type="number" id="ls2-c2" placeholder="1" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcLinSys2()">Solve</button>
+      <div class="result-box" id="res-ls2"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Exponential / Logarithm</div>
+      <div class="card-formula">y = b^x &nbsp;|&nbsp; x = log_b(y)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Base b</label><input type="number" id="exp-b" placeholder="10" step="any"></div>
+        <div class="input-row"><label>Exponent x</label><input type="number" id="exp-x" placeholder="3" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcExpLog()">Calculate</button>
+      <div class="result-box" id="res-exp"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Matrix Determinant (2×2)</div>
+      <div class="card-formula">det = a·d − b·c</div>
+      <div class="input-group">
+        <div class="input-row"><label>a</label><input type="number" id="mat-a" placeholder="3" step="any"></div>
+        <div class="input-row"><label>b</label><input type="number" id="mat-b" placeholder="8" step="any"></div>
+        <div class="input-row"><label>c</label><input type="number" id="mat-c" placeholder="4" step="any"></div>
+        <div class="input-row"><label>d</label><input type="number" id="mat-d" placeholder="6" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMatrixDet()">Calculate</button>
+      <div class="result-box" id="res-mat"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TRIGONOMETRIA -->
+<div class="section" id="sec-trig">
+  <div class="section-title">Trigonometria</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Trigonometric Functions</div>
+      <div class="card-formula">sin(θ), cos(θ), tan(θ)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Angle θ</label><input type="number" id="trig-angle" placeholder="45" step="any"></div>
+        <div class="input-row"><label>Unit</label><select id="trig-unit"><option value="deg">Degrees</option><option value="rad">Radians</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcTrig()">Calculate</button>
+      <div class="result-box" id="res-trig"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Law of Sines</div>
+      <div class="card-formula">a/sin(A) = b/sin(B) = c/sin(C)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Side a</label><input type="number" id="sine-a" placeholder="10" step="any"></div>
+        <div class="input-row"><label>Angle A (°)</label><input type="number" id="sine-A" placeholder="30" step="any"></div>
+        <div class="input-row"><label>Angle B (°)</label><input type="number" id="sine-B" placeholder="45" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcLawSines()">Calculate</button>
+      <div class="result-box" id="res-sine"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Law of Cosines</div>
+      <div class="card-formula">c² = a² + b² − 2ab·cos(C)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Side a</label><input type="number" id="cos-a" placeholder="5" step="any"></div>
+        <div class="input-row"><label>Side b</label><input type="number" id="cos-b" placeholder="7" step="any"></div>
+        <div class="input-row"><label>Angle C (°)</label><input type="number" id="cos-C" placeholder="60" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcLawCosines()">Calculate</button>
+      <div class="result-box" id="res-cos"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Angular Conversion</div>
+      <div class="card-formula">deg ↔ rad ↔ rev</div>
+      <div class="input-group">
+        <div class="input-row"><label>Value</label><input type="number" id="conv-val" placeholder="180" step="any"></div>
+        <div class="input-row"><label>From</label><select id="conv-from"><option value="deg">Degrees</option><option value="rad">Radians</option><option value="rev">Revolutions</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcAngularConv()">Convert</button>
+      <div class="result-box" id="res-conv"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Vector Decomposition</div>
+      <div class="card-formula">Vx = V·cos(θ), Vy = V·sin(θ)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Magnitude V</label><input type="number" id="vec-mag" placeholder="100" step="any"></div>
+        <div class="input-row"><label>Angle θ (°)</label><input type="number" id="vec-ang" placeholder="37" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcVecDecomp()">Calculate</button>
+      <div class="result-box" id="res-vec"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FISICA -->
+<div class="section" id="sec-fisica">
+  <div class="section-title">Physics</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Newton's Second Law</div>
+      <div class="card-formula">F = m · a</div>
+      <div class="input-group">
+        <div class="input-row"><label>Mass (kg)</label><input type="number" id="new-m" placeholder="10" step="any"></div>
+        <div class="input-row"><label>Acceleration (m/s²)</label><input type="number" id="new-a" placeholder="9.81" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcNewton()">Calculate</button>
+      <div class="result-box" id="res-new"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Kinematics (Projectile)</div>
+      <div class="card-formula">y = v₀t − ½gt² &nbsp;|&nbsp; v² = v₀² − 2gy</div>
+      <div class="input-group">
+        <div class="input-row"><label>Initial vel v₀ (m/s)</label><input type="number" id="kin-v0" placeholder="20" step="any"></div>
+        <div class="input-row"><label>Angle (°)</label><input type="number" id="kin-ang" placeholder="45" step="any"></div>
+        <div class="input-row"><label>Gravity (m/s²)</label><input type="number" id="kin-g" placeholder="9.81" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcKinematics()">Calculate</button>
+      <div class="result-box" id="res-kin"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Work / Energy / Power</div>
+      <div class="card-formula">W = F·d &nbsp;|&nbsp; P = W/t</div>
+      <div class="input-group">
+        <div class="input-row"><label>Force (N)</label><input type="number" id="wep-f" placeholder="100" step="any"></div>
+        <div class="input-row"><label>Distance (m)</label><input type="number" id="wep-d" placeholder="10" step="any"></div>
+        <div class="input-row"><label>Time (s)</label><input type="number" id="wep-t" placeholder="5" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcWorkEnergy()">Calculate</button>
+      <div class="result-box" id="res-wep"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ohm's Law</div>
+      <div class="card-formula">V = I·R &nbsp;|&nbsp; P = V·I = I²R = V²/R</div>
+      <div class="input-group">
+        <div class="input-row"><label>Voltage (V)</label><input type="number" id="ohm-v" placeholder="12" step="any"></div>
+        <div class="input-row"><label>Current (A)</label><input type="number" id="ohm-i" placeholder="2" step="any"></div>
+        <div class="input-row"><label>Resistance (Ω)</label><input type="number" id="ohm-r" placeholder="" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcOhm()">Calculate</button>
+      <div class="result-box" id="res-ohm"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Gravitational Force</div>
+      <div class="card-formula">F = G·m₁·m₂ / r²</div>
+      <div class="input-group">
+        <div class="input-row"><label>Mass 1 (kg)</label><input type="number" id="grav-m1" placeholder="5.972e24" step="any"></div>
+        <div class="input-row"><label>Mass 2 (kg)</label><input type="number" id="grav-m2" placeholder="7.342e22" step="any"></div>
+        <div class="input-row"><label>Distance (km)</label><input type="number" id="grav-r" placeholder="384400" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcGravity()">Calculate</button>
+      <div class="result-box" id="res-grav"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Wave Calculator</div>
+      <div class="card-formula">v = f · λ &nbsp;|&nbsp; T = 1/f</div>
+      <div class="input-group">
+        <div class="input-row"><label>Frequency (Hz)</label><input type="number" id="wave-f" placeholder="440" step="any"></div>
+        <div class="input-row"><label>Wavelength (m)</label><input type="number" id="wave-l" placeholder="" step="any"></div>
+        <div class="input-row"><label>Speed (m/s)</label><input type="number" id="wave-v" placeholder="343" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcWave()">Calculate</button>
+      <div class="result-box" id="res-wave"></div>
+    </div>
+  </div>
+</div>
+
+<!-- QUIMICA -->
+<div class="section" id="sec-quimica">
+  <div class="section-title">Chemistry</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Molar Mass Calculator</div>
+      <div class="card-formula">Enter formula: H2O, NaCl, C6H12O6</div>
+      <div class="input-group">
+        <div class="input-row"><label>Formula</label><input type="text" id="mol-formula" placeholder="H2O" style="font-family:monospace"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMolarMass()">Calculate</button>
+      <div class="result-box" id="res-mol"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ideal Gas Law</div>
+      <div class="card-formula">PV = nRT</div>
+      <div class="input-group">
+        <div class="input-row"><label>Pressure (atm)</label><input type="number" id="gas-p" placeholder="1" step="any"></div>
+        <div class="input-row"><label>Volume (L)</label><input type="number" id="gas-v" placeholder="22.4" step="any"></div>
+        <div class="input-row"><label>Moles (n)</label><input type="number" id="gas-n" placeholder="1" step="any"></div>
+        <div class="input-row"><label>Temp (K)</label><input type="number" id="gas-t" placeholder="273.15" step="any"></div>
+        <div class="input-row"><label>Solve for</label><select id="gas-solve"><option value="auto">Auto (leave blank)</option><option value="p">Pressure</option><option value="v">Volume</option><option value="n">Moles</option><option value="t">Temperature</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcIdealGas()">Calculate</button>
+      <div class="result-box" id="res-gas"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Molarity</div>
+      <div class="card-formula">M = moles / Volume(L)</div>
+      <div class="input-group">
+        <div class="input-row"><label>Moles</label><input type="number" id="mol-n" placeholder="2" step="any"></div>
+        <div class="input-row"><label>Volume (L)</label><input type="number" id="mol-v" placeholder="0.5" step="any"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMolarity()">Calculate</button>
+      <div class="result-box" id="res-molarity"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">pH Calculator</div>
+      <div class="card-formula">pH = -log₁₀[H⁺] &nbsp;|&nbsp; [H⁺] = 10^(-pH)</div>
+      <div class="input-group">
+        <div class="input-row"><label>pH or [H⁺]</label><input type="number" id="ph-val" placeholder="7" step="any"></div>
+        <div class="input-row"><label>Input type</label><select id="ph-type"><option value="ph">pH value</option><option value="h">H⁺ concentration (M)</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcPH()">Calculate</button>
+      <div class="result-box" id="res-ph"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LANZAMIENTO -->
+<div class="section" id="sec-launch">
+  <div class="section-title">Launch Routes & Seasons — Solar System + Exoplanets</div>
+
+  <div class="launch-sim">
+    <canvas id="launchCanvas"></canvas>
+  </div>
+
+  <div class="grid">
+    <div class="card" style="grid-column:span 2">
+      <div class="card-title">Hohmann Transfer Calculator</div>
+      <div class="card-formula">Select origin → destination to compute Δv, transfer time, and launch window</div>
+      <div class="input-group">
+        <div class="input-row"><label>Origin</label>
+          <select id="launch-from" onchange="updateLaunchCalc()">
+            <optgroup label="Solar System">
+              <option value="earth" selected>Earth</option>
+              <option value="mercury">Mercury</option>
+              <option value="venus">Venus</option>
+              <option value="mars">Mars</option>
+              <option value="jupiter">Jupiter</option>
+              <option value="saturn">Saturn</option>
+            </optgroup>
+            <optgroup label="Exoplanets">
+              <option value="kepler452b">Kepler-452b</option>
+              <option value="kepler442b">Kepler-442b</option>
+              <option value="trappist1e">TRAPPIST-1e</option>
+              <option value="proximab">Proxima Centauri b</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="input-row"><label>Destination</label>
+          <select id="launch-to" onchange="updateLaunchCalc()">
+            <optgroup label="Solar System">
+              <option value="mercury">Mercury</option>
+              <option value="venus">Venus</option>
+              <option value="mars" selected>Mars</option>
+              <option value="jupiter">Jupiter</option>
+              <option value="saturn">Saturn</option>
+            </optgroup>
+            <optgroup label="Exoplanets">
+              <option value="kepler452b">Kepler-452b</option>
+              <option value="kepler442b">Kepler-442b</option>
+              <option value="trappist1e">TRAPPIST-1e</option>
+              <option value="proximab">Proxima Centauri b</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <button class="calc-btn" onclick="calcLaunchRoute()">Calculate Route</button>
+      <div class="result-box" id="res-launch"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Launch Window Season</div>
+      <div class="card-formula">Optimal departure based on synodic period</div>
+      <div id="launch-seasons"></div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px">Planet Database</div>
+  <div class="planet-info" id="planet-cards"></div>
+</div>
+
+</div>
+
+<div class="statusbar">
+  <span class="label">ENGINEERING</span>
+  <div class="pills" id="statusPills">
+    <span class="pill active" data-pill="estructural">ESTRUCTURAL</span>
+    <span class="pill" data-pill="aerodinamica">AERODINAMICA</span>
+    <span class="pill" data-pill="propulsion">PROPULSION</span>
+    <span class="pill" data-pill="orbital">ORBITAL</span>
+    <span class="pill" data-pill="energia">ENERGIA</span>
+    <span class="pill" data-pill="masa">MASA</span>
+    <span class="pill" data-pill="algebra">ALGEBRA</span>
+    <span class="pill" data-pill="trig">TRIG</span>
+    <span class="pill" data-pill="fisica">FISICA</span>
+    <span class="pill" data-pill="quimica">QUIMICA</span>
+    <span class="pill" data-pill="launch">LANZAMIENTO</span>
+  </div>
+</div>
+
+<script>
+const G=6.674e-11,g0=9.80665,R_AIR=287.05,GAMMA=1.4;
+
+function updateClock(){const n=new Date();document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');}
+setInterval(updateClock,1000);updateClock();
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const t=btn.dataset.tab;
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sec-'+t).classList.add('active');
+    document.querySelectorAll('.statusbar .pill').forEach(p=>{p.classList.toggle('active',p.dataset.pill===t);});
+    if(t==='launch')initLaunchSim();
+  });
+});
+document.querySelectorAll('.statusbar .pill').forEach(p=>{
+  p.addEventListener('click',()=>{
+    const t=p.dataset.pill;
+    document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.toggle('active',b.dataset.tab===t);});
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sec-'+t).classList.add('active');
+    document.querySelectorAll('.statusbar .pill').forEach(pp=>{pp.classList.toggle('active',pp.dataset.pill===t);});
+    if(t==='launch')initLaunchSim();
+  });
+});
+
+function fmt(v,u,cls){let s;if(Math.abs(v)>=1e12)s=v.toExponential(3);else if(Math.abs(v)>=1e6)s=v.toExponential(3);else if(Math.abs(v)>=1000)s=v.toFixed(1);else if(Math.abs(v)>=1)s=v.toFixed(4);else if(Math.abs(v)>=0.001)s=v.toFixed(6);else s=v.toExponential(3);return `<div class="result-row"><span class="result-label">${u}</span><span class="result-value ${cls}">${s}</span></div>`;}
+function showBox(id,html){const el=document.getElementById(id);el.innerHTML=html;el.classList.add('visible');}
+function gv(id){return parseFloat(document.getElementById(id).value)||0;}
+
+// ========== ESTRUCTURAL ==========
+function calcStress(){const f=gv('stress-f'),a=gv('stress-a');if(a===0){showBox('res-stress','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Area cannot be zero</span></div>');return;}const s=f/a;const mpa=s/1e6;let cls='safe';if(mpa>500)cls='danger';else if(mpa>250)cls='warn';showBox('res-stress',fmt(s,'Stress (Pa)','info')+fmt(mpa,'Stress (MPa)',cls));}
+function calcBuckling(){const E=gv('buck-e')*1e9,I=gv('buck-i')*1e-8,L=gv('buck-l'),K=gv('buck-k');if(L===0||K===0){showBox('res-buckling','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Invalid input</span></div>');return;}const Pcr=Math.PI*Math.PI*E*I/Math.pow(K*L,2);showBox('res-buckling',fmt(Pcr,'Critical Load (N)','info')+fmt(Pcr/1000,'Critical Load (kN)','safe'));}
+function calcSafetyFactor(){const sy=gv('sf-sy'),sa=gv('sf-sa');if(sa===0){showBox('res-sf','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Applied stress cannot be zero</span></div>');return;}const n=sy/sa;let cls='safe';if(n<1.5)cls='danger';else if(n<2.0)cls='warn';showBox('res-sf',fmt(n,'Safety Factor n',cls)+(n>=1?fmt((n-1)*100,'Margin Above Yield (%)','info'):fmt((n-1)*100,'Margin Below Yield (%)','danger')));}
+function calcDeflection(){const f=gv('beam-f'),L=gv('beam-l'),E=gv('beam-e')*1e9,I=gv('beam-i')*1e-8;if(E===0||I===0){showBox('res-beam','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">E and I must be nonzero</span></div>');return;}const d=f*Math.pow(L,3)/(3*E*I);let cls='safe';if(d*1000>10)cls='danger';else if(d*1000>2)cls='warn';showBox('res-beam',fmt(d,'Deflection (m)','info')+fmt(d*1000,'Deflection (mm)',cls));}
+
+// ========== AERODINAMICA ==========
+function calcLift(){const rho=gv('lift-rho'),v=gv('lift-v'),s=gv('lift-s'),cl=gv('lift-cl');const L=0.5*rho*v*v*s*cl;showBox('res-lift',fmt(L,'Lift Force (N)','info')+fmt(L/1000,'Lift Force (kN)','safe'));}
+function calcDrag(){const rho=gv('drag-rho'),v=gv('drag-v'),s=gv('drag-s'),cd=gv('drag-cd');const D=0.5*rho*v*v*s*cd;showBox('res-drag',fmt(D,'Drag Force (N)','info')+fmt(D/1000,'Drag Force (kN)','safe'));}
+function calcMach(){const v=gv('mach-v'),T=gv('mach-t');if(T<=0){showBox('res-mach','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Temperature must be > 0</span></div>');return;}const a=Math.sqrt(GAMMA*R_AIR*T);const M=v/a;let regime='Subsonic',cls='safe';if(M>=5){regime='Hypersonic';cls='danger';}else if(M>=1.2){regime='Supersonic';cls='warn';}else if(M>=0.8){regime='Transonic';cls='warn';}showBox('res-mach',fmt(a,'Speed of Sound (m/s)','info')+fmt(M,'Mach Number',cls)+'<div class="result-row"><span class="result-label">Regime</span><span class="result-value '+cls+'">'+regime+'</span></div>');}
+function calcDynPressure(){const rho=gv('qp-rho'),v=gv('qp-v');const q=0.5*rho*v*v;showBox('res-qp',fmt(q,'Dynamic Pressure (Pa)','info')+fmt(q/1000,'Dynamic Pressure (kPa)','safe'));}
+
+// ========== PROPULSION ==========
+function calcThrust(){const md=gv('thrust-md'),ve=gv('thrust-ve'),ae=gv('thrust-ae'),pe=gv('thrust-pe'),pa=gv('thrust-pa');const F=md*ve+ae*(pe-pa);showBox('res-thrust',fmt(F,'Thrust (N)','info')+fmt(F/1000,'Thrust (kN)','safe')+fmt(F/g0,'Thrust (kgf)','info'));}
+function calcIsp(){const f=gv('isp-f'),md=gv('isp-md');if(md===0){showBox('res-isp','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Mass flow cannot be zero</span></div>');return;}const isp=f/(md*g0);showBox('res-isp',fmt(isp,'Specific Impulse (s)','info')+fmt(isp*g0,'Exhaust Velocity (m/s)','safe'));}
+function calcDeltaV(){const isp=gv('deltav-isp'),m0=gv('deltav-m0'),mf=gv('deltav-mf');if(mf<=0||m0<=0||m0<=mf){showBox('res-deltav','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">m0 must be > mf > 0</span></div>');return;}const dv=isp*g0*Math.log(m0/mf);showBox('res-deltav',fmt(dv,'Delta-V (m/s)','info')+fmt(dv/1000,'Delta-V (km/s)','safe')+fmt(m0/mf,'Mass Ratio','info'));}
+function calcTWR(){const t=gv('twr-t'),m=gv('twr-m'),g=gv('twr-g');if(m===0||g===0){showBox('res-twr','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Mass and gravity must be > 0</span></div>');return;}const twr=t/(m*g);let cls='warn',note='Marginal';if(twr>1.5){cls='safe';note='Good thrust margin';}else if(twr<1.0){cls='danger';note='Cannot lift off';}showBox('res-twr',fmt(twr,'TWR',cls)+'<div class="result-row"><span class="result-label">Status</span><span class="result-value '+cls+'">'+note+'</span></div>'+fmt(m*g,'Weight (N)','info'));}
+
+// ========== ORBITAL ==========
+function calcOrbVel(){const m=gv('ov-m'),r=gv('ov-r')*1000;if(r===0){showBox('res-ov','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Radius must be > 0</span></div>');return;}const v=Math.sqrt(G*m/r);showBox('res-ov',fmt(v,'Orbital Velocity (m/s)','info')+fmt(v/1000,'Orbital Velocity (km/s)','safe'));}
+function calcEscVel(){const m=gv('ev-m'),r=gv('ev-r')*1000;if(r===0){showBox('res-ev','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Radius must be > 0</span></div>');return;}const v=Math.sqrt(2*G*m/r);showBox('res-ev',fmt(v,'Escape Velocity (m/s)','info')+fmt(v/1000,'Escape Velocity (km/s)','safe'));}
+function calcHohmann(){const m=gv('hm-m'),r1=gv('hm-r1')*1000,r2=gv('hm-r2')*1000;if(r1===0||r2===0||m===0){showBox('res-hm','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">All inputs must be > 0</span></div>');return;}const v1=Math.sqrt(G*m/r1),v2=Math.sqrt(G*m/r2);const at=(r1+r2)/2;const vper=Math.sqrt(G*m*(2/r1-1/at));const vapo=Math.sqrt(G*m*(2/r2-1/at));const dv1=Math.abs(vper-v1),dv2=Math.abs(v2-vapo);const T=Math.PI*Math.sqrt(Math.pow(at,3)/(G*m));const Td=T/86400;let tStr=Td>1?Td.toFixed(2)+' days':(T/3600).toFixed(2)+' hours';showBox('res-hm',fmt(dv1,'Δv₁ (m/s)','info')+fmt(dv1/1000,'Δv₁ (km/s)','safe')+fmt(dv2,'Δv₂ (m/s)','info')+fmt(dv2/1000,'Δv₂ (km/s)','safe')+fmt(dv1+dv2,'Total Δv (m/s)','warn')+'<div class="result-row"><span class="result-label">Transfer Time</span><span class="result-value info">'+tStr+'</span></div>');}
+function calcSOI(){const a=gv('soi-a')*1000,mp=gv('soi-mp'),ms=gv('soi-ms');if(ms===0){showBox('res-soi','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Star mass must be > 0</span></div>');return;}const soi=a*Math.pow(mp/ms,2/5);showBox('res-soi',fmt(soi,'SOI Radius (m)','info')+fmt(soi/1000,'SOI Radius (km)','safe')+fmt(soi/1e6/1.496e8,'SOI Radius (AU)','warn'));}
+
+// ========== ENERGIA ==========
+function calcSolar(){const eff=gv('solar-eff')/100,a=gv('solar-a'),g=gv('solar-g'),pr=gv('solar-pr');const P=eff*a*g*pr;showBox('res-solar',fmt(P,'Power Output (W)','info')+fmt(P/1000,'Power Output (kW)','safe')+fmt(P*24,'Energy per Day (Wh)','info'));}
+function calcBattery(){const v=gv('bat-v'),ah=gv('bat-ah'),p=gv('bat-p');const E_wh=v*ah;const hours=p>0?E_wh/p:Infinity;const days=hours/24;showBox('res-bat',fmt(E_wh,'Energy (Wh)','info')+fmt(E_wh*3600,'Energy (J)','info')+(p>0?'<div class="result-row"><span class="result-label">Runtime</span><span class="result-value safe">'+(days>=1?days.toFixed(1)+' days':hours.toFixed(1)+' hours')+'</span></div>':''));}
+function calcPowerBudget(){const gen=gv('pb-gen'),load=gv('pb-load');const margin=gen-load;const pct=load>0?((margin/load)*100):0;let cls='safe',note='Surplus';if(margin<0){cls='danger';note='Deficit!';}else if(pct<20){cls='warn';note='Low margin';}showBox('res-pb',fmt(gen,'Generated (W)','info')+fmt(load,'Load (W)','warn')+fmt(margin,'Margin (W)',cls)+'<div class="result-row"><span class="result-label">Margin</span><span class="result-value '+cls+'">'+pct.toFixed(1)+'%</span></div>');}
+
+// ========== MASA ==========
+function calcMassBudget(){const str=gv('mb-str'),prop=gv('mb-prop'),fuel=gv('mb-fuel'),pay=gv('mb-pay'),crew=gv('mb-crew'),marg=gv('mb-marg');const dry=str+prop+pay+crew;const wet=dry+fuel;const mm=wet*(marg/100);const total=wet+mm;showBox('res-mb',fmt(dry,'Dry Mass (kg)','info')+fmt(wet,'Wet Mass (kg)','info')+fmt(mm,'Margin (kg)','warn')+fmt(total,'Total (kg)','safe')+'<div class="result-row"><span class="result-label">Fuel %</span><span class="result-value info">'+(fuel/total*100).toFixed(1)+'%</span></div>'+'<div class="result-row"><span class="result-label">Payload %</span><span class="result-value info">'+(pay/total*100).toFixed(1)+'%</span></div>');}
+function calcMassFraction(){const ms=gv('mf-ms'),mt=gv('mf-mt');if(mt===0){showBox('res-mf','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Total mass must be > 0</span></div>');return;}const mu=ms/mt;let cls='safe';if(mu>0.3)cls='danger';else if(mu>0.2)cls='warn';showBox('res-mf',fmt(mu,'Structural Fraction μ',cls)+'<div class="result-row"><span class="result-label">Propellant</span><span class="result-value info">'+(1-mu).toFixed(4)+'</span></div>');}
+
+// ========== ALGEBRA ==========
+function calcQuadratic(){const a=gv('quad-a'),b=gv('quad-b'),c=gv('quad-c');if(a===0){showBox('res-quad','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">a cannot be zero (not quadratic)</span></div>');return;}const disc=b*b-4*a*c;let html='';if(disc>0){const x1=(-b+Math.sqrt(disc))/(2*a);const x2=(-b-Math.sqrt(disc))/(2*a);html=fmt(x1,'x₁ (real)','info')+fmt(x2,'x₂ (real)','safe');}else if(disc===0){const x=-b/(2*a);html=fmt(x,'x (double root)','info');}else{const re=-b/(2*a),im=Math.sqrt(-disc)/(2*a);html='<div class="result-row"><span class="result-label">Real part</span><span class="result-value info">'+re.toFixed(4)+'</span></div><div class="result-row"><span class="result-label">Imaginary part</span><span class="result-value warn">±'+im.toFixed(4)+'i</span></div>';}html+=fmt(disc,'Discriminant Δ',disc>=0?'safe':'danger');showBox('res-quad',html);}
+
+function calcLinSys2(){const a1=gv('ls2-a1'),b1=gv('ls2-b1'),c1=gv('ls2-c1'),a2=gv('ls2-a2'),b2=gv('ls2-b2'),c2=gv('ls2-c2');const det=a1*b2-a2*b1;if(det===0){showBox('res-ls2','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Determinant = 0 (no unique solution)</span></div>');return;}const x=(c1*b2-c2*b1)/det;const y=(a1*c2-a2*c1)/det;showBox('res-ls2',fmt(x,'x','info')+fmt(y,'y','safe')+fmt(det,'Determinant','warn'));}
+
+function calcExpLog(){const b=gv('exp-b'),x=gv('exp-x');if(b<=0){showBox('res-exp','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Base must be > 0</span></div>');return;}const y=Math.pow(b,x);const logY=b>1?Math.log(y)/Math.log(b):0;showBox('res-exp',fmt(y,'b^x','info')+'<div class="result-row"><span class="result-label">log_b(b^x)</span><span class="result-value safe">'+x.toFixed(4)+'</span></div>'+fmt(Math.log(y),'ln(y)','info')+fmt(Math.log10(y),'log₁₀(y)','safe'));}
+
+function calcMatrixDet(){const a=gv('mat-a'),b=gv('mat-b'),c=gv('mat-c'),d=gv('mat-d');const det=a*d-b*c;let cls='info';if(det===0)cls='danger';showBox('res-mat',fmt(det,'Determinant',cls)+(det!==0?'<div class="result-row"><span class="result-label">Inverse exists</span><span class="result-value safe">Yes</span></div>':'<div class="result-row"><span class="result-label">Inverse exists</span><span class="result-value danger">No (singular matrix)</span></div>'));}
+
+// ========== TRIGONOMETRIA ==========
+function calcTrig(){const ang=gv('trig-angle');const unit=document.getElementById('trig-unit').value;const rad=unit==='deg'?ang*Math.PI/180:ang;const sinV=Math.sin(rad),cosV=Math.cos(rad),tanV=Math.tan(rad);showBox('res-trig',fmt(sinV,'sin(θ)','info')+fmt(cosV,'cos(θ)','safe')+fmt(tanV,'tan(θ)','warn')+'<div class="result-row"><span class="result-label">Angle (rad)</span><span class="result-value info">'+rad.toFixed(4)+'</span></div>'+'<div class="result-row"><span class="result-label">Angle (deg)</span><span class="result-value info">'+(rad*180/Math.PI).toFixed(4)+'</span></div>');}
+
+function calcLawSines(){const a=gv('sine-a'),A=gv('sine-A')*Math.PI/180,B=gv('sine-B')*Math.PI/180;if(A===0||B===0){showBox('res-sine','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Angles must be > 0</span></div>');return;}const sinA=Math.sin(A),sinB=Math.sin(B);if(sinA===0||sinB===0){showBox('res-sine','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Invalid angles</span></div>');return;}const ratio=a/sinA;const b=ratio*sinB;const C=Math.PI-A-B;const c=ratio*Math.sin(C);showBox('res-sine',fmt(b,'Side b','info')+fmt(c,'Side c','safe')+'<div class="result-row"><span class="result-label">Angle C</span><span class="result-value info">'+(C*180/Math.PI).toFixed(2)+'°</span></div>'+fmt(ratio,'a/sin(A) ratio','warn'));}
+
+function calcLawCosines(){const a=gv('cos-a'),b=gv('cos-b'),C=gv('cos-C')*Math.PI/180;const c2=a*a+b*b-2*a*b*Math.cos(C);if(c2<0){showBox('res-cos','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Invalid triangle</span></div>');return;}const c=Math.sqrt(c2);showBox('res-cos',fmt(c,'Side c','info')+'<div class="result-row"><span class="result-label">c²</span><span class="result-value safe">'+c2.toFixed(4)+'</span></div>');}
+
+function calcAngularConv(){const v=gv('conv-val');const from=document.getElementById('conv-from').value;let deg,rad,rev;if(from==='deg'){deg=v;rad=v*Math.PI/180;rev=v/360;}else if(from==='rad'){deg=v*180/Math.PI;rad=v;rev=v/(2*Math.PI);}else{deg=v*360;rad=v*2*Math.PI;rev=v;}showBox('res-conv','<div class="result-row"><span class="result-label">Degrees</span><span class="result-value info">'+deg.toFixed(4)+'°</span></div>'+'<div class="result-row"><span class="result-label">Radians</span><span class="result-value safe">'+rad.toFixed(4)+'</span></div>'+'<div class="result-row"><span class="result-label">Revolutions</span><span class="result-value warn">'+rev.toFixed(6)+'</span></div>');}
+
+function calcVecDecomp(){const V=gv('vec-mag'),ang=gv('vec-ang')*Math.PI/180;const Vx=V*Math.cos(ang),Vy=V*Math.sin(ang);const mag=Math.sqrt(Vx*Vx+Vy*Vy);const dir=Math.atan2(Vy,Vx)*180/Math.PI;showBox('res-vec',fmt(Vx,'Vx (horizontal)','info')+fmt(Vy,'Vy (vertical)','safe')+'<div class="result-row"><span class="result-label">|V| verified</span><span class="result-value info">'+mag.toFixed(4)+'</span></div>'+'<div class="result-row"><span class="result-label">Direction</span><span class="result-value warn">'+dir.toFixed(2)+'°</span></div>');}
+
+// ========== FISICA ==========
+function calcNewton(){const m=gv('new-m'),a=gv('new-a');const F=m*a;showBox('res-new',fmt(F,'Force (N)','info')+fmt(F/1000,'Force (kN)','safe')+fmt(F/g0,'Force (kgf)','warn'));}
+
+function calcKinematics(){const v0=gv('kin-v0'),ang=gv('kin-ang')*Math.PI/180,g=gv('kin-g');if(g===0){showBox('res-kin','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Gravity must be > 0</span></div>');return;}const vx=v0*Math.cos(ang),vy=v0*Math.sin(ang);const tFlight=2*vy/g;const hMax=vy*vy/(2*g);const range=vx*tFlight;showBox('res-kin',fmt(vx,'Vx (m/s)','info')+fmt(vy,'Vy (m/s)','info')+fmt(hMax,'Max Height (m)','safe')+fmt(range,'Range (m)','warn')+'<div class="result-row"><span class="result-label">Flight Time</span><span class="result-value info">'+tFlight.toFixed(3)+' s</span></div>');}
+
+function calcWorkEnergy(){const f=gv('wep-f'),d=gv('wep-d'),t=gv('wep-t');const W=f*d;const P=t>0?W/t:Infinity;showBox('res-wep',fmt(W,'Work (J)','info')+fmt(P,'Power (W)','safe')+'<div class="result-row"><span class="result-label">Power (hp)</span><span class="result-value warn">'+(P/745.7).toFixed(4)+'</span></div>');}
+
+function calcOhm(){const v=gv('ohm-v'),i=gv('ohm-i'),r=gv('ohm-r');let V=0,I=0,R=0,P=0;if(r>0&&i>0){R=r;I=i;V=I*R;}else if(v>0&&r>0){V=v;R=r;I=V/R;}else if(v>0&&i>0){V=v;I=i;R=V/I;}else{showBox('res-ohm','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Need at least 2 values</span></div>');return;}P=V*I;showBox('res-ohm',fmt(V,'Voltage (V)','info')+fmt(I,'Current (A)','safe')+fmt(R,'Resistance (Ω)','warn')+fmt(P,'Power (W)','info'));}
+
+function calcGravity(){const m1=gv('grav-m1'),m2=gv('grav-m2'),r=gv('grav-r')*1000;if(r===0){showBox('res-grav','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Distance must be > 0</span></div>');return;}const F=G*m1*m2/(r*r);showBox('res-grav',fmt(F,'Gravitational Force (N)','info')+fmt(F/1e9,'Force (GN)','safe')+'<div class="result-row"><span class="result-label">Distance</span><span class="result-value info">'+(r/1000).toFixed(0)+' km</span></div>');}
+
+function calcWave(){const f=gv('wave-f'),l=gv('wave-l'),v=gv('wave-v');let freq=0,wl=0,spd=0,T=0;if(f>0&&l>0){freq=f;wl=l;spd=f*l;}else if(f>0&&v>0){freq=f;spd=v;wl=v/f;}else if(l>0&&v>0){wl=l;spd=v;freq=v/l;}else{showBox('res-wave','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Need 2 of 3 values</span></div>');return;}T=freq>0?1/freq:0;showBox('res-wave',fmt(freq,'Frequency (Hz)','info')+fmt(wl,'Wavelength (m)','safe')+fmt(spd,'Speed (m/s)','warn')+'<div class="result-row"><span class="result-label">Period</span><span class="result-value info">'+T.toFixed(6)+' s</span></div>');}
+
+// ========== QUIMICA ==========
+const ELEMENTS={H:1.008,He:4.003,Li:6.941,Be:9.012,B:10.81,C:12.011,N:14.007,O:15.999,F:18.998,Ne:20.180,Na:22.990,Mg:24.305,Al:26.982,Si:28.086,P:30.974,S:32.065,Cl:35.453,Ar:39.948,K:39.098,Ca:40.078,Sc:44.956,Ti:47.867,V:50.942,Cr:51.996,Mn:54.938,Fe:55.845,Co:58.933,Ni:58.693,Cu:63.546,Zn:65.38,Ga:69.723,Ge:72.63,As:74.922,Se:78.96,Br:79.904,Kr:83.798,Rb:85.468,Sr:87.62,Y:88.906,Zr:91.224,Nb:92.906,Mo:95.96,Ru:101.07,Rh:102.906,Pd:106.42,Ag:107.868,Cd:112.411,In:114.818,Sn:118.71,Sb:121.76,Te:127.6,I:126.904,Xe:131.293,Ba:137.327,La:138.905,Ce:140.116,Pr:140.908,Nd:144.24,Pm:145,Sm:150.36,Eu:151.964,Gd:157.25,Tb:158.925,Dy:162.5,Ho:164.93,Er:167.259,Tm:168.934,Yb:173.054,Lu:174.967,Hf:178.49,Ta:180.948,W:183.84,Re:186.207,Os:190.23,Ir:192.217,Pt:195.078,Au:196.967,Hg:200.59,Tl:204.383,Pb:207.2,Bi:208.98,Po:209,At:210,Rn:222,Fr:223,Ra:226,Ac:227,Th:232.038,Pa:231.036,U:238.029,Np:237,Pu:244,Am:243,Cm:247};
+
+function parseFormula(formula){const stack=[{m:1}];let i=0;while(i<formula.length){if(formula[i]==='('){stack.push({m:stack[stack.length-1].m});i++;}else if(formula[i]===')'){if(stack.length>1){const grp=stack.pop();stack[stack.length-1].g=grp;}i++;}else if(/[A-Z]/.test(formula[i])){let el='';el+=formula[i];i++;while(i<formula.length&&/[a-z]/.test(formula[i])){el+=formula[i];i++;}let num='';while(i<formula.length&&/[0-9]/.test(formula[i])){num+=formula[i];i++;}const count=parseInt(num)||1;const mass=(ELEMENTS[el]||0)*count*stack[stack.length-1].m;stack[stack.length-1].t=(stack[stack.length-1].t||0)+mass;}else{i++;}}return stack[0].t||0;}
+
+function calcMolarMass(){const f=document.getElementById('mol-formula').value.trim();if(!f){showBox('res-mol','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Enter a chemical formula</span></div>');return;}const mass=parseFormula(f);if(mass===0){showBox('res-mol','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Invalid formula or unknown element</span></div>');return;}showBox('res-mol','<div class="result-row"><span class="result-label">Formula</span><span class="result-value info">'+f+'</span></div>'+fmt(mass,'Molar Mass (g/mol)','info'));}
+
+function calcIdealGas(){const solve=document.getElementById('gas-solve').value;const P=gv('gas-p'),V=gv('gas-v'),n=gv('gas-n'),T=gv('gas-t');const R_atm=0.08206;let html='';if(solve==='p'||(solve==='auto'&&P===0)){if(n===0||T===0||V===0){showBox('res-gas','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Need n, V, T</span></div>');return;}const p=n*R_atm*T/V;html=fmt(p,'Pressure (atm)','info')+fmt(p*101325,'Pressure (Pa)','safe');}else if(solve==='v'||(solve==='auto'&&V===0)){if(n===0||T===0||P===0){showBox('res-gas','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Need n, P, T</span></div>');return;}const v=n*R_atm*T/P;html=fmt(v,'Volume (L)','info')+fmt(v/1000,'Volume (m³)','safe');}else if(solve==='n'||(solve==='auto'&&n===0)){if(P===0||V===0||T===0){showBox('res-gas','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Need P, V, T</span></div>');return;}const moles=P*V/(R_atm*T);html=fmt(moles,'Moles (n)','info')+fmt(moles*6.022e23,'Molecules','safe');}else if(solve==='t'||(solve==='auto'&&T===0)){if(P===0||V===0||n===0){showBox('res-gas','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Need P, V, n</span></div>');return;}const t=P*V/(n*R_atm);html=fmt(t,'Temperature (K)','info')+fmt(t-273.15,'Temperature (°C)','safe');}else{html=fmt(P*V,'PV product','info')+fmt(n*R_atm*T,'nRT product','safe')+'<div class="result-row"><span class="result-label">Balanced</span><span class="result-value '+(Math.abs(P*V-n*R_atm*T)<0.01?'safe':'warn')+'">'+(Math.abs(P*V-n*R_atm*T)<0.01?'Yes':'No (check inputs)')+'</span></div>';}showBox('res-gas',html);}
+
+function calcMolarity(){const n=gv('mol-n'),v=gv('mol-v');if(v===0){showBox('res-molarity','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">Volume must be > 0</span></div>');return;}const M=n/v;showBox('res-molarity',fmt(M,'Molarity (mol/L)','info')+fmt(M*1000,'Molarity (mmol/L)','safe'));}
+
+function calcPH(){const v=gv('ph-val');const type=document.getElementById('ph-type').value;let pH,hConc;if(type==='ph'){pH=v;hConc=Math.pow(10,-v);}else{if(v<=0){showBox('res-ph','<div class="result-row"><span class="result-label">Error</span><span class="result-value danger">[H⁺] must be > 0</span></div>');return;}hConc=v;pH=-Math.log10(v);}const pOH=14-pH;const hConcFmt=hConc>=0.01?hConc.toFixed(4):hConc.toExponential(3);let cls='safe';if(pH<3)cls='danger';else if(pH<6)cls='warn';else if(pH>11)cls='danger';else if(pH>8)cls='warn';const nature=pH<7?'Acidic':pH>7?'Basic':'Neutral';showBox('res-ph',fmt(pH,'pH',cls)+'<div class="result-row"><span class="result-label">[H⁺]</span><span class="result-value info">'+hConcFmt+' M</span></div>'+fmt(pOH,'pOH','safe')+'<div class="result-row"><span class="result-label">Nature</span><span class="result-value '+cls+'">'+nature+'</span></div>');}
+
+// ========== LANCH ROUTES ==========
+const PLANETS={
+  mercury:{name:'Mercury',color:'#b0b0b0',orbRadius:0.387,period:0.241,mass:3.301e23,radius:2439.7,gravity:3.7,atmo:'None',temp:'-180 to 430°C',moons:0,distAU:0.387,starMass:1.989e30,desc:'Smallest planet, extreme temperature swings'},
+  venus:{name:'Venus',color:'#e8a040',orbRadius:0.723,period:0.615,mass:4.867e24,radius:6051.8,gravity:8.87,atmo:'CO₂ 96.5% (92 bar)',temp:'462°C avg',moons:0,distAU:0.723,starMass:1.989e30,desc:'Dense atmosphere, runaway greenhouse'},
+  earth:{name:'Earth',color:'#4488ff',orbRadius:1.0,period:1.0,mass:5.972e24,radius:6371,gravity:9.81,atmo:'N₂ 78%, O₂ 21%',temp:'15°C avg',moons:1,distAU:1.0,starMass:1.989e30,desc:'Home planet, liquid water, life'},
+  mars:{name:'Mars',color:'#cc4422',orbRadius:1.524,period:1.881,mass:6.417e23,radius:3389.5,gravity:3.72,atmo:'CO₂ 95% (0.006 bar)',temp:'-60°C avg',moons:2,distAU:1.524,starMass:1.989e30,desc:'Red planet, Olympus Mons, polar caps'},
+  jupiter:{name:'Jupiter',color:'#cc9966',orbRadius:5.203,period:11.86,mass:1.898e27,radius:69911,gravity:24.79,atmo:'H₂ 90%, He 10%',temp:'-110°C (cloud top)',moons:95,distAU:5.203,starMass:1.989e30,desc:'Gas giant, Great Red Spot, largest planet'},
+  saturn:{name:'Saturn',color:'#ddbb77',orbRadius:9.537,period:29.46,mass:5.683e26,radius:58232,gravity:10.44,atmo:'H₂ 96%, He 3%',temp:'-140°C (cloud top)',moons:146,distAU:9.537,starMass:1.989e30,desc:'Iconic rings, least dense planet'},
+  kepler452b:{name:'Kepler-452b',color:'#44cc88',orbRadius:1.046,period:1.0,mass:5.0e24,radius:7800,gravity:9.8,atmo:'Unknown (potentially Earth-like)',temp:'~16°C est.',moons:0,distAU:1.046,starMass:1.037e30,starName:'Kepler-452',distLY:1400,desc:'Earth\'s cousin, in habitable zone of Sun-like star'},
+  kepler442b:{name:'Kepler-442b',color:'#66bb88',orbRadius:0.409,period:0.4,mass:2.3e24,radius:6500,gravity:8.2,atmo:'Unknown',temp:'~-20°C est.',moons:0,distAU:0.409,starMass:0.61e30,starName:'Kepler-442',distLY:1206,desc:'Super-Earth in habitable zone of K-type star'},
+  trappist1e:{name:'TRAPPIST-1e',color:'#55aadd',orbRadius:0.028,period:0.005,mass:2.6e24,radius:5800,gravity:9.1,atmo:'Unknown (tidally locked?)',temp:'~16°C est.',moons:0,distAU:0.028,starMass:0.089e30,starName:'TRAPPIST-1',distLY:40,desc:'Earth-sized in 7-planet system, temperate zone'},
+  proximab:{name:'Proxima Centauri b',color:'#ee6644',orbRadius:0.0485,period:0.002,mass:1.07e24,radius:6000,gravity:9.0,atmo:'Unknown',temp:'~-40°C est.',moons:0,distAU:0.0485,starMass:0.122e30,starName:'Proxima Centauri',distLY:4.24,desc:'Nearest exoplanet, M-dwarf flare risk'}
+};
+
+function updateLaunchCalc(){
+  const from=document.getElementById('launch-from').value;
+  const to=document.getElementById('launch-to').value;
+  const p1=PLANETS[from],p2=PLANETS[to];
+  if(from===to||!p1||!p2)return;
+  const r1=p1.distAU*1.496e11;
+  const r2=p2.distAU*1.496e11;
+  const ms=p1.starMass;
+  const at=(r1+r2)/2;
+  const v1=Math.sqrt(G*ms/r1);
+  const v2=Math.sqrt(G*ms/r2);
+  const vper=Math.sqrt(G*ms*(2/r1-1/at));
+  const vapo=Math.sqrt(G*ms*(2/r2-1/at));
+  const dv1=Math.abs(vper-v1);
+  const dv2=Math.abs(v2-vapo);
+  const T=Math.PI*Math.sqrt(Math.pow(at,3)/(G*ms));
+  const Td=T/86400;
+  const Ty=Td/365.25;
+  const synodic=1/Math.abs(1/p1.period-1/p2.period);
+  let html=fmt(dv1,'Δv₁ — Departure (m/s)','info')+fmt(dv1/1000,'Δv₁ (km/s)','safe')+fmt(dv2,'Δv₂ — Arrival (m/s)','info')+fmt(dv2/1000,'Δv₂ (km/s)','safe')+fmt(dv1+dv2,'Total Δv (m/s)','warn')+fmt(dv1+dv2/1000,'Total Δv (km/s)','danger');
+  html+='<div class="result-row"><span class="result-label">Transfer Time</span><span class="result-value info">'+(Ty>0.1?Ty.toFixed(2)+' years':Td.toFixed(1)+' days')+'</span></div>';
+  html+='<div class="result-row"><span class="result-label">Synodic Period</span><span class="result-value warn">'+synodic.toFixed(1)+' years</span></div>';
+  html+='<div class="result-row"><span class="result-label">Launch Window</span><span class="result-value safe">Every '+synodic.toFixed(1)+' years</span></div>';
+  showBox('res-launch',html);
+  updateSeasons(from,to);
+}
+
+function updateSeasons(from,to){
+  const p1=PLANETS[from],p2=PLANETS[to];
+  const synodic=1/Math.abs(1/p1.period-1/p2.period);
+  const seasons=['Launch Window 1 (Optimal)','Transfer Window 2','Transfer Window 3','Transfer Window 4'];
+  let html='';
+  for(let i=0;i<4;i++){
+    html+='<div class="result-row"><span class="result-label">'+seasons[i]+'</span><span class="result-value '+(i===0?'safe':'info')+'">'+(i*synodic).toFixed(1)+' - '+((i*synodic+synodic*0.15).toFixed(1))+' years from now</span></div>';
+  }
+  document.getElementById('launch-seasons').innerHTML=html;
+}
+
+function initPlanetCards(){
+  const container=document.getElementById('planet-cards');
+  let html='';
+  for(const[key,p]of Object.entries(PLANETS)){
+    html+=`<div class="planet-card" onclick="selectPlanet('${key}')">
+      <div class="name"><span class="color" style="background:${p.color}"></span>${p.name}</div>
+      <div class="detail">${p.distLY?p.distLY+' ly':'Solar System'} | ${p.period.toFixed?p.period.toFixed(2):p.period} yr orbit</div>
+      <div class="detail">g=${p.gravity} m/s² | ${p.temp}</div>
+      <div class="detail">${p.desc}</div>
+    </div>`;
+  }
+  container.innerHTML=html;
+}
+
+function selectPlanet(key){
+  document.querySelectorAll('.planet-card').forEach(c=>c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  const p=PLANETS[key];
+  const html=fmt(p.gravity,'Surface Gravity (m/s²)','info')+fmt(p.radius,'Radius (km)','safe')+'<div class="result-row"><span class="result-label">Atmosphere</span><span class="result-value info">'+p.atmo+'</span></div>'+'<div class="result-row"><span class="result-label">Temperature</span><span class="result-value warn">'+p.temp+'</span></div>'+'<div class="result-row"><span class="result-label">Moons</span><span class="result-value info">'+p.moons+'</span></div>'+(p.starName?'<div class="result-row"><span class="result-label">Star</span><span class="result-value info">'+p.starName+'</span></div>':'')+(p.distLY?'<div class="result-row"><span class="result-label">Distance</span><span class="result-value warn">'+p.distLY+' light-years</span></div>':'');
+  showBox('res-launch',html);
+}
+
+// ========== LAUNCH SIM CANVAS ==========
+let launchAnim=null;
+function initLaunchSim(){
+  const canvas=document.getElementById('launchCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width=canvas.parentElement.clientWidth;
+  const H=canvas.height=canvas.parentElement.clientHeight;
+  const cx=W/2,cy=H/2;
+  const maxR=Math.min(cx,cy)*0.85;
+  let t=0;
+  const planetKeys=['mercury','venus','earth','mars','jupiter','saturn'];
+  const orbits=[0.387,0.723,1.0,1.524,5.203,9.537];
+  const periods=[0.241,0.615,1.0,1.881,11.86,29.46];
+  const from=document.getElementById('launch-from').value;
+  const to=document.getElementById('launch-to').value;
+  const fromIdx=planetKeys.indexOf(from);
+  const toIdx=planetKeys.indexOf(to);
+
+  if(launchAnim)cancelAnimationFrame(launchAnim);
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Star
+    const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,20);
+    grad.addColorStop(0,'#ffee88');grad.addColorStop(1,'rgba(255,238,136,0)');
+    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText('☀',cx+12,cy+4);
+    // Orbits & planets
+    for(let i=0;i<planetKeys.length;i++){
+      const r=(orbits[i]/9.537)*maxR;
+      const ang=t/(periods[i]*60)*Math.PI*2;
+      const px=cx+r*Math.cos(ang);
+      const py=cy+r*Math.sin(ang);
+      // Orbit ring
+      ctx.strokeStyle='rgba(0,229,255,0.08)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+      // Planet
+      const p=PLANETS[planetKeys[i]];
+      const sz=Math.max(3,Math.min(10,Math.log10(PLANETS[planetKeys[i]].mass/1e22)*2));
+      ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(px,py,sz,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(200,214,229,0.7)';ctx.font='9px sans-serif';ctx.fillText(p.name,px+sz+3,py+3);
+    }
+    // Transfer orbit (if from and to are solar system planets)
+    if(fromIdx>=0&&toIdx>=0&&fromIdx!==toIdx){
+      const r1=(orbits[fromIdx]/9.537)*maxR;
+      const r2=(orbits[toIdx]/9.537)*maxR;
+      const a_t=(r1+r2)/2;
+      const c=Math.abs(r2-r1)/2;
+      const offset=cx+c;
+      ctx.strokeStyle='rgba(255,145,0,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.ellipse(offset,cy,a_t,Math.min(r1,r2),0,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      // Label
+      ctx.fillStyle='rgba(255,145,0,0.6)';ctx.font='10px sans-serif';
+      ctx.fillText('Hohmann Transfer',cx-40,cy-Math.max(r1,r2)-8);
+    }
+    t++;
+    launchAnim=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+initPlanetCards();
+updateLaunchCalc();
+</script>
+</body>
+</html>

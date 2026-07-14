@@ -203,6 +203,55 @@ body{display:flex;flex-direction:column;background:#04060c}
 .status-modules{display:flex;gap:6px;margin-left:auto}
 .status-mod{padding:1px 5px;border:1px solid rgba(0,229,255,0.05);border-radius:2px;font-size:6px;color:#3a4a5a}
 .status-mod.active{color:#00e5ff;border-color:rgba(0,229,255,0.15)}
+
+/* LINKS BAR */
+.links-bar{
+  width:100%;max-width:700px;margin-top:16px;
+  display:flex;flex-wrap:wrap;justify-content:center;gap:6px;
+  animation:fadeSlideUp 1s ease-out 0.3s both;
+}
+.link-chip{
+  font-size:8px;letter-spacing:2px;padding:5px 14px;
+  border:1px solid rgba(0,255,136,0.12);background:rgba(0,255,136,0.03);
+  color:#0f6;cursor:pointer;text-decoration:none;
+  clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
+  transition:all .2s;
+}
+.link-chip:hover{background:rgba(0,255,136,0.12);border-color:rgba(0,255,136,0.3);text-shadow:0 0 8px rgba(0,255,136,0.4)}
+
+/* BACKGROUND MEDIA PLAYER */
+.bg-player{
+  position:fixed;right:12px;bottom:34px;z-index:998;
+  width:300px;background:rgba(8,12,20,0.96);
+  border:1px solid rgba(0,255,136,0.18);border-radius:8px;
+  padding:10px 12px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 12px 40px rgba(0,255,136,0.08);
+  backdrop-filter:blur(8px);
+}
+.bg-player.hidden{display:none}
+.bg-player-head{display:flex;align-items:center;gap:8px}
+.bg-player-eq{display:flex;gap:2px;align-items:flex-end;height:14px}
+.bg-player-eq span{width:3px;background:#00ff88;border-radius:1px;animation:eqBar 1s ease-in-out infinite}
+.bg-player-eq span:nth-child(1){height:5px;animation-delay:0s}
+.bg-player-eq span:nth-child(2){height:11px;animation-delay:0.2s}
+.bg-player-eq span:nth-child(3){height:7px;animation-delay:0.4s}
+.bg-player-eq span:nth-child(4){height:13px;animation-delay:0.1s}
+.bg-player.playing .bg-player-eq span{animation-play-state:running}
+.bg-player:not(.playing) .bg-player-eq span{animation-play-state:paused;height:4px}
+@keyframes eqBar{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
+.bg-player-title{font-size:9px;letter-spacing:1px;color:#00ff88;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.bg-player-sub{font-size:6px;letter-spacing:2px;color:#3a4a5a;text-transform:uppercase}
+.bg-player-controls{display:flex;align-items:center;justify-content:center;gap:14px}
+.bg-player-controls button{
+  background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);
+  color:#00ff88;width:30px;height:30px;border-radius:50%;cursor:pointer;
+  font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.bg-player-controls button:hover{background:rgba(0,255,136,0.16);border-color:rgba(0,255,136,0.4);box-shadow:0 0 14px rgba(0,255,136,0.2)}
+.bg-player-controls #bgPlay{width:38px;height:38px;font-size:14px}
+.bg-player-seek{display:flex;align-items:center;gap:8px}
+.bg-player-seek input[type=range]{flex:1;accent-color:#00ff88;height:3px}
+.bg-player-time{font-size:6px;letter-spacing:1px;color:#506070;text-align:center}
 </style>
 </head>
 <body>
@@ -231,7 +280,7 @@ body{display:flex;flex-direction:column;background:#04060c}
     </div>
     <div class="logo"><span>Z</span>ICORE</div>
     <div class="subtitle">Integrated Aerospace Command System</div>
-    <div class="version">v4.0.0 — ZineMotion Foundation — Aerospace Division</div>
+    <div class="version">v5.0.0 — ZineMotion Foundation — Aerospace Division — Materializer Engine</div>
   </div>
 
   <div class="ecosystem-bar">
@@ -242,22 +291,51 @@ body{display:flex;flex-direction:column;background:#04060c}
     <div class="eco-item"><div class="eco-label">STATUS</div><div class="eco-value" style="color:#0f6">NOMINAL</div></div>
   </div>
 
+  <div class="links-bar">
+    <a class="link-chip" href="https://zzz.zicore.space" target="_blank" rel="noopener">ZICORE.SPACE</a>
+    <a class="link-chip" href="https://x.com" target="_blank" rel="noopener">X</a>
+    <a class="link-chip" href="https://chatgpt.com" target="_blank" rel="noopener">CHATGPT</a>
+    <a class="link-chip" href="https://grok.ai" target="_blank" rel="noopener">GROK</a>
+    <a class="link-chip" href="https://z.ai" target="_blank" rel="noopener">Z.AI</a>
+    <a class="link-chip" href="https://zinemotion.com.mx" target="_blank" rel="noopener">ZINEMOTION</a>
+  </div>
+
   <div class="menu">
+    <div class="menu-card green" onclick="window.open('/mission-control','_blank')">
+      <div class="card-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="12" stroke="#00ff88" stroke-width="1.5" fill="rgba(0,255,136,0.05)"/>
+          <circle cx="16" cy="16" r="6" stroke="#00ff88" stroke-width="1" fill="none" opacity="0.5"/>
+          <circle cx="16" cy="16" r="2" fill="#00ff88" opacity="0.8"/>
+          <path d="M16 4v4M16 24v4M4 16h4M24 16h4" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+          <path d="M7.5 7.5l2.8 2.8M21.7 21.7l2.8 2.8M7.5 24.5l2.8-2.8M21.7 10.3l2.8-2.8" stroke="#00ff88" stroke-width="0.8" opacity="0.3"/>
+        </svg>
+      </div>
+      <div class="card-title">MISSION CONTROL</div>
+      <div class="card-desc">Aerospace command hub. Real-time telemetry, missions, nodes, modules, alerts. ZIO Copilot integrated.</div>
+      <div class="card-specs">
+        <div class="card-spec">TELEMETRY</div>
+        <div class="card-spec">MISSIONS</div>
+        <div class="card-spec">LIVE</div>
+      </div>
+    </div>
     <div class="menu-card" onclick="showView('dashboard')">
       <div class="card-icon-wrap">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path d="M16 2L4 10v12l12 8 12-8V10L16 2z" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.05)"/>
-          <circle cx="16" cy="16" r="4" stroke="#00e5ff" stroke-width="1" fill="rgba(0,229,255,0.1)"/>
-          <path d="M16 2v8M16 22v8M4 10l8 6M20 16l8-6M4 22l8-6M20 16l8 6" stroke="#00e5ff" stroke-width="0.5" opacity="0.4"/>
-          <circle cx="16" cy="16" r="1.5" fill="#00e5ff"/>
+          <rect x="4" y="4" width="24" height="24" rx="3" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.05)"/>
+          <path d="M10 22L14 8h4l4 14" stroke="#00e5ff" stroke-width="1" fill="none"/>
+          <path d="M12 18h8" stroke="#00e5ff" stroke-width="1" opacity="0.6"/>
+          <circle cx="22" cy="10" r="4" stroke="#7c4dff" stroke-width="1" fill="rgba(124,77,255,0.1)"/>
+          <path d="M22 8v4M20 10h4" stroke="#7c4dff" stroke-width="0.8"/>
+          <path d="M8 26l4-4M24 26l-4-4" stroke="#00e5ff" stroke-width="0.5" opacity="0.4"/>
         </svg>
       </div>
-      <div class="card-title">FLIGHT DECK</div>
-      <div class="card-desc">Tactical command interface — real-time telemetry, trajectory planning, propulsion monitoring, multi-system avionics control</div>
+      <div class="card-title">ZICORE CONTENT CREATOR</div>
+      <div class="card-desc">Materialize your ideas into reality — 3D modeling, Stable Diffusion AI, OpenSCAD, video editing, image processing, code authoring, procedural generation</div>
       <div class="card-specs">
-        <div class="card-spec">AVIONICS</div>
-        <div class="card-spec">TELEMETRY</div>
-        <div class="card-spec">NAVIGATION</div>
+        <div class="card-spec">3D MODELING</div>
+        <div class="card-spec">AI GENERATION</div>
+        <div class="card-spec">PROCEDURAL</div>
       </div>
     </div>
     <div class="menu-card purple" onclick="showView('zio')">
@@ -292,11 +370,73 @@ body{display:flex;flex-direction:column;background:#04060c}
         </svg>
       </div>
       <div class="card-title">FLIGHT SIM</div>
-      <div class="card-desc">Aerospace vehicle simulator — Obsidiana, BlackVanta, ZIron Sigma flight dynamics with real-time controls</div>
+      <div class="card-desc">Aerospace vehicle simulator — Drone, Obsidiana, BlackVanta, ZIron Sigma flight dynamics with real-time controls and aircraft configuration</div>
       <div class="card-specs">
+        <div class="card-spec">DRONE</div>
         <div class="card-spec">OBSIDIANA</div>
         <div class="card-spec">BLACKVANTA</div>
-        <div class="card-spec">DYNAMICS</div>
+        <div class="card-spec">CONFIG</div>
+      </div>
+    </div>
+    <div class="menu-card purple" onclick="showView('games')">
+      <div class="card-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="4" y="8" width="24" height="16" rx="3" stroke="#7c4dff" stroke-width="1.5" fill="rgba(124,77,255,0.05)"/>
+          <circle cx="12" cy="16" r="3" stroke="#7c4dff" stroke-width="1" fill="none"/>
+          <circle cx="12" cy="16" r="0.8" fill="#7c4dff"/>
+          <path d="M11 14.5h2M12 14v2" stroke="#7c4dff" stroke-width="0.6"/>
+          <circle cx="20" cy="16" r="1.5" fill="#7c4dff" opacity="0.6"/>
+          <circle cx="22" cy="18" r="1.5" fill="#7c4dff" opacity="0.4"/>
+          <circle cx="18" cy="18" r="1.5" fill="#7c4dff" opacity="0.4"/>
+          <circle cx="20" cy="20" r="1.5" fill="#7c4dff" opacity="0.4"/>
+          <path d="M4 22h24" stroke="#7c4dff" stroke-width="0.3" opacity="0.2"/>
+        </svg>
+      </div>
+      <div class="card-title">GAMES & APPS</div>
+      <div class="card-desc">Retro emulators, HTML5 games, Star Wars flight sims, productivity tools, Webamp audio, Thunderbird mail, Firefox browser</div>
+      <div class="card-specs">
+        <div class="card-spec">EMULATOR</div>
+        <div class="card-spec">STAR WARS</div>
+        <div class="card-spec">HTML5</div>
+        <div class="card-spec">TOOLS</div>
+      </div>
+    </div>
+    <div class="menu-card green" onclick="showView('multimedia')">
+      <div class="card-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="11" stroke="#00ff88" stroke-width="1.5" fill="rgba(0,255,136,0.05)"/>
+          <path d="M13 12l8 4-8 4V12z" stroke="#00ff88" stroke-width="1.2" fill="rgba(0,255,136,0.1)"/>
+          <path d="M6 16a10 10 0 0 1 3-7" stroke="#00ff88" stroke-width="0.8" opacity="0.4"/>
+          <path d="M26 16a10 10 0 0 1-3 7" stroke="#00ff88" stroke-width="0.8" opacity="0.4"/>
+          <circle cx="16" cy="16" r="2" fill="#00ff88" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="card-title">MULTIMEDIA</div>
+      <div class="card-desc">Unified audio, video, image and music library — browse, visualize and listen with a background player that keeps playing while you navigate</div>
+      <div class="card-specs">
+        <div class="card-spec">AUDIO</div>
+        <div class="card-spec">VIDEO</div>
+        <div class="card-spec">IMAGES</div>
+        <div class="card-spec">MUSIC</div>
+      </div>
+    </div>
+    <div class="menu-card" onclick="showView('settings')">
+      <div class="card-icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="7" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.05)"/>
+          <path d="M16 7v2M16 23v2M7 16h2M23 16h2" stroke="#00e5ff" stroke-width="1" opacity="0.6"/>
+          <path d="M10.3 10.3l1.4 1.4M20.3 20.3l1.4 1.4M10.3 21.7l1.4-1.4M20.3 11.7l1.4-1.4" stroke="#00e5ff" stroke-width="0.8" opacity="0.4"/>
+          <circle cx="16" cy="16" r="3" stroke="#7c4dff" stroke-width="1" fill="rgba(124,77,255,0.08)"/>
+          <path d="M16 13v6M13 16h6" stroke="#7c4dff" stroke-width="0.8" opacity="0.8"/>
+        </svg>
+      </div>
+      <div class="card-title">SYSTEM CONFIG</div>
+      <div class="card-desc">System-wide configuration — model providers, APIs, ZIO agent parameters, materializer settings, network services, Ollama management, and theme customization</div>
+      <div class="card-specs">
+        <div class="card-spec">PROVIDERS</div>
+        <div class="card-spec">ZIO</div>
+        <div class="card-spec">NETWORK</div>
+        <div class="card-spec">THEME</div>
       </div>
     </div>
   </div>
@@ -359,22 +499,143 @@ body{display:flex;flex-direction:column;background:#04060c}
 <iframe id="dashboardView" class="frameView" src=""></iframe>
 <iframe id="zioView" class="frameView" src=""></iframe>
 <iframe id="simView" class="frameView" src=""></iframe>
+<iframe id="gamesView" class="frameView" src=""></iframe>
+<iframe id="multimediaView" class="frameView" src=""></iframe>
+<iframe id="settingsView" class="frameView" src=""></iframe>
 
-<div class="status-bar">
+  <div class="status-bar">
   <div class="status-dot" id="apiDot"></div>
   <span>SYS</span>
+  <span id="statusDate" style="font-size:7px;letter-spacing:2px;color:#00e5ff;margin-left:8px"></span>
+  <span id="statusTime" style="font-size:7px;letter-spacing:2px;color:#00e5ff"></span>
   <div class="status-modules">
+    <div class="status-mod active" id="connDot" title="Internet Connection">NET</div>
     <div class="status-mod active">ZINAV</div>
     <div class="status-mod active">ZIHAB</div>
     <div class="status-mod active">ZIPOWER</div>
     <div class="status-mod active">ZISEC</div>
     <div class="status-mod active">ZICOMM</div>
   </div>
-  <span style="margin-left:auto" id="clock">00:00:00</span>
+  <span style="font-size:6px;letter-spacing:2px;color:#2a3040">MATERIALIZING IDEAS INTO REALITY</span>
+  <span style="margin-left:8px;font-size:6px;letter-spacing:2px;color:#2a3040">ZICORE v5.0</span>
+  <span onclick="showView('dashboard')" style="cursor:pointer;margin-left:8px;padding:2px 8px;border:1px solid rgba(0,229,255,0.15);border-radius:3px;font-size:6px;letter-spacing:2px;color:#00e5ff" title="Open Configuration">CONFIG</span>
+</div>
+
+<!-- PERSISTENT BACKGROUND MEDIA PLAYER (survives navigation) -->
+<audio id="bgAudio" preload="metadata"></audio>
+<video id="bgVideo" preload="metadata" style="display:none"></video>
+<div id="bgPlayer" class="bg-player hidden">
+  <div class="bg-player-head">
+    <div class="bg-player-eq"><span></span><span></span><span></span><span></span></div>
+    <div style="flex:1;min-width:0">
+      <div class="bg-player-title" id="bgTitle">—</div>
+      <div class="bg-player-sub" id="bgSub">ZICORE MULTIMEDIA</div>
+    </div>
+    <span id="bgKind" style="font-size:8px;letter-spacing:1px;color:#00ff88;border:1px solid rgba(0,255,136,0.2);border-radius:3px;padding:1px 5px">—</span>
+  </div>
+  <div class="bg-player-controls">
+    <button id="bgPrev" title="Previous">&#9198;</button>
+    <button id="bgPlay" title="Play/Pause">&#9654;</button>
+    <button id="bgNext" title="Next">&#9197;</button>
+  </div>
+  <div class="bg-player-seek">
+    <input type="range" id="bgSeek" min="0" max="1000" value="0">
+  </div>
+  <div class="bg-player-time" id="bgTime">0:00 / 0:00</div>
 </div>
 
 <script>
 var currentView=null;
+
+/* ===== PERSISTENT BACKGROUND MEDIA PLAYER =====
+   Audio/Video elements live in the PARENT window so playback continues
+   while the user navigates between iframes (dashboard, zio, sim, etc.).
+   The multimedia iframe controls this player via window.postMessage. */
+(function(){
+  var audio=document.getElementById('bgAudio');
+  var video=document.getElementById('bgVideo');
+  var player=document.getElementById('bgPlayer');
+  var titleEl=document.getElementById('bgTitle');
+  var subEl=document.getElementById('bgSub');
+  var kindEl=document.getElementById('bgKind');
+  var playBtn=document.getElementById('bgPlay');
+  var prevBtn=document.getElementById('bgPrev');
+  var nextBtn=document.getElementById('bgNext');
+  var seek=document.getElementById('bgSeek');
+  var timeEl=document.getElementById('bgTime');
+
+  var playlist=[];      // [{url,title,kind}]
+  var index=-1;
+  var active=null;      // current media element (audio or video)
+
+  function fmt(s){ if(!s||isNaN(s))return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+  function current(){ return (index>=0&&index<playlist.length)?playlist[index]:null; }
+
+  function bind(el){
+    el.ontimeupdate=function(){
+      if(el.duration){
+        seek.value=Math.floor((el.currentTime/el.duration)*1000);
+        timeEl.textContent=fmt(el.currentTime)+' / '+fmt(el.duration);
+      }
+    };
+    el.onended=function(){ next(); };
+    el.onloadedmetadata=function(){ timeEl.textContent='0:00 / '+fmt(el.duration); };
+  }
+  bind(audio); bind(video);
+
+  function show(){
+    var it=current(); if(!it){ player.classList.add('hidden'); return; }
+    player.classList.remove('hidden');
+    titleEl.textContent=it.title||it.name||'Untitled';
+    kindEl.textContent=(it.kind||'media').toUpperCase();
+    subEl.textContent='TRACK '+(index+1)+' / '+playlist.length;
+  }
+
+  function playItem(i){
+    if(i<0||i>=playlist.length)return;
+    index=i; var it=playlist[i];
+    audio.pause(); video.pause();
+    if(it.kind==='video'){ video.src=it.url; active=video; video.style.display='none'; }
+    else { audio.src=it.url; active=audio; }
+    active.play().then(function(){ player.classList.add('playing'); playBtn.innerHTML='&#10074;&#10074;'; }).catch(function(e){ player.classList.remove('playing'); playBtn.innerHTML='&#9654;'; });
+    show();
+  }
+
+  function play(){ if(active){ active.play(); player.classList.add('playing'); playBtn.innerHTML='&#10074;&#10074;'; } }
+  function pause(){ if(active){ active.pause(); player.classList.remove('playing'); playBtn.innerHTML='&#9654;'; } }
+  function toggle(){ if(!active)return; if(active.paused)play(); else pause(); }
+  function next(){ if(playlist.length) playItem((index+1)%playlist.length); }
+  function prev(){ if(playlist.length) playItem((index-1+playlist.length)%playlist.length); }
+
+  playBtn.onclick=toggle;
+  nextBtn.onclick=next;
+  prevBtn.onclick=prev;
+  seek.oninput=function(){ if(active&&active.duration){ active.currentTime=(seek.value/1000)*active.duration; } };
+
+  // Listen for commands from the multimedia iframe
+  window.addEventListener('message',function(e){
+    var d=e.data; if(!d||d.zicore!=='media')return;
+    if(d.action==='play'){ playlist=[d.item]; index=-1; playItem(0); }
+    else if(d.action==='playlist'){ playlist=d.items||[]; playItem(d.index||0); }
+    else if(d.action==='control'){
+      if(d.cmd==='play')play(); else if(d.cmd==='pause')pause();
+      else if(d.cmd==='toggle')toggle(); else if(d.cmd==='next')next(); else if(d.cmd==='prev')prev();
+      else if(d.cmd==='seek'&&active&&active.duration)active.currentTime=parseFloat(d.value);
+    }
+    else if(d.action==='state'){
+      // reply so the iframe can sync its UI
+      try{ e.source.postMessage({zicore:'media-state',playing:active&&!active.paused,title:titleEl.textContent,kind:kindEl.textContent,index:index,playlist:playlist},'*'); }catch(_){}
+    }
+  });
+
+  window.ZICORE_MEDIA={
+    play:function(it){ playlist=[it]; index=-1; playItem(0); },
+    playlist:function(items,i){ playlist=items||[]; playItem(i||0); },
+    control:function(cmd,val){ if(cmd==='play')play(); else if(cmd==='pause')pause(); else if(cmd==='toggle')toggle(); else if(cmd==='next')next(); else if(cmd==='prev')prev(); else if(cmd==='seek'&&active&&active.duration)active.currentTime=parseFloat(val); },
+    state:function(){ return {playing:active&&!active.paused,title:titleEl.textContent,kind:kindEl.textContent,index:index,playlist:playlist}; }
+  };
+})();
 
 function showView(view){
   document.getElementById('menuView').style.display='none';
@@ -383,8 +644,10 @@ function showView(view){
   document.querySelector('.info-section').style.display='none';
   document.querySelector('.ecosystem-bar').style.display='none';
 
-  var frameId=view==='dashboard'?'dashboardView':view==='zio'?'zioView':'simView';
-  var src=view==='dashboard'?'/dashboard':view==='zio'?'/zio':'/sim';
+  var views={dashboard:'dashboardView',zio:'zioView',sim:'simView',games:'gamesView',multimedia:'multimediaView',settings:'settingsView'};
+  var srcs={dashboard:'/dashboard',zio:'/zio',sim:'/flight-sim',games:'/games',multimedia:'/multimedia',settings:'/settings'};
+  var frameId=views[view]||'dashboardView';
+  var src=srcs[view]||'/dashboard';
 
   var f=document.getElementById(frameId);
   if(!f.src||f.src==='about:blank'||f.src===location.href)f.src=src;
@@ -393,9 +656,9 @@ function showView(view){
 }
 
 function showMenu(){
-  document.getElementById('dashboardView').style.display='none';
-  document.getElementById('zioView').style.display='none';
-  document.getElementById('simView').style.display='none';
+  ['dashboardView','zioView','simView','gamesView','multimediaView','settingsView'].forEach(function(id){
+    document.getElementById(id).style.display='none';
+  });
   document.getElementById('menuView').style.display='flex';
   document.getElementById('backBtn').style.display='none';
   document.querySelector('.status-bar').style.display='flex';
@@ -471,12 +734,22 @@ function showMenu(){
 
   setInterval(function(){
     var n=new Date();
-    document.getElementById('clock').textContent=
+    document.getElementById('statusTime').textContent=
       String(n.getHours()).padStart(2,'0')+':'+
       String(n.getMinutes()).padStart(2,'0')+':'+
       String(n.getSeconds()).padStart(2,'0');
+    document.getElementById('statusDate').textContent=
+      n.getFullYear()+'-'+
+      String(n.getMonth()+1).padStart(2,'0')+'-'+
+      String(n.getDate()).padStart(2,'0');
     document.getElementById('ecoLatency').textContent=Math.round(8+Math.random()*8)+'ms';
   },1000);
+
+  setInterval(function(){
+    var dot=document.getElementById('connDot');
+    fetch('/api/status',{method:'HEAD',mode:'no-cors'}).then(function(){dot.classList.add('active');dot.title='Connected';}).catch(function(){dot.classList.remove('active');dot.title='Disconnected';});
+  },10000);
+  fetch('/api/status').then(function(){document.getElementById('connDot').classList.add('active');}).catch(function(){});
 })();
 </script>
 </body>

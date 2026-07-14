@@ -109,7 +109,7 @@ def show_urls():
     print("")
     print("  API:")
     print("    https://api.zicore.space")
-    print("    https://localhost:8080/api/status")
+    print("    https://localhost:4080/api/status")
     print("=" * 60)
 
 def main():

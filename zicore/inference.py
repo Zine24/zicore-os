@@ -2,7 +2,7 @@ class ZiCoreInference:
     """Bridge de inferencia entre los motores A/B y el dashboard"""
     
     def __init__(self):
-        self.pipeline_url = "http://localhost:8080/api/infer"
+        self.pipeline_url = "http://localhost:4080/api/infer"
         self.history = []
     
     async def query(self, module: str, instruction: str, input_data: str = "") -> dict:

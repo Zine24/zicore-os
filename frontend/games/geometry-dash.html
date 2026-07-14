@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Geometry Dash</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'Courier New',monospace;color:#fff;overflow:hidden}
+canvas{border:2px solid #1a1a4e}
+#startScreen{position:absolute;text-align:center;z-index:10}
+#startScreen h1{font-size:32px;color:#7c4dff;text-shadow:0 0 20px #7c4dff;margin-bottom:20px}
+#startScreen p{color:#aaa;font-size:12px;margin:5px 0}
+#gameOver{position:absolute;text-align:center;z-index:10;display:none}
+#gameOver h1{font-size:36px;color:#ff1744;text-shadow:0 0 20px #ff1744;margin-bottom:10px}
+#gameOver .final{font-size:18px;color:#7c4dff;margin:10px 0}
+</style>
+</head>
+<body>
+<div id="startScreen">
+<h1>GEOMETRY DASH</h1>
+<p>Press <span style="color:#7c4dff;font-weight:bold">SPACE</span> or <span style="color:#7c4dff;font-weight:bold">CLICK</span> to jump</p>
+<p>Avoid the obstacles!</p>
+<p style="margin-top:20px;color:#7c4dff">Press ENTER to start</p>
+</div>
+<div id="gameOver">
+<h1>GAME OVER</h1>
+<div class="final">Distance: <span id="finalScore">0</span>m</div>
+<div class="final">Best: <span id="bestScore">0</span>m</div>
+<p>Press ENTER to restart</p>
+</div>
+<canvas id="game" width="480" height="300"></canvas>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=480,H=300,GROUND=H-50;
+let gameState='start',distance=0,best=0;
+let cube,obstacles,particles,groundOffset=0;
+
+function initGame(){
+cube={x:80,y:GROUND-30,vy:0,r:15,rot:0,grounded:true};
+obstacles=[];particles=[];distance=0;groundOffset=0;
+}
+
+function drawBg(){
+// Dark gradient
+let g=ctx.createLinearGradient(0,0,0,H);
+g.addColorStop(0,'#0a0a2e');g.addColorStop(1,'#1a1a4e');
+ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+// Ground
+ctx.fillStyle='#1a1a4e';
+ctx.fillRect(0,GROUND,W,50);
+ctx.strokeStyle='#7c4dff';
+ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(0,GROUND);ctx.lineTo(W,GROUND);ctx.stroke();
+// Ground grid lines
+ctx.strokeStyle='rgba(124,77,255,0.2)';
+for(let i=0;i<W;i+=40){
+let x=(i-groundOffset%40);
+ctx.beginPath();ctx.moveTo(x,GROUND);ctx.lineTo(x,H);ctx.stroke();
+}
+}
+
+function drawCube(){
+ctx.save();
+ctx.translate(cube.x,cube.y+cube.r);
+ctx.rotate(cube.rot);
+// Glow
+ctx.shadowColor='#7c4dff';ctx.shadowBlur=15;
+ctx.fillStyle='#7c4dff';
+ctx.fillRect(-cube.r,-cube.r,cube.r*2,cube.r*2);
+ctx.shadowBlur=0;
+// Inner detail
+ctx.fillStyle='rgba(255,255,255,0.3)';
+ctx.fillRect(-cube.r+3,-cube.r+3,cube.r*2-6,cube.r*2-6);
+// Center dot
+ctx.fillStyle='#fff';
+ctx.fillRect(-3,-3,6,6);
+ctx.restore();
+}
+
+function drawObstacles(){
+obstacles.forEach(o=>{
+ctx.save();
+ctx.shadowColor='#ff1744';ctx.shadowBlur=10;
+ctx.fillStyle=o.type==='spike'?'#ff1744':'#ff5722';
+if(o.type==='spike'){
+// Triangle spike
+ctx.beginPath();
+ctx.moveTo(o.x,GROUND);
+ctx.lineTo(o.x+o.w/2,GROUND-o.h);
+ctx.lineTo(o.x+o.w,GROUND);
+ctx.closePath();
+ctx.fill();
+}else{
+// Block
+ctx.fillRect(o.x,GROUND-o.h,o.w,o.h);
+ctx.strokeStyle='rgba(255,255,255,0.2)';
+ctx.strokeRect(o.x,GROUND-o.h,o.w,o.h);
+}
+ctx.restore();
+});
+}
+
+function drawParticles(){
+particles.forEach(p=>{
+ctx.fillStyle=`rgba(124,77,255,${p.life})`;
+ctx.fillRect(p.x,p.y,p.size,p.size);
+});
+}
+
+function spawnObstacle(){
+let types=['spike','block','spike','spike','block'];
+let type=types[Math.floor(Math.random()*types.length)];
+let h=type==='spike'?30+Math.random()*20:20+Math.random()*30;
+let w=type==='spike'?20:20+Math.random()*20;
+obstacles.push({x:W+50,w,h,type,scored:false});
+}
+
+function update(){
+if(gameState!=='playing')return;
+// Cube physics
+if(!cube.grounded)cube.vy+=0.8;
+cube.vy=Math.min(cube.vy,12);
+cube.y+=cube.vy;
+if(cube.y>=GROUND-30){cube.y=GROUND-30;cube.vy=0;cube.grounded=true}
+cube.rot+=cube.grounded?0:0.15;
+// Scroll
+groundOffset+=4;
+distance+=0.1;
+// Spawn obstacles
+if(Math.random()<0.02)spawnObstacle();
+// Move obstacles
+obstacles.forEach(o=>{
+o.x-=4;
+if(!o.scored&&o.x+o.w<cube.x){o.scored=true}
+});
+obstacles=obstacles.filter(o=>o.x>-50);
+// Collision
+obstacles.forEach(o=>{
+if(cube.x+cube.r>o.x&&cube.x-cube.r<o.x+o.w){
+if(cube.y+cube.r>GROUND-o.h){
+gameState='gameOver';
+let d=Math.floor(distance);
+if(d>best)best=d;
+document.getElementById('finalScore').textContent=d;
+document.getElementById('bestScore').textContent=best;
+document.getElementById('gameOver').style.display='block';
+// Particles
+for(let i=0;i<20;i++){
+particles.push({x:cube.x,y:cube.y+cube.r,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,size:3+Math.random()*4,life:1});
+}
+}
+}
+});
+// Particles
+particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.03;p.size*=0.97});
+particles=particles.filter(p=>p.life>0);
+}
+
+function drawScore(){
+ctx.fillStyle='#fff';ctx.font='bold 18px Courier New';ctx.textAlign='left';
+ctx.fillText(Math.floor(distance)+'m',10,25);
+ctx.fillStyle='#7c4dff';
+ctx.fillText('Best: '+best+'m',10,45);
+}
+
+function gameLoop(){
+drawBg();drawObstacles();drawCube();drawParticles();drawScore();
+update();
+requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown',e=>{
+if(gameState==='start'&&e.key==='Enter'){gameState='playing';document.getElementById('startScreen').style.display='none';initGame();gameLoop();return}
+if(gameState==='gameOver'&&e.key==='Enter'){gameState='playing';document.getElementById('gameOver').style.display='none';initGame();return}
+if(gameState==='playing'&&cube.grounded&&(e.key===' '||e.key==='ArrowUp')){cube.vy=-12;cube.grounded=false;e.preventDefault()}
+});
+canvas.addEventListener('click',()=>{if(gameState==='playing'&&cube.grounded){cube.vy=-12;cube.grounded=false}});
+canvas.addEventListener('touchstart',()=>{if(gameState==='playing'&&cube.grounded){cube.vy=-12;cube.grounded=false}});
+</script>
+</body>
+</html>

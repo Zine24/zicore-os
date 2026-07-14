@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE SYSTEM — System Configuration</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+:root{--glow:#00e5ff;--glow2:#7c4dff;--panel-bg:rgba(10,14,22,0.88);--panel-border:rgba(0,229,255,0.12);--text2:#607080;--text3:#303848}
+body{display:flex;flex-direction:column}
+#topBar{height:42px;min-height:42px;background:rgba(6,8,14,0.96);border-bottom:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;padding:0 12px;gap:10px;flex-shrink:0}
+#topBar .logo{font-size:11px;letter-spacing:5px;color:var(--glow);font-weight:700}
+#topBar .logo span{color:var(--glow2)}
+.top-btn{font-size:8px;letter-spacing:2px;padding:4px 10px;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);color:var(--glow);cursor:pointer;clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);transition:all .2s}
+.top-btn:hover{background:rgba(0,229,255,0.1)}
+.top-btn.primary{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
+#main{flex:1;display:flex;overflow:hidden}
+#tabs{width:200px;min-width:200px;border-right:1px solid rgba(0,229,255,0.08);padding:8px 0;overflow-y:auto;flex-shrink:0}
+.tab{padding:8px 14px;font-size:9px;letter-spacing:2px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
+.tab.active{color:var(--glow);border-left-color:var(--glow);background:rgba(0,229,255,0.06)}
+#content{flex:1;padding:16px;overflow-y:auto}
+.panel{display:none}
+.panel.active{display:block}
+.section{margin-bottom:16px;padding:12px;border:1px solid rgba(0,229,255,0.06);border-radius:3px}
+.section-title{font-size:9px;letter-spacing:2px;color:var(--glow);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(0,229,255,0.06)}
+.section-title.purple{color:var(--glow2)}
+.section-title.green{color:#0f6}
+.grid{display:grid;gap:6px;align-items:center}
+.grid-2{grid-template-columns:100px 1fr}
+.grid-3{grid-template-columns:100px 1fr 100px 1fr}
+label{font-size:9px;color:var(--text2)}
+input,select,textarea{background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:rgba(0,229,255,0.3)}
+textarea{font-family:monospace;font-size:9px;resize:vertical}
+input[type=range]{padding:0;background:transparent;border:none;accent-color:var(--glow)}
+input[type=color]{padding:2px;height:28px;cursor:pointer}
+select option{background:#0a0e16;color:var(--glow)}
+.btn{padding:6px 14px;font-size:8px;letter-spacing:2px;cursor:pointer;transition:all .2s;border-radius:2px}
+.btn-primary{background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.3);color:var(--glow)}
+.btn-primary:hover{background:rgba(0,229,255,0.2)}
+.btn-test{background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.15);color:var(--glow)}
+.btn-test:hover{background:rgba(0,229,255,0.1)}
+.btn-save{background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.3);color:#0f6;width:100%;padding:10px;margin-top:8px;font-size:10px;letter-spacing:3px}
+.btn-save:hover{background:rgba(0,255,136,0.2)}
+.toggle{width:32px;height:16px;border-radius:8px;cursor:pointer;position:relative;transition:all .2s;display:inline-block}
+.toggle.on{background:rgba(0,229,255,0.3)}
+.toggle.off{background:rgba(255,255,255,0.1)}
+.toggle div{position:absolute;top:2px;width:12px;height:12px;border-radius:50%;transition:all .2s}
+.toggle.on div{left:16px;background:#0ff}
+.toggle.off div{left:2px;background:#666}
+.status-ok{color:#0f6}
+.status-warn{color:#fa0}
+.status-err{color:#f44}
+.status-idle{color:var(--text2)}
+.flex{display:flex;gap:6px;align-items:center}
+.gap-4{gap:4px}
+.mt-8{margin-top:8px}
+.mb-8{margin-bottom:8px}
+.ml-auto{margin-left:auto}
+.text-center{text-align:center}
+.text-2{color:var(--text2)}
+.text-3{color:var(--text3)}
+.text-glow{color:var(--glow)}
+.fs-7{font-size:7px}
+.fs-8{font-size:8px}
+.fs-9{font-size:9px}
+.fs-10{font-size:10px}
+.ls-1{letter-spacing:1px}
+.ls-2{letter-spacing:2px}
+.ls-3{letter-spacing:3px}
+#toast{position:fixed;bottom:60px;right:20px;z-index:9999;padding:8px 16px;border-radius:4px;font-size:9px;letter-spacing:1px;display:none;background:rgba(10,14,22,0.96);border:1px solid rgba(0,255,136,0.3);color:#0f6;box-shadow:0 4px 20px rgba(0,255,136,0.1)}
+#toast.err{border-color:#f44;color:#f44}
+.sig{text-align:center;padding:12px 0 4px;font-size:7px;letter-spacing:3px;color:var(--text3)}
+.model-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid rgba(0,229,255,0.04);border-radius:3px;cursor:pointer;transition:all .15s}
+.model-item:hover{border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.03)}
+.model-item.selected{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.08)}
+.model-item input[type=radio]{accent-color:var(--glow);width:14px;height:14px;cursor:pointer}
+.model-item .model-name{font-size:9px;color:var(--glow);letter-spacing:1px;flex:1}
+.model-item .model-desc{font-size:7px;color:var(--text2);letter-spacing:0.5px}
+.model-item .model-tag{font-size:7px;letter-spacing:1px;padding:2px 6px;border-radius:2px}
+.tag-free{background:rgba(0,255,136,0.12);color:#0f6;border:1px solid rgba(0,255,136,0.2)}
+.tag-local{background:rgba(0,229,255,0.12);color:var(--glow);border:1px solid rgba(0,229,255,0.2)}
+.tag-paid{background:rgba(255,136,0,0.12);color:#fa0;border:1px solid rgba(255,136,0,0.2)}
+.model-item.is-free .model-name{color:#50fa7b;font-weight:bold;text-shadow:0 0 8px rgba(80,250,123,0.3)}
+.model-item.is-free{border-color:rgba(0,255,136,0.15);background:rgba(0,255,136,0.03)}
+.model-item.is-free:hover{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.06)}
+.chat-item{padding:8px;border:1px solid rgba(0,229,255,0.04);border-radius:3px;margin-bottom:6px;transition:all .15s}
+.chat-item:hover{border-color:rgba(0,229,255,0.15)}
+.chat-msg{font-size:9px;color:var(--text2);line-height:1.6}
+.chat-role{font-size:7px;letter-spacing:2px;margin-bottom:2px}
+.chat-role.user{color:var(--glow)}
+.chat-role.assistant{color:var(--glow2)}
+.chat-role.system{color:#fa0}
+.chat-time{font-size:7px;color:var(--text3);margin-top:4px}
+.session-group{margin-bottom:12px;padding:8px;border:1px solid rgba(124,77,255,0.1);border-radius:3px}
+.session-title{font-size:8px;letter-spacing:2px;color:var(--glow2);margin-bottom:6px}
+.upload-zone{border:1px dashed rgba(0,229,255,0.2);border-radius:3px;padding:16px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.03)}
+.upload-zone input[type=file]{display:none}
+.upload-zone .upload-label{font-size:8px;letter-spacing:2px;color:var(--glow);cursor:pointer}
+.upload-zone .upload-hint{font-size:7px;color:var(--text2);margin-top:4px}
+</style>
+</head>
+<body>
+<div id="topBar">
+  <span class="logo"><span>Z</span>ICORE CONFIG</span>
+  <button class="top-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}">&#9664; PORTAL</button>
+  <button class="top-btn primary" onclick="saveAll()">SAVE ALL</button>
+  <span id="saveStatus" class="fs-8 ls-1 text-2 ml-auto">v5.0.0</span>
+</div>
+<div id="main">
+  <div id="tabs">
+    <div class="tab active" onclick="switchTab('general', event)">GENERAL</div>
+    <div class="tab" onclick="switchTab('providers', event)">PROVIDERS</div>
+    <div class="tab" onclick="switchTab('zio', event)">ZIO AGENT</div>
+    <div class="tab" onclick="switchTab('materializer', event)">MATERIALIZER</div>
+    <div class="tab" onclick="switchTab('network', event)">NETWORK</div>
+    <div class="tab" onclick="switchTab('ollama', event)">OLLAMA</div>
+    <div class="tab" onclick="switchTab('models', event)">MODELS</div>
+    <div class="tab" onclick="switchTab('engineering', event)">ENGINEERING</div>
+    <div class="tab" onclick="switchTab('theme', event)">THEME</div>
+    <div class="tab" onclick="switchTab('system', event)">SYSTEM INFO</div>
+    <div class="tab" onclick="switchTab('chats', event)">CHATS</div>
+  </div>
+  <div id="content">
+    <div class="panel active" id="panel-general"></div>
+    <div class="panel" id="panel-providers"></div>
+    <div class="panel" id="panel-zio"></div>
+    <div class="panel" id="panel-materializer"></div>
+    <div class="panel" id="panel-network"></div>
+    <div class="panel" id="panel-ollama"></div>
+    <div class="panel" id="panel-models"></div>
+    <div class="panel" id="panel-engineering"></div>
+    <div class="panel" id="panel-theme"></div>
+    <div class="panel" id="panel-system"></div>
+    <div class="panel" id="panel-chats"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+var CONFIG=null;
+var PROVIDER_ORDER=['ollama','openrouter','openai','anthropic','groq','deepseek','together','opencode'];
+
+function switchTab(name,event){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  if(event&&event.target)event.target.classList.add("active");
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+function toast(msg,isErr){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.className=isErr?'err':'';t.style.display='block';
+  clearTimeout(t._tmr);t._tmr=setTimeout(function(){t.style.display='none';},3000);
+}
+
+function loadCfg(){
+  fetch('/api/config').then(function(r){return r.json();}).then(function(cfg){
+    CONFIG=cfg;
+    renderGeneral(cfg);
+    renderProviders(cfg);
+    renderZIO(cfg);
+    renderMaterializer(cfg);
+    renderNetwork(cfg);
+    renderOllama(cfg);
+    renderModels(cfg);
+    renderEngineering(cfg);
+    renderTheme(cfg);
+    renderSystem(cfg);
+    renderChats(cfg);
+  }).catch(function(e){toast('Error loading config: '+e.message,true);});
+}
+
+function gatherAll(){
+  var c={providers:{},zio_engine:{},system:{},materializer:{},theme_config:{},theme:CONFIG.theme||'midnight',ollama_service:{},engineering:{}};
+  /* providers */
+  PROVIDER_ORDER.forEach(function(pid){
+    var el=document.getElementById('prov_'+pid+'_enabled');
+    var keyEl=document.getElementById('prov_'+pid+'_api_key');
+    var urlEl=document.getElementById('prov_'+pid+'_base_url');
+    var modelEl=document.getElementById('prov_'+pid+'_default_model');
+    if(el&&keyEl&&urlEl&&modelEl){
+      c.providers[pid]={};
+      c.providers[pid].enabled=el.classList.contains('on');
+      var kv=keyEl.value; if(kv&&kv!=='********')c.providers[pid].api_key=kv;
+      c.providers[pid].base_url=urlEl.value;
+      c.providers[pid].default_model=modelEl.value;
+      c.providers[pid].name=CONFIG.providers[pid]&&CONFIG.providers[pid].name?CONFIG.providers[pid].name:pid;
+    }
+  });
+  /* zio_engine */
+  var apEl=document.getElementById('cfgActiveProv');
+  if(apEl)c.zio_engine.active_provider=apEl.value;
+  var tEl=document.getElementById('cfgTemp');
+  if(tEl)c.zio_engine.temperature=parseInt(tEl.value)/100;
+  var mtEl=document.getElementById('cfgMaxTok');
+  if(mtEl)c.zio_engine.max_tokens=parseInt(mtEl.value);
+  var ctEl=document.getElementById('cfgCtx');
+  if(ctEl)c.zio_engine.context_length=parseInt(ctEl.value);
+  var spEl=document.getElementById('cfgSysPrompt');
+  if(spEl)c.zio_engine.system_prompt=spEl.value;
+  var tpEl=document.getElementById('cfgTopP');
+  if(tpEl)c.zio_engine.top_p=parseInt(tpEl.value)/100;
+  var strEl=document.getElementById('cfgStream');
+  if(strEl)c.zio_engine.stream=strEl.classList.contains('on');
+  /* materializer */
+  var odEl=document.getElementById('matOutputDir');
+  if(odEl)c.materializer.output_dir=odEl.value;
+  var iqEl=document.getElementById('matImageQuality');
+  if(iqEl)c.materializer.image_quality=iqEl.value;
+  var mfEl=document.getElementById('matMeshFormat');
+  if(mfEl)c.materializer.mesh_format=mfEl.value;
+  var sdStEl=document.getElementById('matSDSteps');
+  if(sdStEl)c.materializer.sd_steps=parseInt(sdStEl.value);
+  var sdGdEl=document.getElementById('matSDGuidance');
+  if(sdGdEl)c.materializer.sd_guidance=parseFloat(sdGdEl.value);
+  var sdMdEl=document.getElementById('matSDModel');
+  if(sdMdEl)c.materializer.sd_model=sdMdEl.value;
+  /* system */
+  var wpEl=document.getElementById('sysWebPort');
+  if(wpEl)c.system.web_port=parseInt(wpEl.value);
+  var apEl2=document.getElementById('sysAPIPort');
+  if(apEl2)c.system.api_port=parseInt(apEl2.value);
+  var llEl=document.getElementById('sysLogLevel');
+  if(llEl)c.system.log_level=llEl.value;
+  var mwEl=document.getElementById('sysMaxWorkers');
+  if(mwEl)c.system.max_workers=parseInt(mwEl.value);
+  /* engineering */
+  var engFields=['vehicles','propulsion_types','materializer_quality','engine_temperature','engine_top_p','engine_max_tokens','engine_context','procedural_seed','sim_gravity','sim_atm_density','sim_dt','sim_max_altitude'];
+  engFields.forEach(function(f){
+    var el=document.getElementById('eng_'+f);
+    if(el)c.engineering[f]=el.value;
+  });
+  var engToggles=['sim_show_vectors','sim_debug','engine_auto_load'];
+  engToggles.forEach(function(f){
+    var el=document.getElementById('eng_'+f);
+    if(el)c.engineering[f]=el.classList.contains('on');
+  });
+  /* theme */
+  var secEl=document.getElementById('thmSecondary');
+  if(secEl)c.theme_config.secondary_color=secEl.value;
+  var opEl=document.getElementById('thmOpacity');
+  if(opEl)c.theme_config.panel_opacity=parseInt(opEl.value);
+  var bgEl=document.getElementById('thmBg');
+  if(bgEl)c.theme_config.background=bgEl.value;
+  /* ollama_service */
+  var ollUrlEl=document.getElementById('ollamaBaseUrl');
+  if(ollUrlEl)c.ollama_service.base_url=ollUrlEl.value;
+  var ollEnabledEl=document.getElementById('ollamaEnabled');
+  if(ollEnabledEl)c.ollama_service.enabled=ollEnabledEl.classList.contains('on');
+  var ollManagedEl=document.getElementById('ollamaManaged');
+  if(ollManagedEl)c.ollama_service.managed=ollManagedEl.classList.contains('on');
+  return c;
+}
+
+function saveAll(){
+  var data=gatherAll();
+  document.getElementById('saveStatus').textContent='SAVING...';
+  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+  .then(function(r){return r.json();}).then(function(){
+    toast('Configuration saved successfully');
+    document.getElementById('saveStatus').textContent='SAVED '+new Date().toLocaleTimeString();
+    loadCfg();
+  }).catch(function(e){toast('Save error: '+e.message,true);document.getElementById('saveStatus').textContent='ERROR';});
+}
+
+function toggleEl(el){
+  el.classList.toggle('on');el.classList.toggle('off');
+  el.querySelector('div').style.left=el.classList.contains('on')?'16px':'2px';
+  el.querySelector('div').style.background=el.classList.contains('on')?'#0ff':'#666';
+  el.style.background=el.classList.contains('on')?'rgba(0,229,255,0.3)':'rgba(255,255,255,0.1)';
+}
+
+/* ===== RENDERERS ===== */
+
+function renderGeneral(cfg){
+  var h='<div class="section"><div class="section-title">ZICORE SYSTEM v5.0 — GENERAL CONFIGURATION</div>';
+  h+='<div class="grid grid-3">';
+  h+='<label>Web Port</label><input id="sysWebPort" value="'+(cfg.system&&cfg.system.web_port||4000)+'" type="number">';
+  h+='<label>API Port</label><input id="sysAPIPort" value="'+(cfg.system&&cfg.system.api_port||4080)+'" type="number">';
+  h+='<label>Log Level</label><select id="sysLogLevel">';
+  ['DEBUG','INFO','WARN','ERROR'].forEach(function(l){h+='<option value="'+l+'"'+((cfg.system&&cfg.system.log_level||'INFO')===l?' selected':'')+'>'+l+'</option>';});
+  h+='</select>';
+  h+='<label>Max Workers</label><input id="sysMaxWorkers" value="'+(cfg.system&&cfg.system.max_workers||4)+'" type="number" min="1" max="16">';
+  h+='<label>Active Provider</label><select id="cfgActiveProv">';
+  var ap=cfg.zio_engine&&cfg.zio_engine.active_provider||'zicore_native';
+  var provs=cfg.providers||{};
+  var allProvs=['zicore_native'].concat(PROVIDER_ORDER);
+  allProvs.forEach(function(p){
+    var pName=provs[p]?provs[p].name||p:p;
+    h+='<option value="'+p+'"'+(ap===p?' selected':'')+'>'+pName+'</option>';
+  });
+  h+='</select>';
+  h+='</div></div>';
+  document.getElementById('panel-general').innerHTML=h;
+}
+
+function renderProviders(cfg){
+  var h='';
+  PROVIDER_ORDER.forEach(function(pid){
+    var p=cfg.providers&&cfg.providers[pid]||{enabled:false,api_key:'',base_url:'',default_model:'',models:[]};
+    h+='<div class="section"><div class="section-title purple flex"><span>'+(p.name||pid).toUpperCase()+'</span>';
+    h+='<div class="toggle '+(p.enabled?'on':'off')+'" id="prov_'+pid+'_enabled" onclick="toggleEl(this)"><div></div></div>';
+    h+='<span class="fs-7 ls-1 text-2">'+(p.enabled?'ENABLED':'DISABLED')+'</span>';
+    h+='<button class="btn btn-test fs-8 ml-auto" onclick="testProvider(\''+pid+'\')">TEST</button>';
+    h+='<span class="fs-8" id="testStatus_'+pid+'"></span>';
+    h+='</div>';
+    h+='<div class="grid grid-2"><label>API Key</label><input id="prov_'+pid+'_api_key" type="password" value="'+(p.api_key||'')+'" placeholder="sk-...">';
+    h+='<label>Base URL</label><input id="prov_'+pid+'_base_url" value="'+(p.base_url||'')+'">';
+    h+='<label>Default Model</label><input id="prov_'+pid+'_default_model" value="'+(p.default_model||'')+'">';
+    h+='<label>Available Models</label><textarea rows="3" readonly style="color:var(--text2)">'+(p.models&&p.models.length?p.models.join('\n'):'— none configured —')+'</textarea>';
+    h+='</div></div>';
+  });
+  document.getElementById('panel-providers').innerHTML=h;
+}
+
+function renderZIO(cfg){
+  var eng=cfg.zio_engine||{};
+  var h='<div class="section"><div class="section-title">ZIO AGENT SETTINGS</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Temperature</label><div class="flex gap-4"><input id="cfgTemp" type="range" min="0" max="200" value="'+((eng.temperature||0.7)*100)+'" oninput="document.getElementById(\'cfgTempVal\').textContent=(this.value/100).toFixed(2)"><span class="fs-10 text-glow" id="cfgTempVal">'+(eng.temperature||0.7).toFixed(2)+'</span></div>';
+  h+='<label>Max Tokens</label><div class="flex gap-4"><input id="cfgMaxTok" type="range" min="256" max="16384" step="256" value="'+(eng.max_tokens||4096)+'" oninput="document.getElementById(\'cfgMaxTokVal\').textContent=this.value"><span class="fs-10 text-glow" id="cfgMaxTokVal">'+(eng.max_tokens||4096)+'</span></div>';
+  h+='<label>Context Length</label><div class="flex gap-4"><input id="cfgCtx" type="range" min="256" max="8192" step="256" value="'+(eng.context_length||4096)+'" oninput="document.getElementById(\'cfgCtxVal\').textContent=this.value"><span class="fs-10 text-glow" id="cfgCtxVal">'+(eng.context_length||4096)+'</span></div>';
+  h+='<label>Top P</label><div class="flex gap-4"><input id="cfgTopP" type="range" min="50" max="100" value="'+((eng.top_p||0.9)*100)+'" oninput="document.getElementById(\'cfgTopPVal\').textContent=(this.value/100).toFixed(2)"><span class="fs-10 text-glow" id="cfgTopPVal">'+(eng.top_p||0.9).toFixed(2)+'</span></div>';
+  h+='<label>Stream</label><div class="toggle '+(eng.stream!==false?'on':'off')+'" id="cfgStream" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>System Prompt</label><textarea id="cfgSysPrompt" rows="4">'+(eng.system_prompt||'')+'</textarea>';
+  h+='</div></div>';
+  /* Info card */
+  h+='<div class="section"><div class="section-title green">ZIO CAPABILITIES</div>';
+  h+='<div class="fs-8" style="color:var(--text2);line-height:1.8">';
+  h+='&#8226; <b style="color:var(--glow)">Dual Engine:</b> Deterministic + ML inference via configurable providers<br>';
+  h+='&#8226; <b style="color:var(--glow)">Vision:</b> Image/video analysis, OCR, object detection<br>';
+  h+='&#8226; <b style="color:var(--glow)">Generation:</b> Image, video, 3D mesh, audio synthesis<br>';
+  h+='&#8226; <b style="color:var(--glow)">Knowledge:</b> Persistent chat history, document ingestion, RAG context<br>';
+  h+='&#8226; <b style="color:var(--glow)">Parametric 3D:</b> trimesh, OpenSCAD, procedural (L-systems, fractals, terrain)<br>';
+  h+='&#8226; <b style="color:var(--glow)">Voice:</b> TTS output, STT commands<br>';
+  h+='&#8226; <b style="color:var(--glow)">ML Engine:</b> Clustering, regression, sentiment, embeddings (no GPU needed)</div></div>';
+  document.getElementById('panel-zio').innerHTML=h;
+}
+
+function renderMaterializer(cfg){
+  var mat=cfg.materializer||{};
+  var h='<div class="section"><div class="section-title">MATERIALIZER ENGINE</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Output Directory</label><input id="matOutputDir" value="'+(mat.output_dir||'output')+'">';
+  h+='<label>Image Quality</label><select id="matImageQuality">';
+  ['draft','standard','high'].forEach(function(q){h+='<option value="'+q+'"'+((mat.image_quality||'standard')===q?' selected':'')+'>'+q.toUpperCase()+'</option>';});
+  h+='</select>';
+  h+='<label>3D Mesh Format</label><select id="matMeshFormat">';
+  ['STL','OBJ','GLTF'].forEach(function(f){h+='<option value="'+f+'"'+((mat.mesh_format||'STL')===f?' selected':'')+'>'+f+'</option>';});
+  h+='</select>';
+  h+='<label>SD Steps</label><input id="matSDSteps" type="number" min="10" max="100" value="'+(mat.sd_steps||20)+'">';
+  h+='<label>SD Guidance</label><input id="matSDGuidance" type="number" min="1" max="20" step="0.5" value="'+(mat.sd_guidance||7.5)+'">';
+  h+='<label>SD Model</label><input id="matSDModel" value="'+(mat.sd_model||'runwayml/stable-diffusion-v1-5')+'">';
+  h+='</div></div>';
+  /* Capabilities */
+  h+='<div class="section"><div class="section-title green">MATERIALIZER CAPABILITIES</div>';
+  h+='<div class="fs-8" style="color:var(--text2);line-height:1.8">';
+  h+='&#8226; <b style="color:var(--glow)">Stable Diffusion:</b> CPU-based image generation (~10-30s/image)<br>';
+  h+='&#8226; <b style="color:var(--glow)">Parametric 3D:</b> Box, sphere, cylinder, cone, rocket, torus, gear, pipe, star, custom via trimesh<br>';
+  h+='&#8226; <b style="color:var(--glow)">Procedural 3D:</b> Terrain (Perlin noise), caves (cellular automata), fractals, L-system plants<br>';
+  h+='&#8226; <b style="color:var(--glow)">OpenSCAD:</b> Script-based parametric CAD modeling<br>';
+  h+='&#8226; <b style="color:var(--glow)">Video:</b> Cut, trim, concatenate, export via FFmpeg<br>';
+  h+='&#8226; <b style="color:var(--glow)">Audio:</b> TTS synthesis, waveform generation</div></div>';
+  document.getElementById('panel-materializer').innerHTML=h;
+}
+
+function renderNetwork(cfg){
+  var h='<div class="section"><div class="section-title">NETWORK SERVICES</div>';
+  h+='<div class="fs-8" style="color:var(--text2);line-height:2">';
+  var services=[
+    {port:3000,name:'Next.js',status:'active'},
+    {port:3001,name:'REST API (ZiCore Node)',status:'active'},
+    {port:4000,name:'Web UI / Materializer',status:'active'},
+    {port:4001,name:'Games / EmulatorJS',status:'active'},
+    {port:4080,name:'API Server',status:'active'},
+    {port:4081,name:'File Server',status:'active'},
+    {port:2525,name:'Mail (SMTP)',status:'active'},
+    {port:5354,name:'DNS Server',status:'active'},
+    {port:8080,name:'WebSocket',status:'active'},
+    {port:11434,name:'Ollama',status:'active'},
+  ];
+  services.forEach(function(s){
+    h+='<div class="flex" style="gap:8px;padding:2px 0">';
+    h+='<span style="color:var(--glow);font-family:monospace;width:60px">'+s.port+'</span>';
+    h+='<span style="width:180px">'+s.name+'</span>';
+    h+='<span class="status-ok">&#9679; '+s.status+'</span></div>';
+  });
+  h+='</div></div>';
+  h+='<div class="section"><div class="section-title purple">EXTERNAL SERVICES</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Mail Domain</label><input value="zinemotion.com" readonly style="color:var(--text2)">';
+  h+='<label>Admin Email</label><input value="admin@zinemotion.com" readonly style="color:var(--text2)">';
+  h+='<label>Server IP</label><input value="192.168.1.85" readonly style="color:var(--text2)">';
+  h+='<label>Cloudflare Tunnel</label><input value="zmmx-core" readonly style="color:var(--text2)">';
+  h+='</div></div>';
+  document.getElementById('panel-network').innerHTML=h;
+}
+
+function renderOllama(cfg){
+  var oll=cfg.ollama_service||{};
+  var prov=cfg.providers&&cfg.providers.ollama||{};
+  var h='<div class="section"><div class="section-title">OLLAMA CONFIGURATION</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Ollama Service</label><div class="toggle '+(oll.enabled?'on':'off')+'" id="ollamaEnabled" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>Managed Mode</label><div class="toggle '+(oll.managed?'on':'off')+'" id="ollamaManaged" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>Base URL</label><input id="ollamaBaseUrl" value="'+(oll.base_url||prov.base_url||'http://localhost:11434')+'">';
+  h+='<label>Models Directory</label><input value="'+(oll.models_dir||'data/ollama/models')+'" readonly style="color:var(--text2)">';
+  h+='</div>';
+  h+='<div class="flex mt-8" style="gap:8px">';
+  h+='<button class="btn btn-test" onclick="fetch(\'/api/ollama/status\').then(function(r){return r.json()}).then(function(d){toast(\'Ollama: \'+JSON.stringify(d))}).catch(function(e){toast(\'Error: \'+e.message,true)})">CHECK STATUS</button>';
+  h+='<button class="btn btn-test" onclick="var m=prompt(\'Model name:\',\'tinyllama\');if(m)fetch(\'/api/ollama/pull\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({model:m})}).then(function(r){return r.json()}).then(function(d){toast(\'Pull: \'+JSON.stringify(d))}).catch(function(e){toast(\'Error: \'+e.message,true)})">PULL MODEL</button>';
+  h+='</div></div>';
+  h+='<div class="section"><div class="section-title green">AVAILABLE MODELS</div><div id="ollamaModels"><span class="fs-8 text-2">Loading...</span></div></div>';
+  document.getElementById('panel-ollama').innerHTML=h;
+  /* Load models */
+  fetch('/api/ollama/status').then(function(r){return r.json();}).then(function(d){
+    var m=d.models||[];
+    if(m.length){
+      var html2='<div class="grid grid-2" style="font-size:9px">';
+      m.forEach(function(mod){
+        var name=typeof mod==='string'?mod:mod.name||mod.model||'unknown';
+        html2+='<span style="color:var(--glow)">'+name+'</span><span class="text-2 fs-8">'+(mod.size||'—')+'</span>';
+      });
+      html2+='</div>';
+      document.getElementById('ollamaModels').innerHTML=html2;
+    }else{
+      document.getElementById('ollamaModels').innerHTML='<span class="fs-8 text-2">No models found. Pull one above.</span>';
+    }
+  }).catch(function(){
+    document.getElementById('ollamaModels').innerHTML='<span class="status-err fs-8">Ollama not reachable</span>';
+  });
+}
+
+function renderEngineering(cfg){
+  var eng=cfg.engineering||{};
+  var vehicles=[
+    {id:'drone',name:'ZI DRONE SWARM',mass:2.5,thrust:0.8,propulsion:'Electric Quad-Rotor',maxSpeed:80,ceil:500,color:'#00ff88'},
+    {id:'obsidiana',name:'OBSIDIANA',mass:12500,thrust:240,propulsion:'Ion Hybrid',maxSpeed:4200,ceil:45000,color:'#00e5ff'},
+    {id:'blackvanta',name:'BLACKVANTA',mass:45000,thrust:800,propulsion:'Dual Turbofan',maxSpeed:2800,ceil:40000,color:'#7c4dff'},
+    {id:'zironsigma',name:'ZIRON SIGMA',mass:8000,thrust:120,propulsion:'RCS Thrusters',maxSpeed:28000,ceil:400000,color:'#00ff88'},
+    {id:'zivoyager',name:'ZI VOYAGER',mass:22000,thrust:450,propulsion:'Ion Drive',maxSpeed:50000,ceil:999999,color:'#fa0'},
+    {id:'xwing',name:'X-WING',mass:5000,thrust:1200,propulsion:'Sublight+Hyperdrive',maxSpeed:1050,ceil:99999,color:'#f44'},
+    {id:'freespace',name:'GT BEGASUS',mass:18000,thrust:600,propulsion:'Fusion Pulse',maxSpeed:850,ceil:99999,color:'#fa0'},
+  ];
+  var propulsionTypes=['Electric Quad-Rotor','Ion Hybrid','Dual Turbofan','RCS Thrusters','Ion Drive','Fusion Pulse','Sublight+Hyperdrive','Plasma Thruster','Antimatter','Warp Drive'];
+  var qualityLevels=['draft','standard','high','ultra'];
+  var h='';
+
+  /* VEHICLE PARAMETERS */
+  h+='<div class="section"><div class="section-title green">VEHICLE ENGINEERING — FLEET PARAMETERS</div>';
+  h+='<div class="fs-8" style="color:var(--text2);margin-bottom:8px;line-height:1.6">Configure mass, thrust, propulsion type, max speed, and ceiling for each aerospace vehicle. These parameters feed the Flight Simulator and Z-TY Aircraft Factory.</div>';
+  vehicles.forEach(function(v){
+    h+='<div style="margin-bottom:8px;padding:8px;border:1px solid rgba(0,229,255,0.04);border-radius:3px">';
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+    h+='<span style="color:'+v.color+';font-size:10px;font-weight:700;letter-spacing:2px;width:140px">'+v.name+'</span>';
+    h+='<span class="fs-7 text-2">'+v.id.toUpperCase()+'</span></div>';
+    h+='<div class="grid grid-3" style="font-size:8px">';
+    h+='<label>Mass (kg)</label><input id="eng_v_mass_'+v.id+'" type="number" value="'+(eng['v_mass_'+v.id]||v.mass)+'" step="0.1" style="font-size:9px">';
+    h+='<label>Thrust (kN)</label><input id="eng_v_thrust_'+v.id+'" type="number" value="'+(eng['v_thrust_'+v.id]||v.thrust)+'" step="0.1" style="font-size:9px">';
+    h+='<label>Max Speed (kts)</label><input id="eng_v_speed_'+v.id+'" type="number" value="'+(eng['v_speed_'+v.id]||v.maxSpeed)+'" style="font-size:9px">';
+    h+='<label>Ceiling (m)</label><input id="eng_v_ceil_'+v.id+'" type="number" value="'+(eng['v_ceil_'+v.id]||v.ceil)+'" style="font-size:9px">';
+    h+='<label>Propulsion</label><select id="eng_v_prop_'+v.id+'" style="font-size:9px">';
+    propulsionTypes.forEach(function(p){h+='<option value="'+p+'"'+((eng['v_prop_'+v.id]||v.propulsion)===p?' selected':'')+'>'+p+'</option>';});
+    h+='</select>';
+    h+='<label>Fuel (kg)</label><input id="eng_v_fuel_'+v.id+'" type="number" value="'+(eng['v_fuel_'+v.id]||(v.id==='drone'?0.5:8000))+'" style="font-size:9px">';
+    h+='</div></div>';
+  });
+  h+='</div>';
+
+  /* SIMULATION PHYSICS */
+  h+='<div class="section"><div class="section-title purple">SIMULATION PHYSICS — ENVIRONMENT</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Gravity (m/s²)</label><input id="eng_sim_gravity" type="number" step="0.01" value="'+(eng.sim_gravity||'9.81')+'">';
+  h+='<label>Atm Density (kg/m³)</label><input id="eng_sim_atm_density" type="number" step="0.001" value="'+(eng.sim_atm_density||'1.225')+'">';
+  h+='<label>Time Step (dt)</label><input id="eng_sim_dt" type="number" step="0.001" value="'+(eng.sim_dt||'0.016')+'">';
+  h+='<label>Max Altitude (m)</label><input id="eng_sim_max_altitude" type="number" value="'+(eng.sim_max_altitude||'500000')+'">';
+  h+='<label>Show Vectors</label><div class="toggle '+(eng.sim_show_vectors!==false?'on':'off')+'" id="eng_sim_show_vectors" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>Debug Mode</label><div class="toggle '+(eng.sim_debug?'on':'off')+'" id="eng_sim_debug" onclick="toggleEl(this)"><div></div></div>';
+  h+='</div></div>';
+
+  /* MATERIALIZER ENGINEERING */
+  h+='<div class="section"><div class="section-title">MATERIALIZER ENGINEERING — GENERATION TUNING</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Gen Quality</label><select id="eng_materializer_quality">';
+  qualityLevels.forEach(function(q){h+='<option value="'+q+'"'+((eng.materializer_quality||'standard')===q?' selected':'')+'>'+q.toUpperCase()+'</option>';});
+  h+='</select>';
+  h+='<label>Engine Temperature</label><div class="flex gap-4"><input id="eng_engine_temperature" type="range" min="0" max="200" value="'+((eng.engine_temperature||70))+'"><span class="fs-10 text-glow" id="eng_engine_temperature_val">'+(eng.engine_temperature||70)+'%</span></div>';
+  h+='<label>Top P Sampling</label><div class="flex gap-4"><input id="eng_engine_top_p" type="range" min="50" max="100" value="'+(eng.engine_top_p||90)+'"><span class="fs-10 text-glow" id="eng_engine_top_p_val">'+(eng.engine_top_p||90)+'%</span></div>';
+  h+='<label>Max Tokens</label><input id="eng_engine_max_tokens" type="number" value="'+(eng.engine_max_tokens||'4096')+'">';
+  h+='<label>Context Length</label><input id="eng_engine_context" type="number" value="'+(eng.engine_context||'8192')+'">';
+  h+='<label>Procedural Seed</label><input id="eng_procedural_seed" type="number" value="'+(eng.procedural_seed||'42')+'">';
+  h+='<label>Auto-load Engines</label><div class="toggle '+(eng.engine_auto_load!==false?'on':'off')+'" id="eng_engine_auto_load" onclick="toggleEl(this)"><div></div></div>';
+  h+='</div></div>';
+
+  /* SYSTEM PERFORMANCE */
+  h+='<div class="section"><div class="section-title" style="color:#ff8800">SYSTEM ENGINEERING — PERFORMANCE</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>CPU Threads</label><input id="eng_cpu_threads" type="number" min="1" max="16" value="'+(eng.cpu_threads||'4')+'">';
+  h+='<label>Memory Limit (MB)</label><input id="eng_mem_limit" type="number" min="256" max="32768" step="256" value="'+(eng.mem_limit||'2048')+'">';
+  h+='<label>Cache Size (MB)</label><input id="eng_cache_size" type="number" min="64" max="4096" step="64" value="'+(eng.cache_size||'512')+'">';
+  h+='<label>Max Workers</label><input id="eng_max_workers" type="number" min="1" max="32" value="'+(eng.max_workers||'4')+'">';
+  h+='<label>Enable Profiling</label><div class="toggle '+(eng.profiling?'on':'off')+'" id="eng_profiling" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>Safety Limits</label><div class="toggle '+(eng.safety_limits!==false?'on':'off')+'" id="eng_safety_limits" onclick="toggleEl(this)"><div></div></div>';
+  h+='</div></div>';
+
+  /* PROPULSION TYPES */
+  h+='<div class="section"><div class="section-title green">PROPULSION REFERENCE — TYPE PARAMETERS</div>';
+  var props=[
+    {name:'Electric Quad-Rotor',isp:600,thrustWeight:4,type:'Atmospheric',fuel:'Battery'},
+    {name:'Ion Hybrid',isp:3200,thrustWeight:0.2,type:'Atmo/Exo',fuel:'Xenon+RP1'},
+    {name:'Dual Turbofan',isp:2500,thrustWeight:6,type:'Atmospheric',fuel:'Jet-A'},
+    {name:'RCS Thrusters',isp:1800,thrustWeight:0.5,type:'Exo/Vacuum',fuel:'Hydrazine'},
+    {name:'Ion Drive',isp:4500,thrustWeight:0.05,type:'Exo/Vacuum',fuel:'Xenon'},
+    {name:'Fusion Pulse',isp:12000,thrustWeight:8,type:'Exo/Deep',fuel:'Deuterium'},
+    {name:'Sublight+Hyperdrive',isp:50000,thrustWeight:12,type:'Hyperspace',fuel:'Hypermatter'},
+    {name:'Plasma Thruster',isp:6000,thrustWeight:0.8,type:'Exo/Vacuum',fuel:'Hydrogen'},
+    {name:'Antimatter',isp:100000,thrustWeight:20,type:'Deep Space',fuel:'Antimatter'},
+  ];
+  h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:7px;color:var(--text2);margin-bottom:4px">';
+  h+='<span style="color:var(--glow)">Type</span><span style="color:var(--glow)">Isp (s)</span><span style="color:var(--glow)">TWR</span><span style="color:var(--glow)">Domain</span><span style="color:var(--glow)">Fuel</span></div>';
+  props.forEach(function(p){
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:7px;padding:2px 0;border-top:1px solid rgba(0,229,255,0.03)">';
+    h+='<span style="color:var(--glow)">'+p.name+'</span><span>'+p.isp+'</span><span>'+p.thrustWeight+':1</span><span>'+p.type+'</span><span>'+p.fuel+'</span></div>';
+  });
+  h+='</div>';
+
+  /* Z-TY Reference */
+  h+='<div class="section"><div class="section-title purple">Z-TY AIRCRAFT FACTORY — TEMPLATES</div>';
+  h+='<div class="fs-8" style="color:var(--text2);line-height:1.8">';
+  h+='&#8226; <b style="color:var(--glow)">Z-TY/Mk.I:</b> Light interceptor — 8,400 kg, 180 kN, Ion Hybrid<br>';
+  h+='&#8226; <b style="color:var(--glow)">Z-TY/Mk.II:</b> Medium fighter — 14,200 kg, 310 kN, Dual Turbofan<br>';
+  h+='&#8226; <b style="color:var(--glow)">Z-TY/Mk.III:</b> Heavy bomber — 38,600 kg, 720 kN, Fusion Pulse<br>';
+  h+='&#8226; <b style="color:var(--glow)">Z-TY/Mk.IV:</b> Orbital shuttle — 22,000 kg, 450 kN, Ion Drive<br>';
+  h+='&#8226; <b style="color:var(--glow)">Z-TY/Mk.V:</b> Deep space cruiser — 124,000 kg, 2,400 kN, Antimatter<br>';
+  h+='</div></div>';
+
+  document.getElementById('panel-engineering').innerHTML=h;
+
+  /* bind range sliders */
+  var bindRange=function(id,displayId){
+    var el=document.getElementById(id);
+    var disp=document.getElementById(displayId);
+    if(el&&disp){el.oninput=function(){disp.textContent=this.value+(id.includes('temp')||id.includes('p_')?'%':'');};}
+  };
+  bindRange('eng_engine_temperature','eng_engine_temperature_val');
+  bindRange('eng_engine_top_p','eng_engine_top_p_val');
+}
+
+function renderTheme(cfg){
+  var thm=cfg.theme_config||{};
+  var h='<div class="section"><div class="section-title">THEME CUSTOMIZATION</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Accent Color</label><input id="thmAccent" type="color" value="'+(thm.accent_color||'#00e5ff')+'">';
+  h+='<label>Secondary Color</label><input id="thmSecondary" type="color" value="'+(thm.secondary_color||'#7c4dff')+'">';
+  h+='<label>Panel Opacity</label><div class="flex gap-4"><input id="thmOpacity" type="range" min="50" max="100" value="'+(thm.panel_opacity||88)+'" oninput="document.getElementById(\'thmOpacityVal\').textContent=this.value+\'%\'"><span class="fs-10 text-glow" id="thmOpacityVal">'+(thm.panel_opacity||88)+'%</span></div>';
+  h+='<label>Background</label><select id="thmBg">';
+  ['dark','midnight','void','abyss'].forEach(function(b){h+='<option value="'+b+'"'+((thm.background||'dark')===b?' selected':'')+'>'+b.toUpperCase()+'</option>';});
+  h+='</select>';
+  h+='</div></div>';
+  document.getElementById('panel-theme').innerHTML=h;
+}
+
+function renderSystem(cfg){
+  var h='<div class="section"><div class="section-title green">SYSTEM INFORMATION</div>';
+  h+='<div class="fs-8" style="color:var(--text2);line-height:2">';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">Version</span><span>5.0.0</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">Framework</span><span>FastAPI (Python 3.11+3.12)</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">AI Backend</span><span>Ollama (CPU) + Cloud APIs</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">3D Engine</span><span>trimesh + OpenSCAD + Procedural</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">GPU Status</span><span class="status-warn">N/A (CPU-only inference)</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">Storage</span><span>local + 500GB SATA mounted</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">License</span><span>CC-BY-SA-4.0</span></div>';
+  h+='<div class="flex gap-4"><span style="color:var(--glow);width:140px">Brand</span><span>ZineMotion Foundation / Aerospace Division</span></div>';
+  h+='</div></div>';
+  h+='<div class="section"><div class="section-title purple">API ENDPOINTS</div>';
+  h+='<div class="fs-8 text-2" style="line-height:1.8">';
+  h+='&#8226; <b style="color:var(--glow)">/api/config</b> — System configuration (GET/POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/chat</b> — ZIO Chat (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/generate</b> — Content generation (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/mesh/generate</b> — Parametric 3D mesh (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/materialize</b> — Full materializer pipeline (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/ollama/status</b> — Ollama status (GET)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/vision/analyze</b> — Vision analysis (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/ml/sentiment</b> — Sentiment analysis (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/code/execute</b> — Python sandbox (POST)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/api/media/list</b> — Media library (GET)<br>';
+  h+='&#8226; <b style="color:var(--glow)">/ws/zio</b> — ZIO WebSocket<br>';
+  h+='&#8226; <b style="color:var(--glow)">/ws/telemetry</b> — Telemetry WebSocket</div></div>';
+  h+='<div class="sig">ZICORE SYSTEM v5.0 — AEROSPACE DIVISION</div>';
+  document.getElementById('panel-system').innerHTML=h;
+}
+
+function renderModels(cfg){
+  var h='';
+  var activeModel=cfg.zio_engine&&(cfg.zio_engine.active_model||cfg.zio_engine.default_model)||'';
+
+  var MODEL_NAMES={
+    'openrouter/free':'OpenRouter Auto-Route (Free)',
+    'tencent/hy3:free':'Tencent Hy3 295B MoE (Free)',
+    'nvidia/nemotron-3-ultra-250b:free':'Nemotron 3 Ultra 550B (Free)',
+    'poolside/laguna-m1:free':'Poolside Laguna M.1 Coding (Free)',
+    'nvidia/nemotron-3-super-120b-a12b:free':'Nemotron 3 Super 120B (Free)',
+    'cohere/north-mini-code:free':'Cohere North Mini Code 30B (Free)',
+    'poolside/laguna-xs-2.1:free':'Poolside Laguna XS 2.1 33B (Free)',
+    'nvidia/nemotron-3-nano-30b-a3b:free':'Nemotron 3 Nano 30B (Free)',
+    'google/gemma-4-31b-it:free':'Gemma 4 31B Instruct (Free)',
+    'openai/gpt-oss-120b:free':'GPT-OSS 120B MoE (Free)',
+    'nvidia/nemotron-3-nano-omni:free':'Nemotron 3 Nano Omni (Free)',
+    'openai/gpt-oss-20b:free':'GPT-OSS 20B MoE (Free)',
+    'nvidia/nemotron-nano-9b-v2:free':'Nemotron Nano 9B v2 (Free)',
+    'nvidia/nemotron-nano-12b-2-vl:free':'Nemotron Nano 12B VL (Free)',
+    'google/gemma-4-26b-a4b-it:free':'Gemma 4 26B MoE (Free)',
+    'liquid/lfm-2.5-1.2b-instruct:free':'LFM 2.5 1.2B Multimodal (Free)',
+    'meta-llama/llama-3.1-8b-instruct:free':'Llama 3.1 8B (Free)',
+    'meta-llama/llama-3.1-70b-instruct:free':'Llama 3.1 70B (Free)',
+    'qwen/qwen-2.5-72b-instruct:free':'Qwen 2.5 72B (Free)',
+    'qwen/qwen-2.5-coder-32b-instruct:free':'Qwen 2.5 Coder 32B (Free)',
+    'deepseek/deepseek-chat:free':'DeepSeek Chat (Free)',
+    'deepseek/deepseek-r1:free':'DeepSeek R1 (Free)',
+    'mistralai/mistral-7b-instruct:free':'Mistral 7B (Free)',
+    'microsoft/phi-3-mini-128k-instruct:free':'Phi-3 Mini 3.8B (Free)',
+    'microsoft/phi-3-medium-128k-instruct:free':'Phi-3 Medium 14B (Free)',
+    'nvidia/llama-3.1-nemotron-70b-instruct:free':'Nemotron 70B (Free)',
+    'qwen/qwen-2.5-7b-instruct:free':'Qwen 2.5 7B (Free)',
+    'google/gemma-2-9b-it:free':'Gemma 2 9B (Free)',
+    'anthropic/claude-3-haiku':'Claude 3 Haiku',
+    'anthropic/claude-3.5-sonnet':'Claude 3.5 Sonnet',
+    'openai/gpt-4o-mini':'GPT-4o Mini',
+    'openai/gpt-4o':'GPT-4o',
+    'gemma3:1b':'Gemma 3 1B (Local)',
+    'gemma3:270m':'Gemma 3 270M (Local)',
+    'deepseek-r1:1.5b':'DeepSeek R1 1.5B (Local)',
+    'qwen3:0.6b':'Qwen 3 0.6B (Local)',
+    'qwen3:4b':'Qwen 3 4B (Local)',
+    'qwen2.5-coder:1.5b':'Qwen 2.5 Coder 1.5B (Local)',
+    'qwen2.5-coder:0.5b':'Qwen 2.5 Coder 0.5B (Local)',
+    'codellama:7b':'CodeLlama 7B (Local)',
+    'deepcoder:1.5b':'DeepCoder 1.5B (Local)',
+    'deepseek-r1:latest':'DeepSeek R1 Latest (Local)',
+    'dolphin-phi:2.7b':'Dolphin Phi 2.7B (Local)',
+    'codellama-deepseek:latest':'CodeLlama DeepSeek (Local)',
+    'gpt-4o':'GPT-4o',
+    'gpt-4o-mini':'GPT-4o Mini',
+    'gpt-4-turbo':'GPT-4 Turbo',
+    'gpt-3.5-turbo':'GPT-3.5 Turbo',
+    'o1-mini':'o1 Mini',
+    'o1-preview':'o1 Preview',
+    'o3-mini':'o3 Mini',
+    'claude-3-opus-20240229':'Claude 3 Opus',
+    'claude-3-sonnet-20240229':'Claude 3 Sonnet',
+    'claude-3-haiku-20240307':'Claude 3 Haiku',
+    'claude-3.5-sonnet-20241022':'Claude 3.5 Sonnet',
+    'claude-3.5-haiku-20241022':'Claude 3.5 Haiku',
+    'llama-3.1-8b-instant':'Llama 3.1 8B Instant',
+    'llama-3.1-70b-versatile':'Llama 3.1 70B Versatile',
+    'llama-3.3-70b-versatile':'Llama 3.3 70B Versatile',
+    'mixtral-8x7b-32768':'Mixtral 8x7B',
+    'gemma2-9b-it':'Gemma 2 9B',
+    'deepseek-chat':'DeepSeek Chat',
+    'deepseek-coder':'DeepSeek Coder',
+    'deepseek-reasoner':'DeepSeek Reasoner',
+    'deepseek-r1-distill-llama-70b':'DeepSeek R1 Distill 70B',
+    'qwen-qwq-32b':'QwQ 32B',
+    'llama-3.2-1b-preview':'Llama 3.2 1B Preview',
+    'llama-3.2-3b-preview':'Llama 3.2 3B Preview',
+    'llama-3.2-11b-vision-preview':'Llama 3.2 11B Vision',
+    'llama-3.2-90b-vision-preview':'Llama 3.2 90B Vision',
+    'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo':'Llama 3.1 8B Turbo',
+    'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo':'Llama 3.1 70B Turbo',
+    'meta-llama/Meta-Llama-3.3-70B-Instruct-Turbo':'Llama 3.3 70B Turbo',
+    'mistralai/Mixtral-8x7B-Instruct-v0.1':'Mixtral 8x7B Instruct',
+    'google/gemma-2-9b-it':'Gemma 2 9B',
+    'Qwen/Qwen2.5-72B-Instruct-Turbo':'Qwen 2.5 72B Turbo',
+    'deepseek-ai/DeepSeek-R1':'DeepSeek R1',
+    'deepseek-ai/DeepSeek-V3':'DeepSeek V3',
+    'NousResearch/Hermes-3-Llama-3.1-405B':'Hermes 3 405B',
+    'opencode/mimo-v2-free':'MiMo V2 Free',
+    'opencode/mimo-v2.5-free':'MiMo V2.5 Free (200K ctx, reasoning)',
+    'opencode/mimo-v2-pro-free':'MiMo V2 Pro Free (1M ctx, reasoning)',
+    'opencode/big-pickle-free':'Big Pickle Free (1M ctx, reasoning)',
+    'opencode/ring-2.6-1t-free':'Ring 2.6 1T Free (1M ctx)',
+    'opencode/hy3-preview-free':'Hy3 Preview Free (262K ctx)',
+    'opencode/ling-2.6-flash-free':'Ling 2.6 Flash Free (131K ctx)',
+    'opencode/north-mini-code-free':'North Mini Code Free (256K ctx)',
+    'opencode/mimo-v2-pro':'MiMo V2 Pro',
+    'opencode/codestral-2407':'Codestral',
+    'opencode/deepseek-v3':'DeepSeek V3',
+    'opencode/deepseek-r1':'DeepSeek R1',
+    'opencode/llama-3.1-8b':'Llama 3.1 8B',
+    'opencode/mistral-7b':'Mistral 7B',
+    'opencode/gemma-2-9b':'Gemma 2 9B',
+    'opencode/qwen-2.5-72b':'Qwen 2.5 72B'
+  };
+  var MODEL_DESCS={
+    'google/gemma-4-31b-it:free':'31B params, free tier, fast inference',
+    'nvidia/nemotron-3-super-120b-a12b:free':'120B sparse MoE, free, best quality',
+    'openrouter/free':'Auto-routes to best available free model',
+    'liquid/lfm-2.5-1.2b-instruct:free':'1.2B multimodal, free, lightweight',
+    'google/gemma-4-26b-a4b-it:free':'26B (4B active), free, efficient',
+    'meta-llama/llama-3.1-8b-instruct:free':'8B general purpose, free tier',
+    'meta-llama/llama-3.1-70b-instruct:free':'70B top quality, free tier',
+    'qwen/qwen-2.5-72b-instruct:free':'72B multilingual, free tier',
+    'qwen/qwen-2.5-coder-32b-instruct:free':'32B coding, free tier',
+    'deepseek/deepseek-chat:free':'DeepSeek Chat, free tier',
+    'deepseek/deepseek-r1:free':'DeepSeek R1 reasoning, free tier',
+    'mistralai/mistral-7b-instruct:free':'7B Mistral, free tier',
+    'huggingfaceh4/zephyr-7b-beta:free':'7B Zephyr, free tier',
+    'openchat/openchat-7b:free':'7B OpenChat, free tier',
+    'databricks/dbrx-instruct:free':'DBRX 132B MoE, free tier',
+    'nousresearch/nous-capybara-7b:free':'7B Capybara, free tier',
+    'meta-llama/llama-2-13b-chat:free':'13B Llama 2, free tier',
+    'gryphe/mystral-7b-instruct:free':'7B Mystral, free tier',
+    'teknium/openhermes-2.5-mistral-7b:free':'7B OpenHermes, free tier',
+    'microsoft/phi-3-mini-128k-instruct:free':'3.8B Phi-3, free tier',
+    'microsoft/phi-3-medium-128k-instruct:free':'14B Phi-3, free tier',
+    'nvidia/llama-3.1-nemotron-70b-instruct:free':'70B Nemotron, free tier',
+    'qwen/qwen-2.5-7b-instruct:free':'7B Qwen, free tier',
+    'google/gemma-2-9b-it:free':'9B Gemma 2, free tier',
+    'meta-llama/llama-3.1-8b-instruct':'8B general purpose, paid',
+    'meta-llama/llama-3.1-70b-instruct':'70B top quality, paid',
+    'anthropic/claude-3-haiku':'Fast Claude model, paid',
+    'anthropic/claude-3.5-sonnet':'Claude 3.5 Sonnet, paid',
+    'openai/gpt-4o-mini':'Fast GPT-4o, paid',
+    'openai/gpt-4o':'GPT-4o flagship, paid',
+    'o3-mini':'o3 reasoning, paid',
+    'deepseek-reasoner':'DeepSeek Reasoner, paid',
+    'llama-3.3-70b-versatile':'Llama 3.3 70B, Groq free tier',
+    'deepseek-r1-distill-llama-70b':'DeepSeek R1 Distill, Groq free tier',
+    'qwen-qwq-32b':'QwQ 32B reasoning, Groq free tier',
+    'llama-3.2-11b-vision-preview':'11B Vision, Groq free tier',
+    'llama-3.2-90b-vision-preview':'90B Vision, Groq free tier',
+    'deepseek-ai/DeepSeek-R1':'DeepSeek R1, Together',
+    'deepseek-ai/DeepSeek-V3':'DeepSeek V3, Together',
+    'NousResearch/Hermes-3-Llama-3.1-405B':'405B Hermes, Together',
+    'opencode/mimo-v2-free':'MiMo V2 Free tier',
+    'opencode/mimo-v2-pro':'MiMo V2 Pro, paid'
+  };
+
+  function getName(id){return MODEL_NAMES[id]||id;}
+  function getDesc(id){return MODEL_DESCS[id]||'';}
+  var FETCHED_MODELS={};
+
+  function isFreeModel(id){
+    if(id.indexOf(':free')>=0)return true;
+    if(id.indexOf('-free')>=0)return true;
+    if(id==='openrouter/free')return true;
+    var groqFree=['llama-3.1-8b-instant','llama-3.3-70b-versatile','deepseek-r1-distill-llama-70b','qwen-qwq-32b','llama-3.2-1b-preview','llama-3.2-3b-preview','llama-3.2-11b-vision-preview','llama-3.2-90b-vision-preview'];
+    if(groqFree.indexOf(id)>=0)return true;
+    return false;
+  }
+
+  function renderModelList(containerId, models, activeModel, showRadio){
+    var el=document.getElementById(containerId);
+    if(!el)return;
+    var h='';
+    models.forEach(function(m){
+      var mName=typeof m==='string'?m:(m.id||m.name||'');
+      var free=typeof m==='object'?m.is_free:isFreeModel(mName);
+      var sel=activeModel===mName;
+      var displayName=getName(mName);
+      if(showRadio){
+        var mid=containerId+'_'+mName.replace(/[^a-zA-Z0-9]/g,'_');
+        h+='<label class="model-item'+(sel?' selected':'')+(free?' is-free':'')+'" for="'+mid+'">';
+        h+='<input type="radio" name="default_model_select" id="'+mid+'" value="'+mName+'"'+(sel?' checked':'')+' onchange="selectDefaultModel(\''+mName.replace(/'/g,"\\'")+'\',this)">';
+        h+='<div style="flex:1"><div class="model-name">'+displayName+'</div>';
+        h+='<div class="model-desc">'+(getDesc(mName)||'')+'</div></div>';
+        if(free)h+='<span class="model-tag tag-free">FREE</span>';
+        else h+='<span class="model-tag tag-paid">PAID</span>';
+        h+='</label>';
+      }else{
+        h+='<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid '+(free?'rgba(0,255,136,0.2)':'rgba(0,229,255,0.08)')+';border-radius:3px;background:'+(free?'rgba(0,255,136,0.04)':'rgba(0,0,0,0.2)')+'">';
+        h+='<span style="font-size:8px;color:'+(free?'#50fa7b':'var(--text2)')+';'+(free?'font-weight:bold':'')+'">'+displayName+'</span>';
+        if(free)h+='<span class="model-tag tag-free" style="font-size:6px;padding:1px 4px">FREE</span>';
+        h+='</div>';
+      }
+    });
+    el.innerHTML=h;
+  }
+
+  function fetchProviderModels(provider){
+    var statusEl=document.getElementById('fetchStatus_'+provider);
+    if(statusEl)statusEl.textContent='Fetching...';
+    fetch('/api/providers/fetch-models?provider='+provider).then(function(r){return r.json();}).then(function(d){
+      if(d.models){
+        FETCHED_MODELS[provider]=d.models;
+        var containerId=provider+'_fetched_models';
+        var el=document.getElementById(containerId);
+        if(el){
+          var h='<div style="margin-top:6px">';
+          d.models.forEach(function(m){
+            var free=m.is_free;
+            var name=getName(m.id);
+            h+='<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid '+(free?'rgba(0,255,136,0.2)':'rgba(0,229,255,0.08)')+';border-radius:3px;background:'+(free?'rgba(0,255,136,0.04)':'rgba(0,0,0,0.2)')+'">';
+            h+='<span style="font-size:8px;color:'+(free?'#50fa7b':'var(--text2)')+';'+(free?'font-weight:bold':'')+'">'+name+'</span>';
+            if(free)h+='<span class="model-tag tag-free" style="font-size:6px;padding:1px 4px">FREE</span>';
+            h+='</div>';
+          });
+          h+='</div>';
+          el.innerHTML=h;
+        }
+        if(statusEl)statusEl.textContent=d.models.length+' models ('+d.models.filter(function(m){return m.is_free;}).length+' free)';
+      }else{
+        if(statusEl)statusEl.textContent='Error: '+(d.error||'unknown');
+      }
+    }).catch(function(e){
+      if(statusEl)statusEl.textContent='Failed: '+e.message;
+    });
+  }
+
+  function fetchAllProviders(){
+    var statusEl=document.getElementById('fetchAllStatus');
+    if(statusEl)statusEl.textContent='Fetching all providers...';
+    fetch('/api/providers/fetch-models?provider=all').then(function(r){return r.json();}).then(function(d){
+      if(d.providers){
+        Object.keys(d.providers).forEach(function(pid){
+          var pd=d.providers[pid];
+          if(pd.models)FETCHED_MODELS[pid]=pd.models;
+        });
+        renderModels(CONFIG);
+        if(statusEl)statusEl.textContent='Updated '+Object.keys(d.providers).length+' providers';
+      }
+    }).catch(function(e){
+      if(statusEl)statusEl.textContent='Failed: '+e.message;
+    });
+  }
+
+  /* OpenRouter */
+  h+='<div class="section"><div class="section-title green">OPENROUTER</div>';
+  h+='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px">';
+  h+='<div class="fs-8 text-2">Cloud models. Free tier available. Recommended for ZIO.</div>';
+  h+='<button onclick="fetchProviderModels(\'openrouter\')" style="padding:2px 8px;font-size:7px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--glow);border-radius:3px;cursor:pointer">FETCH MODELS</button>';
+  h+='<span id="fetchStatus_openrouter" class="fs-8 text-2"></span>';
+  h+='</div>';
+  var orCfg=cfg.providers&&cfg.providers.openrouter||{};
+  var orModels=FETCHED_MODELS.openrouter||(orCfg.models||[]);
+  if(orModels.length){
+    h+='<div id="openrouterModelList">';
+    orModels.forEach(function(m,i){
+      var mid='or_model_'+i;
+      var mName=typeof m==='string'?m:(m.id||m.name||'');
+      var free=typeof m==='object'?m.is_free:isFreeModel(mName);
+      var sel=activeModel===mName;
+      h+='<label class="model-item'+(sel?' selected':'')+(free?' is-free':'')+'" for="'+mid+'">';
+      h+='<input type="radio" name="default_model_select" id="'+mid+'" value="'+mName+'"'+(sel?' checked':'')+' onchange="selectDefaultModel(\''+mName.replace(/'/g,"\\'")+'\',this)">';
+      h+='<div style="flex:1"><div class="model-name">'+getName(mName)+'</div>';
+      h+='<div class="model-desc">'+(getDesc(mName)||'OpenRouter')+'</div></div>';
+      if(free)h+='<span class="model-tag tag-free">FREE</span>';
+      else h+='<span class="model-tag tag-paid">PAID</span>';
+      h+='</label>';
+    });
+    h+='</div>';
+  }
+  h+='<div id="openrouter_fetched_models"></div>';
+  h+='</div>';
+
+  /* OpenCode */
+  h+='<div class="section"><div class="section-title">OPENCODE ZEN</div>';
+  h+='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px">';
+  h+='<div class="fs-8 text-2">OpenCode hosted models. Requires valid API key.</div>';
+  h+='<button onclick="fetchProviderModels(\'opencode\')" style="padding:2px 8px;font-size:7px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--glow);border-radius:3px;cursor:pointer">FETCH MODELS</button>';
+  h+='<span id="fetchStatus_opencode" class="fs-8 text-2"></span>';
+  h+='</div>';
+  var ocCfg=cfg.providers&&cfg.providers.opencode||{};
+  var ocModels=FETCHED_MODELS.opencode||(ocCfg.models||[]);
+  if(ocModels.length){
+    h+='<div id="opencodeModelList">';
+    ocModels.forEach(function(m,i){
+      var mid='oc_model_'+i;
+      var mName=typeof m==='string'?m:(m.id||m.name||'');
+      var free=typeof m==='object'?m.is_free:isFreeModel(mName);
+      var sel=activeModel===mName;
+      h+='<label class="model-item'+(sel?' selected':'')+(free?' is-free':'')+'" for="'+mid+'">';
+      h+='<input type="radio" name="default_model_select" id="'+mid+'" value="'+mName+'"'+(sel?' checked':'')+' onchange="selectDefaultModel(\''+mName.replace(/'/g,"\\'")+'\',this)">';
+      h+='<div style="flex:1"><div class="model-name">'+getName(mName)+'</div>';
+      h+='<div class="model-desc">'+(getDesc(mName)||'OpenCode Zen')+'</div></div>';
+      if(free)h+='<span class="model-tag tag-free">FREE</span>';
+      else h+='<span class="model-tag tag-paid">PAID</span>';
+      h+='</label>';
+    });
+    h+='</div>';
+  }
+  h+='<div id="opencode_fetched_models"></div>';
+  h+='</div>';
+
+  /* Ollama Local */
+  h+='<div class="section"><div class="section-title">OLLAMA LOCAL</div>';
+  h+='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px">';
+  h+='<div class="fs-8 text-2">CPU inference on .68/.85. Slower but fully private.</div>';
+  h+='<button onclick="fetchProviderModels(\'ollama\')" style="padding:2px 8px;font-size:7px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--glow);border-radius:3px;cursor:pointer">SCAN</button>';
+  h+='<span id="fetchStatus_ollama" class="fs-8 text-2"></span>';
+  h+='</div>';
+  var ollModels=cfg.providers&&cfg.providers.ollama&&cfg.providers.ollama.models||[];
+  if(ollModels.length){
+    h+='<div id="ollamaModelList">';
+    ollModels.forEach(function(m){
+      var mName=typeof m==='string'?m:(m.id||m.name||'');
+      var sel=activeModel===mName;
+      h+='<div class="model-item'+(sel?' selected':'')+'">';
+      h+='<span class="model-name">'+getName(mName)+'</span>';
+      h+='<span class="model-tag tag-local">LOCAL</span>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  h+='<div id="ollama_fetched_models"></div>';
+  h+='</div>';
+
+  /* Remote Providers */
+  h+='<div class="section"><div class="section-title purple">REMOTE PROVIDERS</div>';
+  h+='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px">';
+  h+='<div class="fs-8 text-2">Cloud APIs. Toggle on/off. Requires API key.</div>';
+  h+='<button onclick="fetchAllProviders()" style="padding:2px 8px;font-size:7px;background:rgba(124,77,255,0.15);border:1px solid rgba(124,77,255,0.4);color:#b388ff;border-radius:3px;cursor:pointer">FETCH ALL</button>';
+  h+='<span id="fetchAllStatus" class="fs-8 text-2"></span>';
+  h+='</div>';
+  var remoteProviders=['openai','anthropic','groq','deepseek','together'];
+  remoteProviders.forEach(function(rpId){
+    var rpCfg=cfg.providers&&cfg.providers[rpId]||{};
+    var enabled=rpCfg&&rpCfg.enabled;
+    var rpName=rpCfg.name||rpId;
+    var rpModels=FETCHED_MODELS[rpId]||(rpCfg.models||[]);
+    h+='<div style="margin-bottom:10px;padding:8px;border:1px solid rgba(0,229,255,0.06);border-radius:3px">';
+    h+='<div class="flex" style="gap:8px;margin-bottom:6px">';
+    h+='<span style="font-size:9px;color:var(--glow);letter-spacing:2px">'+rpName.toUpperCase()+'</span>';
+    h+='<div class="toggle '+(enabled?'on':'off')+'" id="prov_'+rpId+'_enabled" onclick="toggleEl(this)"><div></div></div>';
+    h+='<span class="fs-7 '+(enabled?'text-glow':'text-2')+'">'+(enabled?'ENABLED':'DISABLED')+'</span>';
+    h+='<button onclick="fetchProviderModels(\''+rpId+'\')" style="padding:1px 6px;font-size:6px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:var(--glow);border-radius:3px;cursor:pointer">FETCH</button>';
+    h+='<span id="fetchStatus_'+rpId+'" class="fs-8 text-2"></span>';
+    h+='</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
+    rpModels.forEach(function(m){
+      var mName=typeof m==='string'?m:(m.id||m.name||'');
+      var free=typeof m==='object'?m.is_free:isFreeModel(mName);
+      h+='<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid '+(free?'rgba(0,255,136,0.2)':'rgba(0,229,255,0.08)')+';border-radius:3px;background:'+(free?'rgba(0,255,136,0.04)':'rgba(0,0,0,0.2)')+'">';
+      h+='<span style="font-size:8px;color:'+(free?'#50fa7b':'var(--text2)')+';'+(free?'font-weight:bold':'')+'">'+getName(mName)+'</span>';
+      if(free)h+='<span class="model-tag tag-free" style="font-size:6px;padding:1px 4px">FREE</span>';
+      h+='</div>';
+    });
+    h+='</div>';
+    h+='<div id="'+rpId+'_fetched_models"></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  document.getElementById('panel-models').innerHTML=h;
+}
+
+function selectDefaultModel(modelId,radioEl){
+  if(CONFIG&&CONFIG.zio_engine)CONFIG.zio_engine.active_model=modelId;
+  document.querySelectorAll('[name=default_model_select]').forEach(function(el){el.closest('.model-item').classList.remove('selected');});
+  if(radioEl)radioEl.closest('.model-item').classList.add('selected');
+}
+
+function renderChats(cfg){
+  var h='';
+
+  /* Import Chat */
+  h+='<div class="section"><div class="section-title">IMPORT CHAT</div>';
+  h+='<div class="fs-8 text-2 mb-8">Import conversation history from external platforms (ChatGPT, Grok, Claude, Gemini).</div>';
+  h+='<div class="upload-zone" id="chatUploadZone" onclick="document.getElementById(\'chatFileInput\').click()">';
+  h+='<input type="file" id="chatFileInput" accept=".json,.jsonl,.csv" onchange="handleChatImport(this.files)">';
+  h+='<div class="upload-label">DROP FILE OR CLICK TO UPLOAD</div>';
+  h+='<div class="upload-hint">Supports: ChatGPT (.json), Grok (.json), Claude (.json), Gemini (.jsonl)</div>';
+  h+='</div>';
+  h+='<div id="importStatus" class="mt-8 fs-8"></div>';
+  h+='</div>';
+
+  /* Chat History */
+  h+='<div class="section"><div class="section-title purple">CHAT HISTORY</div>';
+  h+='<div class="fs-8 text-2 mb-8">Recent conversations and messages from the knowledge base.</div>';
+  h+='<div id="chatHistoryList"><span class="fs-8 text-2">Loading...</span></div>';
+  h+='</div>';
+
+  /* Sessions */
+  h+='<div class="section"><div class="section-title green">SESSIONS</div>';
+  h+='<div class="fs-8 text-2 mb-8">Conversations grouped by session.</div>';
+  h+='<div id="chatSessionList"><span class="fs-8 text-2">Loading...</span></div>';
+  h+='</div>';
+
+  document.getElementById('panel-chats').innerHTML=h;
+  loadChatHistory();
+}
+
+function handleChatImport(files){
+  if(!files||!files.length)return;
+  var file=files[0];
+  var statusEl=document.getElementById('importStatus');
+  statusEl.innerHTML='<span class="text-glow">Importing: '+file.name+'...</span>';
+  var formData=new FormData();
+  formData.append('file',file);
+  fetch('/api/zio/import',{method:'POST',body:formData}).then(function(r){return r.json();}).then(function(d){
+    if(d.status==='ok'||d.imported!==undefined){
+      statusEl.innerHTML='<span class="status-ok">Imported successfully'+(d.imported?' ('+d.imported+' messages)':'')+'</span>';
+      loadChatHistory();
+    }else{
+      statusEl.innerHTML='<span class="status-err">'+(d.error||'Import failed')+'</span>';
+    }
+  }).catch(function(e){
+    statusEl.innerHTML='<span class="status-err">Error: '+e.message+'</span>';
+  });
+}
+
+function loadChatHistory(){
+  fetch('/api/knowledge/conversations').then(function(r){return r.json();}).then(function(d){
+    var conversations=d.conversations||d||[];
+    var histEl=document.getElementById('chatHistoryList');
+    var sessEl=document.getElementById('chatSessionList');
+    if(!conversations.length){
+      histEl.innerHTML='<span class="fs-8 text-2">No conversations found.</span>';
+      sessEl.innerHTML='<span class="fs-8 text-2">No sessions found.</span>';
+      return;
+    }
+    /* Recent messages */
+    var recent=conversations.slice(-10).reverse();
+    var html='';
+    recent.forEach(function(c){
+      html+='<div class="chat-item">';
+      var role=c.role||'user';
+      html+='<div class="chat-role '+role+'">'+role.toUpperCase()+'</div>';
+      html+='<div class="chat-msg">'+escapeHtml((c.content||c.message||'').substring(0,200))+((c.content||c.message||'').length>200?'...':'')+'</div>';
+      if(c.timestamp||c.created_at)html+='<div class="chat-time">'+new Date(c.timestamp||c.created_at).toLocaleString()+'</div>';
+      html+='</div>';
+    });
+    histEl.innerHTML=html;
+
+    /* Sessions */
+    var sessions={};
+    conversations.forEach(function(c){
+      var sid=c.session_id||'default';
+      if(!sessions[sid])sessions[sid]=[];
+      sessions[sid].push(c);
+    });
+    var sh='';
+    Object.keys(sessions).forEach(function(sid){
+      var msgs=sessions[sid];
+      sh+='<div class="session-group">';
+      sh+='<div class="session-title">SESSION: '+sid.substring(0,12)+'... ('+msgs.length+' messages)</div>';
+      var last=msgs.slice(-3);
+      last.forEach(function(c){
+        var role=c.role||'user';
+        sh+='<div class="chat-item">';
+        sh+='<div class="chat-role '+role+'">'+role.toUpperCase()+'</div>';
+        sh+='<div class="chat-msg">'+escapeHtml((c.content||c.message||'').substring(0,120))+'</div>';
+        sh+='</div>';
+      });
+      sh+='</div>';
+    });
+    sessEl.innerHTML=sh;
+  }).catch(function(){
+    document.getElementById('chatHistoryList').innerHTML='<span class="status-err fs-8">Could not load conversations.</span>';
+    document.getElementById('chatSessionList').innerHTML='<span class="status-err fs-8">Could not load sessions.</span>';
+  });
+}
+
+function escapeHtml(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function testProvider(pid){
+  var statusEl=document.getElementById('testStatus_'+pid);
+  statusEl.textContent='Testing...';statusEl.className='fs-8 status-idle';
+  fetch('/api/config/test-provider/'+pid,{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    if(d.status==='connected'){statusEl.textContent='OK ('+d.model+', '+d.available_models.length+' models)';statusEl.className='fs-8 status-ok';}
+    else if(d.status==='configured'){statusEl.textContent='OK ('+d.model+')';statusEl.className='fs-8 status-ok';}
+    else if(d.status==='disabled'){statusEl.textContent='DISABLED';statusEl.className='fs-8 status-idle';}
+    else if(d.status==='no_api_key'){statusEl.textContent='NO API KEY';statusEl.className='fs-8 status-warn';}
+    else{statusEl.textContent='ERROR';statusEl.className='fs-8 status-err';}
+  }).catch(function(){statusEl.textContent='FAILED';statusEl.className='fs-8 status-err';});
+}
+
+loadCfg();
+</script>
+</body>
+</html>

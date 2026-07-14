@@ -4,11 +4,11 @@
   "ingress": [
     {
       "hostname": "app.zicore.space",
-      "service": "http://localhost:3000"
+      "service": "http://localhost:4000"
     },
     {
       "hostname": "api.zicore.space",
-      "service": "http://localhost:8080"
+      "service": "http://localhost:4080"
     },
     {
       "service": "http_status:404"

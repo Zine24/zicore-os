@@ -38,12 +38,37 @@ ENV/
 cloudflared.exe
 output/
 data/config/zio_config.json
+data/ollama/
+data/models/
+data/ml_models/
 data/knowledge/conversations.jsonl
 data/knowledge/documents/
 data/knowledge/document_index.json
 data/missions/*.json
 zicore-system.zip
 *.log
+data/traffic.db
+data/games_scores.json
+*.db
+data/media/
+*.tar.gz
+
+# Temp/debug files
+debug_test.py
+ssh_*.py
+fix_*.py
+test_*.py
+oem_config.json
+setup_zicore.py
+zicore_v5.0.bat
+zicore_v5.0.sh
+zicore_oem_*.bat
+zicore_oem_*.sh
+setup_containers.bat
+deploy/
+v5-transfer.tar.gz
+nginx/ssl/
+containers/mail/data/test_register.py
 
 # Tests
 .pytest_cache/

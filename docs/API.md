@@ -1,6 +1,6 @@
 # ZICORE API Reference
 
-Base URL: `http://localhost:8080` (local) or `https://api.zicore.space` (production)
+Base URL: `http://localhost:4080` (local) or `https://api.zicore.space` (production)
 
 ---
 
@@ -361,7 +361,7 @@ Set active theme.
 
 ## WebSocket
 
-Connect: `ws://localhost:8080/ws/zio`
+Connect: `ws://localhost:4080/ws/zio`
 
 ### Commands
 

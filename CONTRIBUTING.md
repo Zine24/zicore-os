@@ -23,8 +23,8 @@ python -m pytest tests/ -v
 python start_all.py
 ```
 
-- Web: `http://localhost:3000`
-- API: `http://localhost:8080`
+- Web: `http://localhost:4000`
+- API: `http://localhost:4080`
 
 ---
 

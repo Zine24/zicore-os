@@ -100,9 +100,9 @@ def main():
     print("    python zicore_menu.py        # Interactive menu")
     print("    python start.py              # Quick start backend+frontend")
     print("    python -m pytest tests/ -v   # Run tests")
-    print("\n  Dashboard: http://localhost:3000")
-    print("  API Docs:  http://localhost:8080/docs")
-    print("  Agent:     http://localhost:8080/api/infer")
+    print("\n  Dashboard: http://localhost:4000")
+    print("  API Docs:  http://localhost:4080/docs")
+    print("  Agent:     http://localhost:4080/api/infer")
     print()
 
 

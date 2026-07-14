@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZICORE Breakout</title>
+<style>
+body{background:#0a0a1a;color:#0f6;font-family:monospace;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center}
+canvas{border:2px solid #0f6;background:#000}
+h1{text-shadow:0 0 10px #0f6}
+.info{color:#888;font-size:12px;margin:10px}
+</style>
+</head>
+<body>
+<h1>Breakout</h1>
+<div class="info">Mouse or Arrow Keys to move paddle | Space to launch</div>
+<canvas id="c" width="480" height="400"></canvas>
+<div class="info">Score: <span id="score">0</span> | Lives: <span id="lives">3</span></div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const W=480,H=400;
+let paddle,paddleX,ball,ballDX,ballDY,bricks,score,lives,running,launched;
+const BRICK_ROWS=6,BRICK_COLS=10,BW=44,BH=15,BPAD=4,BTOP=50;
+const BCOLORS=['#f00','#f80','#ff0','#0f0','#0ff','#00f'];
+
+function init(){
+  paddleX=W/2-40;paddle={x:paddleX,y:H-30,w:80,h:10};
+  ball={x:W/2,y:H-45,r:5};
+  ballDX=3;ballDY=-3;launched=false;
+  bricks=[];score=0;lives=3;
+  for(let r=0;r<BRICK_ROWS;r++)
+    for(let col=0;col<BRICK_COLS;col++)
+      bricks.push({x:col*(BW+BPAD)+BPAD,y:r*(BH+BPAD)+BTOP,w:BW,h:BH,color:BCOLORS[r],alive:true});
+  updateUI();running=true;draw();
+}
+
+function tick(){
+  if(!running||!launched)return;
+  ball.x+=ballDX;ball.y+=ballDY;
+  if(ball.x<=ball.r||ball.x>=W-ball.r)ballDX*=-1;
+  if(ball.y<=ball.r)ballDY*=-1;
+  if(ball.y>=H){
+    lives--;updateUI();
+    if(lives<=0){running=false;ctx.fillStyle='#f00';ctx.font='24px monospace';ctx.fillText('GAME OVER',160,200);return;}
+    ball.x=W/2;ball.y=H-45;launched=false;ballDX=3;ballDY=-3;
+  }
+  if(ball.y+ball.r>=paddle.y&&ball.x>=paddleX&&ball.x<=paddleX+paddle.w&&ballDY>0){
+    ballDY*=-1;
+    let hit=(ball.x-(paddleX+paddle.w/2))/(paddle.w/2);
+    ballDX=hit*4;
+  }
+  for(let b of bricks){
+    if(!b.alive)continue;
+    if(ball.x+ball.r>b.x&&ball.x-ball.r<b.x+b.w&&ball.y+ball.r>b.y&&ball.y-ball.r<b.y+b.h){
+      b.alive=false;ballDY*=-1;score+=10;updateUI();
+    }
+  }
+  if(bricks.every(b=>!b.alive)){running=false;ctx.fillStyle='#0f6';ctx.font='24px monospace';ctx.fillText('YOU WIN!',180,200);return;}
+  draw();
+}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#0f6';ctx.fillRect(paddleX,paddle.y,paddle.w,paddle.h);
+  ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+  for(let b of bricks){
+    if(!b.alive)continue;
+    ctx.fillStyle=b.color;ctx.fillRect(b.x,b.y,b.w,b.h);
+  }
+}
+
+function updateUI(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('lives').textContent=lives;
+}
+
+c.onmousemove=e=>{
+  const rect=c.getBoundingClientRect();
+  paddleX=Math.max(0,Math.min(W-paddle.w,(e.clientX-rect.left)*(W/rect.width)-paddle.w/2));
+  paddle.x=paddleX;
+  draw();
+};
+
+document.onkeydown=e=>{
+  if(e.key==' '&&!launched){launched=true;setInterval(tick,16);return;}
+  if(e.key=='ArrowLeft')paddleX=Math.max(0,paddleX-20);
+  if(e.key=='ArrowRight')paddleX=Math.min(W-paddle.w,paddleX+20);
+  paddle.x=paddleX;draw();
+};
+init();
+</script>
+</body>
+</html>

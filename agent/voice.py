@@ -4,6 +4,7 @@ Uses: whisper (STT), pyttsx3 (TTS), websockets for remote
 """
 import os
 import sys
+import time
 import logging
 import tempfile
 import wave

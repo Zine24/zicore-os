@@ -8,19 +8,27 @@ const btnStyle = {
   transition: 'all 0.1s',
 };
 
-export default function ControlPanel({ mode, onModeChange }) {
+export default function ControlPanel({ mode, onModeChange, onCommand }) {
+  const handleCmd = (cmd) => {
+    if (onCommand) onCommand(cmd);
+  };
   return (
     <div className="panel" style={{ padding: '8px 12px' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <button className="danger" style={{ minWidth: 80, minHeight: 56, fontSize: 16, fontWeight: 900 }}>ABORT</button>
-        <button className="primary" style={{ flex: 1, minHeight: 56, fontSize: 16 }}>HOLD</button>
-        <button style={{ flex: 1, minHeight: 56, border: '2px solid var(--accent)' }}>
+        <button className="danger" style={{ minWidth: 80, minHeight: 56, fontSize: 16, fontWeight: 900 }}
+          onClick={() => handleCmd('ABORT')} onTouchEnd={() => handleCmd('ABORT')}>ABORT</button>
+        <button className="primary" style={{ flex: 1, minHeight: 56, fontSize: 16 }}
+          onClick={() => handleCmd('HOLD')} onTouchEnd={() => handleCmd('HOLD')}>HOLD</button>
+        <button style={{ flex: 1, minHeight: 56, border: '2px solid var(--accent)' }}
+          onClick={() => handleCmd('THROTTLE_UP')} onTouchEnd={() => handleCmd('THROTTLE_UP')}>
           <span style={{ fontSize: 18 }}>▲</span>
         </button>
-        <button style={{ flex: 1, minHeight: 56, border: '2px solid var(--accent)' }}>
+        <button style={{ flex: 1, minHeight: 56, border: '2px solid var(--accent)' }}
+          onClick={() => handleCmd('THROTTLE_DOWN')} onTouchEnd={() => handleCmd('THROTTLE_DOWN')}>
           <span style={{ fontSize: 18 }}>▼</span>
         </button>
-        <button className="danger" style={{ minWidth: 80, minHeight: 56, fontSize: 16, fontWeight: 900 }}>FIRE</button>
+        <button className="danger" style={{ minWidth: 80, minHeight: 56, fontSize: 16, fontWeight: 900 }}
+          onClick={() => handleCmd('FIRE')} onTouchEnd={() => handleCmd('FIRE')}>FIRE</button>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {modes.map(m => (

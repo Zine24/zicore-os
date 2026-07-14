@@ -1,0 +1,5 @@
+user = zicore_mail
+password = zicore_mail_pass_2026
+hosts = mail-db
+dbname = zicore_mail
+query = SELECT 1 FROM virtual_users WHERE email='%s' AND active=1

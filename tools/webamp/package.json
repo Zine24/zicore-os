@@ -1,0 +1,13 @@
+{
+  "name": "zicore-webamp",
+  "version": "1.0.0",
+  "description": "ZICORE Audio Player - Winamp 2 in browser",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "webamp": "^2.3.1"
+  }
+}

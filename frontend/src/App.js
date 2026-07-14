@@ -22,10 +22,20 @@ export default function App() {
     zipower: { solar_w: 1200, battery_pct: 85, load_w: 980, status: 'nominal' },
   });
   const [modalMode, setModalMode] = useState('AUTO');
+  const [cmdLog, setCmdLog] = useState([]);
   const wsRef = useRef(null);
 
+  const handleCommand = useCallback((cmd) => {
+    setCmdLog(prev => [...prev.slice(-49), { cmd, time: Date.now() }]);
+    fetch('/api/sim/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd, params: { mode: modalMode } }),
+    }).catch(() => {});
+  }, [modalMode]);
+
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8080/ws/telemetry');
+    const ws = new WebSocket('ws://localhost:4080/ws/telemetry');
     ws.onmessage = (e) => {
       try { setTelemetry(JSON.parse(e.data)); } catch {}
     };
@@ -35,7 +45,7 @@ export default function App() {
   }, []);
 
   const connectWS = useCallback(() => {
-    const ws = new WebSocket('ws://localhost:8080/ws/telemetry');
+    const ws = new WebSocket('ws://localhost:4080/ws/telemetry');
     ws.onmessage = (e) => { try { setTelemetry(JSON.parse(e.data)); } catch {} };
     wsRef.current = ws;
   }, []);
@@ -50,7 +60,7 @@ export default function App() {
         <HubComponent telemetry={telemetry} />
       </div>
 
-      <ControlPanel mode={modalMode} onModeChange={setModalMode} />
+      <ControlPanel mode={modalMode} onModeChange={setModalMode} onCommand={handleCommand} />
       <MenuBar activeHub={activeHub} onHubChange={setActiveHub} />
       
       <div style={{

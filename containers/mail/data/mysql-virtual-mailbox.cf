@@ -1,0 +1,5 @@
+user = zicore_mail
+password = zicore_mail_pass_2026
+hosts = 172.20.0.2:3306
+dbname = zicore_mail
+query = SELECT CONCAT(SUBSTRING_INDEX(email, '@', -1), '/', SUBSTRING_INDEX(email, '@', 1), '/Maildir/') FROM virtual_users WHERE email='%s' AND active=1

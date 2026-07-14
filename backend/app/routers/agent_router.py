@@ -207,7 +207,7 @@ async def generate_media(body: GenerateRequest):
 
     if body.type == "image":
         try:
-            from ...agent.media import MediaEngine
+            from agent.media import MediaEngine
             media = MediaEngine()
             r = media.generate_image(body.prompt)
             result.update(r)
@@ -216,7 +216,7 @@ async def generate_media(body: GenerateRequest):
 
     elif body.type == "video":
         try:
-            from ...agent.media import MediaEngine
+            from agent.media import MediaEngine
             media = MediaEngine()
             r = media.generate_video(body.prompt, duration=body.params.get("duration", 3) if body.params else 3)
             result.update(r)
@@ -225,7 +225,7 @@ async def generate_media(body: GenerateRequest):
 
     elif body.type == "sound":
         try:
-            from ...agent.media import MediaEngine
+            from agent.media import MediaEngine
             media = MediaEngine()
             r = media.generate_sound(body.prompt, duration=body.params.get("duration", 3) if body.params else 3)
             result.update(r)
@@ -234,7 +234,7 @@ async def generate_media(body: GenerateRequest):
 
     elif body.type == "3d":
         try:
-            from ...agent.content3d import Engine3D
+            from agent.content3d import Engine3D
             engine = Engine3D()
             r = engine.generate_from_prompt(body.prompt)
             result.update(r)
@@ -247,7 +247,7 @@ async def generate_media(body: GenerateRequest):
 @router.post("/tts")
 async def text_to_speech(body: TTSRequest):
     try:
-        from ...agent.voice import VoiceEngine
+        from agent.voice import VoiceEngine
         voice = VoiceEngine()
         r = voice.text_to_speech(body.text)
         return r
@@ -258,7 +258,7 @@ async def text_to_speech(body: TTSRequest):
 @router.post("/stt")
 async def speech_to_text(body: STTRequest):
     try:
-        from ...agent.voice import VoiceEngine
+        from agent.voice import VoiceEngine
         voice = VoiceEngine()
         r = voice.speech_to_text(body.audio_path)
         return r
@@ -482,7 +482,7 @@ async def agent_ws(websocket: WebSocket):
             elif command == "tts":
                 text = payload.get("text", "")
                 try:
-                    from ...agent.voice import VoiceEngine
+                    from agent.voice import VoiceEngine
                     voice = VoiceEngine()
                     r = voice.text_to_speech(text)
                     await websocket.send_json({"type": "tts_result", "result": r})
@@ -543,31 +543,14 @@ async def agent_ws(websocket: WebSocket):
                 tool_name = payload.get("name", "")
                 tool_args = payload.get("args", {})
                 try:
-                    from agent.state import ToolRegistry
-                    registry = ToolRegistry()
-                    # Register default tools
-                    registry.register("web_search", lambda query="", **kw: {"query": query, "results": []}, "Search web")
-                    registry.register("read_file", lambda path="", **kw: {"path": path, "content": ""}, "Read file")
-                    registry.register("calculate", lambda expression="", **kw: {"expression": expression, "result": eval(expression)}, "Calculate")
-                    registry.register("timestamp", lambda **kw: {"timestamp": time.time()}, "Get timestamp")
-
-                    result = registry.call(tool_name, **tool_args)
+                    result = session.tools.call(tool_name, **tool_args)
                     await websocket.send_json({"type": "tool_result", "tool": tool_name, "result": result})
                 except Exception as e:
                     await websocket.send_json({"type": "error", "message": f"Tool error: {str(e)}"})
 
             elif command == "tools":
                 # List available tools
-                tools = [
-                    {"name": "web_search", "description": "Search the web"},
-                    {"name": "read_file", "description": "Read file contents"},
-                    {"name": "write_file", "description": "Write file contents"},
-                    {"name": "list_files", "description": "List directory contents"},
-                    {"name": "run_command", "description": "Run shell command"},
-                    {"name": "calculate", "description": "Evaluate math expression"},
-                    {"name": "timestamp", "description": "Get current timestamp"},
-                    {"name": "random", "description": "Generate random number"},
-                ]
+                tools = session.tools.list_tools()
                 await websocket.send_json({"type": "tools_list", "tools": tools})
 
             else:
@@ -582,16 +565,16 @@ async def agent_ws(websocket: WebSocket):
 async def _generate_media(gen_type: str, prompt: str, params: dict) -> dict:
     try:
         if gen_type == "image":
-            from ...agent.media import MediaEngine
+            from agent.media import MediaEngine
             return MediaEngine().generate_image(prompt)
         elif gen_type == "video":
-            from ...agent.media import MediaEngine
+            from agent.media import MediaEngine
             return MediaEngine().generate_video(prompt, duration=params.get("duration", 3))
         elif gen_type == "sound":
-            from ...agent.media import MediaEngine
+            from agent.media import MediaEngine
             return MediaEngine().generate_sound(prompt, duration=params.get("duration", 3))
         elif gen_type == "3d":
-            from ...agent.content3d import Engine3D
+            from agent.content3d import Engine3D
             return Engine3D().generate_from_prompt(prompt)
         return {"error": f"Unknown type: {gen_type}"}
     except Exception as e:

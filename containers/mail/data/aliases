@@ -1,0 +1,7 @@
+# ZICORE Mail Aliases
+# Format: alias: target
+
+root: admin@zinemotion.com.mx
+postmaster: admin@zinemotion.com.mx
+abuse: admin@zinemotion.com.mx
+noreply: admin@zinemotion.com.mx

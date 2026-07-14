@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Digital Aerospace Operating System</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1525;--bg4:#141c30;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;--text:#c8d6e5;--text2:#667788;--border:#1a2540;--glass:rgba(10,14,26,0.92)}
+@font-face{font-family:'Mono';src:local('Cascadia Code'),local('Consolas'),local('monospace')}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.01) 2px,rgba(0,229,255,.01) 4px)}
+
+.app{position:relative;z-index:2;display:grid;grid-template-columns:220px 1fr;grid-template-rows:48px 1fr 28px;height:100vh;width:100vw}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--glass);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);z-index:10}
+.topbar .logo{width:26px;height:26px;flex-shrink:0}
+.topbar .logo svg{width:100%;height:100%}
+.topbar .brand{font-size:12px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar .sep{width:1px;height:16px;background:var(--border)}
+.topbar .tagline{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase}
+.topbar .spacer{flex:1}
+.topbar .clock{font-family:'Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:1px}
+.topbar .dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* SIDEBAR */
+.sidebar{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px)}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sb-section{padding:12px 14px 6px;font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;font-size:12px;color:var(--text2)}
+.sb-item:hover{background:rgba(0,229,255,.04);color:var(--text)}
+.sb-item.active{background:rgba(0,229,255,.06);color:var(--cyan);border-left-color:var(--cyan)}
+.sb-item .ico{width:18px;text-align:center;font-size:13px;flex-shrink:0}
+.sb-divider{height:1px;background:var(--border);margin:8px 14px}
+
+/* CONTENT */
+.content{display:flex;flex-direction:column;overflow:hidden}
+.content-header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.ch-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text)}
+.ch-spacer{flex:1}
+.ch-badge{font-size:8px;padding:2px 8px;border-radius:3px;letter-spacing:1px;font-weight:600}
+.badge-cyan{background:rgba(0,229,255,.1);color:var(--cyan)}
+.badge-green{background:rgba(0,255,136,.1);color:var(--green)}
+.badge-purple{background:rgba(124,77,255,.1);color:var(--purple)}
+.content-frame{flex:1;border:none;background:var(--bg)}
+
+/* LIBRARY VIEW */
+.library{flex:1;overflow-y:auto;padding:16px;display:none}
+.library.open{display:block}
+.lib-filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.lib-filter{font-size:9px;letter-spacing:1px;padding:5px 12px;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2);transition:all .2s;background:transparent}
+.lib-filter:hover{border-color:rgba(0,229,255,.2);color:var(--text)}
+.lib-filter.active{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.lib-search{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;font-size:11px;outline:none;width:200px;margin-bottom:14px}
+.lib-search:focus{border-color:var(--cyan)}
+.lib-search::placeholder{color:var(--text2)}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.lib-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;transition:all .2s}
+.lib-card:hover{border-color:rgba(0,229,255,.25);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.lib-card.selected{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,229,255,.15)}
+.lib-thumb{height:90px;display:flex;align-items:center;justify-content:center;background:var(--bg3);position:relative;overflow:hidden}
+.lib-thumb img{width:100%;height:100%;object-fit:cover}
+.lib-thumb .ico{font-size:28px;opacity:.4}
+.lib-thumb .type{position:absolute;top:4px;left:4px;font-size:7px;letter-spacing:1px;padding:2px 5px;border-radius:3px;background:rgba(0,0,0,.7);border:1px solid rgba(0,229,255,.15);color:var(--cyan)}
+.lib-info{padding:8px 10px}
+.lib-name{font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-meta{font-size:8px;color:var(--text2);margin-top:2px;letter-spacing:.5px}
+.lib-empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--text2);font-size:11px;letter-spacing:1px}
+.lib-player{position:fixed;bottom:40px;left:230px;right:0;background:var(--glass);border-top:1px solid var(--border);padding:10px 16px;display:none;align-items:center;gap:12px;z-index:20;backdrop-filter:blur(16px)}
+.lib-player.open{display:flex}
+.lib-player audio,.lib-player video{height:36px;flex:1;max-width:400px}
+.lib-player .pl-info{font-size:10px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-player .pl-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:4px}
+.lib-player .pl-close:hover{color:var(--red)}
+
+/* STATUSBAR */
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--glass);border-top:1px solid var(--border);font-size:9px;color:var(--text2);letter-spacing:.5px}
+.statusbar .spacer{flex:1}
+.statusbar .tag{padding:1px 6px;border-radius:3px;background:rgba(0,229,255,.06);color:var(--cyan);font-size:8px;letter-spacing:1px}
+
+/* WELCOME VIEW */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px}
+.welcome .hex{font-size:48px;opacity:.3;animation:spin 12s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.welcome h2{font-size:18px;font-weight:300;letter-spacing:4px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.welcome p{font-size:11px;color:var(--text2);text-align:center;max-width:400px;line-height:1.6}
+.welcome .cards{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.welcome .wcard{padding:16px 20px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;text-align:center;min-width:120px}
+.welcome .wcard:hover{border-color:rgba(0,229,255,.2);transform:translateY(-2px)}
+.welcome .wcard .wc-icon{font-size:22px;margin-bottom:6px}
+.welcome .wcard .wc-name{font-size:10px;font-weight:600;letter-spacing:1px}
+.welcome .wcard.c1:hover{border-color:rgba(0,229,255,.3)}.welcome .wcard.c1 .wc-name{color:var(--cyan)}
+.welcome .wcard.c2:hover{border-color:rgba(0,255,136,.3)}.welcome .wcard.c2 .wc-name{color:var(--green)}
+.welcome .wcard.c3:hover{border-color:rgba(124,77,255,.3)}.welcome .wcard.c3 .wc-name{color:var(--purple)}
+.welcome .wcard.c4:hover{border-color:rgba(0,229,255,.3)}.welcome .wcard.c4 .wc-name{color:var(--cyan)}
+.welcome .wcard.c5:hover{border-color:rgba(200,0,255,.3)}.welcome .wcard.c5 .wc-name{color:#C800FF}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="grain"></div>
+<div class="scanline"></div>
+
+<div class="app">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="logo">
+      <svg viewBox="0 0 40 46"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg)" stroke-width="1.5"/>
+        <defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs>
+        <text x="20" y="26" text-anchor="middle" fill="url(#hg)" font-size="16" font-weight="700" font-family="sans-serif">Z</text></svg>
+    </div>
+    <div class="brand">ZICORE</div>
+    <div class="sep"></div>
+    <div class="tagline">Digital Aerospace Operating System</div>
+    <div class="spacer"></div>
+    <div class="dot"></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sb-section">Divisiones</div>
+    <div class="sb-item active" onclick="showView('welcome')"><div class="ico">◈</div>Inicio</div>
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">◇ Aerospace</div>
+    <div class="sb-item" onclick="showFrame('/engineering','Engineering')"><div class="ico">⚙</div> Ingeniería</div>
+    <div class="sb-item" onclick="showFrame('/aerospace-engineering','Aero Engineering')"><div class="ico">🔬</div> Ingeniería Aeroespacial</div>
+    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">🚀</div> Vehículos</div>
+    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">⚡</div> Propulsión</div>
+    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">◎</div> Órbita</div>
+    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">📋</div> Misiones</div>
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">◉ ZiEnvironment</div>
+    <div class="sb-item" onclick="showFrame('/environment','ZiEnvironment')"><div class="ico">◉</div> Kernel (21 nodos)</div>
+    <div class="sb-item" onclick="showFrame('/environment','Red Neural')"><div class="ico">🌐</div> Red Neural</div>
+    <div class="sb-item" onclick="showFrame('/zio','ZIO AI')"><div class="ico">◎</div> ZIO Copilot</div>
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">◈ ZineMotion</div>
+    <div class="sb-item" onclick="showFrame('/dashboard','Materializer')"><div class="ico">◈</div> Materializer</div>
+    <div class="sb-item" onclick="showFrame('/aerospace-engineering','Ingeniería Aeroespacial')"><div class="ico">🔬</div> Ingeniería Aeroespacial</div>
+    <div class="sb-item" onclick="showView('library')"><div class="ico">📚</div> Biblioteca</div>
+    <div class="sb-item" onclick="showFrame('/multimedia','Multimedia')"><div class="ico">⊕</div> Multimedia</div>
+    <div class="sb-item" onclick="showFrame('/games','Games')"><div class="ico">⬡</div> Juegos</div>
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">Otros</div>
+    <div class="sb-item" onclick="showFrame('/mail','Mail')"><div class="ico">✉</div> Mail</div>
+    <div class="sb-item" onclick="showFrame('/settings','Settings')"><div class="ico">⚙</div> Configuración</div>
+    <div class="sb-item" onclick="showFrame('/installers','Descargas')"><div class="ico">⬇</div> Descargas</div>
+    <div class="sb-item" onclick="showFrame('/web-stats','Web Stats')"><div class="ico">📊</div> Estadísticas</div>
+    <div class="sb-item" onclick="openExternal('https://zinemotion.com.mx')"><div class="ico">↗</div> Portal Web</div>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="content-header" id="contentHeader">
+      <div class="ch-title" id="chTitle">ZICORE OS</div>
+      <div class="ch-spacer"></div>
+      <div class="ch-badge badge-green">ONLINE</div>
+    </div>
+
+    <!-- Welcome View -->
+    <div class="welcome" id="welcomeView">
+      <div class="hex">◈</div>
+      <h2>ZICORE OS</h2>
+      <p>Digital Aerospace Operating System. Un portal integral que conecta aerospace, ingeniería, creatividad y sistema distribuido.</p>
+      <div class="cards">
+        <div class="wcard c1" onclick="showFrame('/aerospace','Aerospace')"><div class="wc-icon">◇</div><div class="wc-name">Aerospace</div></div>
+        <div class="wcard c2" onclick="showFrame('/engineering','Engineering')"><div class="wc-icon">⚙</div><div class="wc-name">Engineering</div></div>
+        <div class="wcard c5" onclick="showFrame('/environment','ZiEnvironment')"><div class="wc-icon">◉</div><div class="wc-name">ZiEnvironment</div></div>
+        <div class="wcard c3" onclick="showFrame('/dashboard','Materializer')"><div class="wc-icon">◈</div><div class="wc-name">ZineMotion</div></div>
+        <div class="wcard c4" onclick="showView('library')"><div class="wc-icon">📚</div><div class="wc-name">Biblioteca</div></div>
+      </div>
+    </div>
+
+    <!-- Iframe View -->
+    <iframe class="content-frame" id="contentFrame" src="about:blank" style="display:none"></iframe>
+
+    <!-- Library View -->
+    <div class="library" id="libraryView">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <input class="lib-search" id="libSearch" placeholder="Buscar archivos..." oninput="filterLibrary()">
+        <div class="lib-filters" id="libFilters">
+          <div class="lib-filter active" onclick="setLibFilter('all',this)">TODOS</div>
+          <div class="lib-filter" onclick="setLibFilter('audio',this)">AUDIO</div>
+          <div class="lib-filter" onclick="setLibFilter('music',this)">MÚSICA</div>
+          <div class="lib-filter" onclick="setLibFilter('video',this)">VIDEO</div>
+          <div class="lib-filter" onclick="setLibFilter('images',this)">IMÁGENES</div>
+          <div class="lib-filter" onclick="setLibFilter('3d',this)">3D</div>
+        </div>
+      </div>
+      <div class="lib-grid" id="libGrid"><div class="lib-empty">Cargando biblioteca...</div></div>
+    </div>
+
+    <!-- Player -->
+    <div class="lib-player" id="libPlayer">
+      <button class="pl-close" onclick="closePlayer()">✕</button>
+      <div class="pl-info" id="plInfo">--</div>
+      <audio id="plAudio" controls style="flex:1;max-width:500px"></audio>
+      <video id="plVideo" controls style="display:none;height:36px;flex:1;max-width:500px"></video>
+    </div>
+  </div>
+
+  <!-- Statusbar -->
+  <div class="statusbar">
+    <div style="width:4px;height:4px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)"></div>
+    <span>SYS: NOMINAL</span>
+    <div class="spacer"></div>
+    <span id="sbInfo">--</span>
+    <div class="spacer"></div>
+    <span class="tag">ZICORE OS v5.0</span>
+    <span style="color:var(--text2);letter-spacing:1px">creando el tiempo</span>
+  </div>
+</div>
+
+<script>
+// Clock
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-MX',{hour12:false})}
+setInterval(tick,1000);tick();
+
+// Starfield
+const cv=document.getElementById('starfield'),cx=cv.getContext('2d');let st=[];
+function initS(){cv.width=innerWidth;cv.height=innerHeight;st=[];for(let i=0;i<60;i++)st.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1+.3,a:Math.random(),d:Math.random()*.015-.007})}
+function drawS(){cx.clearRect(0,0,cv.width,cv.height);st.forEach(s=>{s.a+=s.d;if(s.a>1||s.a<.15)s.d*=-1;cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);cx.fillStyle=`rgba(180,200,220,${s.a})`;cx.fill()});requestAnimationFrame(drawS)}
+initS();drawS();addEventListener('resize',initS);
+
+// Views
+let currentView='welcome';
+function showView(v){
+  document.getElementById('welcomeView').style.display=v==='welcome'?'flex':'none';
+  document.getElementById('libraryView').className='library'+(v==='library'?' open':'');
+  document.getElementById('contentFrame').style.display=v==='frame'?'block':'none';
+  document.getElementById('libPlayer').className='lib-player'+(v==='library'?' open':'');
+  currentView=v;
+  // Update sidebar active
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
+  if(v==='library'){document.querySelectorAll('.sb-item').forEach(el=>{if(el.textContent.includes('Biblioteca'))el.classList.add('active')})}
+  if(v==='welcome'){document.querySelectorAll('.sb-item').forEach(el=>{if(el.textContent.includes('Inicio'))el.classList.add('active')})}
+}
+function showFrame(url,title){
+  showView('frame');
+  document.getElementById('contentFrame').src=url;
+  document.getElementById('chTitle').textContent=title||'ZICORE';
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(el=>{if(el.textContent.trim().includes(title))el.classList.add('active')});
+}
+function openExternal(url){window.open(url,'_blank')}
+
+// Library
+let libData={audio:[],video:[],images:[],music:[],'3d':[]};
+let libFilter='all';
+let libPage=0;const PAGE_SIZE=60;
+async function loadLibrary(){
+  try{
+    const r=await fetch('/api/media/list');const d=await r.json();
+    libData.audio=d.audio||[];libData.music=d.music||[];libData.video=d.video||[];libData.images=d.images||[];
+    // Also fetch 3D from output
+    try{const r2=await fetch('/api/content/library?type=3d');const d2=await r2.json();libData['3d']=(d2.items||[]).map(i=>({name:i.name,path:i.path,url:i.url||('/output/'+i.path),size:i.size,ext:i.ext||''}))}catch(e){}
+    renderLibrary();
+  }catch(e){document.getElementById('libGrid').innerHTML='<div class="lib-empty">Error cargando biblioteca</div>'}
+}
+function setLibFilter(f,el){
+  libFilter=f;libPage=0;
+  document.querySelectorAll('.lib-filter').forEach(e=>e.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderLibrary();
+}
+function filterLibrary(){libPage=0;renderLibrary()}
+function renderLibrary(){
+  const search=(document.getElementById('libSearch').value||'').toLowerCase();
+  let items=[];
+  if(libFilter==='all')items=[].concat(libData.audio,libData.music,libData.video,libData.images,libData['3d']||[]);
+  else items=libData[libFilter]||[];
+  if(search)items=items.filter(i=>(i.name||'').toLowerCase().includes(search));
+  const grid=document.getElementById('libGrid');
+  if(!items.length){grid.innerHTML='<div class="lib-empty">No hay archivos en esta categoría</div>';return}
+
+  // Group by directory
+  const folders={};
+  items.forEach(it=>{
+    const dir=it.dir||'root';
+    if(!folders[dir])folders[dir]=[];
+    folders[dir].push(it);
+  });
+  const dirs=Object.keys(folders);
+  const totalItems=items.length;
+  const totalPages=Math.ceil(totalItems/PAGE_SIZE);
+  const start=libPage*PAGE_SIZE;
+  const pageItems=items.slice(start,Math.min(start+PAGE_SIZE,totalItems));
+
+  let header=`<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,229,255,0.08);margin-bottom:8px">`;
+  header+=`<span style="font-size:9px;color:#506070;letter-spacing:1px">${totalItems} archivos${dirs.length>1?' en '+dirs.length+' carpetas':''}</span>`;
+  if(totalPages>1){
+    header+=`<div style="display:flex;gap:4px;align-items:center">`;
+    header+=`<button onclick="libPage=Math.max(0,libPage-1);renderLibrary()" style="background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:#00e5ff;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:9px">&#9664;</button>`;
+    header+=`<span style="font-size:8px;color:#506070">${libPage+1}/${totalPages}</span>`;
+    header+=`<button onclick="libPage=Math.min(${totalPages-1},libPage+1);renderLibrary()" style="background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:#00e5ff;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:9px">&#9654;</button>`;
+    header+=`</div>`;
+  }
+  header+=`</div>`;
+
+  grid.innerHTML=header;
+  pageItems.forEach(it=>{
+    const ext=(it.ext||'').toLowerCase();
+    const isImg=['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext);
+    const isVid=['mp4','webm','ogv','mov','mkv'].includes(ext);
+    const isAud=['wav','mp3','ogg','flac','m4a','aac'].includes(ext);
+    const kind=isImg?'image':isVid?'video':isAud?'audio':'3d';
+    const icon=isImg?'&#128444;':isVid?'&#127916;':kind==='3d'?'&#9651;':'&#127925;';
+    const dirLabel=it.dir&&it.dir!=='root'&&it.dir!=='local'?`<div style="font-size:7px;color:#3a4a5a;letter-spacing:1px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.dir}</div>`:'';
+    const card=document.createElement('div');
+    card.className='lib-card';
+    card.innerHTML=`<div class="lib-thumb">${isImg?`<img src="${it.url}" loading="lazy">`:`<div class="ico">${icon}</div>`}<div class="type">${(it.ext||kind).toUpperCase()}</div></div><div class="lib-info"><div class="lib-name">${it.name}</div>${dirLabel}<div class="lib-meta">${humanSize(it.size)}</div></div>`;
+    card.onclick=()=>playItem(it,kind);
+    grid.appendChild(card)});
+}
+function humanSize(b){if(!b)return'--';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
+function playItem(it,kind){
+  const player=document.getElementById('libPlayer');
+  const audio=document.getElementById('plAudio');
+  const video=document.getElementById('plVideo');
+  const info=document.getElementById('plInfo');
+  audio.style.display='none';video.style.display='none';audio.src='';video.src='';
+  info.textContent=it.name;
+  if(kind==='video'){video.style.display='block';video.src=it.url;video.play()}
+  else if(kind==='audio'){audio.style.display='block';audio.src=it.url;audio.play()}
+  player.classList.add('open');
+}
+function closePlayer(){
+  document.getElementById('plAudio').pause();document.getElementById('plVideo').pause();
+  document.getElementById('libPlayer').classList.remove('open');
+}
+
+// System polling
+async function poll(){
+  try{
+    const r=await fetch('/api/system/stats');const d=await r.json();
+    if(!d.error)document.getElementById('sbInfo').textContent=`CPU: ${d.cpu_percent}% | MEM: ${d.memory_percent}% | UPTIME: ${d.uptime||'--'}`;
+  }catch(e){}
+}
+poll();setInterval(poll,5000);
+loadLibrary();
+
+// Portal message listener - modules can call parent.postMessage
+window.addEventListener('message',function(e){
+  if(!e.data||typeof e.data!=='object')return;
+  if(e.data.zicore==='navigate'){showFrame(e.data.url,e.data.title)}
+  if(e.data.zicore==='back'){showView('welcome')}
+  if(e.data.zicore==='media'){
+    if(e.data.action==='play'&&e.data.url){playItem({url:e.data.url,name:e.data.name||'Audio',size:0,ext:e.data.ext||'mp3'},'audio')}
+  }
+});
+
+// Expose functions for modules
+window.zicorePortal={navigate:function(url,title){showFrame(url,title)},back:function(){showView('welcome')}};
+</script>
+</body>
+</html>

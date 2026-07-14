@@ -81,7 +81,7 @@ def start_tunnel():
         print("  [FALLBACK] Using quick tunnel (temporary URL)...")
 
         tunnel_proc = subprocess.Popen(
-            [str(CLOUDFLARED), "tunnel", "--url", "http://localhost:3000"],
+            [str(CLOUDFLARED), "tunnel", "--url", "http://localhost:4000"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -140,15 +140,15 @@ def show_urls(public_url):
         print("    https://api.zicore.space")
     print("")
     print("  Local URLs:")
-    print("    http://localhost:3000")
-    print("    http://localhost:3000/dashboard")
-    print("    http://localhost:3000/zio")
-    print("    http://localhost:3000/sim")
+    print("    http://localhost:4000")
+    print("    http://localhost:4000/dashboard")
+    print("    http://localhost:4000/zio")
+    print("    http://localhost:4000/sim")
     print("=" * 60)
 
 def main():
     print("=" * 60)
-    print("  ZICORE SYSTEM v4.0 — PRODUCTION")
+    print("  ZICORE SYSTEM v5.0 — PRODUCTION")
     print("  ZineMotion Foundation — Aerospace Division")
     print("=" * 60)
 

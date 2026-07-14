@@ -17,4 +17,22 @@ MODEL_REGISTRY = {
         "fine_tuned": False,
         "description": "Motor ML basado en Unsloth + Llama-3.1-8B fine-tuneado",
     },
+    "ollama": {
+        "name": "llama3.1:8b",
+        "type": "llm",
+        "version": "1.0.2",
+        "status": "not_loaded",
+        "languages": ["python", "multilingual"],
+        "base_model": "llama3.1:8b",
+        "description": "Modern coding model from Ollama, 8B parameters with 8k context window",
+        "capabilities": ["code_generation", "reasoning", "text_completion"],
+        "parameters": {
+            "model": "llama3.1:8b",
+            "temperature": 0.1,
+            "max_tokens": 2048,
+            "num_ctx": 8192,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0
+        }
+    },
 }

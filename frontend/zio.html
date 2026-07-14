@@ -3,7 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZIO SERVER — Remote Inference</title>
+<title>ZICORE ZIO — AI Copilot</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+THREE.STLLoader=function(){};
+THREE.STLLoader.prototype.load=function(url,onLoad,onProgress,onError){
+  var scope=this;
+  var xhr=new XMLHttpRequest();
+  if(onProgress)xhr.addEventListener('progress',onProgress);
+  xhr.addEventListener('load',function(){
+    if(xhr.status===200||xhr.status===0){
+      var buffer=xhr.response||xhr.responseText;
+      var geometry=scope.parse(buffer);
+      onLoad(geometry);
+    }else if(onError){onError(xhr);}
+  });
+  xhr.addEventListener('error',function(){if(onError)onError(xhr);});
+  xhr.open('GET',url,true);
+  xhr.responseType='arraybuffer';
+  xhr.send();
+};
+THREE.STLLoader.prototype.parse=function(buffer){
+  var binary=false;
+  var reader=new DataView(new Uint8Array(buffer));
+  var header='';
+  for(var i=0;i<80;i++){header+=String.fromCharCode(reader.getUint8(i,true));}
+  if(header.indexOf('solid')===0&&header.indexOf('facet')>-1){binary=false;}
+  else{binary=true;}
+  if(binary){
+    var offset=80;
+    var numTriangles=reader.getUint32(offset,true);offset+=4;
+    var vertices=[];var normals=[];
+    for(var i=0;i<numTriangles;i++){
+      var nx=reader.getFloat32(offset,true);offset+=4;
+      var ny=reader.getFloat32(offset,true);offset+=4;
+      var nz=reader.getFloat32(offset,true);offset+=4;
+      for(var j=0;j<3;j++){
+        var x=reader.getFloat32(offset,true);offset+=4;
+        var y=reader.getFloat32(offset,true);offset+=4;
+        var z=reader.getFloat32(offset,true);offset+=4;
+        vertices.push(x,y,z);normals.push(nx,ny,nz);
+      }
+      offset+=2;
+    }
+    var geometry=new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+    return geometry;
+  }else{
+    var data=new TextDecoder().decode(new Uint8Array(buffer));
+    var vertices=[];var normals=[];
+    var lines=data.split('\n');
+    for(var i=0;i<lines.length;i++){
+      var line=lines[i].trim();
+      if(line.indexOf('facet normal')===0){
+        var parts=line.split(/\s+/);
+        var nx=parseFloat(parts[2])||0;var ny=parseFloat(parts[3])||0;var nz=parseFloat(parts[4])||0;
+        normals.push(nx,ny,nz,nx,ny,nz,nx,ny,nz);
+      }else if(line.indexOf('vertex')===0){
+        var parts=line.split(/\s+/);
+        vertices.push(parseFloat(parts[1])||0,parseFloat(parts[2])||0,parseFloat(parts[3])||0);
+      }
+    }
+    var geometry=new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals.length>=vertices.length?normals:new Array(vertices.length).fill(0),3));
+    return geometry;
+  }
+};
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
@@ -52,9 +120,26 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 #sidebar .provider-dot.enabled{background:#0f6}
 #sidebar .provider-dot.disabled{background:#555}
 #sidebar .model-select{
-  width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
-  color:var(--glow);padding:4px 6px;font-size:10px;font-family:inherit;outline:none;margin-top:4px;
+  flex:1;min-width:0;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:4px 6px;font-size:10px;font-family:inherit;outline:none;
 }
+#sidebar .model-refresh{
+  display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;
+  background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);border-radius:3px;
+  color:var(--glow);font-size:12px;cursor:pointer;margin-left:4px;transition:all .2s;
+}
+#sidebar .model-refresh:hover{background:rgba(0,229,255,0.25);border-color:var(--glow)}
+#sidebar .model-row{display:flex;align-items:center;margin-top:4px}
+#sidebar .ollama-btn{
+  display:flex;align-items:center;justify-content:center;gap:4px;width:100%;
+  background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:3px;
+  color:var(--glow);font-size:9px;cursor:pointer;padding:6px 8px;margin-top:6px;transition:all .2s;
+}
+#sidebar .ollama-btn:hover{background:rgba(0,229,255,0.1);border-color:var(--glow)}
+#sidebar .ollama-status{font-size:8px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:4px}
+#sidebar .ollama-status .dot{width:6px;height:6px;border-radius:50%}
+#sidebar .ollama-status .dot.online{background:#0f6}
+#sidebar .ollama-status .dot.offline{background:#f44}
 #sidebar .param-group{margin:4px 0}
 #sidebar .param-label{font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:2px}
 #sidebar .param-slider{
@@ -81,6 +166,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 .msg.user .label{color:rgba(0,229,255,0.6)}
 .msg.zio .label{color:rgba(124,77,255,0.6)}
 .msg .meta{font-size:8px;color:var(--text2);margin-top:2px}
+.msg.system{max-width:100%;text-align:center}
+.msg.system .bubble{color:var(--text2);font-size:9px;padding:2px 8px}
+.msg.error{max-width:100%;text-align:center}
+.msg.error .bubble{color:#f44;font-size:9px;padding:2px 8px;background:rgba(255,60,60,0.05);border:1px solid rgba(255,60,60,0.1)}
+.msg.meta{display:none}
 
 #inputArea{
   padding:10px 16px;background:rgba(6,8,14,0.95);
@@ -127,12 +217,114 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 #outputPreview.active{display:block}
 #outputPreview img,#outputPreview video{max-width:100%;max-height:200px;border:1px solid rgba(0,229,255,0.1)}
 #outputPreview .output-path{font-size:9px;color:var(--text2);margin-top:4px}
+.mesh-preview{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px}
+.mesh-preview canvas{width:280px;height:200px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);border-radius:4px}
+.mesh-preview .mesh-actions{display:flex;gap:6px}
+.mesh-preview .mesh-btn{padding:5px 14px;font-size:9px;letter-spacing:1px;cursor:pointer;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.04);color:var(--glow);transition:all .2s}
+.mesh-preview .mesh-btn:hover{background:rgba(0,229,255,0.1)}
+.mesh-preview .mesh-btn.accent{border-color:rgba(124,77,255,0.2);color:var(--glow2)}
+
+#meshModal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center}
+#meshModal.active{display:flex}
+#meshModalInner{width:80vw;max-width:800px;height:70vh;background:rgba(10,14,22,0.98);border:1px solid rgba(0,229,255,0.15);border-radius:4px;display:flex;flex-direction:column;overflow:hidden}
+#meshModalHeader{padding:10px 16px;border-bottom:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:space-between}
+#meshModalHeader span{font-size:10px;letter-spacing:2px;color:var(--glow)}
+#meshModalHeader button{padding:4px 12px;font-size:9px;letter-spacing:1px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--glow);cursor:pointer}
+#meshModalCanvas{flex:1;width:100%;background:rgba(0,0,0,0.5)}
+#meshModalFooter{padding:8px 16px;border-top:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:space-between}
+#meshModalFooter .mesh-info{font-size:9px;color:var(--text2)}
+#meshModalFooter .mesh-actions{display:flex;gap:6px}
 
 #bottomBar{
   height:22px;min-height:22px;background:rgba(6,8,14,0.96);
   border-top:1px solid rgba(0,229,255,0.08);
   display:flex;align-items:center;padding:0 12px;font-size:8px;color:var(--text2);gap:16px;
 }
+
+/* Ollama Modal */
+#ollamaModal{
+  display:none;position:fixed;inset:0;z-index:6000;
+  background:rgba(0,0,0,0.85);align-items:center;justify-content:center;
+}
+#ollamaModal.active{display:flex}
+#ollamaContent{
+  width:420px;max-height:80vh;background:rgba(10,14,22,0.98);
+  border:1px solid rgba(0,229,255,0.2);border-radius:6px;overflow:hidden;
+  box-shadow:0 0 40px rgba(0,229,255,0.1);
+}
+#ollamaHeader{
+  padding:12px 16px;border-bottom:1px solid rgba(0,229,255,0.1);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,229,255,0.03);
+}
+#ollamaHeader .title{font-size:10px;letter-spacing:3px;color:var(--glow);font-weight:700}
+#ollamaHeader .close-btn{
+  padding:4px 10px;font-size:9px;letter-spacing:1px;
+  background:rgba(255,60,60,0.1);border:1px solid rgba(255,60,60,0.2);
+  color:#f44;cursor:pointer;border-radius:3px;transition:all .2s;
+}
+#ollamaHeader .close-btn:hover{background:rgba(255,60,60,0.2)}
+#ollamaBody{padding:16px;max-height:60vh;overflow-y:auto}
+#ollamaBody .status-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.08);
+  border-radius:4px;margin-bottom:12px;
+}
+#ollamaBody .status-info{display:flex;align-items:center;gap:8px}
+#ollamaBody .status-dot{width:8px;height:8px;border-radius:50%}
+#ollamaBody .status-dot.online{background:#0f6;box-shadow:0 0 6px #0f6}
+#ollamaBody .status-dot.offline{background:#f44;box-shadow:0 0 6px #f44}
+#ollamaBody .status-text{font-size:10px;color:var(--glow)}
+#ollamaBody .status-host{font-size:8px;color:var(--text2)}
+#ollamaBody .action-btns{display:flex;gap:6px}
+#ollamaBody .action-btn{
+  padding:5px 12px;font-size:9px;letter-spacing:1px;cursor:pointer;
+  border-radius:3px;transition:all .2s;border:1px solid;
+}
+#ollamaBody .action-btn.start{background:rgba(0,255,100,0.1);border-color:rgba(0,255,100,0.3);color:#0f6}
+#ollamaBody .action-btn.start:hover{background:rgba(0,255,100,0.2)}
+#ollamaBody .action-btn.stop{background:rgba(255,60,60,0.1);border-color:rgba(255,60,60,0.3);color:#f44}
+#ollamaBody .action-btn.stop:hover{background:rgba(255,60,60,0.2)}
+#ollamaBody .section-title{font-size:8px;letter-spacing:2px;color:var(--text2);margin:12px 0 8px;text-transform:uppercase}
+#ollamaBody .model-list{display:flex;flex-direction:column;gap:4px}
+#ollamaBody .model-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.08);
+  border-radius:4px;cursor:pointer;transition:all .2s;
+}
+#ollamaBody .model-item:hover{border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.03)}
+#ollamaBody .model-item.active{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.08)}
+#ollamaBody .model-name{font-size:10px;color:var(--glow)}
+#ollamaBody .model-size{font-size:8px;color:var(--text2)}
+#ollamaBody .model-actions{display:flex;gap:4px}
+#ollamaBody .model-btn{
+  padding:3px 8px;font-size:8px;letter-spacing:1px;cursor:pointer;
+  border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.05);
+  color:var(--glow);border-radius:2px;transition:all .2s;
+}
+#ollamaBody .model-btn:hover{background:rgba(0,229,255,0.12)}
+#ollamaBody .model-btn.use{border-color:rgba(0,255,100,0.3);color:#0f6}
+#ollamaBody .model-btn.delete{border-color:rgba(255,60,60,0.3);color:#f44}
+#ollamaBody .pull-section{
+  margin-top:12px;padding:10px;background:rgba(0,0,0,0.3);
+  border:1px solid rgba(0,229,255,0.08);border-radius:4px;
+}
+#ollamaBody .pull-row{display:flex;gap:6px;align-items:center}
+#ollamaBody .pull-input{
+  flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:6px 10px;font-size:10px;font-family:inherit;outline:none;
+}
+#ollamaBody .pull-input:focus{border-color:rgba(0,229,255,0.25)}
+#ollamaBody .pull-btn{
+  padding:6px 14px;font-size:9px;letter-spacing:1px;cursor:pointer;
+  background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.3);
+  color:var(--glow2);border-radius:3px;transition:all .2s;white-space:nowrap;
+}
+#ollamaBody .pull-btn:hover{background:rgba(124,77,255,0.2)}
+#ollamaBody .pull-btn:disabled{opacity:0.4;cursor:not-allowed}
+#ollamaBody .pull-status{margin-top:8px;font-size:9px;color:var(--text2);min-height:14px}
+#ollamaBody .loading{color:var(--glow);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
 /* Config Modal */
 #configModal{
@@ -181,9 +373,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 <body>
 <div id="app">
   <div id="topBar">
-    <button class="config-btn" onclick="if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}" style="margin-right:8px">&#9664; MENU</button>
+    <button class="config-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}" style="margin-right:8px">&#9664; PORTAL</button>
     <div class="logo"><span>Z</span>IO SERVER</div>
-    <div class="server-info">v3.7.0 — Remote Inference</div>
+    <div class="server-info">v5.0.0 — AI Copilot</div>
     <div class="conn-status" id="connStatus">CONNECTING...</div>
     <button class="config-btn" id="openConfig">CONFIG</button>
   </div>
@@ -196,7 +388,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       </div>
       <div class="section">
         <div class="section-title">MODEL</div>
-        <select class="model-select" id="modelSelect"><option>zicore_native</option></select>
+        <div class="model-row">
+          <select class="model-select" id="modelSelect"><option>zicore_native</option></select>
+        </div>
+        <div class="ollama-status" id="ollamaStatus">
+          <div class="dot offline" id="ollamaDot"></div>
+          <span id="ollamaStatusText">Checking...</span>
+        </div>
+        <div class="ollama-btn" id="openOllama">
+          <span>&#9881;</span> Ollama Settings
+        </div>
       </div>
       <div class="section">
         <div class="section-title">PARAMETERS</div>
@@ -226,6 +427,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         </div>
         <div class="provider-item" id="btnExportChat">
           <div class="provider-dot disabled"></div>Export Chat
+        </div>
+        <div class="provider-item" id="btnImportChat">
+          <div class="provider-dot disabled"></div>Import Chat
         </div>
       </div>
     </div>
@@ -260,6 +464,42 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   </div>
 </div>
 
+<div id="ollamaModal">
+  <div id="ollamaContent">
+    <div id="ollamaHeader">
+      <span class="title">&#9881; OLLAMA SETTINGS</span>
+      <button class="close-btn" id="closeOllama">CLOSE</button>
+    </div>
+    <div id="ollamaBody">
+      <div class="status-row">
+        <div class="status-info">
+          <div class="status-dot offline" id="ollamaModalDot"></div>
+          <div>
+            <div class="status-text" id="ollamaModalStatus">Checking...</div>
+            <div class="status-host" id="ollamaModalHost">127.0.0.1:11434</div>
+          </div>
+        </div>
+        <div class="action-btns">
+          <button class="action-btn start" id="ollamaStartBtn">START</button>
+          <button class="action-btn stop" id="ollamaStopBtn" style="display:none">STOP</button>
+        </div>
+      </div>
+      <div class="section-title">INSTALLED MODELS</div>
+      <div class="model-list" id="ollamaModelList">
+        <div style="font-size:9px;color:var(--text2)">Loading...</div>
+      </div>
+      <div class="pull-section">
+        <div class="section-title">PULL NEW MODEL</div>
+        <div class="pull-row">
+          <input class="pull-input" id="pullModelInput" placeholder="e.g. llama3.1:8b, mistral, gemma3:2b">
+          <button class="pull-btn" id="pullModelBtn">PULL</button>
+        </div>
+        <div class="pull-status" id="pullStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="configModal">
   <div id="configContent">
     <div class="cfg-header">
@@ -270,12 +510,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   </div>
 </div>
 
+<div id="meshModal">
+  <div id="meshModalInner">
+    <div id="meshModalHeader">
+      <span id="meshModalTitle">3D VIEWER</span>
+      <button id="meshModalClose">CLOSE</button>
+    </div>
+    <canvas id="meshModalCanvas"></canvas>
+    <div id="meshModalFooter">
+      <div class="mesh-info" id="meshModalInfo">Loading...</div>
+      <div class="mesh-actions">
+        <button class="mesh-btn" id="meshModalDownload">DOWNLOAD</button>
+        <button class="mesh-btn accent" id="meshModalExportSTL">EXPORT STL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   var ws=null;
   var config={providers:{},zio_engine:{},theme:'midnight'};
   var activeProvider='zicore_native';
   var msgCount=0;
+  var sessionId=localStorage.getItem('zio_session_id');
+  if(!sessionId){sessionId='zio_'+Date.now()+'_'+Math.random().toString(36).substr(2,8);localStorage.setItem('zio_session_id',sessionId);}
   var providers=[
     {id:'zicore_native',name:'ZICORE Native',color:'#0ff'},
     {id:'openrouter',name:'OpenRouter',color:'#f0f'},
@@ -295,6 +554,39 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     setupInput();
     setupButtons();
     setupSliders();
+    setupGenPanel();
+    loadChatHistory();
+  }
+
+  function setupGenPanel(){
+    document.getElementById('genBtn').addEventListener('click',function(){
+      var type=document.getElementById('genTypeSelect').value;
+      var prompt=document.getElementById('genPromptInput').value.trim();
+      if(!prompt)return;
+      if(ws&&ws.readyState===WebSocket.OPEN){
+        ws.send(JSON.stringify({command:'generate',payload:{type:type,prompt:prompt}}));
+        addMsg('user','[GEN '+type.toUpperCase()+'] '+prompt);
+      }
+    });
+  }
+  function speakText(text){
+    if(!window.speechSynthesis){return;}
+    var utter=new SpeechSynthesisUtterance(text);
+    utter.rate=1.0;utter.pitch=1.0;
+    var voices=speechSynthesis.getVoices();
+    if(voices.length>0)utter.voice=voices[0];
+    speechSynthesis.speak(utter);
+  }
+  function startListening(callback){
+    var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SpeechRecognition){alert('Speech recognition not supported in this browser');return;}
+    var recognition=new SpeechRecognition();
+    recognition.continuous=false;recognition.interimResults=false;recognition.lang='en-US';
+    recognition.onresult=function(event){
+      var text=event.results[0][0].transcript;
+      callback(text);
+    };
+    recognition.start();
   }
 
   function renderProviders(){
@@ -318,28 +610,130 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     });
   }
 
+  function loadOllamaStatus(){
+    fetch('/api/ollama/status').then(function(r){return r.json();}).then(function(d){
+      var dot=document.getElementById('ollamaModalDot');
+      var status=document.getElementById('ollamaModalStatus');
+      var host=document.getElementById('ollamaModalHost');
+      var startBtn=document.getElementById('ollamaStartBtn');
+      var stopBtn=document.getElementById('ollamaStopBtn');
+      var sidebarDot=document.getElementById('ollamaDot');
+      var sidebarText=document.getElementById('ollamaStatusText');
+      host.textContent=d.host||'127.0.0.1:11434';
+      if(d.status==='online'){
+        dot.className='status-dot online';
+        status.textContent='ONLINE';
+        startBtn.style.display='none';
+        stopBtn.style.display='inline-block';
+        stopBtn.textContent='STOP';
+        stopBtn.disabled=false;
+        sidebarDot.className='dot online';
+        sidebarText.textContent='Online ('+d.models.length+' models)';
+      }else{
+        dot.className='status-dot offline';
+        status.textContent='OFFLINE';
+        startBtn.style.display='inline-block';
+        startBtn.textContent='START';
+        startBtn.disabled=false;
+        stopBtn.style.display='none';
+        sidebarDot.className='dot offline';
+        sidebarText.textContent='Offline';
+      }
+      loadOllamaModels();
+    }).catch(function(){
+      document.getElementById('ollamaModalDot').className='status-dot offline';
+      document.getElementById('ollamaModalStatus').textContent='Error';
+      document.getElementById('ollamaDot').className='dot offline';
+      document.getElementById('ollamaStatusText').textContent='Error';
+    });
+  }
+
+  function loadOllamaModels(){
+    var list=document.getElementById('ollamaModelList');
+    list.innerHTML='<div style="font-size:9px;color:var(--text2)" class="loading">Loading models...</div>';
+    fetch('/api/ollama/status').then(function(r){return r.json();}).then(function(d){
+      var models=d.models||[];
+      if(models.length===0){
+        list.innerHTML='<div style="font-size:9px;color:var(--text2)">No models installed. Pull a model below.</div>';
+        return;
+      }
+      var html='';
+      models.forEach(function(m){
+        var isActive=m===(config.providers&&config.providers.ollama&&config.providers.ollama.default_model);
+        html+='<div class="model-item'+(isActive?' active':'')+'" data-model="'+m+'">';
+        html+='<div><div class="model-name">'+m+'</div></div>';
+        html+='<div class="model-actions">';
+        html+='<button class="model-btn use" onclick="useOllamaModel(\''+m+'\')">USE</button>';
+        html+='</div></div>';
+      });
+      list.innerHTML=html;
+      updateModelSelect();
+    }).catch(function(){
+      list.innerHTML='<div style="font-size:9px;color:#f44">Error loading models</div>';
+    });
+  }
+
+  function useOllamaModel(model){
+    if(!config.providers)config.providers={};
+    if(!config.providers.ollama)config.providers.ollama={};
+    config.providers.ollama.default_model=model;
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine.active_provider='ollama';
+    config.zio_engine.active_model=model;
+    activeProvider='ollama';
+    fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
+    .then(function(){
+      renderProviders();
+      updateModelSelect();
+      loadOllamaModels();
+      addMsg('system','Switched to Ollama model: '+model);
+    });
+  }
+
   function updateModelSelect(){
     var ms=document.getElementById('modelSelect');
-    var models=[];
+    ms.innerHTML='<option>Loading models...</option>';
     if(activeProvider==='zicore_native'){
-      models=['zicore_native'];
-    }else if(config.providers[activeProvider]&&config.providers[activeProvider].enabled){
-      models=config.providers[activeProvider].models||[];
+      ms.innerHTML='<option>zicore_native</option>';
+      document.getElementById('footerModel').textContent='zicore_native';
+      return;
     }
-    ms.innerHTML='';
-    if(models.length===0){
-      var o=document.createElement('option');
-      o.value='';o.textContent='No models available';
-      ms.appendChild(o);
+    var provCfg=config.providers[activeProvider];
+    if(!provCfg||!provCfg.enabled){
+      ms.innerHTML='<option>Provider not enabled</option>';
       document.getElementById('footerModel').textContent='none';
       return;
     }
-    models.forEach(function(m){
-      var o=document.createElement('option');
-      o.value=m;o.textContent=m;
-      ms.appendChild(o);
+    fetch('/api/provider/models/'+activeProvider)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var models=d.models||[];
+      if(models.length===0){
+        models=provCfg.models||[];
+      }
+      ms.innerHTML='';
+      if(models.length===0){
+        ms.innerHTML='<option>No models available</option>';
+        document.getElementById('footerModel').textContent='none';
+        return;
+      }
+      models.forEach(function(m){
+        var o=document.createElement('option');
+        o.value=m;o.textContent=m;
+        ms.appendChild(o);
+      });
+      document.getElementById('footerModel').textContent=models[0]||activeProvider;
+    })
+    .catch(function(){
+      var models=provCfg.models||[];
+      ms.innerHTML='';
+      models.forEach(function(m){
+        var o=document.createElement('option');
+        o.value=m;o.textContent=m;
+        ms.appendChild(o);
+      });
+      document.getElementById('footerModel').textContent=models[0]||activeProvider;
     });
-    document.getElementById('footerModel').textContent=models[0]||activeProvider;
   }
 
   function loadConfig(){
@@ -413,13 +807,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       }
       addMsg('zio','Generated: '+(r.filename||r.file||'done'));
     }else if(data.type==='stream_start'){
-      var el=addMsg('zio','','streaming');
+      var el=addMsg('zio','');
     }else if(data.type==='stream_chunk'){
       var last=document.querySelector('.msg.zio:last-child .bubble');
-      if(last)last.textContent+=data.content||'';
+      if(last)last.textContent+=data.chunk||'';
       scrollChat();
     }else if(data.type==='stream_end'){
-      addMsg('meta','intent='+data.intent+' latency='+data.latency_ms+'ms');
+      var last=document.querySelector('.msg.zio:last-child');
+      if(last&&data.intent){
+        var metaEl=document.createElement('div');
+        metaEl.className='meta';
+        metaEl.textContent='intent='+data.intent+(data.latency_ms?' latency='+data.latency_ms+'ms':'');
+        last.appendChild(metaEl);
+      }
     }else if(data.type==='error'){
       addMsg('error',data.message);
     }else if(data.type==='config'){
@@ -454,6 +854,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function loadChatHistory(){
+    fetch('/api/knowledge/conversations?limit=50&session_id='+encodeURIComponent(sessionId))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var convs=data.conversations||data;
+        if(!Array.isArray(convs)||convs.length===0)return;
+        var m=document.getElementById('messages');
+        m.innerHTML='';
+        msgCount=0;
+        for(var i=0;i<convs.length;i++){
+          var c=convs[i];
+          addMsg(c.role==='user'?'user':'zio',c.content,c.intent||'',c.latency_ms||0);
+        }
+      })
+      .catch(function(){});
+  }
+
   function sendMsg(){
     var inp=document.getElementById('chatInput');
     var msg=inp.value.trim();
@@ -462,7 +879,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     inp.style.height='36px';
     addMsg('user',msg);
     if(ws&&ws.readyState===WebSocket.OPEN){
-      ws.send(JSON.stringify({command:'stream',payload:{message:msg,module:activeProvider}}));
+      ws.send(JSON.stringify({command:'stream',payload:{message:msg,module:activeProvider,session_id:sessionId}}));
     }else{
       addMsg('error','Not connected to server');
     }
@@ -482,6 +899,53 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   }
 
   function setupButtons(){
+    document.getElementById('openOllama').addEventListener('click',function(){
+      document.getElementById('ollamaModal').classList.add('active');
+      loadOllamaStatus();
+    });
+    document.getElementById('closeOllama').addEventListener('click',function(){
+      document.getElementById('ollamaModal').classList.remove('active');
+    });
+    document.getElementById('ollamaModal').addEventListener('click',function(e){
+      if(e.target===this)this.classList.remove('active');
+    });
+    document.getElementById('ollamaStartBtn').addEventListener('click',function(){
+      this.textContent='STARTING...';
+      this.disabled=true;
+      fetch('/api/ollama/start',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+        loadOllamaStatus();
+      });
+    });
+    document.getElementById('ollamaStopBtn').addEventListener('click',function(){
+      this.textContent='STOPPING...';
+      this.disabled=true;
+      fetch('/api/ollama/stop',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+        loadOllamaStatus();
+      });
+    });
+    document.getElementById('pullModelBtn').addEventListener('click',function(){
+      var model=document.getElementById('pullModelInput').value.trim();
+      if(!model)return;
+      this.textContent='PULLING...';
+      this.disabled=true;
+      document.getElementById('pullStatus').innerHTML='<span class="loading">Downloading '+model+'...</span>';
+      var self=this;
+      fetch('/api/ollama/pull',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model})})
+      .then(function(r){return r.json();}).then(function(d){
+        self.textContent='PULL';
+        self.disabled=false;
+        if(d.status==='ok'){
+          document.getElementById('pullStatus').innerHTML='<span style="color:#0f6">'+model+' pulled successfully</span>';
+          loadOllamaModels();
+        }else{
+          document.getElementById('pullStatus').innerHTML='<span style="color:#f44">Error: '+(d.error||'Unknown error')+'</span>';
+        }
+      }).catch(function(e){
+        self.textContent='PULL';
+        self.disabled=false;
+        document.getElementById('pullStatus').innerHTML='<span style="color:#f44">Network error</span>';
+      });
+    });
     document.getElementById('openConfig').addEventListener('click',function(){
       document.getElementById('configModal').classList.add('active');
       renderConfig();
@@ -490,6 +954,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       document.getElementById('configModal').classList.remove('active');
     });
     document.getElementById('configModal').addEventListener('click',function(e){
+      if(e.target===this)this.classList.remove('active');
+    });
+    document.getElementById('meshModalClose').addEventListener('click',function(){
+      document.getElementById('meshModal').classList.remove('active');
+    });
+    document.getElementById('meshModal').addEventListener('click',function(e){
       if(e.target===this)this.classList.remove('active');
     });
     document.getElementById('btnToggleGen').addEventListener('click',function(){
@@ -507,14 +977,46 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       a.download='zio_chat_'+Date.now()+'.txt';
       a.click();
     });
-    document.getElementById('genBtn').addEventListener('click',function(){
-      var type=document.getElementById('genTypeSelect').value;
-      var prompt=document.getElementById('genPromptInput').value.trim();
-      if(!prompt)return;
-      if(ws&&ws.readyState===WebSocket.OPEN){
-        ws.send(JSON.stringify({command:'generate',payload:{type:type,prompt:prompt}}));
-        addMsg('user','[GEN '+type.toUpperCase()+'] '+prompt);
+    document.getElementById('btnImportChat').addEventListener('click',function(){
+      document.getElementById('importModal').style.display='flex';
+      document.getElementById('importResult').textContent='';
+      document.getElementById('importFileLabel').textContent='';
+      document.getElementById('importUploadBtn').disabled=true;
+      document.getElementById('importFileInput').value='';
+    });
+    document.getElementById('importSelectBtn').addEventListener('click',function(){
+      document.getElementById('importFileInput').click();
+    });
+    document.getElementById('importFileInput').addEventListener('change',function(){
+      var f=this.files[0];
+      if(f){
+        document.getElementById('importFileLabel').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+        document.getElementById('importUploadBtn').disabled=false;
       }
+    });
+    document.getElementById('importUploadBtn').addEventListener('click',function(){
+      var file=document.getElementById('importFileInput').files[0];
+      if(!file)return;
+      var source=document.getElementById('importSource').value;
+      var session=document.getElementById('importSessionName').value||'imported';
+      var fd=new FormData();
+      fd.append('file',file);
+      if(source)fd.append('source',source);
+      fd.append('session_prefix',session);
+      document.getElementById('importResult').textContent='Uploading...';
+      document.getElementById('importUploadBtn').disabled=true;
+      fetch('/api/zio/import',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+        if(d.status==='ok'){
+          document.getElementById('importResult').innerHTML='<span style="color:#00e5ff">Imported '+d.imported+' messages from '+d.source+' ('+d.filename+')</span>';
+          addMsg('system','Imported '+d.imported+' messages from '+d.source+'. Session: '+session+'_'+d.source);
+        }else{
+          document.getElementById('importResult').innerHTML='<span style="color:#ff5555">Error: '+(d.error||'unknown')+'</span>';
+        }
+        document.getElementById('importUploadBtn').disabled=false;
+      }).catch(function(e){
+        document.getElementById('importResult').innerHTML='<span style="color:#ff5555">Upload failed: '+e.message+'</span>';
+        document.getElementById('importUploadBtn').disabled=false;
+      });
     });
   }
 
@@ -554,11 +1056,124 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       oc.innerHTML='<video controls src="/output/'+filename+'"></video>';
     }else if(['wav','mp3'].indexOf(ext)>=0){
       oc.innerHTML='<audio controls src="/output/'+filename+'"></audio>';
-    }else if(['stl','obj'].indexOf(ext)>=0){
-      oc.innerHTML='<div style="padding:20px;color:#0cc">3D Model: '+filename+'</div>';
+    }else if(['stl','obj','ply'].indexOf(ext)>=0){
+      oc.innerHTML='<div class="mesh-preview">'
+        +'<canvas id="inlineMeshCanvas" width="280" height="200"></canvas>'
+        +'<div style="font-size:9px;color:var(--glow)">'+filename+'</div>'
+        +'<div class="mesh-actions">'
+        +'<button class="mesh-btn" onclick="downloadMesh(\''+filename+'\')">DOWNLOAD</button>'
+        +'<button class="mesh-btn accent" onclick="openMeshFull(\''+filename+'\')">ENLARGE</button>'
+        +'</div></div>';
+      setTimeout(function(){renderInlineMesh('inlineMeshCanvas','/output/'+filename,ext);},100);
     }else{
       oc.innerHTML='<div style="padding:10px;color:#889">'+filename+'</div>';
     }
+  }
+
+  function renderInlineMesh(canvasId,url,ext){
+    var canvas=document.getElementById(canvasId);
+    if(!canvas||typeof THREE==='undefined')return;
+    try{
+      var scene=new THREE.Scene();
+      scene.background=new THREE.Color(0x0a0e18);
+      var camera=new THREE.PerspectiveCamera(50,canvas.width/canvas.height,0.1,1000);
+      camera.position.set(2,1.5,2);camera.lookAt(0,0,0);
+      var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+      renderer.setSize(canvas.width,canvas.height);
+      scene.add(new THREE.AmbientLight(0x404040,0.5));
+      var dir=new THREE.DirectionalLight(0xffffff,0.8);dir.position.set(5,5,5);scene.add(dir);
+      var point=new THREE.PointLight(0x00e5ff,0.4);point.position.set(-3,2,-3);scene.add(point);
+      scene.add(new THREE.GridHelper(4,8,0x1a2a3a,0x0d1520));
+      var loader=new THREE.STLLoader();
+      loader.load(url,function(geo){
+        geo.computeVertexNormals();
+        var mat=new THREE.MeshPhongMaterial({color:0x00e5ff,wireframe:false,transparent:true,opacity:0.85,side:THREE.DoubleSide});
+        var mesh=new THREE.Mesh(geo,mat);
+        var box=new THREE.Box3().setFromObject(mesh);
+        var center=box.getCenter(new THREE.Vector3());
+        mesh.position.sub(center);
+        var size=box.getSize(new THREE.Vector3());
+        var maxDim=Math.max(size.x,size.y,size.z);
+        if(maxDim>0)mesh.scale.multiplyScalar(2/maxDim);
+        scene.add(mesh);
+        var edges=new THREE.EdgesGeometry(geo);
+        var line=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:0x7c4dff,transparent:true,opacity:0.3}));
+        line.position.copy(mesh.position);line.scale.copy(mesh.scale);scene.add(line);
+        function anim(){requestAnimationFrame(anim);mesh.rotation.y+=0.008;line.rotation.y=mesh.rotation.y;renderer.render(scene,camera);}
+        anim();
+      });
+    }catch(e){}
+  }
+
+  function downloadMesh(filename){
+    var a=document.createElement('a');
+    a.href='/output/'+filename;a.download=filename;a.click();
+  }
+
+  function openMeshFull(filename){
+    var modal=document.getElementById('meshModal');
+    modal.classList.add('active');
+    document.getElementById('meshModalTitle').textContent='3D VIEWER — '+filename;
+    document.getElementById('meshModalInfo').textContent=filename;
+    document.getElementById('meshModalDownload').onclick=function(){downloadMesh(filename);};
+    var canvas=document.getElementById('meshModalCanvas');
+    var rect=canvas.parentElement.getBoundingClientRect();
+    canvas.width=rect.width||700;canvas.height=(rect.height-80)||400;
+    var ext=filename.split('.').pop().toLowerCase();
+    setTimeout(function(){renderFullMesh(canvas,'/output/'+filename,ext);},200);
+  }
+
+  function renderFullMesh(canvas,url,ext){
+    if(typeof THREE==='undefined')return;
+    try{
+      var scene=new THREE.Scene();
+      scene.background=new THREE.Color(0x060a12);
+      var camera=new THREE.PerspectiveCamera(50,canvas.width/canvas.height,0.1,2000);
+      camera.position.set(3,2,3);camera.lookAt(0,0,0);
+      var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+      renderer.setSize(canvas.width,canvas.height);
+      scene.add(new THREE.AmbientLight(0x404040,0.6));
+      var dir=new THREE.DirectionalLight(0xffffff,0.9);dir.position.set(5,5,5);scene.add(dir);
+      var point=new THREE.PointLight(0x00e5ff,0.5);point.position.set(-4,3,-4);scene.add(point);
+      var point2=new THREE.PointLight(0x7c4dff,0.3);point2.position.set(4,-2,4);scene.add(point2);
+      scene.add(new THREE.GridHelper(6,12,0x1a2a3a,0x0d1520));
+      var loader=new THREE.STLLoader();
+      loader.load(url,function(geo){
+        geo.computeVertexNormals();
+        var mat=new THREE.MeshPhongMaterial({color:0x00e5ff,specular:0x111111,shininess:80,wireframe:false,transparent:true,opacity:0.88,side:THREE.DoubleSide});
+        var mesh=new THREE.Mesh(geo,mat);
+        var box=new THREE.Box3().setFromObject(mesh);
+        var center=box.getCenter(new THREE.Vector3());
+        mesh.position.sub(center);
+        var size=box.getSize(new THREE.Vector3());
+        var maxDim=Math.max(size.x,size.y,size.z);
+        if(maxDim>0)mesh.scale.multiplyScalar(3/maxDim);
+        scene.add(mesh);
+        var edges=new THREE.EdgesGeometry(geo);
+        var line=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:0x7c4dff,transparent:true,opacity:0.25}));
+        line.position.copy(mesh.position);line.scale.copy(mesh.scale);scene.add(line);
+        document.getElementById('meshModalInfo').textContent=filename+' — '+geo.attributes.position.count+' vertices';
+        var isDragging=false,prevMouse={x:0,y:0};
+        canvas.addEventListener('mousedown',function(e){isDragging=true;prevMouse={x:e.clientX,y:e.clientY};});
+        canvas.addEventListener('mousemove',function(e){
+          if(!isDragging)return;
+          var dx=e.clientX-prevMouse.x;var dy=e.clientY-prevMouse.y;
+          mesh.rotation.y+=dx*0.01;mesh.rotation.x+=dy*0.01;
+          line.rotation.y=mesh.rotation.y;line.rotation.x=mesh.rotation.x;
+          prevMouse={x:e.clientX,y:e.clientY};
+        });
+        canvas.addEventListener('mouseup',function(){isDragging=false;});
+        canvas.addEventListener('mouseleave',function(){isDragging=false;});
+        canvas.addEventListener('wheel',function(e){
+          e.preventDefault();
+          var z=camera.position.length();
+          z+=e.deltaY*0.01;z=Math.max(2,Math.min(20,z));
+          camera.position.normalize().multiplyScalar(z);
+        });
+        function anim(){requestAnimationFrame(anim);if(!isDragging){mesh.rotation.y+=0.005;line.rotation.y=mesh.rotation.y;line.rotation.x=mesh.rotation.x;}renderer.render(scene,camera);}
+        anim();
+      });
+    }catch(e){}
   }
 
   function renderConfig(){
@@ -624,5 +1239,39 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   init();
 })();
 </script>
+
+<input type="file" id="importFileInput" accept=".json,.jsonl,.txt,.csv" style="display:none">
+
+<div id="importModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:24px;max-width:420px;width:90%;color:#e0e0e0;font-family:monospace;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="color:#00e5ff;font-size:14px;font-weight:bold;">IMPORT CHAT HISTORY</span>
+      <button onclick="document.getElementById('importModal').style.display='none'" style="background:none;border:none;color:#ff5555;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="color:#888;font-size:11px;">SOURCE</label>
+      <select id="importSource" style="width:100%;background:#161b22;border:1px solid #30363d;color:#e0e0e0;padding:8px;border-radius:6px;margin-top:4px;">
+        <option value="">Auto-detect</option>
+        <option value="chatgpt">ChatGPT</option>
+        <option value="grok">Grok (xAI)</option>
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="generic">Generic (JSON/JSONL/TXT)</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="color:#888;font-size:11px;">SESSION NAME</label>
+      <input id="importSessionName" placeholder="e.g. chatgpt_backup" style="width:100%;background:#161b22;border:1px solid #30363d;color:#e0e0e0;padding:8px;border-radius:6px;margin-top:4px;">
+    </div>
+    <div id="importFileLabel" style="color:#58a6ff;font-size:12px;margin-bottom:12px;min-height:18px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="importSelectBtn" style="flex:1;background:#21262d;border:1px solid #30363d;color:#e0e0e0;padding:10px;border-radius:6px;cursor:pointer;">SELECT FILE</button>
+      <button id="importUploadBtn" style="flex:1;background:#00e5ff;border:none;color:#000;padding:10px;border-radius:6px;cursor:pointer;font-weight:bold;" disabled>UPLOAD</button>
+    </div>
+    <div id="importResult" style="margin-top:12px;color:#888;font-size:12px;min-height:18px;"></div>
+  </div>
+</div>
+
 </body>
 </html>

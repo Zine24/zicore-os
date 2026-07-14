@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Space Invaders</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'Courier New',monospace;color:#fff;overflow:hidden}
+canvas{border:2px solid #1a1a2e}
+#hud{display:flex;gap:30px;margin-bottom:10px;font-size:14px;letter-spacing:2px}
+#hud .score{color:#00e5ff}
+#hud .lives{color:#ff1744}
+#hud .wave{color:#ffeb3b}
+#startScreen{position:absolute;text-align:center;z-index:10}
+#startScreen h1{font-size:32px;color:#00e5ff;text-shadow:0 0 20px #00e5ff;margin-bottom:20px}
+#startScreen p{color:#aaa;font-size:12px;margin:5px 0}
+#startScreen .key{color:#00e5ff;font-weight:bold}
+#gameOver{position:absolute;text-align:center;z-index:10;display:none}
+#gameOver h1{font-size:36px;color:#ff1744;text-shadow:0 0 20px #ff1744;margin-bottom:10px}
+#gameOver .final{font-size:18px;color:#00e5ff;margin:10px 0}
+</style>
+</head>
+<body>
+<div id="startScreen">
+<h1>SPACE INVADERS</h1>
+<p><span class="key">A/D</span> or <span class="key">LEFT/RIGHT</span> to move</p>
+<p><span class="key">SPACE</span> to shoot</p>
+<p style="margin-top:20px;color:#00e5ff">Press ENTER to start</p>
+</div>
+<div id="gameOver">
+<h1>GAME OVER</h1>
+<div class="final" id="finalScore">Score: 0</div>
+<p>Press ENTER to restart</p>
+</div>
+<div id="hud"><div class="score">SCORE: <span id="score">0</span></div><div class="lives">LIVES: <span id="lives">3</span></div><div class="wave">WAVE: <span id="wave">1</span></div></div>
+<canvas id="game" width="480" height="400"></canvas>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=480,H=400;
+let score=0,lives=3,wave=1,gameState='start';
+let ship,aliens,bullets,alienBullets,alienDir;
+
+function initGame(){
+ship={x:W/2,y:H-40,w:30,dir:0,speed:4};
+aliens=[];alienDir=1;
+for(let r=0;r<4;r++)for(let c=0;c<8;c++){
+aliens.push({x:60+c*45,y:40+r*35,w:24,h:20,alive:true,dir:1,speed:0.3+r*0.05});
+}
+bullets=[];alienBullets=[];
+}
+
+function drawShip(){
+ctx.fillStyle='#00e5ff';
+ctx.beginPath();
+ctx.moveTo(ship.x,ship.y-15);
+ctx.lineTo(ship.x-15,ship.y+10);
+ctx.lineTo(ship.x-5,ship.y+5);
+ctx.lineTo(ship.x+5,ship.y+5);
+ctx.lineTo(ship.x+15,ship.y+10);
+ctx.closePath();
+ctx.fill();
+// Engine glow
+ctx.fillStyle='rgba(0,229,255,0.3)';
+ctx.beginPath();ctx.arc(ship.x,ship.y+12,6,0,Math.PI*2);ctx.fill();
+}
+
+function drawAliens(){
+aliens.forEach(a=>{
+if(!a.alive)return;
+let colors=['#ff1744','#ff9100','#ffeb3b','#76ff03'];
+let c=colors[Math.floor(a.y/35)%4];
+ctx.fillStyle=c;
+ctx.fillRect(a.x-a.w/2,a.y-a.h/2,a.w,a.h);
+// Eyes
+ctx.fillStyle='#000';
+ctx.fillRect(a.x-5,a.y-3,3,3);
+ctx.fillRect(a.x+2,a.y-3,3,3);
+// Antenna
+ctx.fillStyle=c;
+ctx.fillRect(a.x-1,a.y-a.h/2-4,2,4);
+ctx.fillRect(a.x-4,a.y-a.h/2-6,2,2);
+ctx.fillRect(a.x+2,a.y-a.h/2-6,2,2);
+});
+}
+
+function drawBullets(){
+ctx.fillStyle='#ffeb3b';
+bullets.forEach(b=>{ctx.fillRect(b.x-1,b.y,2,8)});
+ctx.fillStyle='#ff1744';
+alienBullets.forEach(b=>{ctx.fillRect(b.x-1,b.y,2,8)});
+}
+
+function update(){
+if(gameState!=='playing')return;
+// Ship
+if(ship.dir!==0)ship.x+=ship.dir*ship.speed;
+ship.x=Math.max(15,Math.min(W-15,ship.x));
+// Bullets
+bullets=bullets.filter(b=>{b.y-=7;return b.y>-10});
+alienBullets=alienBullets.filter(b=>{b.y+=4;return b.y<H+10});
+// Aliens move
+let edge=false;
+aliens.forEach(a=>{if(a.alive){a.x+=a.dir*a.speed;if(a.x>W-20||a.x<20)edge=true}});
+if(edge){aliens.forEach(a=>{if(a.alive){a.dir*=-1;a.y+=15}})}
+// Alien shooting
+aliens.filter(a=>a.alive).forEach(a=>{
+if(Math.random()<0.005)alienBullets.push({x:a.x,y:a.y+10});
+});
+// Bullet-alien collision
+bullets.forEach(b=>{
+aliens.forEach(a=>{
+if(a.alive&&Math.abs(b.x-a.x)<a.w/2&&Math.abs(b.y-a.y)<a.h/2){
+a.alive=false;b.y=-100;score+=10;
+}
+});
+});
+// Alien bullet-ship collision
+alienBullets.forEach(b=>{
+if(Math.abs(b.x-ship.x)<12&&Math.abs(b.y-ship.y)<12){
+lives--;b.y=H+100;
+if(lives<=0){gameState='gameOver';document.getElementById('finalScore').textContent='Score: '+score;document.getElementById('gameOver').style.display='block'}
+}
+});
+// Alien reach bottom
+aliens.forEach(a=>{if(a.alive&&a.y>H-60){lives=0;gameState='gameOver';document.getElementById('finalScore').textContent='Score: '+score;document.getElementById('gameOver').style.display='block'}});
+// Wave complete
+if(aliens.filter(a=>a.alive).length===0){wave++;initGame()}
+}
+
+function draw(){
+ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+// Stars
+for(let i=0;i<30;i++){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fillRect((i*137)%W,(i*89+frame)%H,1,1)}
+drawShip();drawAliens();drawBullets();
+document.getElementById('score').textContent=score;
+document.getElementById('lives').textContent=lives;
+document.getElementById('wave').textContent=wave;
+}
+
+let frame=0;
+function gameLoop(){
+if(gameState!=='playing'){requestAnimationFrame(gameLoop);return}
+update();draw();frame++;
+requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown',e=>{
+if(gameState==='start'&&e.key==='Enter'){gameState='playing';document.getElementById('startScreen').style.display='none';initGame();gameLoop();return}
+if(gameState==='gameOver'&&e.key==='Enter'){gameState='playing';document.getElementById('gameOver').style.display='none';score=0;lives=3;wave=1;initGame();return}
+if(e.key==='ArrowLeft'||e.key==='a')ship.dir=-1;
+if(e.key==='ArrowRight'||e.key==='d')ship.dir=1;
+if(e.key===' '){bullets.push({x:ship.x,y:ship.y-15});e.preventDefault()}
+});
+document.addEventListener('keyup',e=>{
+if((e.key==='ArrowLeft'&&ship.dir===-1)||(e.key==='ArrowRight'&&ship.dir===1))ship.dir=0;
+if((e.key==='a'&&ship.dir===-1)||(e.key==='d'&&ship.dir===1))ship.dir=0;
+});
+</script>
+</body>
+</html>

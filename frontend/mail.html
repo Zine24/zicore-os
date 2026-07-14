@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Mail — Correo Electrónico</title>
+<meta name="description" content="ZICORE Mail — Servicio de correo electrónico del ecosistema ZICORE.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✉</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--bg4:#141a28;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;
+  --text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;
+  --border:rgba(0,229,255,0.06);
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+.grain{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
+
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{height:48px;flex-shrink:0;background:rgba(6,8,16,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;padding-right:16px;border-right:1px solid var(--border)}
+.topbar-icon{font-size:18px;color:var(--cyan)}
+.topbar-title{font-size:13px;font-weight:600;letter-spacing:3px;color:var(--cyan);text-transform:uppercase}
+.topbar-nav{display:flex;gap:4px;margin-left:16px}
+.topbar-tab{font-size:9px;letter-spacing:2px;color:var(--text-dim);padding:6px 12px;cursor:pointer;text-transform:uppercase;border:1px solid transparent;border-radius:3px;transition:all 0.3s;background:transparent;font-family:var(--font)}
+.topbar-tab:hover{color:var(--text);border-color:var(--border)}
+.topbar-tab.active{color:var(--cyan);border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.04)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.topbar-time{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--cyan)}
+.topbar-user{font-size:10px;color:var(--text-dim);padding:4px 10px;border:1px solid var(--border);border-radius:3px}
+.topbar-back{font-size:9px;letter-spacing:2px;color:var(--text-dim);padding:5px 12px;border:1px solid var(--border);border-radius:3px;cursor:pointer;text-decoration:none;text-transform:uppercase;transition:all 0.3s;background:transparent;font-family:var(--font)}
+.topbar-back:hover{color:var(--cyan);border-color:rgba(0,229,255,0.2)}
+
+/* ── MAIN ── */
+.main{flex:1;overflow:hidden;display:flex}
+
+/* ── SIDEBAR ── */
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
+.sidebar-section{padding:0 16px;margin-bottom:16px}
+.sidebar-label{font-size:8px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all 0.2s;font-size:12px;color:var(--text-dim)}
+.sidebar-item:hover{background:rgba(0,229,255,0.03);color:var(--text)}
+.sidebar-item.active{background:rgba(0,229,255,0.05);color:var(--cyan);border-left:2px solid var(--cyan)}
+.sidebar-item .count{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text-faint);background:rgba(0,229,255,0.06);padding:2px 6px;border-radius:8px}
+.sidebar-compose{margin:16px;padding:10px;background:linear-gradient(135deg,rgba(0,229,255,0.08),rgba(124,77,255,0.05));border:1px solid rgba(0,229,255,0.15);color:var(--cyan);font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;text-align:center;border-radius:4px;transition:all 0.3s;font-family:var(--font)}
+.sidebar-compose:hover{border-color:rgba(0,229,255,0.3);box-shadow:0 0 20px rgba(0,229,255,0.08)}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
+
+/* ── LOGIN ── */
+.login-view{flex:1;display:flex;align-items:center;justify-content:center;padding:40px}
+.login-box{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:40px 32px}
+.login-title{font-size:18px;font-weight:400;letter-spacing:4px;color:var(--text);text-align:center;margin-bottom:8px}
+.login-sub{font-size:11px;color:var(--text-dim);text-align:center;margin-bottom:32px}
+.login-field{margin-bottom:16px}
+.login-label{font-size:9px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px;display:block}
+.login-input{width:100%;font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:12px 14px;outline:none;transition:all 0.3s;border-radius:3px}
+.login-input:focus{border-color:rgba(0,229,255,0.2)}
+.login-btn{width:100%;font-family:var(--font);font-size:11px;letter-spacing:3px;padding:12px;background:linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,77,255,0.06));border:1px solid rgba(0,229,255,0.2);color:var(--cyan);cursor:pointer;text-transform:uppercase;transition:all 0.3s;border-radius:3px;margin-top:8px}
+.login-btn:hover{border-color:rgba(0,229,255,0.4);box-shadow:0 0 20px rgba(0,229,255,0.08)}
+.login-error{font-size:11px;color:var(--red);text-align:center;margin-top:12px;display:none}
+
+/* ── INBOX ── */
+.inbox-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.inbox-title{font-size:14px;font-weight:500;letter-spacing:2px}
+.inbox-actions{display:flex;gap:8px}
+.inbox-btn{font-family:var(--font);font-size:9px;letter-spacing:2px;padding:6px 12px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;text-transform:uppercase;border-radius:3px;transition:all 0.3s}
+.inbox-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.email-list{flex:1;overflow-y:auto}
+.email-item{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:all 0.2s}
+.email-item:hover{background:rgba(0,229,255,0.02)}
+.email-item.unread{border-left:2px solid var(--cyan)}
+.email-from{font-size:12px;font-weight:500;color:var(--text);width:180px;flex-shrink:0}
+.email-subject{font-size:12px;color:var(--text-dim);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.email-date{font-family:var(--mono);font-size:9px;color:var(--text-faint);flex-shrink:0}
+.email-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:13px}
+
+/* ── COMPOSE ── */
+.compose-view{flex:1;display:flex;flex-direction:column;padding:24px}
+.compose-from{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.compose-to{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.compose-label{font-size:9px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase;width:60px;flex-shrink:0}
+.compose-input{flex:1;font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:10px 14px;outline:none;border-radius:3px}
+.compose-input:focus{border-color:rgba(0,229,255,0.2)}
+.compose-input option{background:#0a0e18;color:var(--text);font-family:var(--font);padding:8px}
+.compose-subject{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.compose-body{flex:1;font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:16px;outline:none;resize:none;border-radius:3px;line-height:1.7}
+.compose-body:focus{border-color:rgba(0,229,255,0.2)}
+.compose-actions{display:flex;gap:12px;margin-top:16px;justify-content:flex-end}
+.compose-send{font-family:var(--font);font-size:11px;letter-spacing:3px;padding:10px 24px;background:linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,77,255,0.06));border:1px solid rgba(0,229,255,0.2);color:var(--cyan);cursor:pointer;text-transform:uppercase;border-radius:3px;transition:all 0.3s}
+.compose-send:hover{border-color:rgba(0,229,255,0.4);box-shadow:0 0 20px rgba(0,229,255,0.08)}
+.compose-draft{font-family:var(--font);font-size:11px;letter-spacing:3px;padding:10px 24px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;text-transform:uppercase;border-radius:3px;transition:all 0.3s}
+.compose-draft:hover{border-color:rgba(200,208,220,0.15);color:var(--text)}
+
+/* ── SETTINGS ── */
+.settings-view{padding:24px;overflow-y:auto}
+.settings-section{margin-bottom:32px}
+.settings-title{font-size:14px;font-weight:500;letter-spacing:2px;color:var(--text);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid rgba(0,229,255,0.03)}
+.settings-key{font-family:var(--mono);font-size:11px;color:var(--text-dim);width:140px;flex-shrink:0}
+.settings-val{font-size:12px;color:var(--text)}
+.settings-val a{color:var(--cyan);text-decoration:none}
+.settings-badge{display:inline-block;font-family:var(--mono);font-size:8px;letter-spacing:2px;padding:3px 8px;border-radius:2px;margin-left:8px}
+.settings-badge.on{color:var(--green);border:1px solid rgba(0,255,136,0.2);background:rgba(0,255,136,0.04)}
+.settings-badge.off{color:var(--red);border:1px solid rgba(255,68,68,0.2);background:rgba(255,68,68,0.04)}
+
+/* ── STATUSBAR ── */
+.statusbar{height:28px;flex-shrink:0;background:rgba(6,8,16,0.95);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--text-faint)}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)}
+.status-right{margin-left:auto;display:flex;gap:8px}
+.status-pill{padding:1px 6px;border:1px solid var(--border);border-radius:2px;font-size:7px}
+.status-pill.on{color:var(--cyan);border-color:rgba(0,229,255,0.15)}
+
+@media(max-width:700px){
+  .sidebar{display:none}
+  .topbar-nav{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a class="topbar-logo" href="/">
+      <span class="topbar-icon">✉</span>
+      <span class="topbar-title">ZICORE Mail</span>
+    </a>
+    <div class="topbar-nav">
+      <button class="topbar-tab active" onclick="showView('inbox')">Bandeja</button>
+      <button class="topbar-tab" onclick="showView('compose')">Redactar</button>
+      <button class="topbar-tab" onclick="showView('settings')">Configuración</button>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-time" id="clock"></div>
+      <div class="topbar-user" id="userEmail">admin@zinemotion.com</div>
+      <a class="topbar-back" href="/">Portal</a>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-compose" onclick="showView('compose')">✉ Redactar</div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Bandeja</div>
+        <div class="sidebar-item active" onclick="showView('inbox')">
+          <span>📥</span> Entrada <span class="count" id="inboxCount">0</span>
+        </div>
+        <div class="sidebar-item" onclick="showView('sent')">
+          <span>📤</span> Enviados
+        </div>
+        <div class="sidebar-item">
+          <span>📝</span> Borradores
+        </div>
+        <div class="sidebar-item">
+          <span>🗑️</span> Papelera
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Carpetas</div>
+        <div class="sidebar-item">
+          <span>📁</span> Importantes
+        </div>
+        <div class="sidebar-item">
+          <span>📁</span> Notificaciones
+        </div>
+      </div>
+      <div class="sidebar-section" style="margin-top:auto">
+        <div class="sidebar-label">Estado</div>
+        <div class="sidebar-item">
+          <span style="color:var(--green)">●</span> SMTP
+        </div>
+        <div class="sidebar-item">
+          <span style="color:var(--green)">●</span> IMAP
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content" id="content">
+
+      <!-- LOGIN VIEW -->
+      <div class="login-view" id="view-login">
+        <div class="login-box">
+          <div class="login-title">ZICORE Mail</div>
+          <div class="login-sub">Inicia sesión para acceder a tu correo</div>
+          <div class="login-field">
+            <label class="login-label">Correo</label>
+            <input class="login-input" type="email" id="loginEmail" placeholder="usuario@zinemotion.com">
+          </div>
+          <div class="login-field">
+            <label class="login-label">Contraseña</label>
+            <input class="login-input" type="password" id="loginPass" placeholder="••••••••">
+          </div>
+          <button class="login-btn" onclick="doLogin()">Iniciar Sesión</button>
+          <div class="login-error" id="loginError">Credenciales incorrectas</div>
+          <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text2)">
+            ¿No tienes cuenta? <a href="/mail/register" style="color:var(--glow);text-decoration:none;font-weight:600">Crear cuenta</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- INBOX VIEW -->
+      <div id="view-inbox" style="display:none;flex:1;flex-direction:column">
+        <div class="inbox-header">
+          <div class="inbox-title">📥 Bandeja de Entrada</div>
+          <div class="inbox-actions">
+            <button class="inbox-btn" onclick="loadInbox()">Actualizar</button>
+          </div>
+        </div>
+        <div class="email-list" id="emailList">
+          <div class="email-empty">Cargando emails...</div>
+        </div>
+      </div>
+
+      <!-- COMPOSE VIEW -->
+      <div class="compose-view" id="view-compose" style="display:none">
+        <div class="compose-from">
+          <span class="compose-label">De</span>
+          <select class="compose-input" id="composeFrom" style="cursor:pointer">
+            <option value="">Cargando cuentas...</option>
+          </select>
+        </div>
+        <div class="compose-to">
+          <span class="compose-label">Para</span>
+          <input class="compose-input" type="email" id="composeTo" placeholder="destinatario@zinemotion.com">
+        </div>
+        <div class="compose-subject">
+          <span class="compose-label">Asunto</span>
+          <input class="compose-input" type="text" id="composeSubject" placeholder="Asunto del mensaje">
+        </div>
+        <textarea class="compose-body" id="composeBody" placeholder="Escribe tu mensaje aquí..."></textarea>
+        <div class="compose-actions">
+          <button class="compose-draft">Guardar Borrador</button>
+          <button class="compose-send" onclick="sendEmail()">Enviar</button>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div class="settings-view" id="view-settings" style="display:none">
+        <div class="settings-section">
+          <div class="settings-title">Servidor de Correo</div>
+          <div class="settings-row">
+            <span class="settings-key">Dominio</span>
+            <span class="settings-val">zinemotion.com</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-key">SMTP</span>
+            <span class="settings-val">mail.zinemotion.com.mx:587 <span class="settings-badge on">ACTIVO</span></span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-key">IMAP</span>
+            <span class="settings-val">mail.zinemotion.com.mx:993 <span class="settings-badge on">ACTIVO</span></span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-key">Admin</span>
+            <span class="settings-val">admin@zinemotion.com</span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">Registros DNS</div>
+          <div class="settings-row">
+            <span class="settings-key">MX</span>
+            <span class="settings-val">mail.zinemotion.com.mx → zinemotion.com</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-key">SPF</span>
+            <span class="settings-val">v=spf1 mx a ~all <span class="settings-badge on">OK</span></span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-key">DKIM</span>
+            <span class="settings-val">zicore._domainkey.zinemotion.com <span class="settings-badge on">OK</span></span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-key">DMARC</span>
+            <span class="settings-val">_dmarc.zinemotion.com → p=quarantine</span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">Usuarios</div>
+          <div id="usersList">Cargando...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STATUSBAR -->
+  <div class="statusbar">
+    <div class="status-dot"></div>
+    <span>MAIL</span>
+    <span id="statusMail">Conectado</span>
+    <div class="status-right">
+      <div class="status-pill on">SMTP</div>
+      <div class="status-pill on">IMAP</div>
+      <div class="status-pill">TLS</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var logged=false, currentUser='';
+
+function showView(name){
+  document.querySelectorAll('[id^="view-"]').forEach(function(el){el.style.display='none'});
+  var v=document.getElementById('view-'+name);
+  if(v){v.style.display=name==='inbox'?'flex':'block'}
+  document.querySelectorAll('.topbar-tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.sidebar-item').forEach(function(s){s.classList.remove('active')});
+  if(name==='inbox')document.querySelector('.sidebar-item').classList.add('active');
+  if(name==='compose'){document.querySelectorAll('.topbar-tab')[1].classList.add('active');loadMailAccounts()}
+  if(name==='settings')document.querySelectorAll('.topbar-tab')[2].classList.add('active');
+}
+
+function doLogin(){
+  var email=document.getElementById('loginEmail').value;
+  var pass=document.getElementById('loginPass').value;
+  if(!email||!pass){document.getElementById('loginError').style.display='block';return}
+  fetch('/api/mail/status').then(function(r){return r.json()}).then(function(d){
+    logged=true;currentUser=email;
+    document.getElementById('userEmail').textContent=email;
+    document.getElementById('view-login').style.display='none';
+    document.getElementById('view-inbox').style.display='flex';
+    loadInbox();
+  }).catch(function(){
+    document.getElementById('loginError').style.display='block';
+  });
+}
+
+function loadInbox(){
+  var list=document.getElementById('emailList');
+  list.innerHTML='<div class="email-empty">Cargando emails...</div>';
+  fetch('/api/mail/inbox?limit=20').then(function(r){return r.json()}).then(function(d){
+    var msgs=d.messages||[];
+    document.getElementById('inboxCount').textContent=msgs.length;
+    if(msgs.length===0){list.innerHTML='<div class="email-empty">No hay emails</div>';return}
+    list.innerHTML='';
+    msgs.forEach(function(m){
+      var item=document.createElement('div');
+      item.className='email-item'+(m.seen?'':' unread');
+      item.innerHTML='<div class="email-from">'+(m.from||'Desconocido')+'</div>'+
+        '<div class="email-subject">'+(m.subject||'Sin asunto')+'</div>'+
+        '<div class="email-date">'+(m.date||'')+'</div>';
+      list.appendChild(item);
+    });
+  }).catch(function(){list.innerHTML='<div class="email-empty">Error al cargar emails</div>'});
+}
+
+function sendEmail(){
+  var from=document.getElementById('composeFrom').value;
+  var to=document.getElementById('composeTo').value;
+  var subject=document.getElementById('composeSubject').value;
+  var body=document.getElementById('composeBody').value;
+  if(!to||!subject||!body){alert('Completa todos los campos');return}
+  fetch('/api/mail/send',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({to:to,subject:subject,body:body,from:from||undefined})
+  }).then(function(r){return r.json()}).then(function(d){
+    if(d.status==='ok'){alert('Email enviado desde '+(from||'admin@zinemotion.com'));document.getElementById('composeTo').value='';document.getElementById('composeSubject').value='';document.getElementById('composeBody').value='';showView('inbox')}
+    else{alert('Error al enviar')}
+  }).catch(function(){alert('Error de conexión')});
+}
+
+function loadMailAccounts(){
+  fetch('/api/mail/users').then(function(r){return r.json()}).then(function(d){
+    var sel=document.getElementById('composeFrom');
+    var users=d.users||[];
+    sel.innerHTML='';
+    if(users.length===0){
+      sel.innerHTML='<option value="">admin@zinemotion.com (default)</option>';
+      return;
+    }
+    users.filter(function(u){return u.active}).forEach(function(u){
+      var opt=document.createElement('option');
+      opt.value=u.email;
+      opt.textContent=u.name?(u.name+' <'+u.email+'>'):u.email;
+      sel.appendChild(opt);
+    });
+    if(sel.options.length===0){
+      sel.innerHTML='<option value="">admin@zinemotion.com (default)</option>';
+    }
+  }).catch(function(){
+    document.getElementById('composeFrom').innerHTML='<option value="">admin@zinemotion.com (default)</option>';
+  });
+}
+
+function loadUsers(){
+  fetch('/api/mail/users').then(function(r){return r.json()}).then(function(d){
+    var el=document.getElementById('usersList');
+    var users=d.users||[];
+    if(users.length===0){el.innerHTML='No hay usuarios';return}
+    el.innerHTML='';
+    users.forEach(function(u){
+      var row=document.createElement('div');
+      row.className='settings-row';
+      row.innerHTML='<span class="settings-key">'+u.email+'</span>'+
+        '<span class="settings-val">'+(u.name||'-')+' <span class="settings-badge '+(u.active?'on':'off')+'">'+(u.active?'ACTIVO':'INACTIVO')+'</span></span>';
+      el.appendChild(row);
+    });
+  }).catch(function(){document.getElementById('usersList').innerHTML='Error al cargar'});
+}
+
+setInterval(function(){
+  var n=new Date();
+  document.getElementById('clock').textContent=
+    String(n.getHours()).padStart(2,'0')+':'+
+    String(n.getMinutes()).padStart(2,'0')+':'+
+    String(n.getSeconds()).padStart(2,'0');
+},1000);
+
+showView('inbox');
+loadUsers();
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+# ZICORE Postfix main.cf
+# Domain: zinemotion.com.mx
+
+# General
+myhostname = mail.zinemotion.com.mx
+mydomain = zinemotion.com.mx
+myorigin = $mydomain
+mydestination = localhost
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 192.168.0.0/16 10.0.0.0/8
+inet_interfaces = all
+inet_protocols = ipv4
+
+# Virtual users
+virtual_mailbox_domains = zinemotion.com.mx
+virtual_mailbox_base = /var/mail/vmail
+virtual_mailbox_maps = mysql:/etc/postfix/mysql-virtual-mailbox.cf
+virtual_alias_maps = mysql:/etc/postfix/mysql-virtual-alias.cf
+virtual_uid_maps = static:5000
+virtual_gid_maps = static:5000
+
+# SASL (via Dovecot)
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous
+
+# TLS
+smtpd_tls_cert_file = /etc/ssl/mail/fullchain.pem
+smtpd_tls_key_file = /etc/ssl/mail/privkey.pem
+smtpd_tls_security_level = may
+smtpd_tls_auth_only = yes
+smtpd_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtpd_tls_mandatory_ciphers = high
+smtp_tls_security_level = may
+smtp_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+
+# Restrictions
+smtpd_recipient_restrictions = permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination
+smtpd_helo_restrictions = permit_mynetworks, reject_invalid_helo_hostname
+smtpd_sender_restrictions = permit_mynetworks, reject_non_fqdn_sender
+
+# Message limits
+message_size_limit = 52428800
+mailbox_size_limit = 0
+virtual_mailbox_limit = 0
+virtual_mailbox_limit = 0
+
+# Queue
+maximal_queue_lifetime = 1d
+bounce_queue_lifetime = 1d
+
+# Logging
+maillog_file = /var/log/mail.log

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZICORE System — Download Portal</title>
+<meta name="description" content="ZICORE System v5.0 — Materializer Engine. Download for Windows, Linux, or deploy with Docker.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:#04060c;color:#c8d0dc;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
+a{color:#00e5ff;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Hero ──────────────────────────────────────────── */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:60px 20px;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:radial-gradient(ellipse at 50% 30%,rgba(0,229,255,0.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 20% 80%,rgba(124,77,255,0.05) 0%,transparent 50%);
+}
+.hero-content{position:relative;z-index:1;max-width:800px}
+.hero h1{
+  font-size:clamp(2rem,5vw,3.5rem);font-weight:800;letter-spacing:4px;
+  background:linear-gradient(135deg,#00e5ff,#7c4dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+.hero .subtitle{font-size:clamp(0.9rem,2vw,1.1rem);color:#5a6070;letter-spacing:6px;margin-bottom:24px}
+.hero .tagline{font-size:clamp(1rem,2.5vw,1.3rem);color:#8890a0;line-height:1.6;max-width:600px;margin:0 auto 40px}
+.hero .version{font-size:12px;color:#3a4050;letter-spacing:3px;margin-top:16px}
+
+.hero-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
+.btn{
+  padding:14px 36px;border-radius:6px;font-size:14px;font-weight:600;letter-spacing:2px;
+  cursor:pointer;transition:all .3s;border:none;font-family:inherit;
+}
+.btn-primary{
+  background:linear-gradient(135deg,#00e5ff,#0090a0);color:#000;
+  box-shadow:0 4px 20px rgba(0,229,255,0.3);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(0,229,255,0.4);text-decoration:none}
+.btn-secondary{background:rgba(0,229,255,0.06);color:#00e5ff;border:1px solid rgba(0,229,255,0.2)}
+.btn-secondary:hover{background:rgba(0,229,255,0.12);text-decoration:none}
+.btn-github{background:rgba(255,255,255,0.06);color:#c8d0dc;border:1px solid rgba(255,255,255,0.1)}
+.btn-github:hover{background:rgba(255,255,255,0.12);text-decoration:none}
+
+/* ── Stats ─────────────────────────────────────────── */
+.stats{
+  display:flex;gap:40px;justify-content:center;flex-wrap:wrap;
+  padding:30px 0;border-top:1px solid rgba(0,229,255,0.06);margin-top:20px;
+}
+.stat{text-align:center}
+.stat .num{font-size:28px;font-weight:700;color:#00e5ff}
+.stat .label{font-size:11px;color:#5a6070;letter-spacing:2px;margin-top:4px}
+
+/* ── Section ───────────────────────────────────────── */
+section{padding:80px 20px;max-width:1100px;margin:0 auto}
+.section-title{
+  font-size:clamp(1.2rem,3vw,1.8rem);font-weight:700;letter-spacing:3px;
+  color:#00e5ff;margin-bottom:8px;
+}
+.section-sub{font-size:13px;color:#5a6070;letter-spacing:2px;margin-bottom:40px}
+
+/* ── Download Cards ────────────────────────────────── */
+.download-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;
+}
+.download-card{
+  background:rgba(10,14,22,0.8);border:1px solid rgba(0,229,255,0.08);
+  border-radius:12px;padding:32px;transition:all .3s;position:relative;overflow:hidden;
+}
+.download-card:hover{border-color:rgba(0,229,255,0.2);transform:translateY(-4px)}
+.download-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),transparent);
+}
+.download-card .icon{font-size:36px;margin-bottom:16px}
+.download-card h3{font-size:18px;font-weight:700;color:#e0e8f0;margin-bottom:4px}
+.download-card .os{font-size:11px;color:#5a6070;letter-spacing:2px;margin-bottom:12px}
+.download-card p{font-size:13px;color:#8890a0;line-height:1.6;margin-bottom:20px}
+.download-card .specs{font-size:11px;color:#5a6070;margin-bottom:20px;line-height:1.8}
+.download-card .specs b{color:#8890a0}
+.download-card .btn{width:100%;text-align:center;display:block}
+
+.card-windows{--accent:#00e5ff}
+.card-linux{--accent:#7c4dff}
+.card-docker{--accent:#00ff88}
+.card-source{--accent:#fa0}
+
+/* ── Features ──────────────────────────────────────── */
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+.feature{
+  background:rgba(10,14,22,0.6);border:1px solid rgba(0,229,255,0.06);
+  border-radius:8px;padding:24px;transition:border-color .3s;
+}
+.feature:hover{border-color:rgba(0,229,255,0.15)}
+.feature .icon{font-size:24px;margin-bottom:10px}
+.feature h4{font-size:13px;font-weight:600;color:#e0e8f0;margin-bottom:6px}
+.feature p{font-size:12px;color:#5a6070;line-height:1.5}
+
+/* ── Requirements ──────────────────────────────────── */
+.req-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.req{
+  background:rgba(10,14,22,0.6);border:1px solid rgba(0,229,255,0.06);
+  border-radius:8px;padding:24px;
+}
+.req h4{font-size:13px;color:#00e5ff;margin-bottom:10px;letter-spacing:1px}
+.req ul{list-style:none;font-size:12px;color:#8890a0;line-height:2}
+.req ul li::before{content:'› ';color:#00e5ff}
+
+/* ── Quick Start ───────────────────────────────────── */
+.code-block{
+  background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  border-radius:8px;padding:24px;font-family:'Consolas','Courier New',monospace;
+  font-size:13px;line-height:1.8;overflow-x:auto;margin-bottom:20px;
+}
+.code-block .comment{color:#5a6070}
+.code-block .cmd{color:#00ff88}
+.code-block .flag{color:#fa0}
+
+/* ── Footer ────────────────────────────────────────── */
+footer{
+  text-align:center;padding:40px 20px;
+  border-top:1px solid rgba(0,229,255,0.06);margin-top:40px;
+}
+footer p{font-size:11px;color:#3a4050;letter-spacing:2px}
+footer a{color:#5a6070}
+footer a:hover{color:#00e5ff}
+
+/* ── Particles ─────────────────────────────────────── */
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.hero-content,.features-section,.footer-section{position:relative;z-index:1}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- ═══════ HERO ═══════ -->
+<div class="hero">
+  <div class="hero-content">
+    <h1>ZICORE SYSTEM</h1>
+    <div class="subtitle">MATERIALIZER ENGINE</div>
+    <div class="tagline">
+      Turn ideas into reality. AI generation, procedural content, flight simulators,
+      games, and a full aerospace dashboard — all in one system.
+    </div>
+    <div class="hero-buttons">
+      <a href="#downloads" class="btn btn-primary">DOWNLOAD v5.0</a>
+      <a href="https://github.com/zinemotion/zicore-system" class="btn btn-github" target="_blank">GITHUB</a>
+      <a href="#quickstart" class="btn btn-secondary">QUICK START</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num">76</div><div class="label">PYTHON FILES</div></div>
+      <div class="stat"><div class="num">9</div><div class="label">HTML5 GAMES</div></div>
+      <div class="stat"><div class="num">100+</div><div class="label">API ROUTES</div></div>
+      <div class="stat"><div class="num">16</div><div class="label">MODULES</div></div>
+      <div class="stat"><div class="num">v5.0</div><div class="label">VERSION</div></div>
+    </div>
+    <div class="version">ZINEMOTION FOUNDATION — AEROSPACE DIVISION — CC-BY-SA-4.0</div>
+  </div>
+</div>
+
+<!-- ═══════ DOWNLOADS ═══════ -->
+<section id="downloads" class="features-section">
+  <div class="section-title">DOWNLOAD</div>
+  <div class="section-sub">Choose your platform</div>
+
+  <div class="download-grid">
+    <!-- Windows -->
+    <div class="download-card card-windows">
+      <div class="icon">🪟</div>
+      <h3>Windows</h3>
+      <div class="os">WINDOWS 10/11</div>
+      <p>Full OEM installer with interactive configuration. Installs Python, Ollama, Docker services, desktop shortcuts, and all 9 games.</p>
+      <div class="specs">
+        <b>Size:</b> ~50MB (installer) + dependencies<br>
+        <b>Requires:</b> Python 3.10+, Docker Desktop (optional)<br>
+        <b>Includes:</b> All games, flight sim, mail server
+      </div>
+      <a href="zicore_oem_setup.bat" class="btn btn-primary" download>DOWNLOAD .BAT</a>
+    </div>
+
+    <!-- Linux -->
+    <div class="download-card card-linux">
+      <div class="icon">🐧</div>
+      <h3>Linux</h3>
+      <div class="os">UBUNTU / DEBIAN / FEDORA</div>
+      <p>Full OEM installer with systemd service, desktop entry, and interactive configuration. One-command install.</p>
+      <div class="specs">
+        <b>Size:</b> ~50MB (installer) + dependencies<br>
+        <b>Requires:</b> Python 3.10+, curl, Docker (optional)<br>
+        <b>Includes:</b> All games, flight sim, mail server
+      </div>
+      <a href="zicore_oem_setup.sh" class="btn btn-primary" download>DOWNLOAD .SH</a>
+    </div>
+
+    <!-- Docker -->
+    <div class="download-card card-docker">
+      <div class="icon">🐳</div>
+      <h3>Docker Compose</h3>
+      <div class="os">ANY PLATFORM WITH DOCKER</div>
+      <p>Deploy all services with a single command. Includes Ollama, mail server, games, and file browser.</p>
+      <div class="specs">
+        <b>Size:</b> ~200MB (Docker images)<br>
+        <b>Requires:</b> Docker 20.10+, Docker Compose<br>
+        <b>Services:</b> 9 containers
+      </div>
+      <a href="docker-compose.yml" class="btn btn-primary" download>DOWNLOAD .YML</a>
+    </div>
+
+    <!-- Source -->
+    <div class="download-card card-source">
+      <div class="icon">📦</div>
+      <h3>Source Code</h3>
+      <div class="os">GITHUB REPOSITORY</div>
+      <p>Clone the full repository and run from source. Best for developers and custom deployments.</p>
+      <div class="specs">
+        <b>Size:</b> ~10MB (source)<br>
+        <b>Requires:</b> Python 3.10+, Node.js 18+<br>
+        <b>License:</b> CC-BY-SA-4.0
+      </div>
+      <a href="https://github.com/zinemotion/zicore-system" class="btn btn-github" target="_blank">VIEW ON GITHUB</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ FEATURES ═══════ -->
+<section class="features-section">
+  <div class="section-title">INCLUDED</div>
+  <div class="section-sub">Everything you need</div>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="icon">🤖</div>
+      <h4>ZIO AI Agent</h4>
+      <p>Chat with AI models via Ollama, OpenAI, Anthropic, Groq, and more. Command history and auto-complete.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🎨</div>
+      <h4>Materializer Engine</h4>
+      <p>Generate images, 3D meshes, code, audio, and procedural content from text prompts.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">✈️</div>
+      <h4>Flight Simulator</h4>
+      <p>7 vehicles including X-Wing and FreeSpace 2 bombers. Missions, scoring, and real-time physics.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🎮</div>
+      <h4>9 HTML5 Games</h4>
+      <p>Snake, Tetris, Breakout, 2048, Pong, X-Wing, FreeSpace 2, Minesweeper, Sudoku.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📊</div>
+      <h4>ML Engine</h4>
+      <p>14 functions: classification, anomaly detection, K-Means, sentiment, regression, and more.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🎵</div>
+      <h4>Audio Studio</h4>
+      <p>Webamp music player, waveform visualizer, TTS/STT, sound synthesis with 8 types.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📧</div>
+      <h4>Mail Server</h4>
+      <p>Postfix + Dovecot + Rspamd + Roundcube. Full email stack in Docker containers.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🖥️</div>
+      <h4>10 Workspaces</h4>
+      <p>System, AI, 3D, Video, Audio, Image, Code, Text, Vision, Library — all in one dashboard.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ REQUIREMENTS ═══════ -->
+<section>
+  <div class="section-title">REQUIREMENTS</div>
+  <div class="section-sub">What you need</div>
+
+  <div class="req-grid">
+    <div class="req">
+      <h4>MINIMUM</h4>
+      <ul>
+        <li>Python 3.10 or newer</li>
+        <li>4GB RAM</li>
+        <li>2GB free disk space</li>
+        <li>Modern web browser</li>
+        <li>Internet connection (for AI models)</li>
+      </ul>
+    </div>
+    <div class="req">
+      <h4>RECOMMENDED</h4>
+      <ul>
+        <li>Python 3.11+</li>
+        <li>8GB+ RAM</li>
+        <li>10GB+ free disk space</li>
+        <li>Docker Desktop</li>
+        <li>NVIDIA GPU (optional, for Stable Diffusion)</li>
+      </ul>
+    </div>
+    <div class="req">
+      <h4>OPTIONAL</h4>
+      <ul>
+        <li>Docker 20.10+ (for containers)</li>
+        <li>Ollama (for local AI models)</li>
+        <li>NVIDIA GPU with 4GB+ VRAM</li>
+        <li>FFmpeg (for video processing)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ QUICK START ═══════ -->
+<section id="quickstart">
+  <div class="section-title">QUICK START</div>
+  <div class="section-sub">Up and running in minutes</div>
+
+  <h4 style="color:#00e5ff;font-size:13px;letter-spacing:2px;margin-bottom:10px">WINDOWS</h4>
+  <div class="code-block">
+    <span class="comment"># Download and run the installer</span><br>
+    <span class="cmd">zicore_oem_setup.bat</span><br>
+    <br>
+    <span class="comment"># Or manual install</span><br>
+    <span class="cmd">git clone</span> <span class="flag">https://github.com/zinemotion/zicore-system.git</span><br>
+    <span class="cmd">cd</span> zicore-system<br>
+    <span class="cmd">pip install</span> -r requirements.txt<br>
+    <span class="cmd">python</span> start_all.py<br>
+    <br>
+    <span class="comment"># Open browser</span><br>
+    <span class="cmd">start</span> http://localhost:4000
+  </div>
+
+  <h4 style="color:#7c4dff;font-size:13px;letter-spacing:2px;margin:20px 0 10px">LINUX</h4>
+  <div class="code-block">
+    <span class="comment"># One-command install</span><br>
+    <span class="cmd">curl -sL</span> <span class="flag">https://raw.githubusercontent.com/zinemotion/zicore-system/main/zicore_oem_setup.sh</span> | <span class="cmd">bash</span><br>
+    <br>
+    <span class="comment"># Or manual install</span><br>
+    <span class="cmd">git clone</span> <span class="flag">https://github.com/zinemotion/zicore-system.git</span><br>
+    <span class="cmd">cd</span> zicore-system<br>
+    <span class="cmd">pip3 install</span> -r requirements.txt<br>
+    <span class="cmd">python3</span> start_all.py<br>
+    <br>
+    <span class="comment"># Open browser</span><br>
+    <span class="cmd">xdg-open</span> http://localhost:4000
+  </div>
+
+  <h4 style="color:#00ff88;font-size:13px;letter-spacing:2px;margin:20px 0 10px">DOCKER</h4>
+  <div class="code-block">
+    <span class="comment"># Clone and start all services</span><br>
+    <span class="cmd">git clone</span> <span class="flag">https://github.com/zinemotion/zicore-system.git</span><br>
+    <span class="cmd">cd</span> zicore-system<br>
+    <span class="cmd">docker-compose up -d</span><br>
+    <br>
+    <span class="comment"># Pull AI models</span><br>
+    <span class="cmd">docker exec</span> zicore-ollama ollama pull tinyllama<br>
+    <span class="cmd">docker exec</span> zicore-ollama ollama pull llama3.1:8b<br>
+    <br>
+    <span class="comment"># Open browser</span><br>
+    <span class="cmd">open</span> http://localhost:4000
+  </div>
+</section>
+
+<!-- ═══════ PORTS ═══════ -->
+<section>
+  <div class="section-title">PORTS</div>
+  <div class="section-sub">Service endpoints</div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+    <div class="req" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#e0e8f0;font-size:13px">Web UI</span>
+        <span style="color:#00e5ff;font-size:12px;font-family:monospace">:4000</span>
+      </div>
+    </div>
+    <div class="req" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#e0e8f0;font-size:13px">API Server</span>
+        <span style="color:#00e5ff;font-size:12px;font-family:monospace">:4080</span>
+      </div>
+    </div>
+    <div class="req" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#e0e8f0;font-size:13px">Games</span>
+        <span style="color:#00e5ff;font-size:12px;font-family:monospace">:4001</span>
+      </div>
+    </div>
+    <div class="req" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#e0e8f0;font-size:13px">Music</span>
+        <span style="color:#00e5ff;font-size:12px;font-family:monospace">:4002</span>
+      </div>
+    </div>
+    <div class="req" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#e0e8f0;font-size:13px">FileBrowser</span>
+        <span style="color:#00e5ff;font-size:12px;font-family:monospace">:4081</span>
+      </div>
+    </div>
+    <div class="req" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#e0e8f0;font-size:13px">Ollama</span>
+        <span style="color:#00e5ff;font-size:12px;font-family:monospace">:11434</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer>
+  <p>ZICORE SYSTEM v5.0 — ZINEMOTION FOUNDATION — AEROSPACE DIVISION</p>
+  <p style="margin-top:8px">License: <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC-BY-SA-4.0</a></p>
+  <p style="margin-top:8px"><a href="https://github.com/zinemotion/zicore-system" target="_blank">GitHub</a> · <a href="mailto:admin@zinemotion.com">Contact</a></p>
+</footer>
+
+<!-- ═══════ PARTICLES ═══════ -->
+<script>
+(function(){
+  var c=document.getElementById('particles'),ctx=c.getContext('2d');
+  var W,H,particles=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight}
+  resize();window.addEventListener('resize',resize);
+  for(var i=0;i<80;i++){
+    particles.push({x:Math.random()*2000,y:Math.random()*2000,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,size:Math.random()*1.5+0.5,alpha:Math.random()*0.3+0.1});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(function(p){
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,229,255,'+p.alpha+')';ctx.fill();
+    });
+    for(var i=0;i<particles.length;i++){
+      for(var j=i+1;j<particles.length;j++){
+        var dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
+        var dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          ctx.strokeStyle='rgba(0,229,255,'+(1-dist/120)*0.06+')';
+          ctx.lineWidth=0.5;ctx.beginPath();
+          ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y);ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

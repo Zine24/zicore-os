@@ -126,10 +126,10 @@ def cmd_open_dashboard():
     )
     time.sleep(2)
     try:
-        webbrowser.open("http://localhost:3000")
+        webbrowser.open("http://localhost:4000")
         print("  Dashboard opened in browser!")
     except Exception:
-        print("  Open http://localhost:3000 in your browser")
+        print("  Open http://localhost:4000 in your browser")
     print(f"  Backend PID: {backend.pid} | Frontend PID: {frontend.pid}")
     pause()
 
@@ -151,7 +151,7 @@ def cmd_inference():
 
     import requests
     try:
-        r = requests.post("http://localhost:8080/api/infer", json={
+        r = requests.post("http://localhost:4080/api/infer", json={
             "module": module,
             "instruction": instruction,
             "input_data": data,
@@ -179,7 +179,7 @@ def cmd_zty_factory():
 
     import requests
     try:
-        r = requests.get("http://localhost:8080/api/zty/templates", timeout=5)
+        r = requests.get("http://localhost:4080/api/zty/templates", timeout=5)
         templates = r.json()["templates"]
 
         print("  Available templates:")
@@ -194,7 +194,7 @@ def cmd_zty_factory():
             payload = float(input("    Payload (kg) [5000]: ").strip() or "5000")
             crew = int(input("    Crew [0]: ").strip() or "0")
 
-            r = requests.post("http://localhost:8080/api/zty/custom", json={
+            r = requests.post("http://localhost:4080/api/zty/custom", json={
                 "name": name, "payload_kg": payload, "crew": crew,
                 "stages": [
                     {"name": "stage1", "dry_mass_kg": 10000, "fuel_mass_kg": 50000},
@@ -206,7 +206,7 @@ def cmd_zty_factory():
         else:
             idx = int(choice) - 1
             template_name = templates[idx]
-            r = requests.get(f"http://localhost:8080/api/zty/report/{template_name}", timeout=5)
+            r = requests.get(f"http://localhost:4080/api/zty/report/{template_name}", timeout=5)
             report = r.json()
 
         print(f"\n  {'='*50}")
@@ -498,7 +498,7 @@ def cmd_telemetry():
 
     import requests
     try:
-        r = requests.get("http://localhost:8080/api/status", timeout=5)
+        r = requests.get("http://localhost:4080/api/status", timeout=5)
         data = r.json()
 
         print("  Module telemetry:")
@@ -551,12 +551,12 @@ def cmd_deploy():
 
     print(f"\n  Backend PID:  {backend.pid}")
     print(f"  Frontend PID: {frontend.pid}")
-    print(f"\n  Backend:  http://localhost:8080")
-    print(f"  Dashboard: http://localhost:3000")
-    print(f"  API Docs: http://localhost:8080/docs")
+    print(f"\n  Backend:  http://localhost:4080")
+    print(f"  Dashboard: http://localhost:4000")
+    print(f"  API Docs: http://localhost:4080/docs")
 
     try:
-        webbrowser.open("http://localhost:3000")
+        webbrowser.open("http://localhost:4000")
         print("\n  Dashboard opened in browser!")
     except Exception:
         pass

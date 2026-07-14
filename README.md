@@ -1,14 +1,12 @@
-# ZICORE System
+# ZICORE System v5.0
 
-> **Z**ine **I**ntelligence **Core** — Aerospace AI Operating System
+> **Z**ine **I**ntelligence **Core** — Materializer Engine
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-00e5ff.svg)](LICENSE)
+[![License: CC-BY-SA-4.0](https://img.shields.io/badge/License-CC--BY--SA--4.0-00e5ff.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Issues](https://img.shields.io/github/issues/Zine24/zicore-system)](https://github.com/Zine24/zicore-system/issues)
-[![Stars](https://img.shields.io/github/stars/Zine24/zicore-system)](https://github.com/Zine24/zicore-system)
 
-ZICORE is a full-stack aerospace AI system featuring dual-engine inference (deterministic + ML), 17 mission modules, holographic cockpit-style dashboard, NLE video editor, 3D mesh viewer, and real-time telemetry — deployable locally, via Docker, or on Google Colab with free GPU.
+ZICORE is a full-stack aerospace AI system — a Materializer that turns ideas into reality through AI generation, procedural generation, and content creation tools. Features 100 API endpoints, 10 dashboard workspaces, 7 HTML5 games, mail server, ML engine, and cross-platform deployment.
 
 ---
 
@@ -16,66 +14,72 @@ ZICORE is a full-stack aerospace AI system featuring dual-engine inference (dete
 
 | Category | Feature | Detail |
 |----------|---------|--------|
-| **AI Engine** | Dual-Engine Pipeline | Motor A (deterministic rules) + Motor B (ML inference via Unsloth/transformers) |
+| **AI Engine** | Materializer | IntentClassifier + ZICOREMaterializer — dispatches to image/3d/code/video/audio/procedural engines |
 | **AI Engine** | 9 Providers | ZICORE Native, OpenRouter, Ollama, OpenAI, Anthropic, Groq, DeepSeek, Together AI, OpenCode |
-| **AI Engine** | Confidence-Weighted Merge | Both engines vote; output weighted by confidence score |
-| **Dashboard** | 8 Workspaces | System, ZIO AI, 3D, Video, Audio, Post, Vision, Data |
-| **Dashboard** | Cockpit-Style UI | Dark aerospace theme, real-time telemetry bars, WebSocket streaming |
-| **Dashboard** | 8 Themes | Midnight, Cyber Neon, Matrix, Solar Flare, Arctic, Blood Moon, Deep Forest, Void |
-| **Modules** | 17 Mission Modules | ZiNav, ZiHab, ZiPower, ZiShip, ZIDrone, ZIRobot, ZIComm, ZIEco, ZIMed, ZiCoreX, ZILink, ZIVR, ZISec, ZiCRIOGEN, ZiMAURY, GPDEngine, Z-TY Factory |
-| **Video** | NLE Editor | Multi-track timeline (V1/V2/A1/A2), 12 effects, 8 transitions, drag reorder |
-| **Video** | Video Generation | Frame-by-frame procedural + API-based (DALL-E, Stability) |
-| **3D** | Mesh Viewer | Three.js WebGL viewport with material editor |
+| **ML Engine** | 9 Functions | Text classification, anomaly detection, K-Means, sentiment, linear regression, patterns, cosine similarity, hash embedding, text vectorization |
+| **Dashboard** | 10 Workspaces | System, ZIO AI, 3D, Video, Audio, Image, Code, Text, Vision, Library |
+| **Dashboard** | Floating Panels | Video NLE editor, Materializer panel |
+| **Dashboard** | ZIO Mirror | Real-time engine status, command dispatch, task queue |
+| **Flight Sim** | 7 Vehicles | Drone, Obsidiana, BlackVanta, ZIron Sigma, ZI Voyager, X-Wing, GT Begasus |
+| **Flight Sim** | Aircraft Config | Propulsion type, mass, thrust, speed, ceiling, destination selector |
+| **Games** | 7 HTML5 Games | Snake, Tetris, Breakout, 2048, Pong, X-Wing Alliance, FreeSpace 2 |
+| **Games** | EmulatorJS | Retro ROM emulator + HTML5 game server (port 3001) |
+| **Music** | Webamp | Winamp 2 clone audio player (port 3002) |
+| **Mail** | Postfix + Dovecot | Full mail server with Rspamd spam filter, Roundcube webmail |
 | **3D** | Mesh Generation | Cube, sphere, cylinder, cone, rocket — STL/OBJ/GLB export |
-| **Audio** | Waveform Visualizer | Web Audio API real-time visualization |
-| **Audio** | Sound Synthesis | 8 sound types: alarm, engine, beep, wind, radio, melody, heartbeat, laser |
-| **Audio** | TTS/STT | Browser Speech API + optional Whisper |
-| **Vision** | Camera Input | getUserMedia webcam capture with frame analysis |
-| **Vision** | OpenVision | Image/video analysis, OCR, object detection |
+| **Audio** | Sound Synthesis | 8 sound types + TTS/STT via browser Speech API |
+| **Vision** | Camera Input | getUserMedia webcam capture with frame analysis + OCR |
 | **Data** | Knowledge Base | Persistent chat history + document ingestion + full-text search |
-| **Data** | Data Retention | Training data export (JSONL, Unsloth format) |
-| **Data** | Mission Save/Load | JSON-based mission persistence |
-| **Sim** | Flight Simulator | 4 vehicles with physics, HUD, keyboard controls |
-| **Deploy** | Cloudflare Tunnel | One-command public deployment |
-| **Deploy** | Docker | Dockerfile + docker-compose with Nginx SSL |
+| **Deploy** | Cross-Platform | Windows, Linux, macOS — Docker-first, no OS dependency |
+| **Deploy** | Install Scripts | `install.sh` (Linux), `zicore_v5.0.bat` (Windows), `zicore_v5.0.sh` (Linux) |
 
 ---
 
 ## Quick Start
 
-### Option 1: Local
+### Option 1: Windows Launcher
+
+```bat
+zicore_v5.0.bat
+```
+
+### Option 2: Linux Installer
 
 ```bash
-git clone https://github.com/Zine24/zicore-system.git
-cd zicore-system
-pip install -r requirements.txt
-python start_all.py
+curl -sL https://raw.githubusercontent.com/zinemotion/zicore-system/main/install.sh | sudo bash
 ```
 
-Open: `http://localhost:3000`
-
-### Option 2: Google Colab (Free GPU T4)
-
-```python
-# Cell 1 — Upload
-from google.colab import files
-import zipfile
-uploaded = files.upload()
-with zipfile.ZipFile(list(uploaded.keys())[0], 'r') as z:
-    z.extractall('/content/')
-
-# Cell 2 — Setup + Start
-!cd /content/zicore-system && pip install -q -r requirements.txt
-!cd /content/zicore-system && python colab_setup.py
-```
-
-### Option 3: Docker
+### Option 3: Docker Compose
 
 ```bash
 docker-compose up -d
 ```
 
-Open: `https://app.zicore.space`
+### Option 4: Manual
+
+```bash
+git clone https://github.com/zinemotion/zicore-system.git
+cd zicore-system
+pip install -r requirements.txt
+python start_all.py
+```
+
+Open: `http://localhost:4000`
+
+---
+
+## Ports
+
+| Port | Service |
+|------|---------|
+| 3000 | Web UI (ZICORE Dashboard) |
+| 3001 | EmulatorJS (Games) |
+| 3002 | Webamp (Music) |
+| 8080 | API Server + Webmail |
+| 8081 | FileBrowser |
+| 11434 | Ollama (Docker) |
+| 25/465/587 | SMTP (Mail) |
+| 143/993/110/995 | IMAP/POP3 (Mail) |
 
 ---
 
@@ -83,7 +87,8 @@ Open: `https://app.zicore.space`
 
 ```
                     ┌─────────────────────────────────────┐
-                    │         ZICORE System v0.4.0         │
+                    │        ZICORE System v5.0            │
+                    │        Materializer Engine           │
                     └─────────────────────────────────────┘
                                       │
               ┌───────────────────────┼───────────────────────┐
@@ -92,75 +97,71 @@ Open: `https://app.zicore.space`
      │   Frontend       │    │   Web Server     │    │   API Backend    │
      │   (Port 3000)    │    │   (Port 3000)    │    │   (Port 8080)    │
      │                  │    │                  │    │                  │
-     │ • index.html     │    │ • 45 Routes      │    │ • 17 Modules     │
-     │ • dashboard.html │    │ • WebSocket      │    │ • Dual Engine    │
-     │ • zio.html       │    │ • Static Files   │    │ • Pipeline       │
-     │ • simulator.html │    │ • Config API     │    │ • Orchestrator   │
+     │ • index.html     │    │ • 100 Routes     │    │ • 16 Modules     │
+     │ • dashboard.html │    │ • WebSocket      │    │ • Materializer   │
+     │ • flight-sim.html│    │ • Static Files   │    │ • ML Engine      │
+     │ • zio.html       │    │ • Config API     │    │ • Procedural     │
      └──────────────────┘    └──────────────────┘    └──────────────────┘
               │                       │                       │
               │              ┌────────▼────────┐             │
-              │              │  Cloudflare      │             │
-              └──────────────│  Tunnel          │◄────────────┘
-                             │  (Public URL)    │
+              │              │  Docker Services │             │
+              └──────────────│  • Ollama        │◄────────────┘
+                             │  • Mail Stack    │
+                             │  • EmulatorJS    │
+                             │  • Webamp        │
+                             │  • FileBrowser   │
                              └─────────────────┘
 ```
 
-### Dual-Engine Pipeline
+### Materializer Pipeline
 
 ```
-User Input
+User Input ("Generate a picture of a sunset")
     │
     ▼
 ┌───────────────────────────────────────────┐
-│            Intent Classifier               │
-└───────────────────────────────────────────┘
-    │                         │
-    ▼                         ▼
-┌─────────────┐    ┌─────────────────────┐
-│  Motor A     │    │  Motor B             │
-│  (Rules)     │    │  (ML Inference)      │
-│              │    │                      │
-│  Deterministic│    │  • Groq (free)       │
-│  Fast (<1ms) │    │  • OpenAI            │
-│  100% uptime │    │  • Anthropic         │
-└──────┬──────┘    │  • Unsloth (local)   │
-       │           └──────────┬──────────┘
-       │                      │
-       ▼                      ▼
-┌───────────────────────────────────────────┐
-│       Confidence-Weighted Merge            │
-│                                            │
-│  output = (conf_A × out_A + conf_B × out_B)│
-│            / (conf_A + conf_B)             │
+│            IntentClassifier               │
+│  Classifies: image/3d/code/video/audio/   │
+│              procedural/text/vision        │
 └───────────────────────────────────────────┘
     │
     ▼
-Response
+┌───────────────────────────────────────────┐
+│          ZICOREMaterializer               │
+│  Dispatches to appropriate engine:        │
+│  • StableDiffusionEngine (CPU)            │
+│  • Hunyuan3DEngine (trimesh fallback)     │
+│  • ProceduralEngine (10 techniques)       │
+│  • Code execution (sandboxed Python)      │
+│  • Audio synthesis (Web Audio API)        │
+└───────────────────────────────────────────┘
+    │
+    ▼
+Output (image/mesh/terrain/code/audio)
 ```
 
 ---
 
-## 17 Mission Modules
+## Zicore Modules (16)
 
-| Module | Name | Function |
-|--------|------|----------|
-| ZiNav | Navigation | Trajectory planning, orbital mechanics |
-| ZiHab | Habitat | Life support, environment control |
-| ZiPower | Power | Solar, battery, grid management |
-| ZiShip | Ship | Hull integrity, propulsion, thermal |
-| ZIDrone | Drone | Swarm control, autonomous survey |
-| ZIRobot | Robot | Manipulator control, maintenance |
-| ZIComm | Comms | RF/optical links, encryption |
-| ZIEco | Ecology | CO2 scrubbing, water recovery, plants |
-| ZIMed | Medical | Crew health, vitals monitoring |
-| ZiCoreX | Compute | AI inference, cluster management |
-| ZILink | Link | Data rates, link margin |
-| ZIVR | VR | Headset control, environment rendering |
-| ZISec | Security | Firewall, intrusion detection |
-| ZiCRIOGEN | Cryogenic | Propellant management, tank pressure |
-| ZiMAURY | Defense | Tactical systems, shield control |
-| GPDEngine | GPD | Guidance, proximity, docking |
-| Z-TY Factory | Manufacturing | Parametric aircraft design |
+| Module | Function |
+|--------|----------|
+| materializer | IntentClassifier + ZICOREMaterializer — dispatches to generation engines |
+| ml_engine | ZIOML — 9 ML functions (classification, anomaly, clustering, sentiment, regression, patterns, similarity, embedding, vectorization) |
+| procedural | ProceduralEngine — 10 techniques (terrain, cave, dungeon, fractal, L-system, Voronoi, WFC, Perlin, Worley, cellular) |
+| knowledge_base | KnowledgeBase — persistent chat, document ingestion, full-text search |
+| hunyuan3d_engine | 3D mesh generation with GPU detection and trimesh fallback |
+| stable_diffusion_engine | CPU image generation via diffusers library |
+| ollama_service | Cross-platform Ollama management (Docker-first) |
+| ssh_integration | Cross-platform SSH, Firefox, Thunderbird management |
+| mail_integration | Mail server management (users, aliases, send, inbox, IMAP, SMTP, DNS) |
+| openvision | Image/video analysis, OCR, object detection |
+| data_retention | Training data export (JSONL, Unsloth format) |
+| local_llm | Local LLM inference wrapper |
+| inference | Inference pipeline orchestrator |
+| cfd_sim | CFD simulation engine |
+| telemetry_sim | Telemetry simulation |
+| rust_bridge | Rust FFI bridge for performance-critical ops |
 
 ---
 
@@ -290,7 +291,7 @@ zicore-system/
 
 | Method | Command | URL |
 |--------|---------|-----|
-| Local | `python start_all.py` | `http://localhost:3000` |
+| Local | `python start_all.py` | `http://localhost:4000` |
 | Production | `python start_production.py` | `https://app.zicore.space` |
 | Docker | `docker-compose up -d` | `https://app.zicore.space` |
 | Colab | Run cells in notebook | Cloudflare tunnel URL |

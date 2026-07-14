@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Descargas</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1525;--bg4:#141c30;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;--text:#c8d6e5;--text2:#667788;--border:#1a2540;--glass:rgba(10,14,26,0.92)}
+@font-face{font-family:'Mono';src:local('Cascadia Code'),local('Consolas'),local('monospace')}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.01) 2px,rgba(0,229,255,.01) 4px)}
+
+.app{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:20px}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:28px;padding:16px 20px;background:var(--glass);border:1px solid var(--border);border-radius:8px;backdrop-filter:blur(16px)}
+.header .logo{width:32px;height:32px;flex-shrink:0}
+.header .logo svg{width:100%;height:100%}
+.header .title{font-size:14px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .sep{width:1px;height:20px;background:var(--border)}
+.header .subtitle{font-size:10px;letter-spacing:2px;color:var(--text2);text-transform:uppercase}
+.header .spacer{flex:1}
+.header .clock{font-family:'Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:1px}
+.header .back{font-size:11px;color:var(--text2);text-decoration:none;padding:6px 14px;border:1px solid var(--border);border-radius:4px;transition:all .2s;cursor:pointer;background:transparent}
+.header .back:hover{border-color:var(--cyan);color:var(--cyan)}
+
+.hero{text-align:center;margin-bottom:32px}
+.hero h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.hero p{font-size:13px;color:var(--text2);letter-spacing:1px;max-width:500px;margin:0 auto}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:24px;text-align:center;transition:all .3s;position:relative;overflow:hidden;cursor:pointer}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s}
+.card:hover{border-color:rgba(0,229,255,.3);transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.card:hover::before{opacity:1}
+.card .icon{font-size:48px;margin-bottom:14px;display:block}
+.card .name{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+.card .desc{font-size:11px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.card .cmd{font-family:'Mono',monospace;font-size:9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 12px;color:var(--cyan);word-break:break-all;text-align:left;margin-bottom:14px;line-height:1.6}
+.card .cmd .comment{color:var(--text2)}
+.card .dl-btn{display:inline-block;padding:10px 24px;border:1px solid var(--cyan);border-radius:6px;color:var(--cyan);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:all .2s;background:transparent}
+.card .dl-btn:hover{background:rgba(0,229,255,.1);box-shadow:0 0 16px rgba(0,229,255,.2)}
+.card .dl-btn.downloading{pointer-events:none;opacity:.6}
+.card .size{font-size:9px;color:var(--text2);margin-top:10px;letter-spacing:.5px}
+
+.reqs{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:24px}
+.reqs h3{font-size:11px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:14px;font-weight:600}
+.reqs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.req-item{font-size:11px;color:var(--text);line-height:1.6}
+.req-item strong{color:var(--cyan);font-weight:600}
+
+.alternatives{margin-top:24px}
+.alternatives h3{font-size:11px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:12px;font-weight:600}
+.alt-row{display:flex;gap:10px;flex-wrap:wrap}
+.alt-pill{font-size:10px;padding:6px 14px;border:1px solid var(--border);border-radius:20px;color:var(--text2);letter-spacing:.5px}
+.alt-pill code{font-family:'Mono',monospace;color:var(--cyan);font-size:9px}
+
+.footer{text-align:center;padding:20px;font-size:9px;color:var(--text2);letter-spacing:1px}
+.footer span{color:var(--cyan)}
+
+@media(max-width:768px){.cards{grid-template-columns:1fr}.reqs-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="grain"></div>
+<div class="scanline"></div>
+
+<div class="app">
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="50,3 95,27 95,73 50,97 5,73 5,27" stroke="url(#hg)" stroke-width="2" fill="none"/>
+        <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" stroke="url(#hg2)" stroke-width="1.5" fill="rgba(0,229,255,0.05)"/>
+        <circle cx="50" cy="50" r="12" stroke="#00e5ff" stroke-width="1" fill="none" opacity=".6"/>
+        <circle cx="50" cy="50" r="3" fill="#00e5ff" opacity=".8"/>
+        <defs>
+          <linearGradient id="hg" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient>
+          <linearGradient id="hg2" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#7c4dff"/><stop offset="100%" stop-color="#00e5ff"/></linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="title">ZICORE</div>
+    <div class="sep"></div>
+    <div class="subtitle">Descargas</div>
+    <div class="spacer"></div>
+    <a href="/" class="back">← Portal</a>
+    <div class="clock" id="clock"></div>
+  </div>
+
+  <div class="hero">
+    <h1>Instala ZICORE en tu sistema</h1>
+    <p>Sistema Operativo Aeroespacial Digital — ejecuta ZICORE localmente en minutos</p>
+  </div>
+
+  <div class="cards">
+    <div class="card" onclick="downloadInstaller('windows')">
+      <span class="icon">🪟</span>
+      <div class="name">Windows</div>
+      <div class="desc">PowerShell script para Windows 10/11. Instala Python, Node.js, Git y todas las dependencias automáticamente.</div>
+      <div class="cmd">
+        <span class="comment"># Ejecutar en PowerShell como Admin:</span><br>
+        Set-ExecutionPolicy Bypass -Scope Process<br>
+        iex ((New-Object System.Net.WebClient)<br>
+        .DownloadString('https://zcs.zicore.space/installers/install_zicore.ps1'))
+      </div>
+      <div class="dl-btn" id="dl-windows">Descargar .ps1</div>
+      <div class="size">PowerShell Script — ~3 KB</div>
+    </div>
+
+    <div class="card" onclick="downloadInstaller('linux')">
+      <span class="icon">🐧</span>
+      <div class="name">Linux</div>
+      <div class="desc">Bash script para Ubuntu, Debian, Fedora, Arch y derivados. Soporte para systemd services.</div>
+      <div class="cmd">
+        <span class="comment"># Ejecutar en terminal:</span><br>
+        curl -sL https://zcs.zicore.space/<br>
+        installers/install_zicore.sh | bash
+      </div>
+      <div class="dl-btn" id="dl-linux">Descargar .sh</div>
+      <div class="size">Bash Script — ~4 KB</div>
+    </div>
+
+    <div class="card" onclick="downloadInstaller('mac')">
+      <span class="icon">🍎</span>
+      <div class="name">macOS</div>
+      <div class="desc">Script optimizado para macOS 12+. Usa Homebrew para instalar dependencias. Soporta Apple Silicon e Intel.</div>
+      <div class="cmd">
+        <span class="comment"># Ejecutar en Terminal:</span><br>
+        curl -sL https://zcs.zicore.space/<br>
+        installers/install_zicore_mac.sh | bash
+      </div>
+      <div class="dl-btn" id="dl-mac">Descargar .sh</div>
+      <div class="size">Bash Script — ~4 KB</div>
+    </div>
+  </div>
+
+  <div class="reqs">
+    <h3>Requisitos del Sistema</h3>
+    <div class="reqs-grid">
+      <div class="req-item">
+        <strong>Python 3.10+</strong><br>
+        Motor principal del servidor web, Materializer Engine, y generación 3D procedural.
+      </div>
+      <div class="req-item">
+        <strong>Node.js 20+</strong><br>
+        Núcleo neuronal distribuido, LLM pipeline, y cliente Next.js para el dashboard.
+      </div>
+      <div class="req-item">
+        <strong>Git</strong><br>
+        Clonar el repositorio y mantener actualizaciones del sistema.
+      </div>
+    </div>
+  </div>
+
+  <div class="alternatives">
+    <h3>Otras Formas de Instalar</h3>
+    <div class="alt-row">
+      <div class="alt-pill">Docker: <code>docker compose up -d</code></div>
+      <div class="alt-pill">pip: <code>pip install -r requirements.txt</code></div>
+      <div class="alt-pill">npm: <code>cd "New project/ZiCore" && npm install</code></div>
+      <div class="alt-pill">Ollama: <code>ollama pull gemma3:1b</code></div>
+    </div>
+  </div>
+
+  <div class="footer">ZICORE System v5.0 — <span>ZineMotion Foundation</span> — zicore.space</div>
+</div>
+
+<script>
+function updateClock(){
+  const d=new Date();
+  document.getElementById('clock').textContent=d.toISOString().slice(0,19).replace('T',' ')+' UTC';
+}
+setInterval(updateClock,1000);updateClock();
+
+(function(){
+  const c=document.getElementById('starfield'),x=c.getContext('2d');
+  let w,h,stars=[];
+  function resize(){w=c.width=innerWidth;h=c.height=innerHeight;stars=[];for(let i=0;i<120;i++)stars.push({x:Math.random()*w,y:Math.random()*h,s:Math.random()*1.5+.3,a:Math.random(),sp:Math.random()*.0003+.0001})}
+  function draw(){x.clearRect(0,0,w,h);stars.forEach(s=>{s.a+=s.sp;if(s.a>1)s.a=0;const o=Math.sin(s.a*Math.PI);x.beginPath();x.arc(s.x,s.y,s.s,0,Math.PI*2);x.fillStyle=`rgba(200,214,229,${o*.35})`;x.fill()});requestAnimationFrame(draw)}
+  resize();draw();addEventListener('resize',resize);
+})();
+
+function downloadInstaller(platform){
+  const btn=document.getElementById('dl-'+platform);
+  btn.textContent='Descargando...';
+  btn.classList.add('downloading');
+  
+  const urls={
+    windows:'/installers/install_zicore.ps1',
+    linux:'/installers/install_zicore.sh',
+    mac:'/installers/install_zicore_mac.sh'
+  };
+  
+  const a=document.createElement('a');
+  a.href=urls[platform];
+  a.download='';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  
+  setTimeout(()=>{
+    btn.textContent=platform==='windows'?'Descargar .ps1':'Descargar .sh';
+    btn.classList.remove('downloading');
+  },2000);
+}
+</script>
+</body>
+</html>
