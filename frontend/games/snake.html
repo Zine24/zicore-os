@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Snake</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#04060c;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;user-select:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10;display:none;animation:fadeIn .4s ease}
+.screen.active{display:block}
+#startScreen h1{font-size:42px;color:#00ff88;text-shadow:0 0 30px rgba(0,255,136,.5),0 0 60px rgba(0,255,136,.2);margin-bottom:4px;letter-spacing:6px}
+#startScreen .tagline{font-size:11px;color:#7c4dff;margin-bottom:28px;letter-spacing:3px}
+#startScreen .controls{color:#556;font-size:11px;line-height:2}
+#startScreen .controls span{color:#00e5ff}
+.start-hint{color:#ffeb3b;font-size:13px;letter-spacing:2px;animation:pulse 2s infinite;margin-top:20px}
+#gameOver .go-title{font-size:38px;color:#ff1744;text-shadow:0 0 30px rgba(255,23,68,.5);margin-bottom:10px}
+#gameOver .go-score{font-size:20px;color:#ffeb3b;margin-bottom:4px}
+#gameOver .go-info{font-size:13px;color:#7c4dff;margin-bottom:20px}
+.btn{padding:10px 28px;border:2px solid #00e5ff;background:transparent;color:#00e5ff;font-size:13px;font-family:inherit;cursor:pointer;border-radius:6px;letter-spacing:2px;transition:all .2s}
+.btn:hover{background:#00e5ff22;box-shadow:0 0 15px rgba(0,229,255,.3)}
+#gameWrap{display:none;flex-direction:column;align-items:center;gap:8px}
+#gameWrap.active{display:flex}
+#hud{display:flex;gap:12px;font-size:11px;letter-spacing:1px}
+#hud>div{padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px}
+#hud .score{color:#ffeb3b}
+#hud .level{color:#7c4dff}
+#hud .food{color:#00ff88}
+#hud .power{color:#00e5ff}
+#canvasWrap{position:relative;border:2px solid #0e1a2a;border-radius:4px;overflow:hidden}
+#canvasWrap canvas{display:block}
+.controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
+.controls-help span{color:#00e5ff55}
+</style>
+</head>
+<body>
+<div id="startScreen" class="screen active">
+  <h1>SNAKE</h1>
+  <div class="tagline">ZICORE SERPENT ENGINE</div>
+  <div class="controls">
+    <span>WASD</span> or <span>ARROWS</span> to move<br>
+    <span>P</span> Pause
+  </div>
+  <button class="btn" onclick="startGame()">LAUNCH</button>
+  <div class="start-hint">PRESS ENTER OR CLICK</div>
+</div>
+<div id="gameOver" class="screen">
+  <div class="go-title">GAME OVER</div>
+  <div class="go-score" id="finalScore">SCORE: 0</div>
+  <div class="go-info" id="finalInfo">LENGTH: 3 | LEVEL 1</div>
+  <button class="btn" onclick="startGame()">RETRY</button>
+</div>
+<div id="gameWrap">
+  <div id="hud">
+    <div class="score">SCORE: <span id="hudScore">0</span></div>
+    <div class="level">LVL: <span id="hudLevel">1</span></div>
+    <div class="food">LENGTH: <span id="hudLen">3</span></div>
+    <div class="power" id="powerIndicator" style="display:none">POWER: <span id="powerName"></span></div>
+  </div>
+  <div id="canvasWrap"><canvas id="game"></canvas></div>
+</div>
+<div class="controls-help"><span>WASD/ARROWS</span> MOVE <span>P</span> PAUSE</div>
+
+<script>
+const GRID=20,CELL=24;
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+canvas.width=GRID*CELL;canvas.height=GRID*CELL;
+
+const DIR={UP:{x:0,y:-1},DOWN:{x:0,y:1},LEFT:{x:-1,y:0},RIGHT:{x:1,y:0}};
+let snake,dir,nextDir,food,powerUp,obstacles,score,level,gameOver,paused,moveTimer,moveInterval,lastTime,animFrame,particles,powerTimer,powerType,foodEaten;
+
+const POWER_TYPES=[
+  {name:'SPEED',color:'#ff1744',duration:5000},
+  {name:'SLOW',color:'#448aff',duration:5000},
+  {name:'2x PTS',color:'#ffeb3b',duration:8000}
+];
+
+function createObstacles(lvl){
+  const obs=[];
+  const count=Math.min(lvl*2,30);
+  for(let i=0;i<count;i++){
+    let x,y,valid;
+    do{x=Math.floor(Math.random()*GRID);y=Math.floor(Math.random()*GRID);valid=true;
+      if(x<3&&y<3)valid=false;
+      for(const o of obs)if(o.x===x&&o.y===y){valid=false;break;}
+      if(snake)for(const s of snake)if(s.x===x&&s.y===y){valid=false;break;}
+    }while(!valid);
+    obs.push({x,y});
+  }
+  return obs;
+}
+
+function placeFood(){
+  let x,y,valid;
+  do{x=Math.floor(Math.random()*GRID);y=Math.floor(Math.random()*GRID);valid=true;
+    for(const s of snake)if(s.x===x&&s.y===y){valid=false;break;}
+    for(const o of obstacles)if(o.x===x&&o.y===y){valid=false;break;}
+    if(food&&food.x===x&&food.y===y)valid=false;
+  }while(!valid);
+  food={x,y};
+}
+
+function placePowerUp(){
+  if(powerUp||Math.random()>0.15)return;
+  let x,y,valid;
+  do{x=Math.floor(Math.random()*GRID);y=Math.floor(Math.random()*GRID);valid=true;
+    for(const s of snake)if(s.x===x&&s.y===y){valid=false;break;}
+    for(const o of obstacles)if(o.x===x&&o.y===y){valid=false;break;}
+    if(food.x===x&&food.y===y)valid=false;
+  }while(!valid);
+  const type=POWER_TYPES[Math.floor(Math.random()*POWER_TYPES.length)];
+  powerUp={x,y,type};
+}
+
+function addParticles(x,y,color,count=5){
+  for(let i=0;i<count;i++){
+    particles.push({x:x*CELL+CELL/2,y:y*CELL+CELL/2,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:1,color,size:Math.random()*3+1});
+  }
+}
+
+function startGame(){
+  document.getElementById('startScreen').classList.remove('active');
+  document.getElementById('gameOver').classList.remove('active');
+  document.getElementById('gameWrap').classList.add('active');
+  snake=[{x:3,y:3},{x:2,y:3},{x:1,y:3}];
+  dir=DIR.RIGHT;nextDir=DIR.RIGHT;
+  score=0;level=1;gameOver=false;paused=false;moveTimer=0;foodEaten=0;
+  powerUp=null;powerTimer=0;powerType=null;particles=[];
+  obstacles=createObstacles(0);
+  placeFood();updateDropSpeed();updateHUD();
+  lastTime=performance.now();
+  animFrame=requestAnimationFrame(gameLoop);
+}
+
+function updateDropSpeed(){
+  let speed=150-level*5;
+  if(powerType==='SLOW')speed*=1.5;
+  if(powerType==='SPEED')speed*=0.6;
+  moveInterval=Math.max(50,speed);
+}
+
+function updateHUD(){
+  document.getElementById('hudScore').textContent=score;
+  document.getElementById('hudLevel').textContent=level;
+  document.getElementById('hudLen').textContent=snake.length;
+  const pi=document.getElementById('powerIndicator');
+  if(powerType){pi.style.display='block';document.getElementById('powerName').textContent=powerType;}
+  else pi.style.display='none';
+}
+
+function gameLoop(time){
+  if(gameOver||paused)return;
+  const dt=time-lastTime;lastTime=time;
+  // Particles
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.03;return p.life>0;});
+  // Power timer
+  if(powerTimer>0){
+    powerTimer-=dt;
+    if(powerTimer<=0){powerType=null;powerTimer=0;updateDropSpeed();updateHUD();}
+  }
+  moveTimer+=dt;
+  if(moveTimer>=moveInterval){
+    moveTimer=0;
+    dir=nextDir;
+    const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+    // Wall collision
+    if(head.x<0||head.x>=GRID||head.y<0||head.y>=GRID){endGame();return;}
+    // Self collision
+    for(const s of snake)if(s.x===head.x&&s.y===head.y){endGame();return;}
+    // Obstacle collision
+    for(const o of obstacles)if(o.x===head.x&&o.y===head.y){endGame();return;}
+    snake.unshift(head);
+    let ate=false;
+    // Food
+    if(food.x===head.x&&food.y===head.y){
+      ate=true;foodEaten++;
+      let pts=10;
+      if(powerType==='2x PTS')pts*=2;
+      score+=pts;
+      addParticles(food.x,food.y,'#00ff88',8);
+      placeFood();
+      placePowerUp();
+      if(foodEaten%5===0){
+        level=Math.min(level+1,20);
+        const newObs=createObstacles(level);
+        obstacles=newObs;
+        updateDropSpeed();
+      }
+    }
+    // Power-up
+    if(powerUp&&powerUp.x===head.x&&powerUp.y===head.y){
+      powerType=powerUp.type.name;
+      powerTimer=powerUp.type.duration;
+      addParticles(powerUp.x,powerUp.y,powerUp.type.color,10);
+      powerUp=null;
+      updateDropSpeed();
+    }
+    if(!ate)snake.pop();
+    updateHUD();
+  }
+  draw();
+  animFrame=requestAnimationFrame(gameLoop);
+}
+
+function draw(){
+  ctx.fillStyle='#060a14';ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Grid
+  ctx.strokeStyle='#0e1a2a';ctx.lineWidth=0.5;
+  for(let i=0;i<=GRID;i++){
+    ctx.beginPath();ctx.moveTo(i*CELL,0);ctx.lineTo(i*CELL,GRID*CELL);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i*CELL);ctx.lineTo(GRID*CELL,i*CELL);ctx.stroke();
+  }
+  // Obstacles
+  for(const o of obstacles){
+    ctx.fillStyle='#1a2a3a';ctx.fillRect(o.x*CELL+2,o.y*CELL+2,CELL-4,CELL-4);
+    ctx.strokeStyle='#7c4dff44';ctx.lineWidth=1;ctx.strokeRect(o.x*CELL+2,o.y*CELL+2,CELL-4,CELL-4);
+  }
+  // Food
+  ctx.fillStyle='#00ff88';
+  ctx.shadowColor='#00ff88';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.arc(food.x*CELL+CELL/2,food.y*CELL+CELL/2,CELL/3,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  // Power-up
+  if(powerUp){
+    ctx.fillStyle=powerUp.type.color;
+    ctx.shadowColor=powerUp.type.color;ctx.shadowBlur=12;
+    ctx.beginPath();ctx.arc(powerUp.x*CELL+CELL/2,powerUp.y*CELL+CELL/2,CELL/3,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#04060c';ctx.font='bold 9px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('P',powerUp.x*CELL+CELL/2,powerUp.y*CELL+CELL/2);
+  }
+  // Snake
+  for(let i=0;i<snake.length;i++){
+    const s=snake[i];
+    const t=1-i/snake.length;
+    const r=Math.floor(0+t*0);
+    const g=Math.floor(255-t*100);
+    const b=Math.floor(136+t*100);
+    ctx.fillStyle=i===0?'#00ff88':`rgb(${r},${g},${b})`;
+    if(i===0){ctx.shadowColor='#00ff88';ctx.shadowBlur=8;}
+    const pad=i===0?1:2;
+    ctx.fillRect(s.x*CELL+pad,s.y*CELL+pad,CELL-pad*2,CELL-pad*2);
+    ctx.shadowBlur=0;
+  }
+  // Eyes
+  const h=snake[0];
+  ctx.fillStyle='#04060c';
+  const ex=dir.x===0?3:0,ey=dir.y===0?3:0;
+  ctx.fillRect(h.x*CELL+6+ex,h.y*CELL+6+ey,4,4);
+  ctx.fillRect(h.x*CELL+CELL-10+ex,h.y*CELL+6+ey,4,4);
+  // Particles
+  for(const p of particles){
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);
+  }
+  ctx.globalAlpha=1;
+}
+
+function endGame(){
+  gameOver=true;
+  document.getElementById('finalScore').textContent='SCORE: '+score;
+  document.getElementById('finalInfo').textContent='LENGTH: '+snake.length+' | LEVEL '+level;
+  document.getElementById('gameOver').classList.add('active');
+  document.getElementById('gameWrap').classList.remove('active');
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!gameOver&&!document.getElementById('gameWrap').classList.contains('active')){startGame();return;}
+  if(gameOver&&e.key==='Enter'){startGame();return;}
+  if(!document.getElementById('gameWrap').classList.contains('active'))return;
+  if(e.key==='p'||e.key==='P'){if(!gameOver)paused=!paused;return;}
+  if(paused||gameOver)return;
+  const map={
+    'ArrowUp':DIR.UP,'ArrowDown':DIR.DOWN,'ArrowLeft':DIR.LEFT,'ArrowRight':DIR.RIGHT,
+    'w':DIR.UP,'W':DIR.UP,'s':DIR.DOWN,'S':DIR.DOWN,'a':DIR.LEFT,'A':DIR.LEFT,'d':DIR.RIGHT,'D':DIR.RIGHT
+  };
+  const nd=map[e.key];
+  if(nd){
+    if(nd.x+dir.x!==0||nd.y+dir.y!==0)nextDir=nd;
+    e.preventDefault();
+  }
+});
+
+let touchSX,touchSY;
+document.addEventListener('touchstart',e=>{
+  touchSX=e.touches[0].clientX;touchSY=e.touches[0].clientY;
+});
+document.addEventListener('touchend',e=>{
+  if(paused||gameOver||!document.getElementById('gameWrap').classList.contains('active'))return;
+  const dx=e.changedTouches[0].clientX-touchSX;
+  const dy=e.changedTouches[0].clientY-touchSY;
+  if(Math.abs(dx)>Math.abs(dy)){
+    if(dx>0&&dir.x!==1)nextDir=DIR.RIGHT;
+    else if(dx<0&&dir.x!==-1)nextDir=DIR.LEFT;
+  }else{
+    if(dy>0&&dir.y!==1)nextDir=DIR.DOWN;
+    else if(dy<0&&dir.y!==-1)nextDir=DIR.UP;
+  }
+});
+</script>
+</body>
+</html>

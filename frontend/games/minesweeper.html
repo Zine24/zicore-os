@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Minesweeper</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#04060c;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;user-select:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10;display:none;animation:fadeIn .4s ease}
+.screen.active{display:block}
+#startScreen h1{font-size:36px;color:#ff1744;text-shadow:0 0 30px rgba(255,23,68,.5),0 0 60px rgba(255,23,68,.2);margin-bottom:4px;letter-spacing:6px}
+#startScreen .tagline{font-size:11px;color:#7c4dff;margin-bottom:28px;letter-spacing:3px}
+#startScreen .controls{color:#556;font-size:11px;line-height:2}
+#startScreen .controls span{color:#00e5ff}
+.start-hint{color:#ffeb3b;font-size:13px;letter-spacing:2px;animation:pulse 2s infinite;margin-top:20px}
+#gameOver .go-title{font-size:38px;margin-bottom:10px}
+#gameOver .go-info{font-size:14px;color:#7c4dff;margin-bottom:20px}
+.btn{padding:10px 28px;border:2px solid #00e5ff;background:transparent;color:#00e5ff;font-size:13px;font-family:inherit;cursor:pointer;border-radius:6px;letter-spacing:2px;transition:all .2s}
+.btn:hover{background:#00e5ff22;box-shadow:0 0 15px rgba(0,229,255,.3)}
+.level-select{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:420px;margin-top:16px}
+.level-btn{padding:8px 14px;border:1px solid #1a2a3a;background:#0a1020;color:#556;border-radius:4px;cursor:pointer;font-size:10px;font-family:inherit;transition:all .2s}
+.level-btn:hover{border-color:#00e5ff;color:#00e5ff;background:#0a1828}
+#gameWrap{display:none;flex-direction:column;align-items:center;gap:10px}
+#gameWrap.active{display:flex}
+#hud{display:flex;gap:12px;font-size:11px;letter-spacing:1px}
+#hud>div{padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px}
+#hud .mines{color:#ff1744}
+#hud .timer{color:#00e5ff}
+#hud .level{color:#7c4dff}
+#hud .flags{color:#ffeb3b}
+#board{display:inline-grid;gap:1px;background:#0e1a2a;border:2px solid #0e1a2a;border-radius:4px;padding:2px}
+.cell{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;cursor:pointer;border-radius:2px;transition:background .1s;background:#1a2a3a;color:#556;user-select:none}
+.cell:hover:not(.revealed){background:#2a3a4a}
+.cell.revealed{background:#0a1020;cursor:default}
+.cell.mine{background:#3a0a0a;color:#ff1744}
+.cell.flagged{color:#ffeb3b}
+.cell.mine-hit{background:#ff1744;color:#fff}
+.c1{color:#00e5ff}.c2{color:#00ff88}.c3{color:#ff1744}.c4{color:#7c4dff}.c5{color:#ff9100}.c6{color:#00e5ff}.c7{color:#e0e0e0}.c8{color:#ffeb3b}
+.controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
+.controls-help span{color:#00e5ff55}
+</style>
+</head>
+<body>
+<div id="startScreen" class="screen active">
+  <h1>MINESWEEPER</h1>
+  <div class="tagline">ZICORE MINE ENGINE</div>
+  <div class="controls">
+    <span>LEFT CLICK</span> Reveal cell<br>
+    <span>RIGHT CLICK</span> Flag mine<br>
+    20 levels with increasing difficulty
+  </div>
+  <div class="level-select" id="levelSelect"></div>
+  <div class="start-hint">SELECT LEVEL</div>
+</div>
+<div id="gameOver" class="screen">
+  <div class="go-title" id="resultTitle">GAME OVER</div>
+  <div class="go-info" id="resultInfo">LEVEL 1</div>
+  <button class="btn" id="retryBtn" onclick="retryLevel()">RETRY</button>
+  <button class="btn" onclick="showStart()" style="margin-top:8px">LEVELS</button>
+</div>
+<div id="gameWrap">
+  <div id="hud">
+    <div class="level">LVL: <span id="hudLevel">1</span></div>
+    <div class="mines">MINES: <span id="hudMines">10</span></div>
+    <div class="flags">FLAGS: <span id="hudFlags">0</span></div>
+    <div class="timer">TIME: <span id="hudTimer">0</span>s</div>
+  </div>
+  <div id="board"></div>
+</div>
+<div class="controls-help"><span>LEFT CLICK</span> REVEAL <span>RIGHT CLICK</span> FLAG</div>
+
+<script>
+const LEVELS=[
+  {name:'1: 8x8 / 10',rows:8,cols:8,mines:10},
+  {name:'2: 8x8 / 14',rows:8,cols:8,mines:14},
+  {name:'3: 10x10 / 15',rows:10,cols:10,mines:15},
+  {name:'4: 10x10 / 20',rows:10,cols:10,mines:20},
+  {name:'5: 10x10 / 25',rows:10,cols:10,mines:25},
+  {name:'6: 12x10 / 25',rows:10,cols:12,mines:25},
+  {name:'7: 12x12 / 30',rows:12,cols:12,mines:30},
+  {name:'8: 12x12 / 35',rows:12,cols:12,mines:35},
+  {name:'9: 14x12 / 40',rows:12,cols:14,mines:40},
+  {name:'10: 14x14 / 45',rows:14,cols:14,mines:45},
+  {name:'11: 14x14 / 50',rows:14,cols:14,mines:50},
+  {name:'12: 16x14 / 55',rows:14,cols:16,mines:55},
+  {name:'13: 16x16 / 60',rows:16,cols:16,mines:60},
+  {name:'14: 16x16 / 70',rows:16,cols:16,mines:70},
+  {name:'15: 18x16 / 75',rows:16,cols:18,mines:75},
+  {name:'16: 18x18 / 80',rows:18,cols:18,mines:80},
+  {name:'17: 20x18 / 90',rows:18,cols:20,mines:90},
+  {name:'18: 20x20 / 100',rows:20,cols:20,mines:100},
+  {name:'19: 22x20 / 110',rows:20,cols:22,mines:110},
+  {name:'20: 24x20 / 120',rows:20,cols:24,mines:120}
+];
+
+let grid,revealed,flagged,gameActive,firstClick,level,timer,timerInterval,rows,cols,mineCount,flagsPlaced;
+
+function initGrid(){
+  grid=Array.from({length:rows},()=>Array(cols).fill(0));
+  revealed=Array.from({length:rows},()=>Array(cols).fill(false));
+  flagged=Array.from({length:rows},()=>Array(cols).fill(false));
+}
+
+function placeMines(safeR,safeC){
+  let placed=0;
+  while(placed<mineCount){
+    const r=Math.floor(Math.random()*rows);
+    const c=Math.floor(Math.random()*cols);
+    if(grid[r][c]===-1)continue;
+    if(Math.abs(r-safeR)<=1&&Math.abs(c-safeC)<=1)continue;
+    grid[r][c]=-1;placed++;
+  }
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(grid[r][c]===-1)continue;
+    let count=0;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&grid[nr][nc]===-1)count++;
+    }
+    grid[r][c]=count;
+  }
+}
+
+function render(){
+  const boardEl=document.getElementById('board');
+  boardEl.innerHTML='';
+  boardEl.style.gridTemplateColumns=`repeat(${cols},30px)`;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const div=document.createElement('div');
+      div.className='cell';
+      if(revealed[r][c]){
+        div.classList.add('revealed');
+        if(grid[r][c]===-1){div.classList.add('mine');div.textContent='💣';}
+        else if(grid[r][c]>0){div.textContent=grid[r][c];div.classList.add('c'+grid[r][c]);}
+      }else if(flagged[r][c]){
+        div.classList.add('flagged');div.textContent='🚩';
+      }
+      div.addEventListener('click',()=>revealCell(r,c));
+      div.addEventListener('contextmenu',e=>{e.preventDefault();toggleFlag(r,c);});
+      boardEl.appendChild(div);
+    }
+  }
+}
+
+function revealCell(r,c){
+  if(!gameActive||revealed[r][c]||flagged[r][c])return;
+  if(firstClick){
+    firstClick=false;
+    placeMines(r,c);
+    timerInterval=setInterval(()=>{timer++;document.getElementById('hudTimer').textContent=timer;},1000);
+  }
+  revealed[r][c]=true;
+  if(grid[r][c]===-1){
+    gameActive=false;
+    clearInterval(timerInterval);
+    // Reveal all mines
+    for(let i=0;i<rows;i++)for(let j=0;j<cols;j++)if(grid[i][j]===-1)revealed[i][j]=true;
+    render();
+    document.getElementById('resultTitle').textContent='GAME OVER';
+    document.getElementById('resultTitle').style.color='#ff1744';
+    document.getElementById('resultTitle').style.textShadow='0 0 30px rgba(255,23,68,.5)';
+    document.getElementById('resultInfo').textContent='LEVEL '+(level)+' | TIME: '+timer+'s';
+    document.getElementById('retryBtn').textContent='RETRY';
+    setTimeout(()=>{document.getElementById('gameOver').classList.add('active');document.getElementById('gameWrap').classList.remove('active');},500);
+    return;
+  }
+  if(grid[r][c]===0){
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&!revealed[nr][nc])revealCell(nr,nc);
+    }
+  }
+  render();checkWin();
+}
+
+function toggleFlag(r,c){
+  if(!gameActive||revealed[r][c])return;
+  flagged[r][c]=!flagged[r][c];
+  flagsPlaced+=flagged[r][c]?1:-1;
+  updateHUD();render();
+}
+
+function checkWin(){
+  let unrevealed=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(!revealed[r][c])unrevealed++;
+  if(unrevealed===mineCount){
+    gameActive=false;clearInterval(timerInterval);
+    document.getElementById('resultTitle').textContent='LEVEL COMPLETE!';
+    document.getElementById('resultTitle').style.color='#00ff88';
+    document.getElementById('resultTitle').style.textShadow='0 0 30px rgba(0,255,136,.5)';
+    document.getElementById('resultInfo').textContent='TIME: '+timer+'s | MINES: '+mineCount;
+    document.getElementById('retryBtn').textContent='NEXT LEVEL';
+    setTimeout(()=>{document.getElementById('gameOver').classList.add('active');document.getElementById('gameWrap').classList.remove('active');},500);
+  }
+}
+
+function updateHUD(){
+  document.getElementById('hudLevel').textContent=level;
+  document.getElementById('hudMines').textContent=mineCount;
+  document.getElementById('hudFlags').textContent=flagsPlaced;
+}
+
+function startLevel(lvl){
+  level=lvl;
+  const lv=LEVELS[lvl-1];
+  rows=lv.rows;cols=lv.cols;mineCount=lv.mines;
+  gameActive=true;firstClick=true;timer=0;flagsPlaced=0;
+  clearInterval(timerInterval);
+  initGrid();
+  document.getElementById('startScreen').classList.remove('active');
+  document.getElementById('gameOver').classList.remove('active');
+  document.getElementById('gameWrap').classList.add('active');
+  render();updateHUD();
+}
+
+function retryLevel(){
+  document.getElementById('gameOver').classList.remove('active');
+  startLevel(level);
+}
+
+function showStart(){
+  document.getElementById('gameOver').classList.remove('active');
+  document.getElementById('gameWrap').classList.remove('active');
+  document.getElementById('startScreen').classList.add('active');
+}
+
+// Build level select
+const ls=document.getElementById('levelSelect');
+LEVELS.forEach((lv,i)=>{
+  const btn=document.createElement('button');
+  btn.className='level-btn';
+  btn.textContent=lv.name;
+  btn.addEventListener('click',()=>startLevel(i+1));
+  ls.appendChild(btn);
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('startScreen').classList.contains('active'))return;
+    if(document.getElementById('gameOver').classList.contains('active'))retryLevel();
+  }
+});
+</script>
+</body>
+</html>

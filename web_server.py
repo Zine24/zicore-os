@@ -786,6 +786,15 @@ GAMES_CATALOG = [
     {"id": "geometry-dash", "name": "Geometry Dash", "category": "arcade", "icon": "&#128190;"},
     {"id": "pacman", "name": "Pac-Man", "category": "arcade", "icon": "&#128123;"},
     {"id": "space-invaders", "name": "Space Invaders", "category": "arcade", "icon": "&#128126;"},
+    {"id": "tetris", "name": "Tetris", "category": "puzzle", "icon": "&#129522;"},
+    {"id": "snake", "name": "Snake", "category": "arcade", "icon": "&#128013;"},
+    {"id": "breakout", "name": "Breakout", "category": "arcade", "icon": "&#127936;"},
+    {"id": "2048", "name": "2048", "category": "puzzle", "icon": "&#129516;"},
+    {"id": "memory", "name": "Memory", "category": "puzzle", "icon": "&#129504;"},
+    {"id": "sudoku", "name": "Sudoku", "category": "puzzle", "icon": "&#128220;"},
+    {"id": "tic-tac-toe", "name": "Tic-Tac-Toe", "category": "strategy", "icon": "&#10060;"},
+    {"id": "minesweeper", "name": "Minesweeper", "category": "puzzle", "icon": "&#128163;"},
+    {"id": "chess", "name": "Chess", "category": "strategy", "icon": "&#9823;"},
 ]
 
 

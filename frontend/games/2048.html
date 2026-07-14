@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE 2048</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#04060c;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;user-select:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes tilePop{0%{transform:scale(0)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10;display:none;animation:fadeIn .4s ease}
+.screen.active{display:block}
+#startScreen h1{font-size:42px;color:#ff9100;text-shadow:0 0 30px rgba(255,145,0,.5),0 0 60px rgba(255,145,0,.2);margin-bottom:4px;letter-spacing:6px}
+#startScreen .tagline{font-size:11px;color:#7c4dff;margin-bottom:28px;letter-spacing:3px}
+#startScreen .controls{color:#556;font-size:11px;line-height:2}
+#startScreen .controls span{color:#00e5ff}
+.start-hint{color:#ffeb3b;font-size:13px;letter-spacing:2px;animation:pulse 2s infinite;margin-top:20px}
+#gameOver .go-title{font-size:38px;color:#ff1744;text-shadow:0 0 30px rgba(255,23,68,.5);margin-bottom:10px}
+#gameOver .go-score{font-size:20px;color:#ffeb3b;margin-bottom:20px}
+#winScreen .go-title{font-size:38px;color:#ffeb3b;text-shadow:0 0 30px rgba(255,235,59,.5);margin-bottom:10px}
+#winScreen .go-score{font-size:20px;color:#00ff88;margin-bottom:20px}
+.btn{padding:10px 28px;border:2px solid #00e5ff;background:transparent;color:#00e5ff;font-size:13px;font-family:inherit;cursor:pointer;border-radius:6px;letter-spacing:2px;transition:all .2s}
+.btn:hover{background:#00e5ff22;box-shadow:0 0 15px rgba(0,229,255,.3)}
+#gameWrap{display:none;flex-direction:column;align-items:center;gap:12px}
+#gameWrap.active{display:flex}
+#hud{display:flex;gap:12px;font-size:12px;letter-spacing:1px}
+#hud>div{padding:6px 14px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px}
+#hud .score{color:#ffeb3b}
+#hud .best{color:#00ff88}
+.board{background:#0e1a2a;border-radius:8px;padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{width:90px;height:90px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;transition:all .12s ease;background:#1a2a3a;color:#334}
+.tile.t2{background:#0a1828;color:#00e5ff}
+.tile.t4{background:#0a1838;color:#00e5ff}
+.tile.t8{background:#0a1040;color:#7c4dff}
+.tile.t16{background:#1a0a40;color:#7c4dff}
+.tile.t32{background:#200a20;color:#ff1744}
+.tile.t64{background:#300a0a;color:#ff1744}
+.tile.t128{background:#2a1a00;color:#ff9100;font-size:22px}
+.tile.t256{background:#302000;color:#ff9100;font-size:22px}
+.tile.t512{background:#2a2a00;color:#ffeb3b;font-size:22px}
+.tile.t1024{background:#202010;color:#ffeb3b;font-size:18px}
+.tile.t2048{background:#202020;color:#fff;font-size:18px;text-shadow:0 0 10px #ffeb3b}
+.tile.new{animation:tilePop .2s ease}
+.controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
+.controls-help span{color:#00e5ff55}
+</style>
+</head>
+<body>
+<div id="startScreen" class="screen active">
+  <h1>2048</h1>
+  <div class="tagline">ZICORE TILE ENGINE</div>
+  <div class="controls">
+    <span>←→↑↓</span> or <span>WASD</span> to slide tiles
+  </div>
+  <button class="btn" onclick="startGame()">LAUNCH</button>
+  <div class="start-hint">PRESS ENTER OR CLICK</div>
+</div>
+<div id="gameOver" class="screen">
+  <div class="go-title">GAME OVER</div>
+  <div class="go-score" id="finalScore">SCORE: 0</div>
+  <button class="btn" onclick="startGame()">RETRY</button>
+</div>
+<div id="winScreen" class="screen">
+  <div class="go-title">2048!</div>
+  <div class="go-score" id="winScore">SCORE: 0</div>
+  <button class="btn" onclick="continueGame()">CONTINUE</button>
+  <button class="btn" onclick="startGame()" style="margin-top:8px">NEW GAME</button>
+</div>
+<div id="gameWrap">
+  <div id="hud">
+    <div class="score">SCORE: <span id="hudScore">0</span></div>
+    <div class="best">BEST: <span id="hudBest">0</span></div>
+  </div>
+  <div class="board" id="board"></div>
+</div>
+<div class="controls-help"><span>←→↑↓</span> SLIDE <span>P</span> PAUSE</div>
+
+<script>
+let grid,score,best=0,won,keepPlaying,moving,animFrame;
+const boardEl=document.getElementById('board');
+
+function createEmptyGrid(){return Array.from({length:4},()=>Array(4).fill(0));}
+
+function getEmptyCells(){
+  const cells=[];
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(!grid[r][c])cells.push({r,c});
+  return cells;
+}
+
+function addRandomTile(){
+  const cells=getEmptyCells();
+  if(cells.length===0)return;
+  const{r,c}=cells[Math.floor(Math.random()*cells.length)];
+  grid[r][c]=Math.random()<0.9?2:4;
+  return{r,c};
+}
+
+function canMove(){
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+    if(!grid[r][c])return true;
+    if(c<3&&grid[r][c]===grid[r][c+1])return true;
+    if(r<3&&grid[r][c]===grid[r+1][c])return true;
+  }
+  return false;
+}
+
+function slide(row){
+  let arr=row.filter(v=>v);
+  let merged=false;
+  for(let i=0;i<arr.length-1;i++){
+    if(arr[i]===arr[i+1]){arr[i]*=2;score+=arr[i];arr.splice(i+1,1);merged=true;}
+  }
+  while(arr.length<4)arr.push(0);
+  return{result:arr,changed:arr.some((v,i)=>v!==row[i])};
+}
+
+function move(dir){
+  if(moving)return;
+  let changed=false;
+  const oldGrid=grid.map(r=>[...r]);
+  if(dir==='left'){
+    for(let r=0;r<4;r++){const{s,changed:c}=slide(grid[r]);grid[r]=s;changed=changed||c;}
+  }else if(dir==='right'){
+    for(let r=0;r<4;r++){const{result,changed:c}=slide([...grid[r]].reverse());grid[r]=result.reverse();changed=changed||c;}
+  }else if(dir==='up'){
+    for(let c=0;c<4;c++){
+      const col=[grid[0][c],grid[1][c],grid[2][c],grid[3][c]];
+      const{result,changed:c2}=slide(col);
+      for(let r=0;r<4;r++)grid[r][c]=result[r];
+      changed=changed||c2;
+    }
+  }else if(dir==='down'){
+    for(let c=0;c<4;c++){
+      const col=[grid[3][c],grid[2][c],grid[1][c],grid[0][c]];
+      const{result,changed:c2}=slide(col);
+      for(let r=0;r<4;r++)grid[r][c]=result[3-r];
+      changed=changed||c2;
+    }
+  }
+  if(changed){
+    moving=true;
+    const newTile=addRandomTile();
+    render(newTile);
+    if(score>best)best=score;
+    updateHUD();
+    if(!won){
+      for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(grid[r][c]===2048){won=true;showWin();return;}
+    }
+    if(!canMove()){setTimeout(()=>endGame(),300);}
+    setTimeout(()=>{moving=false;},100);
+  }
+}
+
+function render(newTile){
+  boardEl.innerHTML='';
+  for(let r=0;r<4;r++){
+    for(let c=0;c<4;c++){
+      const v=grid[r][c];
+      const div=document.createElement('div');
+      div.className='tile'+(v?' t'+Math.min(v,2048):'');
+      if(newTile&&newTile.r===r&&newTile.c===c)div.classList.add('new');
+      div.textContent=v||'';
+      boardEl.appendChild(div);
+    }
+  }
+}
+
+function updateHUD(){
+  document.getElementById('hudScore').textContent=score;
+  document.getElementById('hudBest').textContent=best;
+}
+
+function startGame(){
+  document.getElementById('startScreen').classList.remove('active');
+  document.getElementById('gameOver').classList.remove('active');
+  document.getElementById('winScreen').classList.remove('active');
+  document.getElementById('gameWrap').classList.add('active');
+  grid=createEmptyGrid();score=0;won=false;keepPlaying=false;moving=false;
+  addRandomTile();addRandomTile();render();updateHUD();
+}
+
+function continueGame(){
+  document.getElementById('winScreen').classList.remove('active');
+  document.getElementById('gameWrap').classList.add('active');
+  keepPlaying=true;
+}
+
+function endGame(){
+  document.getElementById('finalScore').textContent='SCORE: '+score;
+  document.getElementById('gameOver').classList.add('active');
+  document.getElementById('gameWrap').classList.remove('active');
+}
+
+function showWin(){
+  document.getElementById('winScore').textContent='SCORE: '+score;
+  document.getElementById('winScreen').classList.add('active');
+  document.getElementById('gameWrap').classList.remove('active');
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!gameOver&&!document.getElementById('gameWrap').classList.contains('active')){startGame();return;}
+  if(!document.getElementById('gameWrap').classList.contains('active'))return;
+  const map={'ArrowLeft':'left','ArrowRight':'right','ArrowUp':'up','ArrowDown':'down','a':'left','A':'left','d':'right','D':'right','w':'up','W':'up','s':'down','S':'down'};
+  if(map[e.key]){move(map[e.key]);e.preventDefault();}
+});
+
+let touchSX,touchSY;
+document.addEventListener('touchstart',e=>{
+  touchSX=e.touches[0].clientX;touchSY=e.touches[0].clientY;
+});
+document.addEventListener('touchend',e=>{
+  if(!document.getElementById('gameWrap').classList.contains('active'))return;
+  const dx=e.changedTouches[0].clientX-touchSX;
+  const dy=e.changedTouches[0].clientY-touchSY;
+  if(Math.abs(dx)>Math.abs(dy)){move(dx>0?'right':'left');}
+  else{move(dy>0?'down':'up');}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Tic-Tac-Toe</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#04060c;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;user-select:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes popIn{0%{transform:scale(0);opacity:0}50%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+.screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10;display:none;animation:fadeIn .4s ease}
+.screen.active{display:block}
+#startScreen h1{font-size:36px;color:#00e5ff;text-shadow:0 0 30px rgba(0,229,255,.5),0 0 60px rgba(0,229,255,.2);margin-bottom:4px;letter-spacing:6px}
+#startScreen .tagline{font-size:11px;color:#7c4dff;margin-bottom:28px;letter-spacing:3px}
+#startScreen .controls{color:#556;font-size:11px;line-height:2}
+#startScreen .controls span{color:#00e5ff}
+.start-hint{color:#ffeb3b;font-size:13px;letter-spacing:2px;animation:pulse 2s infinite;margin-top:20px}
+#roundResult .go-title{font-size:36px;margin-bottom:10px}
+#roundResult .go-info{font-size:14px;color:#7c4dff;margin-bottom:20px}
+.btn{padding:10px 28px;border:2px solid #00e5ff;background:transparent;color:#00e5ff;font-size:13px;font-family:inherit;cursor:pointer;border-radius:6px;letter-spacing:2px;transition:all .2s}
+.btn:hover{background:#00e5ff22;box-shadow:0 0 15px rgba(0,229,255,.3)}
+#gameWrap{display:none;flex-direction:column;align-items:center;gap:16px}
+#gameWrap.active{display:flex}
+#hud{display:flex;gap:16px;font-size:13px;letter-spacing:1px}
+#hud>div{padding:6px 14px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px}
+#hud .you{color:#00e5ff}
+#hud .ai{color:#ff1744}
+#hud .draw{color:#ffeb3b}
+#hud .round{color:#7c4dff}
+#status{font-size:14px;color:#ffeb3b;letter-spacing:2px;min-height:20px}
+#board{display:grid;grid-template-columns:repeat(3,100px);grid-template-rows:repeat(3,100px);gap:6px}
+.cell{width:100px;height:100px;background:#0a1020;border:2px solid #1a2a3a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:bold;cursor:pointer;transition:all .2s}
+.cell:hover:not(.taken){background:#0a1828;border-color:#00e5ff55}
+.cell.x{color:#00e5ff;text-shadow:0 0 15px rgba(0,229,255,.5);animation:popIn .3s ease}
+.cell.o{color:#ff1744;text-shadow:0 0 15px rgba(255,23,68,.5);animation:popIn .3s ease}
+.cell.win{background:#0a2018;border-color:#00ff88;box-shadow:0 0 20px rgba(0,255,136,.3)}
+.cell.taken{cursor:default}
+.controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
+.controls-help span{color:#00e5ff55}
+</style>
+</head>
+<body>
+<div id="startScreen" class="screen active">
+  <h1>TIC-TAC-TOE</h1>
+  <div class="tagline">ZICORE STRATEGIC ENGINE</div>
+  <div class="controls">
+    <span>CLICK</span> to place X<br>
+    Best of 5 rounds vs <span>AI</span>
+  </div>
+  <button class="btn" onclick="startGame()">LAUNCH</button>
+  <div class="start-hint">PRESS ENTER OR CLICK</div>
+</div>
+<div id="roundResult" class="screen">
+  <div class="go-title" id="resultTitle">YOU WIN</div>
+  <div class="go-info" id="resultInfo">ROUND 1 OF 5</div>
+  <button class="btn" id="nextRoundBtn" onclick="nextRound()">NEXT ROUND</button>
+</div>
+<div id="gameWrap">
+  <div id="hud">
+    <div class="round">ROUND: <span id="hudRound">1</span>/5</div>
+    <div class="you">YOU: <span id="hudYou">0</span></div>
+    <div class="ai">AI: <span id="hudAI">0</span></div>
+    <div class="draw">DRAW: <span id="hudDraw">0</span></div>
+  </div>
+  <div id="status">YOUR TURN (X)</div>
+  <div id="board"></div>
+</div>
+<div class="controls-help"><span>CLICK</span> PLACE MARK</div>
+
+<script>
+let board,gameActive,round,playerWins,aiWins,draws,aiThinking;
+
+const WIN_COMBOS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function createBoard(){
+  board=Array(9).fill('');
+  gameActive=true;aiThinking=false;
+  const boardEl=document.getElementById('board');
+  boardEl.innerHTML='';
+  for(let i=0;i<9;i++){
+    const div=document.createElement('div');
+    div.className='cell';
+    div.addEventListener('click',()=>playerMove(i));
+    boardEl.appendChild(div);
+  }
+}
+
+function checkWin(b,player){
+  return WIN_COMBOS.some(combo=>combo.every(i=>b[i]===player));
+}
+
+function getEmpty(){return board.map((v,i)=>v===''?i:-1).filter(i=>i>=0);}
+
+function minimax(b,depth,isMax){
+  if(checkWin(b,'O'))return 10-depth;
+  if(checkWin(b,'X'))return depth-10;
+  const empty=getEmpty();
+  if(empty.length===0)return 0;
+  if(isMax){
+    let best=-Infinity;
+    for(const i of empty){b[i]='O';best=Math.max(best,minimax(b,depth+1,false));b[i]='';}
+    return best;
+  }else{
+    let best=Infinity;
+    for(const i of empty){b[i]='X';best=Math.min(best,minimax(b,depth+1,true));b[i]='';}
+    return best;
+  }
+}
+
+function aiMove(){
+  if(!gameActive)return;
+  aiThinking=true;
+  document.getElementById('status').textContent='AI THINKING...';
+  setTimeout(()=>{
+    let bestScore=-Infinity,bestMove=-1;
+    const empty=getEmpty();
+    for(const i of empty){
+      board[i]='O';
+      const score=minimax(board,0,false);
+      board[i]='';
+      if(score>bestScore){bestScore=score;bestMove=i;}
+    }
+    if(bestMove>=0){
+      board[bestMove]='O';
+      render();
+      if(checkWin(board,'O')){endRound('ai');return;}
+      if(getEmpty().length===0){endRound('draw');return;}
+    }
+    gameActive=true;
+    document.getElementById('status').textContent='YOUR TURN (X)';
+    aiThinking=false;
+  },400+Math.random()*300);
+}
+
+function playerMove(i){
+  if(!gameActive||board[i]!==''||aiThinking)return;
+  board[i]='X';
+  render();
+  if(checkWin(board,'X')){endRound('player');return;}
+  if(getEmpty().length===0){endRound('draw');return;}
+  gameActive=false;
+  document.getElementById('status').textContent='AI TURN (O)';
+  aiMove();
+}
+
+function render(){
+  const cells=document.querySelectorAll('.cell');
+  cells.forEach((cell,i)=>{
+    cell.textContent=board[i];
+    cell.className='cell';
+    if(board[i]==='X')cell.classList.add('x','taken');
+    else if(board[i]==='O')cell.classList.add('o','taken');
+  });
+}
+
+function endRound(result){
+  gameActive=false;
+  let title,color;
+  if(result==='player'){playerWins++;title='YOU WIN';color='#00e5ff';}
+  else if(result==='ai'){aiWins++;title='AI WINS';color='#ff1744';}
+  else{draws++;title='DRAW';color='#ffeb3b';}
+  // Highlight win line
+  if(result!=='draw'){
+    const winner=result==='player'?'X':'O';
+    for(const combo of WIN_COMBOS){
+      if(combo.every(i=>board[i]===winner)){
+        const cells=document.querySelectorAll('.cell');
+        combo.forEach(i=>cells[i].classList.add('win'));
+        break;
+      }
+    }
+  }
+  updateHUD();
+  const isLast=round>=5;
+  document.getElementById('resultTitle').textContent=title;
+  document.getElementById('resultTitle').style.color=color;
+  document.getElementById('resultTitle').style.textShadow=`0 0 30px ${color}80`;
+  document.getElementById('resultInfo').textContent=`ROUND ${round} OF 5 | YOU ${playerWins} - ${aiWins} AI`;
+  document.getElementById('nextRoundBtn').textContent=isLast?'FINAL RESULTS':'NEXT ROUND';
+  setTimeout(()=>{
+    document.getElementById('roundResult').classList.add('active');
+  },result==='draw'?300:1000);
+}
+
+function nextRound(){
+  document.getElementById('roundResult').classList.remove('active');
+  if(round>=5){
+    showFinalResults();return;
+  }
+  round++;
+  createBoard();updateHUD();
+  document.getElementById('status').textContent='YOUR TURN (X)';
+}
+
+function showFinalResults(){
+  let title,color;
+  if(playerWins>aiWins){title='YOU WIN THE MATCH';color='#00e5ff';}
+  else if(aiWins>playerWins){title='AI WINS THE MATCH';color='#ff1744';}
+  else{title='MATCH DRAWN';color='#ffeb3b';}
+  document.getElementById('resultTitle').textContent=title;
+  document.getElementById('resultTitle').style.color=color;
+  document.getElementById('resultTitle').style.textShadow=`0 0 30px ${color}80`;
+  document.getElementById('resultInfo').textContent=`FINAL: YOU ${playerWins} - ${aiWins} AI - ${draws} DRAW`;
+  document.getElementById('nextRoundBtn').textContent='NEW MATCH';
+  document.getElementById('roundResult').classList.add('active');
+}
+
+function startGame(){
+  document.getElementById('startScreen').classList.remove('active');
+  document.getElementById('roundResult').classList.remove('active');
+  document.getElementById('gameWrap').classList.add('active');
+  round=1;playerWins=0;aiWins=0;draws=0;
+  createBoard();updateHUD();
+  document.getElementById('status').textContent='YOUR TURN (X)';
+}
+
+function updateHUD(){
+  document.getElementById('hudRound').textContent=round;
+  document.getElementById('hudYou').textContent=playerWins;
+  document.getElementById('hudAI').textContent=aiWins;
+  document.getElementById('hudDraw').textContent=draws;
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('startScreen').classList.contains('active'))startGame();
+    else if(document.getElementById('roundResult').classList.contains('active'))nextRound();
+  }
+});
+</script>
+</body>
+</html>

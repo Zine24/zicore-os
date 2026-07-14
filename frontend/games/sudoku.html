@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Sudoku</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#04060c;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;user-select:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10;display:none;animation:fadeIn .4s ease}
+.screen.active{display:block}
+#startScreen h1{font-size:42px;color:#00e5ff;text-shadow:0 0 30px rgba(0,229,255,.5),0 0 60px rgba(0,229,255,.2);margin-bottom:4px;letter-spacing:6px}
+#startScreen .tagline{font-size:11px;color:#7c4dff;margin-bottom:28px;letter-spacing:3px}
+.start-hint{color:#ffeb3b;font-size:13px;letter-spacing:2px;animation:pulse 2s infinite;margin-top:20px}
+#complete .go-title{font-size:32px;color:#00ff88;text-shadow:0 0 30px rgba(0,255,136,.5);margin-bottom:10px}
+#complete .go-info{font-size:14px;color:#ffeb3b;margin-bottom:20px}
+.btn{padding:10px 28px;border:2px solid #00e5ff;background:transparent;color:#00e5ff;font-size:13px;font-family:inherit;cursor:pointer;border-radius:6px;letter-spacing:2px;transition:all .2s}
+.btn:hover{background:#00e5ff22;box-shadow:0 0 15px rgba(0,229,255,.3)}
+.level-select{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:400px;margin-top:16px}
+.level-btn{padding:8px 14px;border:1px solid #1a2a3a;background:#0a1020;color:#556;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;transition:all .2s}
+.level-btn:hover{border-color:#00e5ff;color:#00e5ff;background:#0a1828}
+#gameWrap{display:none;flex-direction:column;align-items:center;gap:12px}
+#gameWrap.active{display:flex}
+#hud{display:flex;gap:12px;font-size:11px;letter-spacing:1px}
+#hud>div{padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px}
+#hud .level{color:#7c4dff}
+#hud .timer{color:#00e5ff}
+#hud .hints{color:#ffeb3b}
+#sudokuBoard{display:grid;grid-template-columns:repeat(9,44px);grid-template-rows:repeat(9,44px);border:3px solid #00e5ff;gap:0;background:#0e1a2a}
+.cell{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:1px solid #1a2a3a;transition:all .15s;background:#060a14;color:#00e5ff}
+.cell.given{color:#334;font-weight:bold}
+.cell.selected{background:#0a1838;border-color:#00e5ff;box-shadow:inset 0 0 10px rgba(0,229,255,.2)}
+.cell.highlight{background:#0a1028}
+.cell.error{color:#ff1744!important;background:#1a0a10}
+.cell.correct{color:#00ff88}
+.cell:nth-child(3n){border-right:2px solid #00e5ff44}
+.cell:nth-child(9n){border-right:none}
+.cell:nth-child(n+19):nth-child(-n+27){border-bottom:2px solid #00e5ff44}
+.cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #00e5ff44}
+.numpad{display:flex;gap:6px;margin-top:8px}
+.num-btn{width:44px;height:44px;border:1px solid #1a2a3a;background:#0a1020;color:#00e5ff;border-radius:4px;cursor:pointer;font-size:18px;font-family:inherit;transition:all .15s}
+.num-btn:hover{background:#0a1828;border-color:#00e5ff}
+.num-btn.active{background:#00e5ff22;border-color:#00e5ff}
+.btn-row{display:flex;gap:8px;margin-top:8px}
+.controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
+.controls-help span{color:#00e5ff55}
+</style>
+</head>
+<body>
+<div id="startScreen" class="screen active">
+  <h1>SUDOKU</h1>
+  <div class="tagline">ZICORE LOGIC ENGINE</div>
+  <div class="level-select" id="levelSelect"></div>
+  <div class="start-hint">SELECT DIFFICULTY</div>
+</div>
+<div id="complete" class="screen">
+  <div class="go-title">COMPLETE!</div>
+  <div class="go-info" id="completeInfo">TIME: 0s | HINTS: 0</div>
+  <button class="btn" onclick="showStart()">BACK</button>
+</div>
+<div id="gameWrap">
+  <div id="hud">
+    <div class="level">LVL: <span id="hudLevel">1</span></div>
+    <div class="timer">TIME: <span id="hudTimer">0</span>s</div>
+    <div class="hints">HINTS: <span id="hudHints">3</span></div>
+  </div>
+  <div id="sudokuBoard"></div>
+  <div class="numpad" id="numpad"></div>
+  <div class="btn-row">
+    <button class="btn" onclick="useHint()" style="font-size:11px;padding:6px 14px">HINT</button>
+    <button class="btn" onclick="validate()" style="font-size:11px;padding:6px 14px">CHECK</button>
+    <button class="btn" onclick="showStart()" style="font-size:11px;padding:6px 14px">BACK</button>
+  </div>
+</div>
+<div class="controls-help"><span>CLICK</span> SELECT CELL <span>1-9</span> INPUT <span>0/DEL</span> ERASE</div>
+
+<script>
+const LEVELS=[
+  {name:'EASY 1',clues:45},{name:'EASY 2',clues:42},{name:'EASY 3',clues:40},
+  {name:'MED 1',clues:38},{name:'MED 2',clues:36},{name:'MED 3',clues:34},
+  {name:'MED 4',clues:32},{name:'HARD 1',clues:30},{name:'HARD 2',clues:28},
+  {name:'HARD 3',clues:27},{name:'HARD 4',clues:26},{name:'HARD 5',clues:25},
+  {name:'EXPERT 1',clues:24},{name:'EXPERT 2',clues:23},{name:'EXPERT 3',clues:22},
+  {name:'EXPERT 4',clues:21},{name:'EXPERT 5',clues:20},{name:'EXPERT 6',clues:19},
+  {name:'EXPERT 7',clues:18},{name:'EXPERT 8',clues:17}
+];
+
+let puzzle,solution,playerBoard,given,selectedCell,level,timer,timerInterval,hints,selectedNum;
+
+function generateSolved(){
+  const board=Array.from({length:9},()=>Array(9).fill(0));
+  function isValid(board,r,c,n){
+    for(let i=0;i<9;i++){if(board[r][i]===n||board[i][c]===n)return false;}
+    const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
+    for(let i=br;i<br+3;i++)for(let j=bc;j<bc+3;j++)if(board[i][j]===n)return false;
+    return true;
+  }
+  function fill(board){
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+      if(board[r][c]===0){
+        const nums=[1,2,3,4,5,6,7,8,9];
+        for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];}
+        for(const n of nums){
+          if(isValid(board,r,c,n)){board[r][c]=n;if(fill(board))return true;board[r][c]=0;}
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+  fill(board);
+  return board;
+}
+
+function generatePuzzle(clues){
+  solution=generateSolved();
+  puzzle=solution.map(r=>[...r]);
+  const toRemove=81-clues;
+  const positions=[];
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)positions.push([r,c]);
+  for(let i=positions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}
+  let removed=0;
+  for(const[r,c] of positions){
+    if(removed>=toRemove)break;
+    const temp=puzzle[r][c];
+    puzzle[r][c]=0;
+    removed++;
+  }
+  given=puzzle.map(r=>r.map(v=>v!==0));
+}
+
+function render(){
+  const boardEl=document.getElementById('sudokuBoard');
+  boardEl.innerHTML='';
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const div=document.createElement('div');
+      div.className='cell';
+      if(given[r][c])div.classList.add('given');
+      if(selectedCell&&selectedCell.r===r&&selectedCell.c===c)div.classList.add('selected');
+      if(playerBoard[r][c]!==0)div.textContent=playerBoard[r][c];
+      div.addEventListener('click',()=>selectCell(r,c));
+      boardEl.appendChild(div);
+    }
+  }
+}
+
+function selectCell(r,c){
+  selectedCell={r,c};
+  render();
+}
+
+function inputNumber(n){
+  if(!selectedCell||given[selectedCell.r][selectedCell.c])return;
+  const{r,c}=selectedCell;
+  playerBoard[r][c]=n;
+  render();
+  checkComplete();
+}
+
+function useHint(){
+  if(hints<=0)return;
+  // Find an empty cell and fill it
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(playerBoard[r][c]===0||playerBoard[r][c]!==solution[r][c]){
+      playerBoard[r][c]=solution[r][c];
+      given[r][c]=true;
+      hints--;
+      updateHUD();render();checkComplete();
+      return;
+    }
+  }
+}
+
+function validate(){
+  const cells=document.querySelectorAll('.cell');
+  let allCorrect=true;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const idx=r*9+c;
+    const cell=cells[idx];
+    cell.classList.remove('error','correct');
+    if(!given[r][c]&&playerBoard[r][c]!==0){
+      if(playerBoard[r][c]===solution[r][c])cell.classList.add('correct');
+      else{cell.classList.add('error');allCorrect=false;}
+    }
+  }
+}
+
+function checkComplete(){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(playerBoard[r][c]!==solution[r][c])return;
+  }
+  clearInterval(timerInterval);
+  setTimeout(()=>{
+    document.getElementById('completeInfo').textContent='TIME: '+timer+'s | HINTS: '+(3-hints);
+    document.getElementById('complete').classList.add('active');
+    document.getElementById('gameWrap').classList.remove('active');
+  },300);
+}
+
+function updateHUD(){
+  document.getElementById('hudLevel').textContent=level;
+  document.getElementById('hudTimer').textContent=timer;
+  document.getElementById('hudHints').textContent=hints;
+}
+
+function showStart(){
+  document.getElementById('gameWrap').classList.remove('active');
+  document.getElementById('complete').classList.remove('active');
+  document.getElementById('startScreen').classList.add('active');
+}
+
+function startLevel(lvl){
+  level=lvl;hints=3;timer=0;selectedCell=null;selectedNum=null;
+  const lv=LEVELS[lvl-1];
+  generatePuzzle(lv.clues);
+  playerBoard=puzzle.map(r=>[...r]);
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{timer++;document.getElementById('hudTimer').textContent=timer;},1000);
+  document.getElementById('startScreen').classList.remove('active');
+  document.getElementById('complete').classList.remove('active');
+  document.getElementById('gameWrap').classList.add('active');
+  render();updateHUD();
+}
+
+// Build level select
+const ls=document.getElementById('levelSelect');
+LEVELS.forEach((lv,i)=>{
+  const btn=document.createElement('button');
+  btn.className='level-btn';
+  btn.textContent=lv.name;
+  btn.addEventListener('click',()=>startLevel(i+1));
+  ls.appendChild(btn);
+});
+
+// Build numpad
+const np=document.getElementById('numpad');
+for(let n=1;n<=9;n++){
+  const btn=document.createElement('button');
+  btn.className='num-btn';
+  btn.textContent=n;
+  btn.addEventListener('click',()=>inputNumber(n));
+  np.appendChild(btn);
+}
+const delBtn=document.createElement('button');
+delBtn.className='num-btn';
+delBtn.textContent='✕';
+delBtn.style.color='#ff1744';
+delBtn.addEventListener('click',()=>inputNumber(0));
+np.appendChild(delBtn);
+
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('gameWrap').classList.contains('active'))return;
+  if(e.key>='1'&&e.key<='9')inputNumber(parseInt(e.key));
+  if(e.key==='0'||e.key==='Delete'||e.key==='Backspace')inputNumber(0);
+  if(selectedCell){
+    if(e.key==='ArrowUp'&&selectedCell.r>0)selectCell(selectedCell.r-1,selectedCell.c);
+    if(e.key==='ArrowDown'&&selectedCell.r<8)selectCell(selectedCell.r+1,selectedCell.c);
+    if(e.key==='ArrowLeft'&&selectedCell.c>0)selectCell(selectedCell.r,selectedCell.c-1);
+    if(e.key==='ArrowRight'&&selectedCell.c<8)selectCell(selectedCell.r,selectedCell.c+1);
+  }
+});
+</script>
+</body>
+</html>
