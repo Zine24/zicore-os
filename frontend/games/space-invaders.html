@@ -55,6 +55,11 @@ canvas{display:block;border:1px solid rgba(0,229,255,0.15);box-shadow:0 0 30px r
 #levelCompleteScreen button:hover{background:rgba(0,255,136,0.2)}
 #levelCompleteScreen button.secondary{background:rgba(124,77,255,0.1);border-color:rgba(124,77,255,0.3);color:#7c4dff}
 #levelCompleteScreen button.secondary:hover{background:rgba(124,77,255,0.2)}
+#pauseOverlay{position:absolute;display:none;align-items:center;justify-content:center;z-index:25;width:100%;height:100%;background:rgba(4,6,12,0.6)}
+#pauseOverlay.active{display:flex}
+#pauseOverlay .pause-box{text-align:center}
+#pauseOverlay .pause-title{font-size:28px;color:#00e5ff;letter-spacing:4px;margin-bottom:10px}
+#pauseOverlay .pause-sub{font-size:12px;color:#5a6a7a;letter-spacing:2px}
 </style>
 </head>
 <body>
@@ -104,6 +109,13 @@ canvas{display:block;border:1px solid rgba(0,229,255,0.15);box-shadow:0 0 30px r
 </div>
 </div>
 
+<div id="pauseOverlay">
+<div class="pause-box">
+<div class="pause-title">PAUSED</div>
+<div class="pause-sub">Press ESC to resume</div>
+</div>
+</div>
+
 <script>
 var canvas = document.getElementById('game');
 var ctx = canvas.getContext('2d');
@@ -112,7 +124,7 @@ canvas.width = CW; canvas.height = CH;
 
 var COLORS = {bg:'#04060c',cyan:'#00e5ff',purple:'#7c4dff',green:'#00ff88',red:'#ff1744',yellow:'#ffeb3b',orange:'#ff9100',white:'#c0d0e0'};
 
-var SAVE_KEY = 'zicore_si_v2';
+var SAVE_KEY = 'zicore_si_v3';
 var progress = loadProgress();
 var currentScreen = 'start';
 var currentLevel = 1;
@@ -125,7 +137,6 @@ var shakeAmount = 0;
 var comboCount = 0;
 var comboTimer = 0;
 
-// Audio context
 var audioCtx = null;
 function initAudio() {
     if (!audioCtx) {
@@ -152,6 +163,8 @@ function sfxBossWarning() { for(var i=0;i<4;i++){setTimeout(function(){playTone(
 function sfxPlayerHit() { playTone(200, 0.2, 'sawtooth', 0.15); playTone(100, 0.3, 'square', 0.1); }
 function sfxCombo() { playTone(1047, 0.05, 'sine', 0.06); }
 function sfxLevelUp() { [523,659,784,1047].forEach(function(f,i){setTimeout(function(){playTone(f,0.15,'sine',0.1)},i*100)}); }
+function sfxBossHit() { playTone(300, 0.06, 'square', 0.05); }
+function sfxBossDeath() { playTone(100, 0.5, 'sawtooth', 0.15); setTimeout(function(){playTone(80,0.6,'square',0.1)},200); setTimeout(function(){playTone(60,0.7,'sawtooth',0.08)},400); }
 
 function loadProgress() {
     try { var d = localStorage.getItem(SAVE_KEY); return d ? JSON.parse(d) : {unlocked:1, scores:{}, bestScores:{}}; }
@@ -188,7 +201,9 @@ function getLevelConfig(lvl) {
 
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+    document.getElementById('pauseOverlay').classList.remove('active');
     if (id) { var el = document.getElementById(id); if (el) el.classList.add('active'); }
+    currentScreen = id || '';
 }
 
 function buildLevelGrid() {
@@ -249,7 +264,6 @@ function startLevel(lvl) {
         engineTrail: []
     };
 
-    // Spawn enemy types based on row
     for (var r = 0; r < cfg.enemyRows; r++) {
         for (var c = 0; c < cfg.enemyCols; c++) {
             var totalRows = cfg.enemyRows;
@@ -257,19 +271,17 @@ function startLevel(lvl) {
             var spd = cfg.speed * (0.4 + rowWeight * 0.6);
             var rowIdx = r % cfg.colors.length;
             var col = cfg.colors[rowIdx];
-            var type = 0; // Grunt
+            var type = 0;
             var hp = 1;
             var points = 100;
             var enemyW = 22, enemyH = 18;
 
-            // Row-based type assignment for interesting formations
-            if (r === 0 && cfg.enemyRows > 3) { type = 2; hp = 3; points = 300; enemyW = 26; enemyH = 22; } // Tank (front row)
+            if (r === 0 && cfg.enemyRows > 3) { type = 2; hp = 3; points = 300; enemyW = 26; enemyH = 22; }
             else if (r === 1 || r === 2) {
-                // Mix of scouts and grunts
-                if ((c + r) % 3 === 0 && hard) { type = 3; hp = 2; points = 250; } // Bomber
-                else { type = 1; hp = 1; points = 150; } // Scout
+                if ((c + r) % 3 === 0 && cfg.hard) { type = 3; hp = 2; points = 250; }
+                else { type = 1; hp = 1; points = 150; enemyW = 20; enemyH = 16; }
             }
-            else if (r === totalRows - 1 && hard) { type = 3; hp = 2; points = 250; } // Back row bomber in hard
+            else if (r === totalRows - 1 && cfg.hard) { type = 3; hp = 2; points = 250; }
 
             gameState.aliens.push({
                 x: startX + c * gapX, y: startY + r * gapY,
@@ -291,7 +303,8 @@ function startLevel(lvl) {
             dir: 1, speed: cfg.speed * 0.3,
             alive: true, attackTimer: 0, attackPhase: 0,
             targetY: 80, entered: false,
-            spawnTimer: 0, patternIndex: 0
+            spawnTimer: 0, patternIndex: 0,
+            phase: 1
         };
         sfxBossWarning();
     }
@@ -360,7 +373,6 @@ function drawShield() {
 
 function drawEngineTrail() {
     var s = gameState.ship;
-    // Engine glow
     var grad = ctx.createRadialGradient(s.x, s.y + s.h/2 + 4, 0, s.x, s.y + s.h/2 + 4, 12);
     grad.addColorStop(0, 'rgba(0,229,255,0.6)');
     grad.addColorStop(0.5, 'rgba(124,77,255,0.3)');
@@ -368,7 +380,6 @@ function drawEngineTrail() {
     ctx.fillStyle = grad;
     ctx.fillRect(s.x - 12, s.y + s.h/2 - 2, 24, 16);
 
-    // Flame particles
     for (var i = 0; i < 3; i++) {
         var px = s.x + (Math.random() - 0.5) * 8;
         var py = s.y + s.h/2 + 4 + Math.random() * 8;
@@ -388,7 +399,6 @@ function drawShip() {
     grad.addColorStop(1, 'rgba(0,229,255,0.4)');
     ctx.fillStyle = grad;
 
-    // Main body
     ctx.beginPath();
     ctx.moveTo(s.x, s.y - s.h/2 + 2);
     ctx.lineTo(s.x - s.w/2, s.y + s.h/2 - 4);
@@ -400,13 +410,11 @@ function drawShip() {
     ctx.closePath();
     ctx.fill();
 
-    // Cockpit
     ctx.fillStyle = 'rgba(124,77,255,0.5)';
     ctx.beginPath();
     ctx.ellipse(s.x, s.y - 2, 5, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wing tips
     ctx.fillStyle = 'rgba(0,229,255,0.3)';
     ctx.beginPath();
     ctx.arc(s.x - s.w/2 + 3, s.y + s.h/2 - 2, 2, 0, Math.PI * 2);
@@ -421,7 +429,6 @@ function drawAlien(a) {
     var wobble = Math.sin(frame * 0.05 + a.x * 0.1) * 1.5;
     var colStr = 'rgb(' + a.color[0] + ',' + a.color[1] + ',' + a.color[2] + ')';
 
-    // Glow
     var glow = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.w);
     glow.addColorStop(0, 'rgba(' + a.color[0] + ',' + a.color[1] + ',' + a.color[2] + ',0.08)');
     glow.addColorStop(1, 'transparent');
@@ -431,19 +438,16 @@ function drawAlien(a) {
     ctx.fillStyle = colStr;
 
     if (a.type === 0) {
-        // Grunt - classic block
         var bw = a.w * 0.4, bh = a.h * 0.35;
         ctx.fillRect(a.x - bw, a.y - bh + wobble, bw * 2, bh * 2);
         ctx.fillRect(a.x - bw - 4, a.y - bh + 4 + wobble, 4, bh);
         ctx.fillRect(a.x + bw, a.y - bh + 4 + wobble, 4, bh);
         ctx.fillRect(a.x - bw, a.y + bh + wobble, bw * 0.6, 4);
         ctx.fillRect(a.x + bw - bw * 0.6, a.y + bh + wobble, bw * 0.6, 4);
-        // Eyes
         ctx.fillStyle = '#000';
         ctx.fillRect(a.x - 5, a.y - 3 + wobble, 3, 3);
         ctx.fillRect(a.x + 2, a.y - 3 + wobble, 3, 3);
     } else if (a.type === 1) {
-        // Scout - triangular
         ctx.beginPath();
         ctx.moveTo(a.x, a.y - a.h/2 - 2 + wobble);
         ctx.lineTo(a.x - a.w/2, a.y + a.h/2 + wobble);
@@ -455,18 +459,15 @@ function drawAlien(a) {
         ctx.fillRect(a.x - 4, a.y - 1 + wobble, 3, 3);
         ctx.fillRect(a.x + 1, a.y - 1 + wobble, 3, 3);
     } else if (a.type === 2) {
-        // Tank - large block with armor
         ctx.fillRect(a.x - a.w/2, a.y - a.h/2 + wobble, a.w, a.h);
         ctx.fillRect(a.x - a.w/2 - 3, a.y - a.h/2 + 6 + wobble, 3, a.h - 8);
         ctx.fillRect(a.x + a.w/2, a.y - a.h/2 + 6 + wobble, 3, a.h - 8);
-        // Armor plates
         ctx.fillStyle = 'rgba(' + Math.min(255,a.color[0]+40) + ',' + Math.min(255,a.color[1]+40) + ',' + Math.min(255,a.color[2]+40) + ',0.5)';
         ctx.fillRect(a.x - a.w/2 + 2, a.y - a.h/2 + 2 + wobble, a.w - 4, 4);
         ctx.fillStyle = '#000';
         ctx.fillRect(a.x - 7, a.y - 3 + wobble, 4, 4);
         ctx.fillRect(a.x + 3, a.y - 3 + wobble, 4, 4);
     } else if (a.type === 3) {
-        // Bomber - wide with wings
         ctx.fillRect(a.x - a.w/2 + 4, a.y - a.h/2 + wobble, a.w - 8, a.h);
         ctx.beginPath();
         ctx.moveTo(a.x - a.w/2, a.y + wobble);
@@ -480,12 +481,10 @@ function drawAlien(a) {
         ctx.lineTo(a.x + a.w/2 - 6, a.y + a.h/2 - 4 + wobble);
         ctx.closePath();
         ctx.fill();
-        // Bomb bay
         ctx.fillStyle = '#000';
         ctx.fillRect(a.x - 3, a.y + a.h/2 - 4 + wobble, 6, 4);
     }
 
-    // HP indicator for multi-hp enemies
     if (a.maxHP > 1 && a.alive) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(a.x - a.w/2, a.y - a.h/2 - 6 + wobble, a.w, 3);
@@ -502,12 +501,10 @@ function drawBoss(b) {
     var flash = hpPct < 0.3 && Math.floor(frame / 6) % 2 === 0;
     var bodyColor = flash ? COLORS.yellow : COLORS.red;
 
-    // Aura
     var auraSize = 50 + Math.sin(frame * 0.03) * 5;
     ctx.fillStyle = 'rgba(255,23,68,0.06)';
     ctx.beginPath(); ctx.arc(b.x, b.y, auraSize, 0, Math.PI * 2); ctx.fill();
 
-    // Main body
     ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y - b.h);
@@ -520,12 +517,10 @@ function drawBoss(b) {
     ctx.closePath();
     ctx.fill();
 
-    // Cannons
     ctx.fillStyle = 'rgba(255,23,68,0.7)';
     ctx.fillRect(b.x - b.w - 8, b.y - 4, 10, 8);
     ctx.fillRect(b.x + b.w - 2, b.y - 4, 10, 8);
 
-    // Eyes
     ctx.fillStyle = '#000';
     ctx.fillRect(b.x - 14, b.y - 8, 7, 7);
     ctx.fillRect(b.x + 7, b.y - 8, 7, 7);
@@ -533,7 +528,6 @@ function drawBoss(b) {
     ctx.fillRect(b.x - 11, b.y - 6, 3, 3);
     ctx.fillRect(b.x + 10, b.y - 6, 3, 3);
 
-    // HP bar
     var barW = 80;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(b.x - barW/2, b.y - b.h - 16, barW, 6);
@@ -555,33 +549,27 @@ function drawHUD() {
     ctx.font = 'bold 13px Consolas,monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
 
-    // Score
     ctx.fillStyle = COLORS.cyan;
     ctx.fillText('SCORE ' + String(gameState.score).padStart(6, '0'), 12, 19);
 
-    // Level
     ctx.fillStyle = gameState.config.hard ? COLORS.red : COLORS.yellow;
     ctx.fillText('LVL ' + currentLevel + (gameState.config.hard ? ' HARD' : ''), 160, 19);
 
-    // Lives
     ctx.fillStyle = COLORS.green;
     var livesStr = '';
     for (var i = 0; i < gameState.ship.lives; i++) livesStr += '\u25C6 ';
     ctx.fillText('LIVES ' + livesStr, 310, 19);
 
-    // Combo
     if (comboCount > 1) {
         ctx.fillStyle = COLORS.orange;
         ctx.fillText('COMBO x' + comboCount, 470, 19);
     }
 
-    // Best
     var best = progress.bestScores[currentLevel] || 0;
     ctx.fillStyle = COLORS.purple;
     ctx.textAlign = 'right';
     ctx.fillText('BEST ' + String(best).padStart(6, '0'), CW - 12, 19);
 
-    // Power-up indicators
     var puY = 52;
     if (gameState.shieldTimer > 0) {
         ctx.fillStyle = COLORS.cyan;
@@ -611,7 +599,6 @@ function drawHUD() {
         ctx.fillText('SPEED ' + Math.ceil(gameState.speedTimer / 60) + 's', 12, puY);
     }
 
-    // Cooldown bar
     if (gameState.shootCooldown > 0) {
         ctx.fillStyle = 'rgba(0,229,255,0.15)';
         var pct = 1 - (gameState.shootCooldown / gameState.config.bulletCooldown);
@@ -633,11 +620,9 @@ function updateGame() {
     if (gameState.multiTimer > 0) gameState.multiTimer--;
     if (gameState.speedTimer > 0) gameState.speedTimer--;
 
-    // Combo decay
     if (comboTimer > 0) comboTimer--;
     if (comboTimer <= 0) comboCount = 0;
 
-    // Player movement
     var moveSpeed = s.speed;
     if (gameState.speedTimer > 0) moveSpeed *= 1.5;
 
@@ -648,13 +633,11 @@ function updateGame() {
     if (s.dir !== 0) s.x += s.dir * moveSpeed;
     s.x = Math.max(s.w/2, Math.min(CW - s.w/2, s.x));
 
-    // Star parallax
     gs.starField.forEach(function(star) {
         star.y += star.speed;
         if (star.y > CH) { star.y = 0; star.x = Math.random() * CW; }
     });
 
-    // Bullets
     gs.bullets = gs.bullets.filter(function(b){ b.y -= gs.config.bulletSpeed; return b.y > -10; });
     gs.alienBullets = gs.alienBullets.filter(function(b){
         b.y += 3 + gs.config.speed * 0.5;
@@ -662,7 +645,6 @@ function updateGame() {
         return b.y < CH + 10;
     });
 
-    // Alien movement
     var hitEdge = false;
     var lowestAlienY = 0;
     gs.aliens.forEach(function(a) {
@@ -682,19 +664,16 @@ function updateGame() {
         });
     }
 
-    // Alien shooting (individual timers)
     gs.aliens.forEach(function(a) {
         if (!a.alive) return;
         a.shootTimer--;
         if (a.shootTimer <= 0) {
             a.shootTimer = 60 + Math.random() * 120 / (1 + gs.config.alienShootRate * 50);
             if (a.type === 3) {
-                // Bomber drops cluster
                 for (var i = -1; i <= 1; i++) {
                     gs.alienBullets.push({x: a.x + i * 8, y: a.y + a.h/2, vx: i * 0.5});
                 }
             } else if (a.type === 2) {
-                // Tank shoots big bullet
                 gs.alienBullets.push({x: a.x, y: a.y + a.h/2, vx: 0, big: true});
             } else {
                 gs.alienBullets.push({x: a.x, y: a.y + a.h/2, vx: 0});
@@ -702,7 +681,6 @@ function updateGame() {
         }
     });
 
-    // Boss logic
     if (gs.boss && gs.boss.alive) {
         var b = gs.boss;
         if (!b.entered) {
@@ -712,6 +690,10 @@ function updateGame() {
             b.x += b.dir * b.speed;
             if (b.x > CW - b.w - 10 || b.x < b.w + 10) b.dir *= -1;
 
+            var hpPct = b.hp / b.maxHP;
+            if (hpPct < 0.3) b.phase = 3;
+            else if (hpPct < 0.6) b.phase = 2;
+
             b.attackTimer++;
             var attackInterval = Math.max(30, 70 - b.attackPhase * 4);
             if (b.attackTimer > attackInterval) {
@@ -720,19 +702,16 @@ function updateGame() {
                 var spd = 3 + gs.config.speed * 0.3;
 
                 if (b.patternIndex === 0) {
-                    // Spread shot
                     for (var i = -2; i <= 2; i++) {
                         gs.alienBullets.push({x: b.x, y: b.y + b.h/2, vx: Math.cos(angle + i * 0.25) * spd * 0.5});
                     }
                 } else if (b.patternIndex === 1) {
-                    // Aimed burst
                     for (var i = 0; i < 3; i++) {
                         setTimeout(function(){
                             if (b.alive) gs.alienBullets.push({x: b.x, y: b.y + b.h/2, vx: Math.cos(angle) * spd * 0.6});
                         }, i * 100);
                     }
                 } else {
-                    // Side cannons
                     gs.alienBullets.push({x: b.x - b.w - 5, y: b.y, vx: -1});
                     gs.alienBullets.push({x: b.x + b.w + 5, y: b.y, vx: 1});
                     gs.alienBullets.push({x: b.x, y: b.y + b.h/2, vx: 0});
@@ -741,7 +720,6 @@ function updateGame() {
                 b.attackPhase = Math.min(b.attackPhase + 1, 10);
             }
 
-            // Spawn minions
             b.spawnTimer++;
             if (b.spawnTimer > 300 && gs.aliens.filter(function(a){return a.alive}).length < 5) {
                 b.spawnTimer = 0;
@@ -757,21 +735,20 @@ function updateGame() {
             }
         }
 
-        // Boss hit by bullets
         gs.bullets.forEach(function(bul) {
             if (Math.abs(bul.x - b.x) < b.w/2 + 6 && Math.abs(bul.y - b.y) < b.h/2 + 6) {
                 b.hp--;
                 bul.y = -100;
                 spawnParticles(bul.x, bul.y, 'rgb(255,23,68)', 8, 2);
                 shakeAmount = 5;
+                sfxBossHit();
                 if (b.hp <= 0) {
                     b.alive = false;
                     gs.bossActive = false;
                     gs.score += 1000;
                     spawnParticles(b.x, b.y, 'rgb(255,23,68)', 50, 6, 2, 5);
                     shakeAmount = 15;
-                    sfxExplode();
-                    // Boss always drops special power-up
+                    sfxBossDeath();
                     spawnPowerUp(b.x, b.y);
                     spawnPowerUp(b.x - 20, b.y);
                     spawnPowerUp(b.x + 20, b.y);
@@ -780,7 +757,6 @@ function updateGame() {
         });
     }
 
-    // Bullet-alien collision
     gs.bullets.forEach(function(b) {
         gs.aliens.forEach(function(a) {
             if (!a.alive) return;
@@ -788,7 +764,6 @@ function updateGame() {
                 a.hp--;
                 if (a.hp <= 0) {
                     a.alive = false;
-                    // Combo scoring
                     comboCount++;
                     comboTimer = 120;
                     var comboMult = Math.min(comboCount, 10);
@@ -808,7 +783,6 @@ function updateGame() {
         });
     });
 
-    // Alien bullet-player collision
     gs.alienBullets.forEach(function(b) {
         var hitW = b.big ? s.w/2 + 6 : s.w/2;
         var hitH = b.big ? s.h/2 + 6 : s.h/2;
@@ -825,7 +799,6 @@ function updateGame() {
         }
     });
 
-    // Aliens reach bottom
     gs.aliens.forEach(function(a) {
         if (a.alive && a.y > s.y - 30) {
             s.lives = 0;
@@ -833,7 +806,6 @@ function updateGame() {
         }
     });
 
-    // Power-up collection
     gs.powerUps = gs.powerUps.filter(function(pu) {
         pu.y += pu.vy;
         if (pu.y > CH + 10) return false;
@@ -844,7 +816,6 @@ function updateGame() {
             if (pu.type === 'multi') { gameState.multiTimer = 300; spawnParticles(pu.x, pu.y, COLORS.purple, 12, 2); }
             if (pu.type === 'health') { s.lives = Math.min(s.lives + 1, 5); spawnParticles(pu.x, pu.y, COLORS.green, 12, 2); }
             if (pu.type === 'bomb') {
-                // Screen clear
                 gs.aliens.forEach(function(a) {
                     if (a.alive) {
                         a.alive = false;
@@ -864,7 +835,6 @@ function updateGame() {
         return true;
     });
 
-    // Particles
     gs.particles = gs.particles.filter(function(p) {
         p.x += p.vx; p.y += p.vy;
         p.vy += 0.04;
@@ -872,11 +842,9 @@ function updateGame() {
         return p.life > 0;
     });
 
-    // Screen shake decay
     if (shakeAmount > 0.5) shakeAmount *= 0.92;
     else shakeAmount = 0;
 
-    // Level complete check
     var allDead = gs.aliens.every(function(a){ return !a.alive; });
     var bossDead = !gs.boss || !gs.boss.alive;
     if (allDead && bossDead) {
@@ -891,7 +859,6 @@ function levelComplete() {
     var lvlBonus = currentLevel * 50 + gs.ship.lives * 100;
     gs.score += lvlBonus;
 
-    // Star rating
     var starCount = 0;
     if (gs.score >= 3000) starCount = 3;
     else if (gs.score >= 1500) starCount = 2;
@@ -961,23 +928,17 @@ function draw() {
     if (gameState) {
         drawStars();
 
-        // Power-ups
         gameState.powerUps.forEach(function(pu) { drawPowerUpIcon(pu); });
 
-        // Aliens
         gameState.aliens.forEach(function(a) { if (a.alive) drawAlien(a); });
 
-        // Boss
         if (gameState.boss && gameState.boss.alive) drawBoss(gameState.boss);
 
-        // Shield
         if (gameState.shieldTimer > 0 || gameState.ship.invuln > 0) drawShield();
 
-        // Ship engine trail
         drawEngineTrail();
         drawShip();
 
-        // Player bullets (glow)
         gameState.bullets.forEach(function(b) {
             ctx.fillStyle = COLORS.cyan;
             ctx.fillRect(b.x - 1, b.y, 2, 10);
@@ -985,7 +946,6 @@ function draw() {
             ctx.fillRect(b.x - 2, b.y - 2, 4, 12);
         });
 
-        // Alien bullets
         gameState.alienBullets.forEach(function(b) {
             ctx.fillStyle = b.big ? COLORS.orange : COLORS.red;
             var bw = b.big ? 4 : 2;
@@ -995,7 +955,6 @@ function draw() {
             ctx.fillRect(b.x - bw, b.y - 2, bw * 2, bh + 4);
         });
 
-        // Particles
         gameState.particles.forEach(function(p) {
             ctx.globalAlpha = p.life;
             ctx.fillStyle = p.color;
@@ -1023,22 +982,15 @@ document.addEventListener('keydown', function(e) {
         if (gameActive) {
             paused = !paused;
             if (paused) {
-                ctx.fillStyle = 'rgba(4,6,12,0.6)';
-                ctx.fillRect(0, 0, CW, CH);
-                ctx.font = 'bold 28px Consolas,monospace';
-                ctx.fillStyle = COLORS.cyan;
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText('PAUSED', CW/2, CH/2 - 10);
-                ctx.font = '12px Consolas,monospace';
-                ctx.fillStyle = '#5a6a7a';
-                ctx.fillText('Press ESC to resume', CW/2, CH/2 + 15);
+                document.getElementById('pauseOverlay').classList.add('active');
+            } else {
+                document.getElementById('pauseOverlay').classList.remove('active');
             }
         }
         e.preventDefault();
         return;
     }
 
-    // Shooting
     if ((currentScreen === '' || !document.querySelector('.screen.active')) && gameActive && !paused) {
         if (e.key === ' ') {
             if (gameState.shootCooldown <= 0) {

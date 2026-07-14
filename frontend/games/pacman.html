@@ -183,7 +183,6 @@ function generateMaze(seed,loopFactor){
   const m=[];
   for(let r=0;r<ROWS;r++){m[r]=[];for(let c=0;c<COLS;c++)m[r][c]=WALL}
 
-  // Recursive backtracking on cell grid
   const vis=[];
   for(let r=0;r<cR;r++){vis[r]=[];for(let c=0;c<cC;c++)vis[r][c]=false}
   const stack=[[0,0]]; vis[0][0]=true; m[1][1]=PATH;
@@ -203,7 +202,6 @@ function generateMaze(seed,loopFactor){
     stack.push([nr,nc]);
   }
 
-  // Remove walls to create loops
   const removable=[];
   for(let r=1;r<ROWS-1;r+=2)for(let c=2;c<COLS-1;c+=2){
     if(m[r][c]===WALL&&m[r][c-1]===PATH&&m[r][c+1]===PATH)removable.push([r,c]);
@@ -218,15 +216,12 @@ function generateMaze(seed,loopFactor){
   }
   for(let i=0;i<removeCount;i++)m[removable[i][0]][removable[i][1]]=PATH;
 
-  // Ghost house (center)
   for(let r=9;r<=10;r++)for(let c=8;c<=10;c++)m[r][c]=GHOST_INSIDE;
   m[8][9]=GHOST_DOOR;
   m[11][9]=PATH;
 
-  // Tunnels (row 10)
   m[10][0]=PATH; m[10][COLS-1]=PATH;
 
-  // Pac-Man start clear
   m[15][9]=PATH;
   m[15][8]=PATH; m[15][10]=PATH;
   m[14][9]=PATH; m[16][9]=PATH;
@@ -292,19 +287,15 @@ function initLevel(lvl){
   const cfg=LEVELS[lvl-1];
   maze=generateMaze(cfg.seed,cfg.loopFactor);
 
-  // Place dots on all PATH tiles (not near ghost house or start)
   dots=[];
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     if(maze[r][c]===PATH){
-      // Skip ghost house area
       if(r>=7&&r<=12&&c>=7&&c<=11)continue;
-      // Skip Pac-Man start area
       if(r>=14&&r<=16&&c>=8&&c<=10)continue;
       dots.push({x:c,y:r,power:false});
     }
   }
 
-  // Place 4 power pellets at corners
   const ppCandidates=[
     {x:1,y:1},{x:COLS-2,y:1},{x:1,y:ROWS-2},{x:COLS-2,y:ROWS-2},
     {x:1,y:Math.floor(ROWS/2)},{x:COLS-2,y:Math.floor(ROWS/2)}
@@ -315,7 +306,6 @@ function initLevel(lvl){
     const idx=dots.findIndex(d=>d.x===pc.x&&d.y===pc.y);
     if(idx>=0){dots[idx].power=true;ppPlaced++}
   }
-  // Fallback: if not enough corner dots, place on nearest PATH tiles
   if(ppPlaced<4){
     const fallbacks=[[1,1],[17,1],[1,19],[17,19],[1,10],[17,10]];
     for(const [fx,fy] of fallbacks){
@@ -382,7 +372,6 @@ function movePacman(dt){
   if(pacman.dir.x===0&&pacman.dir.y===0)return;
   const dx=pacman.dir.x*spd*dt, dy=pacman.dir.y*spd*dt;
   let nx=pacman.x+dx, ny=pacman.y+dy;
-  // Tunnel wrap
   if(nx<-0.5){pacman.x=COLS-0.5;pacman.y=Math.round(pacman.y);return}
   if(nx>COLS-0.5){pacman.x=-0.5;pacman.y=Math.round(pacman.y);return}
   const tnx=Math.round(nx), tny=Math.round(ny);
@@ -391,7 +380,6 @@ function movePacman(dt){
   }else{
     snapToTile(pacman);
   }
-  // Eat dots
   const px=Math.round(pacman.x), py=Math.round(pacman.y);
   for(let i=dots.length-1;i>=0;i--){
     if(dots[i].x===px&&dots[i].y===py){
@@ -408,16 +396,13 @@ function movePacman(dt){
       }
       dots.splice(i,1);
       totalDotsEaten++;
-      // Score popup for power pellet
       if(dots[i]&&dots[i].power){
         scorePopups.push({x:px*TILE,y:py*TILE,text:'+50',timer:45,color:'#00e5ff'});
       }
       break;
     }
   }
-  // Extra life
   if(score>=10000&&!extraLifeAwarded){lives++;extraLifeAwarded=true;sfxExtraLife();scorePopups.push({x:px*TILE,y:py*TILE-10,text:'EXTRA LIFE!',timer:80,color:'#00ff88'})}
-  // Fruit spawn
   if(!fruitSpawned&&dots.length<=Math.floor(LEVELS[currentLevel-1].dots*0.65)){
     fruitSpawned=true;
     const fruitIdx=Math.min(Math.floor((currentLevel-1)/2),FRUITS.length-1);
@@ -439,17 +424,17 @@ function movePacman(dt){
 function getChaseTarget(g,gi){
   const px=Math.round(pacman.x), py=Math.round(pacman.y);
   switch(gi){
-    case 0: // Blinky: direct target
+    case 0:
       return{x:px,y:py};
-    case 1: // Pinky: 4 ahead
+    case 1:
       return{x:px+pacman.dir.x*4,y:py+pacman.dir.y*4};
-    case 2: { // Inky: complex using Blinky
+    case 2: {
       const ahead={x:px+pacman.dir.x*2,y:py+pacman.dir.y*2};
       const bx=ghosts[0]?Math.round(ghosts[0].x):px;
       const by=ghosts[0]?Math.round(ghosts[0].y):py;
       return{x:2*ahead.x-bx,y:2*ahead.y-by};
     }
-    case 3: { // Clyde: chase if far, scatter if close
+    case 3: {
       const dist=Math.abs(g.x-px)+Math.abs(g.y-py);
       return dist>8?{x:px,y:py}:SCATTER_TARGETS[3];
     }
@@ -460,13 +445,11 @@ function getChaseTarget(g,gi){
 function moveGhosts(dt){
   const cfg=LEVELS[currentLevel-1];
   ghosts.forEach((g,gi)=>{
-    // Exit timer (bobbing in house)
     if(g.exitTimer>0){
       g.exitTimer-=dt*1000;
       if(g.inHouse)g.y=9+Math.sin(Date.now()/250)*0.4;
       return;
     }
-    // Leaving house
     if(g.inHouse){
       if(Math.abs(g.x-9)>0.15)g.dir.x=g.x>9?-1:1;
       else{g.dir.x=0;g.dir.y=-1}
@@ -480,7 +463,6 @@ function moveGhosts(dt){
     const dx=g.dir.x*spd*dt, dy=g.dir.y*spd*dt;
     let nx=g.x+dx, ny=g.y+dy;
 
-    // Tunnel wrap
     if(nx<-0.5){g.x=COLS-0.5;g.y=Math.round(g.y);return}
     if(nx>COLS-0.5){g.x=-0.5;g.y=Math.round(g.y);return}
 
@@ -491,12 +473,10 @@ function moveGhosts(dt){
       snapToTile(g);
     }
 
-    // At tile center: decide next direction
     if(atTileCenter(g)){
       snapToTile(g);
       const gx=Math.round(g.x), gy=Math.round(g.y);
 
-      // Eaten ghost reached house
       if(g.eaten&&gy>=8&&gy<=10&&gx>=8&&gx<=10){
         g.eaten=false; g.frightened=false;
         g.y=9; g.x=9; g.dir={x:0,y:-1}; g.inHouse=true; g.exitTimer=800;
@@ -510,7 +490,6 @@ function moveGhosts(dt){
         return isWalkable(gx+d.x,gy+d.y,true)&&maze[gy+d.y][gx+d.x]!==GHOST_INSIDE;
       });
       if(valid.length===0){
-        // Dead end: allow reverse
         const rev=dirs.filter(d=>isWalkable(gx+d.x,gy+d.y,true));
         if(rev.length>0)g.dir=rev[0];
         return;
@@ -518,7 +497,6 @@ function moveGhosts(dt){
       if(g.frightened){
         g.dir=valid[Math.floor(Math.random()*valid.length)];
       }else if(g.eaten){
-        // Navigate toward ghost house door (9,8)
         let best=valid[0],bestDist=9999;
         valid.forEach(d=>{
           const tx=gx+d.x,ty=gy+d.y;
@@ -559,7 +537,6 @@ function checkCollisions(){
         score+=pts;
         scorePopups.push({x:gx*TILE,y:gy*TILE,text:'+'+pts,timer:60,color:'#00e5ff'});
         sfxGhostEat(ghostEatCombo);
-        // Show combo
         if(ghostEatCombo>1){
           const cd=document.getElementById('comboDisplay');
           cd.textContent=ghostEatCombo+'x COMBO!';
@@ -606,7 +583,6 @@ function update(dt){
   }
   if(gameState!=='playing')return;
 
-  // Death animation
   if(deathAnim>0){
     deathAnim--;
     if(deathAnim<=0){
@@ -629,7 +605,6 @@ function update(dt){
     return;
   }
 
-  // Level flash
   if(levelFlash>0){
     levelFlash--;
     if(levelFlash<=0){
@@ -652,7 +627,6 @@ function update(dt){
     return;
   }
 
-  // Power timer
   if(powerTimer>0){
     powerTimer-=dt*1000;
     const cfg=LEVELS[currentLevel-1];
@@ -665,7 +639,6 @@ function update(dt){
     }
   }
 
-  // Scatter/Chase timers
   if(!frightenedMode){
     if(isScatter){
       scatterTimer-=dt*1000;
@@ -676,7 +649,6 @@ function update(dt){
     }
   }
 
-  // Combo display
   if(comboDisplayTimer>0){
     comboDisplayTimer--;
     if(comboDisplayTimer<=0)document.getElementById('comboDisplay').style.opacity='0';
@@ -686,18 +658,14 @@ function update(dt){
   moveGhosts(dt);
   checkCollisions();
 
-  // Score popups
   scorePopups=scorePopups.filter(p=>{p.timer--;p.y-=0.6;return p.timer>0});
 
-  // Fruit timer
   if(fruit){fruit.timer-=dt*1000;if(fruit.timer<=0)fruit=null}
 
-  // Level complete
   if(dots.length===0&&pacman.alive){
     levelFlash=70;
   }
 
-  // Update HUD
   updateHUD();
 }
 
@@ -748,11 +716,9 @@ function drawMaze(){
     if(t===WALL){
       ctx.fillStyle=flash?'#00e5ff':'#0a1225';
       ctx.fillRect(x,y,TILE,TILE);
-      // Wall border glow
       ctx.strokeStyle=flash?'#00e5ff':'#152845';
       ctx.lineWidth=1;
       ctx.strokeRect(x+0.5,y+0.5,TILE-1,TILE-1);
-      // Inner glow
       if(!flash){
         ctx.fillStyle='rgba(0,229,255,0.03)';
         ctx.fillRect(x+3,y+3,TILE-6,TILE-6);
@@ -793,7 +759,6 @@ function drawFruit(){
   const blink=fruit.timer<3000&&(Date.now()%300<150);
   if(blink&&fruit.timer<3000){ctx.globalAlpha=0.4}
 
-  // Sparkle effect
   const t=Date.now()*0.005;
   for(let i=0;i<4;i++){
     const sa=t+i*Math.PI/2;
@@ -810,7 +775,6 @@ function drawFruit(){
   ctx.beginPath();
   ctx.arc(x,y,8,0,Math.PI*2);
   ctx.fill();
-  // Highlight
   ctx.fillStyle='rgba(255,255,255,0.3)';
   ctx.beginPath();
   ctx.arc(x-2,y-2,3,0,Math.PI*2);
@@ -837,7 +801,6 @@ function drawPacman(){
         ctx.fill();
         ctx.shadowBlur=0;
       }else{
-        // Disappear flash
         ctx.fillStyle='rgba(255,235,59,'+(1-progress)+')';
         ctx.beginPath();
         ctx.arc(cx,cy,radius*(1.2-progress*0.2),0,Math.PI*2);
@@ -871,7 +834,6 @@ function drawGhosts(){
     const gy=cy+bobY;
 
     if(g.eaten){
-      // Eyes only
       ctx.fillStyle='#fff';
       ctx.beginPath();ctx.arc(cx-4,gy-3,3.5,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(cx+4,gy-3,3.5,0,Math.PI*2);ctx.fill();
@@ -886,14 +848,12 @@ function drawGhosts(){
       bodyColor=(powerTimer<2500&&(t%250<125))?'#ffffff':'#2233ff';
     }
 
-    // Ghost body
     ctx.fillStyle=bodyColor;
     ctx.shadowColor=bodyColor;
     ctx.shadowBlur=5;
     ctx.beginPath();
     ctx.arc(cx,gy-3,r,Math.PI,0);
     ctx.lineTo(cx+r,gy+r-3);
-    // Wavy bottom
     const wave=t/120;
     for(let i=0;i<3;i++){
       const wx=cx+r-i*(r*2/3)-r/3;
@@ -905,7 +865,6 @@ function drawGhosts(){
     ctx.fill();
     ctx.shadowBlur=0;
 
-    // Eyes
     if(!g.frightened){
       ctx.fillStyle='#fff';
       ctx.beginPath();ctx.arc(cx-4,gy-6,4,0,Math.PI*2);ctx.fill();
@@ -914,7 +873,6 @@ function drawGhosts(){
       ctx.beginPath();ctx.arc(cx-4+g.dir.x*2,gy-6+g.dir.y*2,2.2,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(cx+4+g.dir.x*2,gy-6+g.dir.y*2,2.2,0,Math.PI*2);ctx.fill();
     }else{
-      // Frightened face
       ctx.fillStyle='#fff';
       ctx.beginPath();ctx.arc(cx-4,gy-6,2,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(cx+4,gy-6,2,0,Math.PI*2);ctx.fill();
@@ -996,7 +954,7 @@ function buildLevelGrid(){
       const lv=i;
       btn.onclick=()=>{score=0;lives=3;extraLifeAwarded=false;initLevel(lv);showScreen('gameContainer')};
     }else{
-      btn.innerHTML='<div class="lock-icon">🔒</div><div class="lvl-num" style="font-size:14px;color:#506878">'+i+'</div>';
+      btn.innerHTML='<div class="lock-icon">&#128274;</div><div class="lvl-num" style="font-size:14px;color:#506878">'+i+'</div>';
     }
     grid.appendChild(btn);
   }

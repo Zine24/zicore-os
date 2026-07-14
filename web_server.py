@@ -700,6 +700,11 @@ async def serve_zinemotion_mail():
     return FileResponse(str(FRONTEND_DIR / "zinemotion-mail.html"))
 
 
+@app.get("/zicore-bank")
+async def serve_zicore_bank():
+    return FileResponse(str(FRONTEND_DIR / "zicore-bank.html"))
+
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(str(FRONTEND_DIR / "portal.html"))
