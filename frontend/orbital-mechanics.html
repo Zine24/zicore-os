@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Orbital Mechanics</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--yellow:#ffd600;--red:#ff1744;--panel:rgba(8,16,32,0.85);--border:rgba(0,229,255,0.2);--text:#c8e6ff;--dim:rgba(200,230,255,0.4)}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden;min-height:100vh}
+#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:rgba(4,6,12,0.9);backdrop-filter:blur(20px)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo svg{width:36px;height:36px}
+.logo h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo span{font-size:11px;color:var(--dim);letter-spacing:2px;text-transform:uppercase}
+.nav{display:flex;gap:4px}
+.nav button{background:transparent;border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;transition:all 0.2s}
+.nav button:hover,.nav button.active{background:rgba(0,229,255,0.15);border-color:var(--cyan);color:var(--cyan)}
+.time-bar{font-size:11px;color:var(--cyan);font-family:'Courier New',monospace}
+.main{display:grid;grid-template-columns:320px 1fr 360px;gap:1px;flex:1;background:rgba(0,229,255,0.05)}
+.panel{background:var(--panel);backdrop-filter:blur(16px);padding:16px;overflow-y:auto;max-height:calc(100vh - 52px)}
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:2px}
+.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel h2::before{content:'';width:3px;height:14px;background:var(--cyan);border-radius:2px}
+.panel h3{font-size:12px;color:var(--purple);margin:12px 0 8px;text-transform:uppercase;letter-spacing:1px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px}
+.field input,.field select{width:100%;background:rgba(0,229,255,0.05);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:13px;font-family:inherit;transition:border 0.2s}
+.field input:focus,.field select:focus{outline:none;border-color:var(--cyan)}
+.field select option{background:var(--bg);color:var(--text)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn{padding:8px 16px;border:1px solid var(--border);background:rgba(0,229,255,0.08);color:var(--cyan);border-radius:6px;cursor:pointer;font-size:12px;transition:all 0.2s;text-align:center}
+.btn:hover{background:rgba(0,229,255,0.2);border-color:var(--cyan)}
+.btn.primary{background:linear-gradient(135deg,rgba(0,229,255,0.2),rgba(124,77,255,0.2));border-color:var(--cyan)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:rgba(255,23,68,0.15)}
+.btn-group{display:flex;gap:6px;margin:8px 0}
+.canvas-wrap{position:relative;display:flex;flex-direction:column;background:var(--bg)}
+#orbitCanvas{width:100%;flex:1;display:block}
+.hud{position:absolute;top:12px;left:12px;font-size:11px;font-family:'Courier New',monospace;color:var(--cyan);pointer-events:none;line-height:1.6}
+.hud-right{position:absolute;top:12px;right:12px;text-align:right;font-size:11px;font-family:'Courier New',monospace;color:var(--purple);pointer-events:none;line-height:1.6}
+.controls-bar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.controls-bar .btn{padding:5px 12px;font-size:11px;backdrop-filter:blur(8px);background:rgba(8,16,32,0.8)}
+.stat-card{background:rgba(0,229,255,0.05);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px}
+.stat-card .label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+.stat-card .value{font-size:20px;font-weight:700;font-family:'Courier New',monospace;margin:2px 0}
+.stat-card .unit{font-size:11px;color:var(--dim)}
+.stat-card.cyan .value{color:var(--cyan)}
+.stat-card.purple .value{color:var(--purple)}
+.stat-card.green .value{color:var(--green)}
+.stat-card.yellow .value{color:var(--yellow)}
+.stat-card.red .value{color:var(--red)}
+.dv-budget{margin-top:8px}
+.dv-phase{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid rgba(0,229,255,0.08);font-size:12px}
+.dv-phase .name{color:var(--text)}
+.dv-phase .val{font-family:'Courier New',monospace;font-weight:600}
+.dv-phase .bar{height:3px;border-radius:2px;margin-top:4px}
+.dv-total{display:flex;justify-content:space-between;padding:10px;margin-top:8px;border:1px solid var(--cyan);border-radius:6px;font-weight:700;background:rgba(0,229,255,0.05)}
+.mission-card{background:rgba(0,229,255,0.05);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:all 0.2s}
+.mission-card:hover{border-color:var(--cyan);background:rgba(0,229,255,0.1)}
+.mission-card.active{border-color:var(--purple);background:rgba(124,77,255,0.1)}
+.mission-card h4{font-size:12px;color:var(--cyan);margin-bottom:4px}
+.mission-card p{font-size:11px;color:var(--dim);line-height:1.4}
+.transfer-info{background:rgba(124,77,255,0.08);border:1px solid rgba(124,77,255,0.3);border-radius:8px;padding:12px;margin:8px 0}
+.transfer-info h3{color:var(--purple);font-size:12px;margin-bottom:8px}
+.step{font-size:11px;padding:4px 0;border-bottom:1px solid rgba(124,77,255,0.1);display:flex;justify-content:space-between}
+.step:last-child{border:none}
+.step .slabel{color:var(--dim)}
+.step .sval{color:var(--text);font-family:'Courier New',monospace}
+.body-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.body-table th{text-align:left;color:var(--dim);padding:4px 6px;border-bottom:1px solid var(--border);font-weight:500}
+.body-table td{padding:4px 6px;border-bottom:1px solid rgba(0,229,255,0.06);font-family:'Courier New',monospace;font-size:10px}
+.body-table tr:hover{background:rgba(0,229,255,0.05)}
+.body-table tr.active{background:rgba(0,229,255,0.1)}
+.glow-line{height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);margin:12px 0;opacity:0.3}
+.speed-btns{display:flex;gap:4px}
+.speed-btns button{background:transparent;border:1px solid var(--border);color:var(--dim);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px;font-family:'Courier New',monospace}
+.speed-btns button.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,229,255,0.1)}
+.tabs{display:flex;gap:2px;margin-bottom:12px}
+.tabs button{flex:1;background:rgba(0,229,255,0.05);border:1px solid var(--border);color:var(--dim);padding:6px;border-radius:4px;cursor:pointer;font-size:11px;transition:all 0.2s}
+.tabs button.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,229,255,0.1)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.info-box{background:rgba(0,229,255,0.03);border-left:2px solid var(--cyan);padding:8px 10px;font-size:11px;color:var(--dim);margin:8px 0;line-height:1.5}
+@media(max-width:1200px){.main{grid-template-columns:280px 1fr 300px}}
+@media(max-width:900px){.main{grid-template-columns:1fr;grid-template-rows:auto 50vh auto}.panel{max-height:none}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="app">
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="16" stroke="url(#lg1)" stroke-width="1.5"/><ellipse cx="18" cy="18" rx="16" ry="6" stroke="var(--cyan)" stroke-width="0.8" opacity="0.5" transform="rotate(-20 18 18)"/><ellipse cx="18" cy="18" rx="16" ry="8" stroke="var(--purple)" stroke-width="0.8" opacity="0.4" transform="rotate(30 18 18)"/><circle cx="18" cy="18" r="4" fill="var(--cyan)" opacity="0.8"/><circle cx="28" cy="14" r="1.5" fill="var(--green)"/><defs><linearGradient id="lg1" x1="0" y1="0" x2="36" y2="36"><stop stop-color="var(--cyan)"/><stop offset="1" stop-color="var(--purple)"/></linearGradient></defs></svg>
+    <div><h1>ZICORE Orbital Mechanics</h1><span>Aerospace Command System</span></div>
+  </div>
+  <div class="nav">
+    <button class="active">Orbit</button>
+    <button onclick="showTab('transfers')">Transfers</button>
+    <button onclick="showTab('gravity-assist')">Gravity Assist</button>
+    <button onclick="showTab('missions')">Missions</button>
+    <button onclick="showTab('database')">Database</button>
+  </div>
+  <div class="time-bar" id="clockDisplay">MET 00:00:00 | T+ 0d 0h 0m</div>
+</header>
+
+<div class="main">
+<!-- LEFT PANEL -->
+<div class="panel" id="leftPanel">
+  <div class="tabs" id="leftTabs">
+    <button class="active" onclick="switchLeftTab('orbit')">Orbit</button>
+    <button onclick="switchLeftTab('transfer')">Transfer</button>
+    <button onclick="switchLeftTab('dv')">ΔV Budget</button>
+  </div>
+
+  <div class="tab-content active" id="tab-orbit">
+    <h2>Orbit Parameters</h2>
+    <div class="field">
+      <label>Central Body</label>
+      <select id="bodySelect" onchange="updateBody()">
+        <option value="earth" selected>Earth</option>
+        <option value="moon">Moon</option>
+        <option value="mars">Mars</option>
+        <option value="venus">Venus</option>
+        <option value="jupiter">Jupiter</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Semi-Major Axis (km)</label>
+      <input type="number" id="sma" value="6771" min="6471" step="10" oninput="updateOrbit()">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Eccentricity</label>
+        <input type="number" id="ecc" value="0" min="0" max="0.99" step="0.01" oninput="updateOrbit()">
+      </div>
+      <div class="field">
+        <label>Inclination (°)</label>
+        <input type="number" id="inc" value="51.6" min="0" max="180" step="0.1" oninput="updateOrbit()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>RAAN (°)</label>
+        <input type="number" id="raan" value="0" min="0" max="360" step="1" oninput="updateOrbit()">
+      </div>
+      <div class="field">
+        <label>Arg. Periapsis (°)</label>
+        <input type="number" id="aop" value="0" min="0" max="360" step="1" oninput="updateOrbit()">
+      </div>
+    </div>
+    <div class="field">
+      <label>True Anomaly (°)</label>
+      <input type="number" id="ta" value="0" min="0" max="360" step="1" oninput="updateOrbit()">
+    </div>
+    <div class="glow-line"></div>
+    <div class="row3">
+      <div class="stat-card cyan"><div class="label">Altitude</div><div class="value" id="altVal">400</div><div class="unit">km</div></div>
+      <div class="stat-card purple"><div class="label">Velocity</div><div class="value" id="velVal">7.67</div><div class="unit">km/s</div></div>
+      <div class="stat-card green"><div class="label">Period</div><div class="value" id="perVal">92.4</div><div class="unit">min</div></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn" onclick="resetOrbit()">Reset</button>
+      <button class="btn primary" onclick="circularize()">Circularize</button>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-transfer">
+    <h2>Hohmann Transfer</h2>
+    <div class="field">
+      <label>Initial Orbit Altitude (km)</label>
+      <input type="number" id="hohR1" value="400" min="0" step="10" oninput="calcHohmann()">
+    </div>
+    <div class="field">
+      <label>Target Orbit Altitude (km)</label>
+      <input type="number" id="hohR2" value="35786" min="0" step="10" oninput="calcHohmann()">
+    </div>
+    <div class="btn-group">
+      <button class="btn primary" onclick="calcHohmann()">Calculate</button>
+      <button class="btn" onclick="visualizeTransfer('hohmann')">Visualize</button>
+    </div>
+    <div class="transfer-info" id="hohResult">
+      <h3>Transfer Results</h3>
+      <div class="step"><span class="slabel">ΔV₁ (burn 1)</span><span class="sval" id="hohDv1">—</span></div>
+      <div class="step"><span class="slabel">ΔV₂ (burn 2)</span><span class="sval" id="hohDv2">—</span></div>
+      <div class="step"><span class="slabel">Total ΔV</span><span class="sval" id="hohDvTotal">—</span></div>
+      <div class="step"><span class="slabel">Transfer Time</span><span class="sval" id="hohTime">—</span></div>
+      <div class="step"><span class="slabel">Phase Angle</span><span class="sval" id="hohPhase">—</span></div>
+    </div>
+    <h3>Bi-Elliptic Transfer</h3>
+    <div class="field">
+      <label>Intermediate Apoapsis (km alt)</label>
+      <input type="number" id="biR" value="100000" min="1000" step="1000" oninput="calcBielliptic()">
+    </div>
+    <div class="btn-group">
+      <button class="btn primary" onclick="calcBielliptic()">Calculate</button>
+      <button class="btn" onclick="visualizeTransfer('bielliptic')">Visualize</button>
+    </div>
+    <div class="transfer-info" id="biResult">
+      <h3>Bi-Elliptic Results</h3>
+      <div class="step"><span class="slabel">ΔV₁</span><span class="sval" id="biDv1">—</span></div>
+      <div class="step"><span class="slabel">ΔV₂</span><span class="sval" id="biDv2">—</span></div>
+      <div class="step"><span class="slabel">ΔV₃</span><span class="sval" id="biDv3">—</span></div>
+      <div class="step"><span class="slabel">Total ΔV</span><span class="sval" id="biDvTotal">—</span></div>
+      <div class="step"><span class="slabel">Transfer Time</span><span class="sval" id="biTime">—</span></div>
+      <div class="step"><span class="slabel">vs Hohmann</span><span class="sval" id="biCompare">—</span></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-dv">
+    <h2>Delta-V Budget</h2>
+    <div id="dvPhases">
+      <div class="dv-phase" data-idx="0">
+        <div style="flex:1"><div class="name">Launch to LEO</div><div class="field" style="margin:4px 0 0"><input type="number" class="dv-input" value="9.4" step="0.1" min="0" oninput="updateDvBudget()"></div></div>
+        <div class="val" style="color:var(--cyan);min-width:60px;text-align:right">9.4 km/s</div>
+        <button class="btn danger" style="padding:3px 6px;margin-left:6px;font-size:10px" onclick="removeDvPhase(this)">✕</button>
+      </div>
+      <div class="dv-phase" data-idx="1">
+        <div style="flex:1"><div class="name">Orbit Insertion</div><div class="field" style="margin:4px 0 0"><input type="number" class="dv-input" value="0.7" step="0.1" min="0" oninput="updateDvBudget()"></div></div>
+        <div class="val" style="color:var(--cyan);min-width:60px;text-align:right">0.7 km/s</div>
+        <button class="btn danger" style="padding:3px 6px;margin-left:6px;font-size:10px" onclick="removeDvPhase(this)">✕</button>
+      </div>
+    </div>
+    <button class="btn" style="width:100%;margin:8px 0" onclick="addDvPhase()">+ Add Phase</button>
+    <div class="dv-total">
+      <span>Total ΔV</span>
+      <span id="dvTotalVal" style="color:var(--cyan)">10.1 km/s</span>
+    </div>
+    <div class="info-box" id="dvAssessment">
+      Mission feasibility: <span style="color:var(--green)">FEASIBLE</span> — within typical chemical propulsion budget (~15 km/s)
+    </div>
+    <div class="glow-line"></div>
+    <h3>Reference ΔV Values</h3>
+    <div class="dv-phase"><span class="name">LEO → Lunar Orbit</span><span class="val" style="color:var(--purple)">3.9 km/s</span></div>
+    <div class="dv-phase"><span class="name">LEO → GEO</span><span class="val" style="color:var(--purple)">3.9 km/s</span></div>
+    <div class="dv-phase"><span class="name">LEO → Mars Transfer</span><span class="val" style="color:var(--purple)">3.6 km/s</span></div>
+    <div class="dv-phase"><span class="name">Lunar Landing</span><span class="val" style="color:var(--purple)">1.87 km/s</span></div>
+    <div class="dv-phase"><span class="name">Mars EDL</span><span class="val" style="color:var(--purple)">~1.5 km/s</span></div>
+  </div>
+</div>
+
+<!-- CENTER: CANVAS -->
+<div class="canvas-wrap">
+  <canvas id="orbitCanvas"></canvas>
+  <div class="hud" id="hudLeft"></div>
+  <div class="hud-right" id="hudRight"></div>
+  <div class="controls-bar">
+    <button class="btn" onclick="toggleAnimation()" id="playBtn">▶ Play</button>
+    <div class="speed-btns">
+      <button onclick="setSpeed(1)" class="active" id="sp1">1×</button>
+      <button onclick="setSpeed(10)" id="sp10">10×</button>
+      <button onclick="setSpeed(100)" id="sp100">100×</button>
+      <button onclick="setSpeed(1000)" id="sp1000">1000×</button>
+    </div>
+    <button class="btn" onclick="toggleOrbits()">Orbits</button>
+    <button class="btn" onclick="resetView()">Reset View</button>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="panel" id="rightPanel">
+  <div class="tabs" id="rightTabs">
+    <button class="active" onclick="switchRightTab('calc')">Calculations</button>
+    <button onclick="switchRightTab('gravity')">Gravity Assist</button>
+    <button onclick="switchRightTab('missions')">Missions</button>
+  </div>
+
+  <div class="tab-content active" id="rtab-calc">
+    <h2>Live Calculations</h2>
+    <div class="stat-card cyan">
+      <div class="label">Orbital Velocity (vis-viva)</div>
+      <div class="value" id="calcVel">7.672</div><div class="unit">v = √(GM(2/r − 1/a)) km/s</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="label">Orbital Period</div>
+      <div class="value" id="calcPer">5547.6</div><div class="unit">T = 2π√(a³/GM) seconds</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">Escape Velocity</div>
+      <div class="value" id="calcEsc">10.847</div><div class="unit">v_esc = √(2GM/r) km/s</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="label">Specific Energy</div>
+      <div class="value" id="calcEnergy">-28.93</div><div class="unit">ε = −GM/(2a) km²/s²</div>
+    </div>
+    <div class="glow-line"></div>
+    <h3>Current State Vector</h3>
+    <div class="field"><label>Position (km)</label><input type="text" id="posVec" readonly style="font-family:Courier New,monospace;font-size:11px"></div>
+    <div class="field"><label>Velocity (km/s)</label><input type="text" id="velVec" readonly style="font-family:Courier New,monospace;font-size:11px"></div>
+    <div class="glow-line"></div>
+    <h3>Orbit Comparison</h3>
+    <div id="orbitCompare" style="font-size:11px;color:var(--dim)">Add orbits to compare</div>
+  </div>
+
+  <div class="tab-content" id="rtab-gravity">
+    <h2>Gravity Assist</h2>
+    <div class="field">
+      <label>Flyby Body</label>
+      <select id="gaBody" onchange="updateGA()">
+        <option value="venus">Venus</option>
+        <option value="earth" selected>Earth</option>
+        <option value="mars">Mars</option>
+        <option value="jupiter">Jupiter</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Flyby Altitude (km)</label>
+      <input type="number" id="gaAlt" value="300" min="0" step="10" oninput="updateGA()">
+    </div>
+    <div class="field">
+      <label>Approach Velocity (km/s)</label>
+      <input type="number" id="gaVinf" value="10" min="0.1" step="0.1" oninput="updateGA()">
+    </div>
+    <div class="btn-group">
+      <button class="btn primary" onclick="calcGravityAssist()">Calculate</button>
+      <button class="btn" onclick="visualizeGravityAssist()">Visualize</button>
+    </div>
+    <div class="transfer-info" id="gaResult">
+      <h3>Gravity Assist Results</h3>
+      <div class="step"><span class="slabel">Closest Approach</span><span class="sval" id="gaRclosest">—</span></div>
+      <div class="step"><span class="slabel">Deflection Angle</span><span class="sval" id="gaDeflect">—</span></div>
+      <div class="step"><span class="slabel">ΔV Gained</span><span class="sval" id="gaDvGain">—</span></div>
+      <div class="step"><span class="slabel">Post-flyby Velocity</span><span class="sval" id="gaVout">—</span></div>
+      <div class="step"><span class="slabel">SOI Radius</span><span class="sval" id="gaSOI">—</span></div>
+    </div>
+    <div class="info-box">
+      Gravity assists use a planet's gravitational field and orbital velocity to change a spacecraft's trajectory and speed without using propellant. The maximum ΔV gain equals twice the planet's orbital velocity for a 180° deflection.
+    </div>
+  </div>
+
+  <div class="tab-content" id="rtab-missions">
+    <h2>Preset Missions</h2>
+    <div class="mission-card active" onclick="loadMission('iss')">
+      <h4>ISS Resupply</h4>
+      <p>LEO 400km → ISS. Simple orbit insertion and phasing.</p>
+      <div style="font-size:10px;color:var(--cyan);margin-top:4px">ΔV: ~0.7 km/s | Time: 6 hours</div>
+    </div>
+    <div class="mission-card" onclick="loadMission('lunar')">
+      <h4>Lunar Orbiter</h4>
+      <p>LEO → Trans-Lunar Injection → Lunar Orbit. Hohmann-like transfer.</p>
+      <div style="font-size:10px;color:var(--cyan);margin-top:4px">ΔV: ~3.9 km/s | Time: 3 days</div>
+    </div>
+    <div class="mission-card" onclick="loadMission('mars')">
+      <h4>Mars Transfer</h4>
+      <p>LEO → Hohmann transfer → Mars orbit capture.</p>
+      <div style="font-size:10px;color:var(--cyan);margin-top:4px">ΔV: ~5.7 km/s | Time: 9 months</div>
+    </div>
+    <div class="mission-card" onclick="loadMission('geo')">
+      <h4>GEO Station</h4>
+      <p>LEO → GTO → GEO circularization.</p>
+      <div style="font-size:10px;color:var(--cyan);margin-top:4px">ΔV: ~3.9 km/s | Time: 12 hours</div>
+    </div>
+    <div class="mission-card" onclick="loadMission('l1')">
+      <h4>Lagrange Point L1</h4>
+      <p>LEO → Earth-Sun L1. Halo orbit insertion.</p>
+      <div style="font-size:10px;color:var(--cyan);margin-top:4px">ΔV: ~3.2 km/s | Time: 4 months</div>
+    </div>
+    <div class="mission-card" onclick="loadMission('l2')">
+      <h4>Lagrange Point L2</h4>
+      <p>LEO → Earth-Sun L2. Webb telescope destination.</p>
+      <div style="font-size:10px;color:var(--cyan);margin-top:4px">ΔV: ~3.3 km/s | Time: 3 months</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="rtab-database" style="display:none">
+    <h2>Celestial Body Database</h2>
+    <table class="body-table">
+      <tr><th>Body</th><th>Mass (kg)</th><th>Radius (km)</th><th>GM (km³/s²)</th><th>SOI (km)</th><th>g (m/s²)</th></tr>
+      <tr class="active" onclick="selectBodyDB('earth')"><td>Earth</td><td>5.972e24</td><td>6,371</td><td>398,600</td><td>925,000</td><td>9.81</td></tr>
+      <tr onclick="selectBodyDB('moon')"><td>Moon</td><td>7.342e22</td><td>1,737</td><td>4,904</td><td>66,100</td><td>1.62</td></tr>
+      <tr onclick="selectBodyDB('mars')"><td>Mars</td><td>6.417e23</td><td>3,390</td><td>42,828</td><td>577,000</td><td>3.72</td></tr>
+      <tr onclick="selectBodyDB('venus')"><td>Venus</td><td>4.867e24</td><td>6,052</td><td>324,900</td><td>616,000</td><td>8.87</td></tr>
+      <tr onclick="selectBodyDB('jupiter')"><td>Jupiter</td><td>1.898e27</td><td>69,911</td><td>126,700,000</td><td>52,000,000</td><td>24.79</td></tr>
+    </table>
+    <div class="glow-line"></div>
+    <h3>Kepler's Laws</h3>
+    <div class="info-box">
+      <strong>1st Law:</strong> Orbits are ellipses with the central body at one focus.<br>
+      <strong>2nd Law:</strong> Equal areas swept in equal times (conservation of angular momentum).<br>
+      <strong>3rd Law:</strong> T² ∝ a³ (period squared proportional to semi-major axis cubed).
+    </div>
+    <h3>Useful Equations</h3>
+    <div class="info-box" style="font-family:Courier New,monospace;font-size:10px;line-height:1.8">
+      v = √(GM(2/r − 1/a))<br>
+      T = 2π√(a³/GM)<br>
+      v_esc = √(2GM/r)<br>
+      r_p = a(1−e) | r_a = a(1+e)<br>
+      ε = v²/2 − GM/r = −GM/(2a)<br>
+      h = √(GM·a(1−e²))
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+// ==================== CONSTANTS ====================
+const BODIES = {
+  earth:  { name:'Earth',  mass:5.972e24, radius:6371,  gm:398600,  soi:925000,  g:9.81,  color:'#4488ff' },
+  moon:   { name:'Moon',   mass:7.342e22,radius:1737,   gm:4904,    soi:66100,   g:1.62,  color:'#aaaaaa' },
+  mars:   { name:'Mars',   mass:6.417e23,radius:3390,   gm:42828,   soi:577000,  g:3.72,  color:'#cc4422' },
+  venus:  { name:'Venus',  mass:4.867e24,radius:6052,   gm:324900,  soi:616000,  g:8.87,  color:'#ddaa44' },
+  jupiter:{ name:'Jupiter',mass:1.898e27,radius:69911,  gm:126700000,soi:52000000,g:24.79, color:'#cc8844' }
+};
+
+let currentBody = 'earth';
+let orbit = { sma:6771, ecc:0, inc:51.6, raan:0, aop:0, ta:0 };
+let animRunning = false;
+let animSpeed = 1;
+let animTime = 0;
+let showOrbits = true;
+let transferOrbit = null;
+let transferPhase = 0;
+let gaTrajectory = null;
+let canvas, ctx;
+let W, H;
+let starPositions = [];
+let met0 = Date.now();
+
+// ==================== STARFIELD ====================
+function initStarfield(){
+  const c = document.getElementById('starfield');
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+  const sctx = c.getContext('2d');
+  starPositions = [];
+  for(let i=0;i<400;i++){
+    starPositions.push({x:Math.random()*c.width,y:Math.random()*c.height,s:Math.random()*1.5+0.3,b:Math.random()});
+  }
+  function drawStars(){
+    sctx.clearRect(0,0,c.width,c.height);
+    const t = Date.now()*0.001;
+    starPositions.forEach(s=>{
+      const alpha = 0.3 + 0.7*Math.abs(Math.sin(t*0.5+s.b*10));
+      sctx.fillStyle = `rgba(200,230,255,${alpha})`;
+      sctx.fillRect(s.x,s.y,s.s,s.s);
+    });
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+}
+
+// ==================== CANVAS ====================
+function initCanvas(){
+  canvas = document.getElementById('orbitCanvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  draw();
+}
+
+function resizeCanvas(){
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  W = canvas.width;
+  H = canvas.height;
+  draw();
+}
+
+function worldToScreen(wx, wy){
+  const scale = Math.min(W,H)*0.35 / (BODIES[currentBody].radius * 3);
+  return { x: W/2 + wx*scale, y: H/2 - wy*scale };
+}
+
+function draw(){
+  ctx.fillStyle = '#04060c';
+  ctx.fillRect(0,0,W,H);
+  drawGrid();
+  drawBody();
+  drawOrbitPath(orbit, 'rgba(0,229,255,0.6)', 2);
+  if(showOrbits) drawOrbitReference();
+  if(transferOrbit) drawTransferOrbit();
+  if(gaTrajectory) drawGATrajectory();
+  drawSatellite();
+  drawPhaseAngle();
+  updateHUD();
+  updateCalculations();
+}
+
+function drawGrid(){
+  ctx.strokeStyle = 'rgba(0,229,255,0.06)';
+  ctx.lineWidth = 0.5;
+  const b = BODIES[currentBody];
+  const step = getGridStep();
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = 'rgba(0,229,255,0.2)';
+  for(let r = step; r < b.radius*2.5; r += step){
+    const sr = r*scale;
+    ctx.beginPath();
+    ctx.arc(W/2,H/2,sr,0,Math.PI*2);
+    ctx.stroke();
+    ctx.fillText(r>=1000?(r/1000).toFixed(0)+'k':r+'km', W/2+sr+4, H/2-4);
+  }
+  // axes
+  ctx.strokeStyle = 'rgba(0,229,255,0.1)';
+  ctx.beginPath(); ctx.moveTo(W/2-200,H/2); ctx.lineTo(W/2+200,H/2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2,H/2-200); ctx.lineTo(W/2,H/2+200); ctx.stroke();
+}
+
+function getGridStep(){
+  const b = BODIES[currentBody];
+  if(b.radius > 50000) return 50000;
+  if(b.radius > 5000) return 5000;
+  if(b.radius > 1000) return 1000;
+  return 500;
+}
+
+function drawBody(){
+  const b = BODIES[currentBody];
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+  const r = Math.max(b.radius*scale, 8);
+  // glow
+  const grad = ctx.createRadialGradient(W/2,H/2,r*0.5,W/2,H/2,r*3);
+  grad.addColorStop(0, b.color+'44');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(W/2,H/2,r*3,0,Math.PI*2);
+  ctx.fill();
+  // body
+  const bodyGrad = ctx.createRadialGradient(W/2-r*0.3,H/2-r*0.3,0,W/2,H/2,r);
+  bodyGrad.addColorStop(0, b.color);
+  bodyGrad.addColorStop(1, b.color+'88');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.arc(W/2,H/2,r,0,Math.PI*2);
+  ctx.fill();
+  // label
+  ctx.fillStyle = 'rgba(200,230,255,0.6)';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(b.name, W/2, H/2+r+14);
+  ctx.textAlign = 'left';
+}
+
+function drawOrbitPath(o, color, width){
+  const b = BODIES[currentBody];
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+  const a = o.sma;
+  const e = o.ecc;
+  const bAxis = a * Math.sqrt(1 - e*e);
+  const cx = -a * e; // focus offset
+
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(-o.aop * Math.PI/180);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  // Draw full ellipse
+  for(let deg = 0; deg <= 360; deg += 1){
+    const rad = deg * Math.PI / 180;
+    const r = a * (1 - e*e) / (1 + e * Math.cos(rad));
+    const x = r * Math.cos(rad) * scale;
+    const y = -r * Math.sin(rad) * scale;
+    if(deg === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Draw periapsis and apoapsis markers
+  ctx.fillStyle = color;
+  const rp = a*(1-e);
+  const ra = a*(1+e);
+  // periapsis
+  ctx.beginPath();
+  ctx.arc(rp*scale, 0, 3, 0, Math.PI*2);
+  ctx.fill();
+  // apoapsis (if eccentric)
+  if(e > 0.01){
+    ctx.beginPath();
+    ctx.arc(-ra*scale, 0, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawOrbitReference(){
+  const b = BODIES[currentBody];
+  // SOI circle (faint)
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+  const soiR = b.soi * scale;
+  if(soiR < 500){
+    ctx.strokeStyle = 'rgba(0,229,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,8]);
+    ctx.beginPath();
+    ctx.arc(W/2,H/2,soiR,0,Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(0,229,255,0.15)';
+    ctx.font = '9px Courier New';
+    ctx.fillText('SOI',W/2+soiR-20,H/2-6);
+  }
+}
+
+function drawSatellite(){
+  const b = BODIES[currentBody];
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+  const a = orbit.sma;
+  const e = orbit.ecc;
+  const taRad = orbit.ta * Math.PI / 180;
+  const r = a * (1 - e*e) / (1 + e * Math.cos(taRad));
+  const aopRad = orbit.aop * Math.PI / 180;
+  const x = r * Math.cos(taRad + aopRad);
+  const y = r * Math.sin(taRad + aopRad);
+  const sx = W/2 + x*scale;
+  const sy = H/2 - y*scale;
+
+  // trail
+  ctx.strokeStyle = 'rgba(0,229,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const trailLen = 30;
+  for(let i = 0; i < trailLen; i++){
+    const tta = (taRad - i*0.02);
+    const tr = a*(1-e*e)/(1+e*Math.cos(tta));
+    const tx = W/2 + tr*Math.cos(tta+aopRad)*scale;
+    const ty = H/2 - tr*Math.sin(tta+aopRad)*scale;
+    if(i===0) ctx.moveTo(tx,ty); else ctx.lineTo(tx,ty);
+  }
+  ctx.stroke();
+
+  // satellite dot
+  ctx.fillStyle = '#00e5ff';
+  ctx.shadowColor = '#00e5ff';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(sx,sy,4,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // solar panels
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(sx-8,sy); ctx.lineTo(sx+8,sy);
+  ctx.moveTo(sx,sy-2); ctx.lineTo(sx,sy+2);
+  ctx.stroke();
+}
+
+function drawTransferOrbit(){
+  const t = transferOrbit;
+  if(!t) return;
+  const b = BODIES[currentBody];
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+
+  // Draw transfer ellipse
+  const a = t.sma;
+  const e = t.ecc;
+  const aop = t.aop || 0;
+
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(-aop * Math.PI / 180);
+  ctx.strokeStyle = 'rgba(124,77,255,0.8)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  for(let deg = 0; deg <= 360; deg++){
+    const rad = deg * Math.PI / 180;
+    const r = a * (1 - e*e) / (1 + e * Math.cos(rad));
+    const x = r * Math.cos(rad) * scale;
+    const y = -r * Math.sin(rad) * scale;
+    if(deg===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Highlight transfer arc (only the relevant half)
+  ctx.strokeStyle = '#7c4dff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  const startDeg = t.startAngle || 0;
+  const endDeg = t.endAngle || 180;
+  for(let deg = startDeg; deg <= endDeg; deg++){
+    const rad = deg * Math.PI / 180;
+    const r = a * (1 - e*e) / (1 + e * Math.cos(rad));
+    const x = r * Math.cos(rad) * scale;
+    const y = -r * Math.sin(rad) * scale;
+    if(deg===startDeg) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Burn points
+  ctx.fillStyle = '#ff6644';
+  const r1 = a*(1-e*e)/(1+e*Math.cos(startDeg*Math.PI/180));
+  ctx.beginPath();
+  ctx.arc(r1*Math.cos(startDeg*Math.PI/180)*scale, -r1*Math.sin(startDeg*Math.PI/180)*scale, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#ff6644';
+  const r2 = a*(1-e*e)/(1+e*Math.cos(endDeg*Math.PI/180));
+  ctx.beginPath();
+  ctx.arc(r2*Math.cos(endDeg*Math.PI/180)*scale, -r2*Math.sin(endDeg*Math.PI/180)*scale, 5, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Labels
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#7c4dff';
+  ctx.fillText('ΔV₁', W/2 + 30, H/2 - 20);
+  ctx.fillText('ΔV₂', W/2 - 50, H/2 + 30);
+}
+
+function drawGATrajectory(){
+  // simplified gravity assist visual
+}
+
+function drawPhaseAngle(){
+  if(!transferOrbit) return;
+  // phase angle arc
+  const b = BODIES[currentBody];
+  const scale = Math.min(W,H)*0.35 / (b.radius*3);
+  const r1 = parseFloat(document.getElementById('hohR1').value) + b.radius;
+  ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  ctx.arc(W/2,H/2,r1*scale,-0.1,0);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ==================== PHYSICS ====================
+function orbitalVelocity(gm, r, sma){
+  return Math.sqrt(gm * (2/r - 1/sma));
+}
+
+function orbitalPeriod(gm, sma){
+  return 2 * Math.PI * Math.sqrt(Math.pow(sma,3)/gm);
+}
+
+function escapeVelocity(gm, r){
+  return Math.sqrt(2*gm/r);
+}
+
+function specificEnergy(gm, sma){
+  return -gm/(2*sma);
+}
+
+function hohmannDeltaV(gm, r1, r2){
+  const a_t = (r1+r2)/2;
+  const dv1 = Math.sqrt(gm/r1) * (Math.sqrt(2*r2/(r1+r2)) - 1);
+  const dv2 = Math.sqrt(gm/r2) * (1 - Math.sqrt(2*r1/(r1+r2)));
+  const T = Math.PI * Math.sqrt(Math.pow(a_t,3)/gm);
+  const phase = Math.PI * (1 - Math.pow((r1+r2)/(4*r2), 1.5));
+  return { dv1: Math.abs(dv1), dv2: Math.abs(dv2), dvTotal: Math.abs(dv1)+Math.abs(dv2), time: T, phase: phase*180/Math.PI };
+}
+
+function biellipticDeltaV(gm, r1, r2, ri){
+  const a1 = (r1+ri)/2;
+  const a2 = (ri+r2)/2;
+  const dv1 = Math.sqrt(gm/r1)*(Math.sqrt(2*ri/(r1+ri))-1);
+  const dv2 = Math.sqrt(gm/ri)*(Math.sqrt(2*r2/(ri+r2))-Math.sqrt(2*r1/(r1+ri)));
+  const dv3 = Math.sqrt(gm/r2)*(1-Math.sqrt(2*ri/(ri+r2)));
+  const T = Math.PI*Math.sqrt(Math.pow(a1,3)/gm) + Math.PI*Math.sqrt(Math.pow(a2,3)/gm);
+  return { dv1:Math.abs(dv1), dv2:Math.abs(dv2), dv3:Math.abs(dv3), dvTotal:Math.abs(dv1)+Math.abs(dv2)+Math.abs(dv3), time:T };
+}
+
+function gravityAssistCalc(gmBody, rBody, vInf, alt){
+  const rClosest = rBody + alt;
+  const rp = rClosest;
+  const ecc = 1 + (rp*vInf*vInf)/gmBody;
+  const delta = 2*Math.asin(1/ecc);
+  const deflection = delta*180/Math.PI;
+  // In planet frame, v_in = v_out = v_inf
+  // In sun frame, delta_v gained depends on approach geometry
+  // Max delta_v = 2 * v_planet for optimal alignment
+  const vApproach = vInf;
+  return { rClosest, deflection, ecc, vInf, vApproach, deltaVmax: 2*vInf*Math.sin(delta/2) };
+}
+
+// ==================== UI UPDATES ====================
+function updateBody(){
+  currentBody = document.getElementById('bodySelect').value;
+  const b = BODIES[currentBody];
+  document.getElementById('sma').value = b.radius + 400;
+  document.getElementById('sma').min = b.radius;
+  updateOrbit();
+}
+
+function updateOrbit(){
+  orbit.sma = parseFloat(document.getElementById('sma').value) || BODIES[currentBody].radius+400;
+  orbit.ecc = parseFloat(document.getElementById('ecc').value) || 0;
+  orbit.inc = parseFloat(document.getElementById('inc').value) || 0;
+  orbit.raan = parseFloat(document.getElementById('raan').value) || 0;
+  orbit.aop = parseFloat(document.getElementById('aop').value) || 0;
+  orbit.ta = parseFloat(document.getElementById('ta').value) || 0;
+
+  const b = BODIES[currentBody];
+  const r = orbit.sma * (1 - orbit.ecc*orbit.ecc) / (1 + orbit.ecc*Math.cos(orbit.ta*Math.PI/180));
+  const alt = r - b.radius;
+  const v = orbitalVelocity(b.gm, r, orbit.sma);
+  const T = orbitalPeriod(b.gm, orbit.sma);
+
+  document.getElementById('altVal').textContent = alt.toFixed(0);
+  document.getElementById('velVal').textContent = v.toFixed(2);
+  document.getElementById('perVal').textContent = (T/60).toFixed(1);
+
+  draw();
+}
+
+function updateCalculations(){
+  const b = BODIES[currentBody];
+  const r = orbit.sma * (1 - orbit.ecc*orbit.ecc) / (1 + orbit.ecc*Math.cos(orbit.ta*Math.PI/180));
+  const v = orbitalVelocity(b.gm, r, orbit.sma);
+  const T = orbitalPeriod(b.gm, orbit.sma);
+  const vesc = escapeVelocity(b.gm, r);
+  const eps = specificEnergy(b.gm, orbit.sma);
+
+  document.getElementById('calcVel').textContent = v.toFixed(3);
+  document.getElementById('calcPer').textContent = T.toFixed(1);
+  document.getElementById('calcEsc').textContent = vesc.toFixed(3);
+  document.getElementById('calcEnergy').textContent = eps.toFixed(2);
+
+  // State vector
+  const taRad = orbit.ta*Math.PI/180;
+  const px = r*Math.cos(taRad);
+  const py = r*Math.sin(taRad);
+  document.getElementById('posVec').value = `[${px.toFixed(0)}, ${py.toFixed(0)}, 0] km`;
+  const vr = orbitalVelocity(b.gm,r,orbit.sma)*Math.sin(orbit.ecc*Math.sin(taRad)/(1+orbit.ecc*Math.cos(taRad)));
+  const vt = orbitalVelocity(b.gm,r,orbit.sma)*(1+orbit.ecc*Math.cos(taRad))/(1+orbit.ecc*Math.cos(taRad));
+  document.getElementById('velVec').value = `[${(-v*Math.sin(taRad)).toFixed(3)}, ${(v*Math.cos(taRad)).toFixed(3)}, 0] km/s`;
+}
+
+function updateHUD(){
+  const b = BODIES[currentBody];
+  const r = orbit.sma*(1-orbit.ecc*orbit.ecc)/(1+orbit.ecc*Math.cos(orbit.ta*Math.PI/180));
+  const v = orbitalVelocity(b.gm,r,orbit.sma);
+  document.getElementById('hudLeft').innerHTML = `
+    ${b.name.toUpperCase()} ORBIT<br>
+    ALT: ${(r-b.radius).toFixed(1)} km<br>
+    VEL: ${v.toFixed(3)} km/s<br>
+    SMA: ${orbit.sma.toFixed(0)} km<br>
+    ECC: ${orbit.ecc.toFixed(4)}<br>
+    INC: ${orbit.inc.toFixed(1)}°<br>
+    TA: ${orbit.ta.toFixed(1)}°
+  `;
+  const now = new Date();
+  const elapsed = ((Date.now()-met0)/1000);
+  const d = Math.floor(elapsed/86400);
+  const h = Math.floor((elapsed%86400)/3600);
+  const m = Math.floor((elapsed%3600)/60);
+  const s = Math.floor(elapsed%60);
+  document.getElementById('hudRight').innerHTML = `
+    MET ${String(d).padStart(2,'0')}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<br>
+    SPEED: ${animSpeed}×<br>
+    ${animRunning?'▶ RUNNING':'⏸ PAUSED'}
+  `;
+}
+
+// ==================== HOHMANN ====================
+function calcHohmann(){
+  const b = BODIES[currentBody];
+  const r1 = parseFloat(document.getElementById('hohR1').value) + b.radius;
+  const r2 = parseFloat(document.getElementById('hohR2').value) + b.radius;
+  if(r1 < b.radius || r2 < b.radius) return;
+  const res = hohmannDeltaV(b.gm, r1, r2);
+  document.getElementById('hohDv1').textContent = res.dv1.toFixed(3) + ' km/s';
+  document.getElementById('hohDv2').textContent = res.dv2.toFixed(3) + ' km/s';
+  document.getElementById('hohDvTotal').textContent = res.dvTotal.toFixed(3) + ' km/s';
+  document.getElementById('hohTime').textContent = (res.time/3600).toFixed(1) + ' hours (' + (res.time/86400).toFixed(1) + ' days)';
+  document.getElementById('hohPhase').textContent = res.phase.toFixed(1) + '°';
+  return {r1,r2,...res};
+}
+
+function calcBielliptic(){
+  const b = BODIES[currentBody];
+  const r1 = parseFloat(document.getElementById('hohR1').value) + b.radius;
+  const r2 = parseFloat(document.getElementById('hohR2').value) + b.radius;
+  const ri = parseFloat(document.getElementById('biR').value) + b.radius;
+  if(r1<b.radius||r2<b.radius||ri<r1) return;
+  const res = biellipticDeltaV(b.gm,r1,r2,ri);
+  document.getElementById('biDv1').textContent = res.dv1.toFixed(3)+' km/s';
+  document.getElementById('biDv2').textContent = res.dv2.toFixed(3)+' km/s';
+  document.getElementById('biDv3').textContent = res.dv3.toFixed(3)+' km/s';
+  document.getElementById('biDvTotal').textContent = res.dvTotal.toFixed(3)+' km/s';
+  document.getElementById('biTime').textContent = (res.time/3600).toFixed(1)+' hours (' + (res.time/86400).toFixed(1)+' days)';
+  const hoh = hohmannDeltaV(b.gm,r1,r2);
+  const diff = ((res.dvTotal-hoh.dvTotal)/hoh.dvTotal*100);
+  document.getElementById('biCompare').innerHTML = diff<0 ?
+    `<span style="color:var(--green)">${Math.abs(diff).toFixed(1)}% less ΔV</span>` :
+    `<span style="color:var(--red)">${diff.toFixed(1)}% more ΔV</span>`;
+  return {r1,r2,ri,...res};
+}
+
+// ==================== VISUALIZATION ====================
+function visualizeTransfer(type){
+  const b = BODIES[currentBody];
+  const r1 = parseFloat(document.getElementById('hohR1').value) + b.radius;
+  const r2 = parseFloat(document.getElementById('hohR2').value) + b.radius;
+
+  if(type === 'hohmann'){
+    const a = (r1+r2)/2;
+    const e = Math.abs(r2-r1)/(r1+r2);
+    transferOrbit = {
+      sma: a,
+      ecc: e,
+      aop: 0,
+      startAngle: 0,
+      endAngle: 180
+    };
+  } else if(type === 'bielliptic'){
+    const ri = parseFloat(document.getElementById('biR').value) + b.radius;
+    const a = (r1+ri)/2;
+    const e = Math.abs(ri-r1)/(r1+ri);
+    transferOrbit = {
+      sma: a,
+      ecc: e,
+      aop: 0,
+      startAngle: 0,
+      endAngle: 180
+    };
+  }
+  draw();
+}
+
+// ==================== GRAVITY ASSIST ====================
+function calcGravityAssist(){
+  const bodyKey = document.getElementById('gaBody').value;
+  const b = BODIES[bodyKey];
+  const alt = parseFloat(document.getElementById('gaAlt').value) || 300;
+  const vinf = parseFloat(document.getElementById('gaVinf').value) || 10;
+  const res = gravityAssistCalc(b.gm, b.radius, vinf, alt*1000);
+  document.getElementById('gaRclosest').textContent = (res.rClosest).toFixed(0)+' km';
+  document.getElementById('gaDeflect').textContent = res.deflection.toFixed(2)+'°';
+  document.getElementById('gaDvGain').textContent = res.deltaVmax.toFixed(3)+' km/s';
+  document.getElementById('gaVout').textContent = vinf.toFixed(3)+' km/s (planet frame)';
+  document.getElementById('gaSOI').textContent = (b.soi/1000).toFixed(0)+' × 10³ km';
+  return res;
+}
+
+function updateGA(){ calcGravityAssist(); }
+function visualizeGravityAssist(){ calcGravityAssist(); }
+
+// ==================== MISSIONS ====================
+function loadMission(id){
+  document.querySelectorAll('.mission-card').forEach(c=>c.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  const b = BODIES.earth;
+  currentBody = 'earth';
+  document.getElementById('bodySelect').value = 'earth';
+
+  const missions = {
+    iss: {
+      sma:6771, ecc:0.0001, inc:51.6, aop:0, ta:0,
+      dv:[{name:'Orbit Insertion',v:0.7},{name:'Phasing Burns',v:0.05}],
+      transfer: null
+    },
+    lunar: {
+      sma:6771, ecc:0, inc:28.5, aop:0, ta:0,
+      dv:[{name:'TLI Burn',v:3.13},{name:'Lunar Orbit Insertion',v:0.8}],
+      transfer: {r1:400, r2:384400, type:'hohmann'}
+    },
+    mars: {
+      sma:6771, ecc:0, inc:28.5, aop:0, ta:0,
+      dv:[{name:'Trans-Mars Injection',v:3.6},{name:'Mars Orbit Insertion',v:2.1}],
+      transfer: {r1:400, r2:227940000, type:'hohmann'}
+    },
+    geo: {
+      sma:6771, ecc:0, inc:28.5, aop:0, ta:0,
+      dv:[{name:'GTO Injection',v:2.5},{name:'GEO Circularization',v:1.47}],
+      transfer: {r1:400, r2:35786, type:'hohmann'}
+    },
+    l1: {
+      sma:6771, ecc:0, inc:28.5, aop:0, ta:0,
+      dv:[{name:'Trans-L1 Injection',v:2.9},{name:'L1 Halo Insertion',v:0.3}],
+      transfer: {r1:400, r2:1500000, type:'hohmann'}
+    },
+    l2: {
+      sma:6771, ecc:0, inc:28.5, aop:0, ta:0,
+      dv:[{name:'Trans-L2 Injection',v:3.0},{name:'L2 Halo Insertion',v:0.3}],
+      transfer: {r1:400, r2:1500000, type:'hohmann'}
+    }
+  };
+
+  const m = missions[id];
+  document.getElementById('sma').value = m.sma;
+  document.getElementById('ecc').value = m.ecc;
+  document.getElementById('inc').value = m.inc;
+  document.getElementById('aop').value = m.aop;
+  document.getElementById('ta').value = m.ta;
+
+  // Set DV phases
+  const phasesEl = document.getElementById('dvPhases');
+  phasesEl.innerHTML = '';
+  m.dv.forEach((d,i)=>{
+    phasesEl.innerHTML += `
+      <div class="dv-phase" data-idx="${i}">
+        <div style="flex:1"><div class="name">${d.name}</div><div class="field" style="margin:4px 0 0"><input type="number" class="dv-input" value="${d.v}" step="0.1" min="0" oninput="updateDvBudget()"></div></div>
+        <div class="val" style="color:var(--cyan);min-width:60px;text-align:right">${d.v} km/s</div>
+        <button class="btn danger" style="padding:3px 6px;margin-left:6px;font-size:10px" onclick="removeDvPhase(this)">✕</button>
+      </div>`;
+  });
+  updateDvBudget();
+
+  // Set Hohmann inputs
+  if(m.transfer){
+    document.getElementById('hohR1').value = m.transfer.r1;
+    document.getElementById('hohR2').value = m.transfer.r2;
+    calcHohmann();
+  }
+
+  updateOrbit();
+  showTab('orbit');
+}
+
+// ==================== DV BUDGET ====================
+function updateDvBudget(){
+  const inputs = document.querySelectorAll('.dv-input');
+  let total = 0;
+  inputs.forEach(inp=>{
+    const v = parseFloat(inp.value)||0;
+    total += v;
+    const valEl = inp.closest('.dv-phase').querySelector('.val');
+    if(valEl) valEl.textContent = v.toFixed(1)+' km/s';
+  });
+  document.getElementById('dvTotalVal').textContent = total.toFixed(1)+' km/s';
+  const assess = document.getElementById('dvAssessment');
+  if(total < 12){
+    assess.innerHTML = `Mission feasibility: <span style="color:var(--green)">FEASIBLE</span> — within typical chemical propulsion budget (~15 km/s)`;
+  } else if(total < 18){
+    assess.innerHTML = `Mission feasibility: <span style="color:var(--yellow)">MARGINAL</span> — requires advanced propulsion or staging`;
+  } else {
+    assess.innerHTML = `Mission feasibility: <span style="color:var(--red)">IMPROBABLE</span> — exceeds chemical propulsion limits`;
+  }
+}
+
+function addDvPhase(){
+  const el = document.getElementById('dvPhases');
+  const idx = el.children.length;
+  el.innerHTML += `
+    <div class="dv-phase" data-idx="${idx}">
+      <div style="flex:1"><div class="name">New Phase</div><div class="field" style="margin:4px 0 0"><input type="number" class="dv-input" value="0" step="0.1" min="0" oninput="updateDvBudget()"></div></div>
+      <div class="val" style="color:var(--cyan);min-width:60px;text-align:right">0.0 km/s</div>
+      <button class="btn danger" style="padding:3px 6px;margin-left:6px;font-size:10px" onclick="removeDvPhase(this)">✕</button>
+    </div>`;
+  updateDvBudget();
+}
+
+function removeDvPhase(btn){
+  btn.closest('.dv-phase').remove();
+  updateDvBudget();
+}
+
+// ==================== TABS ====================
+function switchLeftTab(id){
+  document.querySelectorAll('#leftTabs button').forEach((b,i)=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(id.substring(0,3)));
+  });
+  document.querySelectorAll('#leftPanel .tab-content').forEach(t=>t.classList.remove('active'));
+  const el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+}
+
+function switchRightTab(id){
+  document.querySelectorAll('#rightTabs button').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('#rightPanel .tab-content').forEach(t=>{t.classList.remove('active');t.style.display='none'});
+  const el = document.getElementById('rtab-'+id);
+  if(el){el.classList.add('active');el.style.display='block'}
+}
+
+function showTab(id){
+  // switch to relevant view
+  if(id==='transfers') switchLeftTab('transfer');
+  else if(id==='dv') switchLeftTab('dv');
+  else switchLeftTab('orbit');
+}
+
+// ==================== ANIMATION ====================
+function toggleAnimation(){
+  animRunning = !animRunning;
+  document.getElementById('playBtn').textContent = animRunning ? '⏸ Pause' : '▶ Play';
+  if(animRunning) animate();
+}
+
+function setSpeed(s){
+  animSpeed = s;
+  document.querySelectorAll('.speed-btns button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sp'+s).classList.add('active');
+}
+
+function animate(){
+  if(!animRunning) return;
+  const b = BODIES[currentBody];
+  const T = orbitalPeriod(b.gm, orbit.sma);
+  const dt = (16/1000) * animSpeed;
+  orbit.ta = (orbit.ta + (360/T)*dt) % 360;
+  document.getElementById('ta').value = orbit.ta.toFixed(1);
+  updateOrbit();
+  requestAnimationFrame(animate);
+}
+
+function resetOrbit(){
+  const b = BODIES[currentBody];
+  document.getElementById('sma').value = b.radius+400;
+  document.getElementById('ecc').value = 0;
+  document.getElementById('inc').value = 51.6;
+  document.getElementById('raan').value = 0;
+  document.getElementById('aop').value = 0;
+  document.getElementById('ta').value = 0;
+  transferOrbit = null;
+  updateOrbit();
+}
+
+function circularize(){
+  document.getElementById('ecc').value = 0;
+  updateOrbit();
+}
+
+function toggleOrbits(){
+  showOrbits = !showOrbits;
+  draw();
+}
+
+function resetView(){
+  transferOrbit = null;
+  gaTrajectory = null;
+  draw();
+}
+
+function selectBodyDB(key){
+  document.getElementById('bodySelect').value = key;
+  updateBody();
+  document.querySelectorAll('.body-table tr').forEach(r=>r.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ==================== INIT ====================
+window.addEventListener('load', ()=>{
+  initStarfield();
+  initCanvas();
+  calcHohmann();
+  updateOrbit();
+});
+</script>
+</body>
+</html>

@@ -665,6 +665,16 @@ async def serve_vehicle_designer():
     return FileResponse(str(FRONTEND_DIR / "vehicle-designer.html"))
 
 
+@app.get("/propulsion-lab")
+async def serve_propulsion_lab():
+    return FileResponse(str(FRONTEND_DIR / "propulsion-lab.html"))
+
+
+@app.get("/orbital-mechanics")
+async def serve_orbital_mechanics():
+    return FileResponse(str(FRONTEND_DIR / "orbital-mechanics.html"))
+
+
 @app.get("/mail")
 async def serve_mail():
     return FileResponse(str(FRONTEND_DIR / "mail.html"))
