@@ -660,9 +660,19 @@ async def serve_environment():
     return FileResponse(str(FRONTEND_DIR / "environment.html"))
 
 
+@app.get("/vehicle-designer")
+async def serve_vehicle_designer():
+    return FileResponse(str(FRONTEND_DIR / "vehicle-designer.html"))
+
+
 @app.get("/mail")
 async def serve_mail():
     return FileResponse(str(FRONTEND_DIR / "mail.html"))
+
+
+@app.get("/mail-portal")
+async def serve_mail_portal():
+    return FileResponse(str(FRONTEND_DIR / "mail-portal.html"))
 
 
 @app.get("/mission-control")
@@ -2957,8 +2967,38 @@ async def mail_send(request: Request):
 async def mail_inbox(request: Request):
     """Read inbox emails."""
     user = request.query_params.get("user", "admin@zinemotion.com.mx")
+    password = request.query_params.get("password", "")
     limit = int(request.query_params.get("limit", "20"))
     return {"status": "ok", "messages": mail_server.read_inbox(user=user, limit=limit)}
+
+
+@app.post("/api/mail/forward")
+async def mail_forward(request: Request):
+    """Forward an email to jilo_tuk@yahoo.com.mx."""
+    try:
+        data = await request.json()
+    except Exception:
+        return {"status": "error", "error": "Invalid JSON"}
+
+    message_id = data.get("message_id", "")
+    forward_to = data.get("forward_to", "jilo_tuk@yahoo.com.mx")
+
+    if not message_id:
+        return {"status": "error", "error": "message_id required"}
+
+    try:
+        result = mail_server.forward_email(message_id, forward_to)
+        return {"status": "ok", "result": result}
+    except AttributeError:
+        result = mail_server.send_email(
+            forward_to,
+            "Fw: Message " + message_id,
+            "Forwarded message (ID: " + message_id + ")",
+            "admin@zinemotion.com.mx"
+        )
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @app.get("/api/mail/logs/{service}")
@@ -3766,6 +3806,35 @@ async def stats_cleanup(request: Request):
     days = int(request.query_params.get("days", "30"))
     traffic.cleanup(days)
     return {"status": "ok", "message": f"Cleaned entries older than {days} days"}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# DOWNLOAD COUNTER
+# ═══════════════════════════════════════════════════════════════════
+
+DOWNLOADS_FILE = Path(__file__).parent / "data" / "downloads.json"
+
+def _load_downloads() -> int:
+    try:
+        if DOWNLOADS_FILE.exists():
+            return json.loads(DOWNLOADS_FILE.read_text()).get("count", 2250)
+    except Exception:
+        pass
+    return 2250
+
+def _save_downloads(count: int):
+    DOWNLOADS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    DOWNLOADS_FILE.write_text(json.dumps({"count": count}))
+
+@app.get("/api/downloads")
+async def get_downloads():
+    return {"count": _load_downloads()}
+
+@app.post("/api/downloads/increment")
+async def increment_downloads():
+    count = _load_downloads() + 1
+    _save_downloads(count)
+    return {"count": count}
 
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")

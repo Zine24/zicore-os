@@ -107,15 +107,22 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 <div class="app">
   <!-- Top Bar -->
   <div class="topbar">
-    <div class="logo">
-      <svg viewBox="0 0 40 46"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg)" stroke-width="1.5"/>
+    <div class="logo" style="width:56px;height:56px;min-width:56px">
+      <svg viewBox="0 0 40 46" width="56" height="56"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg)" stroke-width="1.5"/>
         <defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs>
         <text x="20" y="26" text-anchor="middle" fill="url(#hg)" font-size="16" font-weight="700" font-family="sans-serif">Z</text></svg>
     </div>
-    <div class="brand">ZICORE</div>
+    <div>
+      <div class="brand">ZICORE</div>
+      <div style="font-size:7px;color:var(--text2);letter-spacing:3px;margin-top:1px">CREANDO EL TIEMPO</div>
+    </div>
     <div class="sep"></div>
     <div class="tagline">Digital Aerospace Operating System</div>
     <div class="spacer"></div>
+    <div style="text-align:right;margin-right:8px">
+      <div style="font-size:7px;color:var(--text2);letter-spacing:1px">DESCARGAS</div>
+      <div id="downloadCount" style="font-size:14px;color:var(--cyan);font-weight:700;font-family:monospace">2250</div>
+    </div>
     <div class="dot"></div>
     <div class="clock" id="clock">--:--:--</div>
   </div>
@@ -127,17 +134,14 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <div class="sb-divider"></div>
 
     <div class="sb-section">◇ Aerospace</div>
+    <div class="sb-item" onclick="showFrame('/vehicle-designer','Vehicle Designer')"><div class="ico">🚀</div> Vehicle Designer</div>
     <div class="sb-item" onclick="showFrame('/engineering','Engineering')"><div class="ico">⚙</div> Ingeniería</div>
     <div class="sb-item" onclick="showFrame('/aerospace-engineering','Aero Engineering')"><div class="ico">🔬</div> Ingeniería Aeroespacial</div>
-    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">🚀</div> Vehículos</div>
-    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">⚡</div> Propulsión</div>
-    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">◎</div> Órbita</div>
-    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">📋</div> Misiones</div>
+    <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">📊</div> Aerospace Dashboard</div>
     <div class="sb-divider"></div>
 
     <div class="sb-section">◉ ZiEnvironment</div>
     <div class="sb-item" onclick="showFrame('/environment','ZiEnvironment')"><div class="ico">◉</div> Kernel (21 nodos)</div>
-    <div class="sb-item" onclick="showFrame('/environment','Red Neural')"><div class="ico">🌐</div> Red Neural</div>
     <div class="sb-item" onclick="showFrame('/zio','ZIO AI')"><div class="ico">◎</div> ZIO Copilot</div>
     <div class="sb-divider"></div>
 
@@ -151,6 +155,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
     <div class="sb-section">Otros</div>
     <div class="sb-item" onclick="showFrame('/mail','Mail')"><div class="ico">✉</div> Mail</div>
+    <div class="sb-item" onclick="showFrame('/mail-portal','Mail Portal')"><div class="ico">📨</div> Mail Portal</div>
     <div class="sb-item" onclick="showFrame('/settings','Settings')"><div class="ico">⚙</div> Configuración</div>
     <div class="sb-item" onclick="showFrame('/installers','Descargas')"><div class="ico">⬇</div> Descargas</div>
     <div class="sb-item" onclick="showFrame('/web-stats','Web Stats')"><div class="ico">📊</div> Estadísticas</div>
@@ -220,9 +225,18 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 </div>
 
 <script>
+const API = '';
 // Clock
 function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-MX',{hour12:false})}
 setInterval(tick,1000);tick();
+
+// Download counter
+function loadDownloads(){
+  fetch(API+'/api/downloads').then(r=>r.json()).then(d=>{
+    document.getElementById('downloadCount').textContent=d.count||2250;
+  }).catch(()=>{});
+}
+loadDownloads();setInterval(loadDownloads,60000);
 
 // Starfield
 const cv=document.getElementById('starfield'),cx=cv.getContext('2d');let st=[];

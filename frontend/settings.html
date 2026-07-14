@@ -80,12 +80,12 @@ select option{background:#0a0e16;color:var(--glow)}
 .model-item .model-name{font-size:9px;color:var(--glow);letter-spacing:1px;flex:1}
 .model-item .model-desc{font-size:7px;color:var(--text2);letter-spacing:0.5px}
 .model-item .model-tag{font-size:7px;letter-spacing:1px;padding:2px 6px;border-radius:2px}
-.tag-free{background:rgba(0,255,136,0.12);color:#0f6;border:1px solid rgba(0,255,136,0.2)}
+.tag-free{background:rgba(0,229,255,0.12);color:#00e5ff;border:1px solid rgba(0,229,255,0.2)}
 .tag-local{background:rgba(0,229,255,0.12);color:var(--glow);border:1px solid rgba(0,229,255,0.2)}
 .tag-paid{background:rgba(255,136,0,0.12);color:#fa0;border:1px solid rgba(255,136,0,0.2)}
-.model-item.is-free .model-name{color:#50fa7b;font-weight:bold;text-shadow:0 0 8px rgba(80,250,123,0.3)}
-.model-item.is-free{border-color:rgba(0,255,136,0.15);background:rgba(0,255,136,0.03)}
-.model-item.is-free:hover{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.06)}
+.model-item.is-free .model-name{color:#00e5ff;font-weight:bold;text-shadow:0 0 8px rgba(0,229,255,0.3)}
+.model-item.is-free{border-color:rgba(0,229,255,0.15);background:rgba(0,229,255,0.03)}
+.model-item.is-free:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06)}
 .chat-item{padding:8px;border:1px solid rgba(0,229,255,0.04);border-radius:3px;margin-bottom:6px;transition:all .15s}
 .chat-item:hover{border-color:rgba(0,229,255,0.15)}
 .chat-msg{font-size:9px;color:var(--text2);line-height:1.6}
@@ -551,16 +551,47 @@ function renderEngineering(cfg){
 
 function renderTheme(cfg){
   var thm=cfg.theme_config||{};
-  var h='<div class="section"><div class="section-title">THEME CUSTOMIZATION</div>';
+  var h='<div class="section"><div class="section-title">TEMA — Selecciona un tema</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">';
+  var themes=[
+    {name:'Aerospace',bg:'#04060c',accent:'#00e5ff',secondary:'#7c4dff',desc:'Clasico ZICORE'},
+    {name:'Nebula',bg:'#0a0014',accent:'#ff00ff',secondary:'#8800ff',desc:'Purpura cosmico'},
+    {name:'Solar',bg:'#0c0800',accent:'#ffaa00',secondary:'#ff4400',desc:'Cálido solar'},
+    {name:'Forest',bg:'#000c04',accent:'#00ff88',secondary:'#00aa44',desc:'Verde bosque'},
+    {name:'Arctic',bg:'#040c0c',accent:'#00dddd',secondary:'#0088cc',desc:'Azul polar'},
+    {name:'Mars',bg:'#0c0400',accent:'#ff4422',secondary:'#cc0000',desc:'Rojo marciano'},
+  ];
+  themes.forEach(function(t){
+    var sel=(thm.background===t.name.toLowerCase()||(!thm.background&&t.name==='Aerospace'));
+    h+='<div onclick="applyThemePreset(\''+t.bg+'\',\''+t.accent+'\',\''+t.secondary+'\')" style="cursor:pointer;padding:10px;border:1px solid '+(sel?t.accent:'rgba(255,255,255,0.08)')+';border-radius:6px;text-align:center;transition:all .2s;background:'+t.bg+'">';
+    h+='<div style="font-size:11px;font-weight:600;color:'+t.accent+';margin-bottom:4px">'+t.name+'</div>';
+    h+='<div style="display:flex;gap:4px;justify-content:center;margin-bottom:4px"><div style="width:12px;height:12px;border-radius:50%;background:'+t.accent+'"></div><div style="width:12px;height:12px;border-radius:50%;background:'+t.secondary+'"></div></div>';
+    h+='<div style="font-size:8px;color:#888">'+t.desc+'</div>';
+    h+='</div>';
+  });
+  h+='</div></div>';
+  h+='<div class="section"><div class="section-title">PERSONALIZAR</div>';
   h+='<div class="grid grid-2">';
-  h+='<label>Accent Color</label><input id="thmAccent" type="color" value="'+(thm.accent_color||'#00e5ff')+'">';
-  h+='<label>Secondary Color</label><input id="thmSecondary" type="color" value="'+(thm.secondary_color||'#7c4dff')+'">';
-  h+='<label>Panel Opacity</label><div class="flex gap-4"><input id="thmOpacity" type="range" min="50" max="100" value="'+(thm.panel_opacity||88)+'" oninput="document.getElementById(\'thmOpacityVal\').textContent=this.value+\'%\'"><span class="fs-10 text-glow" id="thmOpacityVal">'+(thm.panel_opacity||88)+'%</span></div>';
-  h+='<label>Background</label><select id="thmBg">';
-  ['dark','midnight','void','abyss'].forEach(function(b){h+='<option value="'+b+'"'+((thm.background||'dark')===b?' selected':'')+'>'+b.toUpperCase()+'</option>';});
+  h+='<label>Color Acento</label><input id="thmAccent" type="color" value="'+(thm.accent_color||'#00e5ff')+'">';
+  h+='<label>Color Secundario</label><input id="thmSecondary" type="color" value="'+(thm.secondary_color||'#7c4dff')+'">';
+  h+='<label>Opacidad Paneles</label><div class="flex gap-4"><input id="thmOpacity" type="range" min="50" max="100" value="'+(thm.panel_opacity||88)+'" oninput="document.getElementById(\'thmOpacityVal\').textContent=this.value+\'%\'"><span class="fs-10 text-glow" id="thmOpacityVal">'+(thm.panel_opacity||88)+'%</span></div>';
+  h+='<label>Fondo</label><select id="thmBg">';
+  ['dark','midnight','void','abyss','nebula','solar','forest','arctic','mars'].forEach(function(b){h+='<option value="'+b+'"'+((thm.background||'dark')===b?' selected':'')+'>'+b.toUpperCase()+'</option>';});
   h+='</select>';
   h+='</div></div>';
   document.getElementById('panel-theme').innerHTML=h;
+}
+
+function applyThemePreset(bg, accent, secondary){
+  document.documentElement.style.setProperty('--glow', accent);
+  document.documentElement.style.setProperty('--glow2', secondary);
+  if(document.getElementById('thmAccent')) document.getElementById('thmAccent').value=accent;
+  if(document.getElementById('thmSecondary')) document.getElementById('thmSecondary').value=secondary;
+  if(document.getElementById('thmBg')){
+    var sel={dark:'dark',midnight:'midnight',void:'void',abyss:'abyss',nebula:'nebula',solar:'solar',forest:'forest',arctic:'arctic',mars:'mars'};
+    var bgName=bg==='#04060c'?'dark':bg==='#0a0014'?'nebula':bg==='#0c0800'?'solar':bg==='#000c04'?'forest':bg==='#040c0c'?'arctic':bg==='#0c0400'?'mars':'dark';
+    document.getElementById('thmBg').value=bgName;
+  }
 }
 
 function renderSystem(cfg){

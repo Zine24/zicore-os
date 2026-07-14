@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Mail — Webmail Portal</title>
+<meta name="description" content="ZICORE Mail Portal — Secure aerospace email system">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✉</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#080c16;--bg3:#0c1020;--bg4:#10162a;--bg5:#141c34;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;--orange:#ffa500;
+  --text:#d0d8e8;--text-dim:#5a6882;--text-faint:#2a3450;
+  --border:rgba(0,229,255,0.08);--border2:rgba(0,229,255,0.14);
+  --glass:rgba(10,16,30,0.85);--glass2:rgba(10,16,30,0.6);
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+  --glow-cyan:0 0 20px rgba(0,229,255,0.15);
+  --glow-purple:0 0 20px rgba(124,77,255,0.15);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 0%,rgba(0,229,255,0.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,rgba(124,77,255,0.03) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+.grain{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.02;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.12);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.25)}
+
+.app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{height:48px;flex-shrink:0;background:rgba(4,6,12,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100;backdrop-filter:blur(20px)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;padding-right:16px;border-right:1px solid var(--border)}
+.topbar-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--cyan),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#000;font-weight:700}
+.topbar-title{font-size:12px;font-weight:600;letter-spacing:3px;color:var(--cyan);text-transform:uppercase}
+.topbar-nav{display:flex;gap:4px;margin-left:12px}
+.topbar-tab{font-size:9px;letter-spacing:2px;color:var(--text-dim);padding:7px 14px;cursor:pointer;text-transform:uppercase;border:1px solid transparent;border-radius:4px;transition:all 0.3s;background:transparent;font-family:var(--font);white-space:nowrap}
+.topbar-tab:hover{color:var(--text);border-color:var(--border)}
+.topbar-tab.active{color:var(--cyan);border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.04)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.topbar-time{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--cyan)}
+.topbar-user{font-size:10px;color:var(--text-dim);padding:4px 12px;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;gap:6px}
+.topbar-user .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.topbar-back{font-size:9px;letter-spacing:2px;color:var(--text-dim);padding:6px 14px;border:1px solid var(--border);border-radius:4px;cursor:pointer;text-decoration:none;text-transform:uppercase;transition:all 0.3s;background:transparent;font-family:var(--font)}
+.topbar-back:hover{color:var(--cyan);border-color:rgba(0,229,255,0.2)}
+.topbar-logout{font-size:9px;letter-spacing:2px;color:var(--red);padding:6px 14px;border:1px solid rgba(255,68,68,0.2);border-radius:4px;cursor:pointer;text-transform:uppercase;transition:all 0.3s;background:transparent;font-family:var(--font);display:none}
+.topbar-logout:hover{background:rgba(255,68,68,0.06);border-color:rgba(255,68,68,0.3)}
+
+/* ── MAIN LAYOUT ── */
+.main{flex:1;overflow:hidden;display:flex}
+
+/* ── SIDEBAR ── */
+.sidebar{width:230px;flex-shrink:0;background:rgba(8,12,22,0.9);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0;overflow-y:auto}
+.sidebar-header{padding:16px 16px 12px;border-bottom:1px solid var(--border)}
+.sidebar-user{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.sidebar-email{font-size:10px;color:var(--text-dim);font-family:var(--mono)}
+.sidebar-compose{margin:12px 12px 8px;padding:11px;background:linear-gradient(135deg,rgba(0,229,255,0.08),rgba(124,77,255,0.06));border:1px solid rgba(0,229,255,0.18);color:var(--cyan);font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;text-align:center;border-radius:6px;transition:all 0.3s;font-family:var(--font);font-weight:600}
+.sidebar-compose:hover{border-color:rgba(0,229,255,0.35);box-shadow:var(--glow-cyan)}
+.sidebar-section{padding:12px 0 8px}
+.sidebar-label{font-size:8px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase;padding:0 16px;margin-bottom:6px}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all 0.2s;font-size:12px;color:var(--text-dim);border-left:2px solid transparent}
+.sidebar-item:hover{background:rgba(0,229,255,0.03);color:var(--text)}
+.sidebar-item.active{background:rgba(0,229,255,0.05);color:var(--cyan);border-left-color:var(--cyan)}
+.sidebar-item .icon{width:18px;text-align:center;font-size:13px}
+.sidebar-item .count{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text-faint);background:rgba(0,229,255,0.06);padding:2px 8px;border-radius:10px;min-width:20px;text-align:center}
+.sidebar-divider{height:1px;background:var(--border);margin:4px 16px}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+.sidebar-status{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text-dim);letter-spacing:1px}
+.sidebar-status .dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column;background:var(--bg)}
+
+/* ── AUTH VIEWS ── */
+.auth-container{flex:1;display:flex;align-items:center;justify-content:center;padding:40px;background:radial-gradient(ellipse at center,rgba(0,229,255,0.02) 0%,transparent 60%)}
+.auth-box{width:100%;max-width:400px;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:40px 36px;backdrop-filter:blur(20px);box-shadow:var(--shadow)}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo-icon{width:56px;height:56px;margin:0 auto 14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#000;box-shadow:0 0 40px rgba(0,229,255,0.25);animation:authPulse 4s ease-in-out infinite}
+@keyframes authPulse{0%,100%{box-shadow:0 0 40px rgba(0,229,255,0.25)}50%{box-shadow:0 0 60px rgba(0,229,255,0.4)}}
+.auth-logo h1{font-size:18px;font-weight:600;background:linear-gradient(90deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px}
+.auth-logo p{color:var(--text-dim);font-size:11px;margin-top:4px;letter-spacing:1px}
+.auth-title{font-size:16px;font-weight:500;letter-spacing:2px;text-align:center;margin-bottom:4px;color:var(--text)}
+.auth-subtitle{font-size:11px;color:var(--text-dim);text-align:center;margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px;display:block;font-weight:500}
+.form-input{width:100%;font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:11px 14px;outline:none;transition:all 0.3s;border-radius:6px}
+.form-input:focus{border-color:rgba(0,229,255,0.25);box-shadow:0 0 0 3px rgba(0,229,255,0.05)}
+.form-input::placeholder{color:var(--text-faint)}
+.form-row{display:flex;gap:12px}
+.form-row .form-group{flex:1}
+.btn-primary{width:100%;font-family:var(--font);font-size:11px;letter-spacing:3px;padding:12px;background:linear-gradient(135deg,rgba(0,229,255,0.12),rgba(124,77,255,0.08));border:1px solid rgba(0,229,255,0.25);color:var(--cyan);cursor:pointer;text-transform:uppercase;border-radius:6px;transition:all 0.3s;font-weight:600;margin-top:8px}
+.btn-primary:hover{border-color:rgba(0,229,255,0.45);box-shadow:var(--glow-cyan)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-primary .spinner{display:inline-block;width:14px;height:14px;border:2px solid transparent;border-top-color:var(--cyan);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth-error{font-size:11px;color:var(--red);text-align:center;margin-top:12px;display:none;padding:8px;background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.15);border-radius:4px}
+.auth-links{text-align:center;margin-top:20px;font-size:12px;color:var(--text-dim)}
+.auth-links a{color:var(--cyan);text-decoration:none;font-weight:500;transition:color 0.2s}
+.auth-links a:hover{color:var(--purple)}
+.auth-divider{text-align:center;margin:20px 0;position:relative}
+.auth-divider::before{content:'';position:absolute;left:0;top:50%;width:100%;height:1px;background:var(--border)}
+.auth-divider span{position:relative;background:var(--bg);padding:0 14px;color:var(--text-faint);font-size:10px;letter-spacing:2px}
+.password-strength{display:flex;gap:4px;margin-top:6px}
+.password-strength .bar{flex:1;height:3px;background:var(--border);border-radius:2px;transition:all 0.3s}
+.password-strength .bar.weak{background:var(--red)}
+.password-strength .bar.medium{background:var(--orange)}
+.password-strength .bar.strong{background:var(--green)}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:60px;right:20px;padding:12px 20px;border-radius:8px;font-size:12px;font-weight:500;z-index:10000;transform:translateX(120%);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);backdrop-filter:blur(12px);max-width:360px}
+.toast.show{transform:translateX(0)}
+.toast.success{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.25);color:var(--green)}
+.toast.error{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.25);color:var(--red)}
+.toast.info{background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.25);color:var(--cyan)}
+
+/* ── MAIL VIEWS ── */
+.mail-view{display:none;flex:1;flex-direction:column;overflow:hidden}
+.mail-view.active{display:flex}
+
+/* ── INBOX ── */
+.inbox-toolbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:rgba(8,12,22,0.5)}
+.inbox-toolbar-title{font-size:14px;font-weight:600;letter-spacing:1px;color:var(--text)}
+.inbox-toolbar-count{font-family:var(--mono);font-size:10px;color:var(--text-dim);background:rgba(0,229,255,0.06);padding:3px 10px;border-radius:10px}
+.search-box{margin-left:auto;position:relative}
+.search-input{font-family:var(--font);font-size:11px;color:var(--text);background:rgba(0,229,255,0.03);border:1px solid var(--border);padding:7px 12px 7px 32px;outline:none;border-radius:6px;width:240px;transition:all 0.3s}
+.search-input:focus{border-color:rgba(0,229,255,0.2);width:300px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-faint)}
+.inbox-actions{display:flex;gap:6px}
+.action-btn{font-family:var(--font);font-size:9px;letter-spacing:1.5px;padding:6px 12px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;text-transform:uppercase;border-radius:4px;transition:all 0.3s;white-space:nowrap}
+.action-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.action-btn.danger{border-color:rgba(255,68,68,0.15);color:rgba(255,68,68,0.6)}
+.action-btn.danger:hover{border-color:rgba(255,68,68,0.3);color:var(--red);background:rgba(255,68,68,0.04)}
+
+.email-list{flex:1;overflow-y:auto}
+.email-item{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:all 0.15s}
+.email-item:hover{background:rgba(0,229,255,0.02)}
+.email-item.selected{background:rgba(0,229,255,0.04);border-left:2px solid var(--cyan)}
+.email-item.unread{border-left:2px solid var(--cyan)}
+.email-item.unread .email-from{font-weight:600;color:var(--text)}
+.email-item.unread .email-subject{color:var(--text);font-weight:500}
+.email-check{width:16px;height:16px;border:1px solid var(--border);border-radius:3px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.email-check.checked{background:var(--cyan);border-color:var(--cyan)}
+.email-check.checked::after{content:'✓';font-size:10px;color:#000;font-weight:700}
+.email-star{font-size:12px;cursor:pointer;color:var(--text-faint);flex-shrink:0;transition:color 0.2s}
+.email-star:hover,.email-star.starred{color:var(--orange)}
+.email-from{font-size:12px;color:var(--text-dim);width:160px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.email-subject{font-size:12px;color:var(--text-dim);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.email-snippet{font-size:11px;color:var(--text-faint);margin-left:8px;flex-shrink:0}
+.email-date{font-family:var(--mono);font-size:9px;color:var(--text-faint);flex-shrink:0;letter-spacing:0.5px}
+.email-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-faint);gap:8px}
+.email-empty-icon{font-size:36px;opacity:0.3}
+.email-empty-text{font-size:13px}
+
+/* ── EMAIL DETAIL ── */
+.detail-view{flex:1;overflow-y:auto;padding:24px 32px}
+.detail-header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.detail-subject{font-size:18px;font-weight:600;color:var(--text);margin-bottom:12px;line-height:1.4}
+.detail-meta{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.detail-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0}
+.detail-info{flex:1}
+.detail-from{font-size:13px;font-weight:500;color:var(--text)}
+.detail-to{font-size:11px;color:var(--text-dim);margin-top:2px}
+.detail-date{font-family:var(--mono);font-size:10px;color:var(--text-faint);flex-shrink:0}
+.detail-body{font-size:13px;line-height:1.8;color:var(--text-dim);white-space:pre-wrap;word-wrap:break-word}
+.detail-actions{display:flex;gap:8px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
+.detail-btn{font-family:var(--font);font-size:10px;letter-spacing:1.5px;padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;text-transform:uppercase;border-radius:4px;transition:all 0.3s}
+.detail-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.detail-btn.primary{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.detail-btn.danger{border-color:rgba(255,68,68,0.15);color:rgba(255,68,68,0.6)}
+.detail-btn.danger:hover{border-color:rgba(255,68,68,0.3);color:var(--red)}
+.detail-back{font-family:var(--font);font-size:10px;letter-spacing:1.5px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;text-transform:uppercase;border-radius:4px;transition:all 0.3s;margin-bottom:16px;display:inline-flex;align-items:center;gap:6px}
+.detail-back:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+
+/* ── COMPOSE ── */
+.compose-view{flex:1;display:flex;flex-direction:column;padding:0}
+.compose-toolbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:rgba(8,12,22,0.5)}
+.compose-toolbar-title{font-size:13px;font-weight:600;letter-spacing:1px}
+.compose-fields{padding:20px 24px 0}
+.compose-field{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.compose-field-label{font-size:9px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;width:56px;flex-shrink:0;font-weight:500}
+.compose-field-input{flex:1;font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:10px 14px;outline:none;border-radius:6px;transition:all 0.3s}
+.compose-field-input:focus{border-color:rgba(0,229,255,0.2)}
+.compose-field-input option{background:var(--bg2);color:var(--text)}
+.compose-body-area{flex:1;padding:16px 24px}
+.compose-textarea{width:100%;height:100%;font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:16px;outline:none;resize:none;border-radius:6px;line-height:1.7;transition:border-color 0.3s}
+.compose-textarea:focus{border-color:rgba(0,229,255,0.2)}
+.compose-actions{padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:rgba(8,12,22,0.3)}
+
+/* ── ADMIN PANEL ── */
+.admin-view{flex:1;overflow-y:auto;padding:24px 32px}
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.admin-title{font-size:16px;font-weight:600;letter-spacing:1px}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.admin-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:24px;backdrop-filter:blur(12px)}
+.admin-card-title{font-size:12px;font-weight:600;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.user-table{width:100%;border-collapse:collapse}
+.user-table th{font-size:9px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);font-weight:500}
+.user-table td{font-size:12px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid rgba(0,229,255,0.03)}
+.user-table tr:hover td{background:rgba(0,229,255,0.02)}
+.user-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;padding:3px 8px;border-radius:4px}
+.user-status.active{color:var(--green);background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15)}
+.user-status.inactive{color:var(--red);background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.15)}
+.user-actions{display:flex;gap:6px}
+.user-btn{font-family:var(--font);font-size:8px;letter-spacing:1px;padding:4px 8px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;border-radius:3px;text-transform:uppercase;transition:all 0.2s}
+.user-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.user-btn.danger{border-color:rgba(255,68,68,0.15);color:rgba(255,68,68,0.5)}
+.user-btn.danger:hover{border-color:rgba(255,68,68,0.3);color:var(--red)}
+
+/* ── STATUSBAR ── */
+.statusbar{height:28px;flex-shrink:0;background:rgba(4,6,12,0.95);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--text-faint)}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)}
+.status-right{margin-left:auto;display:flex;gap:10px}
+.status-pill{padding:2px 8px;border:1px solid var(--border);border-radius:3px;font-size:7px;letter-spacing:1.5px}
+.status-pill.on{color:var(--cyan);border-color:rgba(0,229,255,0.15)}
+.status-pill.warn{color:var(--orange);border-color:rgba(255,165,0,0.15)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{width:60px}
+  .sidebar-header,.sidebar-label,.sidebar-item span:not(.icon),.sidebar-item .count,.sidebar-email,.sidebar-status span:last-child,.sidebar-compose{font-size:0;width:0;padding:0;margin:0;border:none;overflow:hidden}
+  .sidebar-compose{font-size:18px;width:40px;height:40px;padding:0;margin:12px auto;display:flex;align-items:center;justify-content:center}
+  .sidebar-item{justify-content:center;padding:10px 0}
+  .topbar-nav{display:none}
+  .search-input{width:140px}
+  .admin-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .sidebar{display:none}
+  .inbox-toolbar{flex-wrap:wrap}
+  .search-box{width:100%;margin-left:0;margin-top:8px}
+  .search-input,.search-input:focus{width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar" id="topbar">
+    <a class="topbar-logo" href="/">
+      <div class="topbar-icon">Z</div>
+      <span class="topbar-title">ZICORE Mail</span>
+    </a>
+    <div class="topbar-nav" id="topbarNav" style="display:none">
+      <button class="topbar-tab active" data-view="inbox" onclick="switchView('inbox')">Inbox</button>
+      <button class="topbar-tab" data-view="compose" onclick="switchView('compose')">Compose</button>
+      <button class="topbar-tab" data-view="admin" onclick="switchView('admin')">Admin</button>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-time" id="clock"></div>
+      <div class="topbar-user" id="topbarUser" style="display:none">
+        <span class="dot"></span>
+        <span id="topbarEmail"></span>
+      </div>
+      <button class="topbar-logout" id="logoutBtn" onclick="doLogout()">Logout</button>
+      <a class="topbar-back" href="/">Portal</a>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- LOGIN VIEW -->
+    <div class="auth-container" id="view-login">
+      <div class="auth-box">
+        <div class="auth-logo">
+          <div class="auth-logo-icon">Z</div>
+          <h1>ZICORE MAIL</h1>
+          <p>Secure Aerospace Webmail</p>
+        </div>
+        <div id="loginForm">
+          <div class="auth-title">Sign In</div>
+          <div class="auth-subtitle">Access your zinemotion.com.mx mailbox</div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="loginEmail" placeholder="user@zinemotion.com.mx" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <button class="btn-primary" id="loginBtn" onclick="doLogin()">SIGN IN</button>
+          <div class="auth-error" id="loginError"></div>
+          <div class="auth-links">
+            Don't have an account? <a href="#" onclick="showAuth('register');return false">Create one</a>
+          </div>
+        </div>
+
+        <div id="registerForm" style="display:none">
+          <div class="auth-title">Create Account</div>
+          <div class="auth-subtitle">Get your @zinemotion.com.mx email</div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" type="text" id="regName" placeholder="Your full name" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="regEmail" placeholder="you@zinemotion.com.mx" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="regPass" placeholder="Min. 8 characters" autocomplete="new-password" oninput="checkRegStrength()">
+            <div class="password-strength" id="regStrength">
+              <div class="bar" id="rs1"></div>
+              <div class="bar" id="rs2"></div>
+              <div class="bar" id="rs3"></div>
+              <div class="bar" id="rs4"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input class="form-input" type="password" id="regConfirm" placeholder="Repeat password" autocomplete="new-password">
+          </div>
+          <button class="btn-primary" id="regBtn" onclick="doRegister()">CREATE ACCOUNT</button>
+          <div class="auth-error" id="regError"></div>
+          <div class="auth-links">
+            Already have an account? <a href="#" onclick="showAuth('login');return false">Sign in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR (mail views only) -->
+    <div class="sidebar" id="sidebar" style="display:none">
+      <div class="sidebar-header">
+        <div class="sidebar-user" id="sidebarName">User</div>
+        <div class="sidebar-email" id="sidebarEmail">user@zinemotion.com.mx</div>
+      </div>
+      <div class="sidebar-compose" onclick="switchView('compose')">✉ Compose</div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Mailbox</div>
+        <div class="sidebar-item active" data-folder="inbox" onclick="selectFolder('inbox')">
+          <span class="icon">📥</span><span>Inbox</span><span class="count" id="inboxCount">0</span>
+        </div>
+        <div class="sidebar-item" data-folder="sent" onclick="selectFolder('sent')">
+          <span class="icon">📤</span><span>Sent</span>
+        </div>
+        <div class="sidebar-item" data-folder="drafts" onclick="selectFolder('drafts')">
+          <span class="icon">📝</span><span>Drafts</span>
+        </div>
+        <div class="sidebar-item" data-folder="trash" onclick="selectFolder('trash')">
+          <span class="icon">🗑</span><span>Trash</span>
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Admin</div>
+        <div class="sidebar-item" data-folder="admin" onclick="switchView('admin')">
+          <span class="icon">⚙</span><span>Users</span>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="sidebar-status"><span class="dot"></span><span>Connected</span></div>
+      </div>
+    </div>
+
+    <!-- MAIL CONTENT -->
+    <div class="content" id="mailContent" style="display:none">
+
+      <!-- INBOX -->
+      <div class="mail-view active" id="inboxView">
+        <div class="inbox-toolbar">
+          <span class="inbox-toolbar-title">Inbox</span>
+          <span class="inbox-toolbar-count" id="inboxTotal">0 messages</span>
+          <div class="inbox-actions">
+            <button class="action-btn" onclick="loadInbox()">Refresh</button>
+            <button class="action-btn danger" id="deleteBtn" onclick="deleteSelected()" style="display:none">Delete</button>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" type="text" id="searchInput" placeholder="Search emails..." oninput="filterEmails()">
+          </div>
+        </div>
+        <div class="email-list" id="emailList">
+          <div class="email-empty">
+            <div class="email-empty-icon">📭</div>
+            <div class="email-empty-text">Loading emails...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMAIL DETAIL -->
+      <div class="mail-view" id="detailView">
+        <div class="detail-view">
+          <button class="detail-back" onclick="backToList()">← Back</button>
+          <div class="detail-header">
+            <div class="detail-subject" id="detailSubject"></div>
+            <div class="detail-meta">
+              <div class="detail-avatar" id="detailAvatar"></div>
+              <div class="detail-info">
+                <div class="detail-from" id="detailFrom"></div>
+                <div class="detail-to" id="detailTo"></div>
+              </div>
+              <div class="detail-date" id="detailDate"></div>
+            </div>
+          </div>
+          <div class="detail-body" id="detailBody"></div>
+          <div class="detail-actions">
+            <button class="detail-btn primary" onclick="replyToEmail()">↩ Reply</button>
+            <button class="detail-btn primary" onclick="forwardEmail()">↪ Forward</button>
+            <button class="detail-btn danger" onclick="deleteCurrentEmail()">🗑 Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPOSE -->
+      <div class="mail-view" id="composeView">
+        <div class="compose-toolbar">
+          <span class="compose-toolbar-title">New Message</span>
+        </div>
+        <div class="compose-fields">
+          <div class="compose-field">
+            <span class="compose-field-label">From</span>
+            <select class="compose-field-input" id="composeFrom" style="cursor:pointer">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="compose-field">
+            <span class="compose-field-label">To</span>
+            <input class="compose-field-input" type="email" id="composeTo" placeholder="recipient@zinemotion.com.mx">
+          </div>
+          <div class="compose-field">
+            <span class="compose-field-label">Subject</span>
+            <input class="compose-field-input" type="text" id="composeSubject" placeholder="Email subject">
+          </div>
+        </div>
+        <div class="compose-body-area">
+          <textarea class="compose-textarea" id="composeBody" placeholder="Write your message..."></textarea>
+        </div>
+        <div class="compose-actions">
+          <button class="action-btn" onclick="saveDraft()">Save Draft</button>
+          <button class="action-btn" onclick="clearCompose()">Clear</button>
+          <button class="action-btn primary" style="border-color:rgba(0,229,255,0.25);color:var(--cyan)" onclick="sendEmail()">Send →</button>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="mail-view" id="adminView">
+        <div class="admin-view">
+          <div class="admin-header">
+            <span class="admin-title">User Management</span>
+            <button class="action-btn" onclick="loadUsers()">Refresh</button>
+          </div>
+          <div class="admin-grid">
+            <div class="admin-card" style="grid-column:1/-1">
+              <div class="admin-card-title">All Users</div>
+              <div id="usersTable">Loading...</div>
+            </div>
+            <div class="admin-card">
+              <div class="admin-card-title">Create New User</div>
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input class="form-input" type="text" id="adminNewName" placeholder="Full name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-input" type="email" id="adminNewEmail" placeholder="user@zinemotion.com.mx">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input class="form-input" type="password" id="adminNewPass" placeholder="Password">
+              </div>
+              <button class="btn-primary" onclick="adminCreateUser()">Create User</button>
+            </div>
+            <div class="admin-card">
+              <div class="admin-card-title">Reset Password</div>
+              <div class="form-group">
+                <label class="form-label">Select User</label>
+                <select class="form-input" id="resetUserSelect">
+                  <option value="">Select user...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input class="form-input" type="password" id="resetNewPass" placeholder="New password">
+              </div>
+              <button class="btn-primary" onclick="adminResetPassword()">Reset Password</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUSBAR -->
+  <div class="statusbar">
+    <div class="status-dot"></div>
+    <span>ZICORE MAIL</span>
+    <span id="statusText">Ready</span>
+    <div class="status-right">
+      <div class="status-pill on" id="statusApi">API</div>
+      <div class="status-pill on">SMTP</div>
+      <div class="status-pill on">IMAP</div>
+      <div class="status-pill" id="statusSession">SESSION</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ──────────────────────────────────────────
+   ZICORE MAIL PORTAL — Client Logic
+   ────────────────────────────────────────── */
+
+var STATE = {
+  logged: false,
+  user: null,
+  password: null,
+  token: null,
+  emails: [],
+  filtered: [],
+  selected: null,
+  currentEmail: null,
+  folder: 'inbox',
+  sessionStart: null,
+  users: []
+};
+
+var SESSION_TIMEOUT = 30 * 60 * 1000;
+var logoutTimer = null;
+
+/* ── UTILITIES ── */
+
+function $(id) { return document.getElementById(id); }
+
+function showToast(msg, type) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'info') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 4000);
+}
+
+function enc(str) { return btoa(unescape(encodeURIComponent(str))); }
+function dec(str) { return decodeURIComponent(escape(atob(str))); }
+
+function formatTime(d) {
+  var now = new Date();
+  var dt = new Date(d);
+  var diff = now - dt;
+  if (diff < 86400000 && now.getDate() === dt.getDate()) {
+    return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+  }
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[dt.getMonth()] + ' ' + dt.getDate();
+}
+
+function saveSession() {
+  try {
+    localStorage.setItem('zmail_session', JSON.stringify({
+      user: STATE.user,
+      password: STATE.password,
+      token: STATE.token,
+      start: STATE.sessionStart
+    }));
+  } catch(e) {}
+}
+
+function loadSession() {
+  try {
+    var s = JSON.parse(localStorage.getItem('zmail_session'));
+    if (s && s.user && s.password && s.start) {
+      if (Date.now() - s.start < SESSION_TIMEOUT) {
+        STATE.user = s.user;
+        STATE.password = s.password;
+        STATE.token = s.token;
+        STATE.sessionStart = s.start;
+        STATE.logged = true;
+        return true;
+      }
+      localStorage.removeItem('zmail_session');
+    }
+  } catch(e) {}
+  return false;
+}
+
+function clearSession() {
+  STATE.logged = false;
+  STATE.user = null;
+  STATE.password = null;
+  STATE.token = null;
+  STATE.sessionStart = null;
+  localStorage.removeItem('zmail_session');
+}
+
+function startSessionTimer() {
+  if (logoutTimer) clearTimeout(logoutTimer);
+  var remaining = SESSION_TIMEOUT - (Date.now() - STATE.sessionStart);
+  if (remaining <= 0) { doLogout(); return; }
+  logoutTimer = setTimeout(function() {
+    showToast('Session expired. Please sign in again.', 'error');
+    doLogout();
+  }, remaining);
+}
+
+/* ── AUTH ── */
+
+function showAuth(mode) {
+  if (mode === 'register') {
+    $('loginForm').style.display = 'none';
+    $('registerForm').style.display = 'block';
+  } else {
+    $('loginForm').style.display = 'block';
+    $('registerForm').style.display = 'none';
+  }
+}
+
+function doLogin() {
+  var email = $('loginEmail').value.trim();
+  var pass = $('loginPass').value;
+  var err = $('loginError');
+  err.style.display = 'none';
+
+  if (!email || !pass) {
+    err.textContent = 'Email and password required';
+    err.style.display = 'block';
+    return;
+  }
+
+  var btn = $('loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in...';
+
+  fetch('/api/mail/inbox?user=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(pass) + '&limit=1')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok' || d.messages) {
+        STATE.logged = true;
+        STATE.user = email;
+        STATE.password = pass;
+        STATE.token = enc(email + ':' + pass);
+        STATE.sessionStart = Date.now();
+        saveSession();
+        enterMail();
+        showToast('Welcome, ' + email.split('@')[0] + '!', 'success');
+      } else {
+        err.textContent = d.error || 'Invalid credentials';
+        err.style.display = 'block';
+      }
+      btn.disabled = false;
+      btn.textContent = 'SIGN IN';
+    })
+    .catch(function(e) {
+      err.textContent = 'Connection failed — try again';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'SIGN IN';
+    });
+}
+
+function doRegister() {
+  var name = $('regName').value.trim();
+  var email = $('regEmail').value.trim();
+  var pass = $('regPass').value;
+  var confirm = $('regConfirm').value;
+  var err = $('regError');
+  err.style.display = 'none';
+
+  if (!name || name.length < 2) { err.textContent = 'Name must be at least 2 characters'; err.style.display = 'block'; return; }
+  if (!email || !email.includes('@')) { err.textContent = 'Valid email required'; err.style.display = 'block'; return; }
+  if (pass.length < 8) { err.textContent = 'Password must be at least 8 characters'; err.style.display = 'block'; return; }
+  if (pass !== confirm) { err.textContent = 'Passwords do not match'; err.style.display = 'block'; return; }
+
+  var btn = $('regBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Creating account...';
+
+  fetch('/api/mail/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: pass, confirm_password: confirm, name: name })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showToast('Account created! Signing in...', 'success');
+      $('regName').value = '';
+      $('regEmail').value = '';
+      $('regPass').value = '';
+      $('regConfirm').value = '';
+      showAuth('login');
+      $('loginEmail').value = email;
+      $('loginPass').focus();
+    } else {
+      err.textContent = d.error || 'Registration failed';
+      err.style.display = 'block';
+    }
+    btn.disabled = false;
+    btn.textContent = 'CREATE ACCOUNT';
+  })
+  .catch(function(e) {
+    err.textContent = 'Connection failed';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'CREATE ACCOUNT';
+  });
+}
+
+function doLogout() {
+  clearSession();
+  if (logoutTimer) clearTimeout(logoutTimer);
+  $('sidebar').style.display = 'none';
+  $('mailContent').style.display = 'none';
+  $('topbarNav').style.display = 'none';
+  $('topbarUser').style.display = 'none';
+  $('logoutBtn').style.display = 'none';
+  $('statusSession').className = 'status-pill';
+  $('view-login').style.display = 'flex';
+  $('loginEmail').value = '';
+  $('loginPass').value = '';
+  $('loginError').style.display = 'none';
+}
+
+/* ── ENTER MAIL ── */
+
+function enterMail() {
+  $('view-login').style.display = 'none';
+  $('sidebar').style.display = 'flex';
+  $('mailContent').style.display = 'flex';
+  $('topbarNav').style.display = 'flex';
+  $('topbarUser').style.display = 'flex';
+  $('logoutBtn').style.display = 'block';
+  $('topbarEmail').textContent = STATE.user;
+  $('sidebarName').textContent = STATE.user.split('@')[0];
+  $('sidebarEmail').textContent = STATE.user;
+  $('statusSession').className = 'status-pill on';
+  startSessionTimer();
+  loadInbox();
+  loadMailAccounts();
+  loadUsers();
+}
+
+/* ── NAVIGATION ── */
+
+function switchView(name) {
+  document.querySelectorAll('.mail-view').forEach(function(v) { v.classList.remove('active'); });
+  document.querySelectorAll('.topbar-tab').forEach(function(t) { t.classList.remove('active'); });
+
+  if (name === 'inbox' || name === 'sent' || name === 'drafts' || name === 'trash') {
+    $('inboxView').classList.add('active');
+    var tab = document.querySelector('[data-view="inbox"]');
+    if (tab) tab.classList.add('active');
+    STATE.folder = name;
+    selectFolder(name);
+  } else if (name === 'compose') {
+    $('composeView').classList.add('active');
+    var tab2 = document.querySelector('[data-view="compose"]');
+    if (tab2) tab2.classList.add('active');
+  } else if (name === 'admin') {
+    $('adminView').classList.add('active');
+    var tab3 = document.querySelector('[data-view="admin"]');
+    if (tab3) tab3.classList.add('active');
+    loadUsers();
+  } else if (name === 'detail') {
+    $('detailView').classList.add('active');
+  }
+}
+
+function selectFolder(folder) {
+  STATE.folder = folder;
+  document.querySelectorAll('.sidebar-item').forEach(function(i) { i.classList.remove('active'); });
+  var el = document.querySelector('[data-folder="' + folder + '"]');
+  if (el) el.classList.add('active');
+  if (folder === 'inbox') loadInbox();
+  else if (folder === 'sent') loadSent();
+  else if (folder === 'drafts') showDrafts();
+  else if (folder === 'trash') showTrash();
+}
+
+/* ── INBOX ── */
+
+function loadInbox() {
+  STATE.folder = 'inbox';
+  var list = $('emailList');
+  list.innerHTML = '<div class="email-empty"><div class="email-empty-icon">⏳</div><div class="email-empty-text">Loading inbox...</div></div>';
+  $('statusText').textContent = 'Syncing...';
+
+  var url = '/api/mail/inbox?user=' + encodeURIComponent(STATE.user) + '&password=' + encodeURIComponent(STATE.password) + '&limit=50';
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      STATE.emails = d.messages || [];
+      STATE.filtered = STATE.emails;
+      STATE.selected = null;
+      $('inboxCount').textContent = STATE.emails.length;
+      $('inboxTotal').textContent = STATE.emails.length + ' messages';
+      $('deleteBtn').style.display = 'none';
+      renderEmails();
+      $('statusText').textContent = STATE.emails.length + ' emails';
+      $('statusApi').className = 'status-pill on';
+    })
+    .catch(function(e) {
+      list.innerHTML = '<div class="email-empty"><div class="email-empty-icon">⚠</div><div class="email-empty-text">Failed to load emails</div></div>';
+      $('statusText').textContent = 'Sync failed';
+      $('statusApi').className = 'status-pill warn';
+    });
+}
+
+function loadSent() {
+  STATE.emails = [];
+  STATE.filtered = [];
+  renderEmails();
+  $('inboxTotal').textContent = 'Sent folder';
+  $('inboxCount').textContent = '0';
+  showToast('Sent folder — server-side storage', 'info');
+}
+
+function showDrafts() {
+  STATE.emails = [];
+  STATE.filtered = [];
+  renderEmails();
+  $('inboxTotal').textContent = 'Drafts';
+  $('inboxCount').textContent = '0';
+}
+
+function showTrash() {
+  STATE.emails = [];
+  STATE.filtered = [];
+  renderEmails();
+  $('inboxTotal').textContent = 'Trash';
+  $('inboxCount').textContent = '0';
+}
+
+function renderEmails() {
+  var list = $('emailList');
+  var emails = STATE.filtered;
+
+  if (!emails || emails.length === 0) {
+    list.innerHTML = '<div class="email-empty"><div class="email-empty-icon">📭</div><div class="email-empty-text">No emails</div></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  emails.forEach(function(m, i) {
+    var item = document.createElement('div');
+    item.className = 'email-item' + (m.seen ? '' : ' unread');
+    item.onclick = function(e) { if (!e.target.closest('.email-check')) openEmail(i); };
+
+    var from = m.from || 'Unknown';
+    var fromName = from.split('<')[0].replace(/"/g, '').trim() || from;
+    var avatar = fromName.charAt(0).toUpperCase();
+    var subject = m.subject || '(no subject)';
+    var snippet = m.body ? m.body.substring(0, 60).replace(/\n/g, ' ') : '';
+    var date = m.date ? formatTime(m.date) : '';
+
+    item.innerHTML =
+      '<div class="email-check" onclick="toggleCheck(event,' + i + ')"></div>' +
+      '<span class="email-star" onclick="toggleStar(event,' + i + ')">☆</span>' +
+      '<div class="email-from">' + avatar + ' — ' + escHtml(fromName) + '</div>' +
+      '<div class="email-subject">' + escHtml(subject) + '<span class="email-snippet">' + escHtml(snippet) + '</span></div>' +
+      '<div class="email-date">' + date + '</div>';
+
+    list.appendChild(item);
+  });
+}
+
+function escHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function filterEmails() {
+  var q = $('searchInput').value.toLowerCase();
+  if (!q) {
+    STATE.filtered = STATE.emails;
+  } else {
+    STATE.filtered = STATE.emails.filter(function(m) {
+      return (m.from || '').toLowerCase().indexOf(q) !== -1 ||
+             (m.subject || '').toLowerCase().indexOf(q) !== -1 ||
+             (m.body || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  renderEmails();
+}
+
+function toggleCheck(e, i) {
+  e.stopPropagation();
+  var el = e.currentTarget;
+  el.classList.toggle('checked');
+  var checked = document.querySelectorAll('.email-check.checked');
+  $('deleteBtn').style.display = checked.length > 0 ? 'block' : 'none';
+}
+
+function toggleStar(e, i) {
+  e.stopPropagation();
+  e.currentTarget.classList.toggle('starred');
+}
+
+/* ── EMAIL DETAIL ── */
+
+function openEmail(i) {
+  var m = STATE.filtered[i];
+  if (!m) return;
+  STATE.currentEmail = m;
+  STATE.currentEmailIndex = i;
+
+  $('detailSubject').textContent = m.subject || '(no subject)';
+  $('detailFrom').textContent = m.from || 'Unknown';
+  $('detailTo').textContent = 'To: ' + STATE.user;
+  $('detailDate').textContent = m.date || '';
+
+  var from = (m.from || 'U').split('<')[0].replace(/"/g, '').trim();
+  $('detailAvatar').textContent = from.charAt(0).toUpperCase();
+
+  var body = (m.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  body = body.replace(/\n/g, '<br>');
+  $('detailBody').innerHTML = body;
+
+  switchView('detail');
+}
+
+function backToList() {
+  switchView(STATE.folder);
+}
+
+function replyToEmail() {
+  if (!STATE.currentEmail) return;
+  switchView('compose');
+  $('composeTo').value = STATE.currentEmail.from || '';
+  $('composeSubject').value = 'Re: ' + (STATE.currentEmail.subject || '');
+  $('composeBody').value = '\n\n--- Original Message ---\nFrom: ' + (STATE.currentEmail.from || '') + '\nDate: ' + (STATE.currentEmail.date || '') + '\n\n' + (STATE.currentEmail.body || '');
+  $('composeBody').focus();
+}
+
+function forwardEmail() {
+  var forwardTo = 'jilo_tuk@yahoo.com.mx';
+  if (!STATE.currentEmail) return;
+  var msgId = STATE.currentEmail.id || STATE.currentEmail.message_id || '';
+
+  if (msgId) {
+    fetch('/api/mail/forward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: msgId, forward_to: forwardTo })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        showToast('Forwarded to ' + forwardTo, 'success');
+      } else {
+        composeForward(forwardTo);
+      }
+    })
+    .catch(function() { composeForward(forwardTo); });
+  } else {
+    composeForward(forwardTo);
+  }
+}
+
+function composeForward(to) {
+  switchView('compose');
+  $('composeTo').value = to;
+  $('composeSubject').value = 'Fwd: ' + (STATE.currentEmail ? STATE.currentEmail.subject : '');
+  var body = '\n\n--- Forwarded Message ---\nFrom: ' + (STATE.currentEmail ? STATE.currentEmail.from : '') + '\nSubject: ' + (STATE.currentEmail ? STATE.currentEmail.subject : '') + '\nDate: ' + (STATE.currentEmail ? STATE.currentEmail.date : '') + '\n\n' + (STATE.currentEmail ? STATE.currentEmail.body : '');
+  $('composeBody').value = body;
+}
+
+function deleteCurrentEmail() {
+  if (!STATE.currentEmail) return;
+  showToast('Email moved to trash', 'info');
+  backToList();
+}
+
+function deleteSelected() {
+  var checks = document.querySelectorAll('.email-check.checked');
+  if (checks.length === 0) return;
+  showToast(checks.length + ' email(s) moved to trash', 'info');
+  checks.forEach(function(c) { c.classList.remove('checked'); });
+  $('deleteBtn').style.display = 'none';
+}
+
+/* ── COMPOSE ── */
+
+function loadMailAccounts() {
+  fetch('/api/mail/users')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var sel = $('composeFrom');
+      var users = d.users || [];
+      sel.innerHTML = '';
+      var found = false;
+      users.forEach(function(u) {
+        if (u.active) {
+          var opt = document.createElement('option');
+          opt.value = u.email;
+          opt.textContent = u.name ? u.name + ' <' + u.email + '>' : u.email;
+          sel.appendChild(opt);
+          if (u.email === STATE.user) found = true;
+        }
+      });
+      if (!found) {
+        var opt2 = document.createElement('option');
+        opt2.value = STATE.user;
+        opt2.textContent = STATE.user;
+        sel.appendChild(opt2);
+      }
+    })
+    .catch(function() {
+      var sel = $('composeFrom');
+      sel.innerHTML = '<option value="' + STATE.user + '">' + STATE.user + '</option>';
+    });
+}
+
+function sendEmail() {
+  var from = $('composeFrom').value || STATE.user;
+  var to = $('composeTo').value.trim();
+  var subject = $('composeSubject').value.trim();
+  var body = $('composeBody').value;
+
+  if (!to) { showToast('Recipient required', 'error'); return; }
+  if (!subject) { showToast('Subject required', 'error'); return; }
+  if (!body) { showToast('Message body required', 'error'); return; }
+
+  fetch('/api/mail/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: from, to: to, subject: subject, body: body })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showToast('Email sent to ' + to, 'success');
+      clearCompose();
+      switchView('inbox');
+    } else {
+      showToast(d.error || 'Failed to send', 'error');
+    }
+  })
+  .catch(function(e) {
+    showToast('Connection error', 'error');
+  });
+}
+
+function clearCompose() {
+  $('composeTo').value = '';
+  $('composeSubject').value = '';
+  $('composeBody').value = '';
+}
+
+function saveDraft() {
+  showToast('Draft saved locally', 'info');
+}
+
+/* ── ADMIN ── */
+
+function loadUsers() {
+  fetch('/api/mail/users')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      STATE.users = d.users || [];
+      renderUsersTable();
+      renderResetSelect();
+    })
+    .catch(function() {
+      $('usersTable').innerHTML = '<div style="color:var(--text-dim);font-size:12px">Failed to load users</div>';
+    });
+}
+
+function renderUsersTable() {
+  var users = STATE.users;
+  if (!users || users.length === 0) {
+    $('usersTable').innerHTML = '<div style="color:var(--text-dim);font-size:12px">No users found</div>';
+    return;
+  }
+  var html = '<table class="user-table"><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+  users.forEach(function(u) {
+    var statusClass = u.active ? 'active' : 'inactive';
+    var statusText = u.active ? 'Active' : 'Inactive';
+    html += '<tr>' +
+      '<td style="font-family:var(--mono);font-size:11px">' + escHtml(u.email) + '</td>' +
+      '<td>' + escHtml(u.name || '—') + '</td>' +
+      '<td><span class="user-status ' + statusClass + '"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>' + statusText + '</span></td>' +
+      '<td><div class="user-actions">' +
+      '<button class="user-btn danger" onclick="adminDeleteUser(\'' + escHtml(u.email) + '\')">Delete</button>' +
+      '</div></td></tr>';
+  });
+  html += '</tbody></table>';
+  $('usersTable').innerHTML = html;
+}
+
+function renderResetSelect() {
+  var sel = $('resetUserSelect');
+  sel.innerHTML = '<option value="">Select user...</option>';
+  STATE.users.forEach(function(u) {
+    if (u.active) {
+      var opt = document.createElement('option');
+      opt.value = u.email;
+      opt.textContent = u.name ? u.name + ' <' + u.email + '>' : u.email;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+function adminCreateUser() {
+  var name = $('adminNewName').value.trim();
+  var email = $('adminNewEmail').value.trim();
+  var pass = $('adminNewPass').value;
+
+  if (!email || !pass) { showToast('Email and password required', 'error'); return; }
+
+  fetch('/api/mail/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: pass, name: name })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showToast('User created: ' + email, 'success');
+      $('adminNewName').value = '';
+      $('adminNewEmail').value = '';
+      $('adminNewPass').value = '';
+      loadUsers();
+    } else {
+      showToast(d.error || 'Failed to create user', 'error');
+    }
+  })
+  .catch(function() { showToast('Connection error', 'error'); });
+}
+
+function adminDeleteUser(email) {
+  if (!confirm('Delete user ' + email + '?')) return;
+  fetch('/api/mail/users/' + encodeURIComponent(email), { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      showToast('User deactivated: ' + email, 'success');
+      loadUsers();
+    })
+    .catch(function() { showToast('Failed to delete user', 'error'); });
+}
+
+function adminResetPassword() {
+  var email = $('resetUserSelect').value;
+  var newPass = $('resetNewPass').value;
+  if (!email || !newPass) { showToast('Select user and enter new password', 'error'); return; }
+  fetch('/api/mail/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: newPass, name: '' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    showToast('Password reset for ' + email, 'success');
+    $('resetNewPass').value = '';
+  })
+  .catch(function() { showToast('Failed to reset password', 'error'); });
+}
+
+/* ── PASSWORD STRENGTH ── */
+
+function checkRegStrength() {
+  var pw = $('regPass').value;
+  var bars = [$('rs1'), $('rs2'), $('rs3'), $('rs4')];
+  var score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
+  bars.forEach(function(b, i) {
+    b.className = 'bar';
+    if (i < score) {
+      b.classList.add(score <= 1 ? 'weak' : score <= 2 ? 'medium' : 'strong');
+    }
+  });
+}
+
+/* ── CLOCK ── */
+
+function updateClock() {
+  var n = new Date();
+  $('clock').textContent =
+    String(n.getHours()).padStart(2, '0') + ':' +
+    String(n.getMinutes()).padStart(2, '0') + ':' +
+    String(n.getSeconds()).padStart(2, '0');
+}
+
+/* ── INIT ── */
+
+function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  if (loadSession()) {
+    enterMail();
+  } else {
+    $('view-login').style.display = 'flex';
+  }
+
+  document.querySelectorAll('.form-input').forEach(function(el) {
+    el.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        if ($('loginForm').style.display !== 'none') doLogin();
+        else if ($('registerForm').style.display !== 'none') doRegister();
+      }
+    });
+  });
+}
+
+init();
+</script>
+</body>
+</html>
