@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZNT (ZITON) — Whitepaper v1.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--bg2:#0f1525;--bg3:#141c30;--bg4:#1a2540;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;
+  --text:#c8d6e5;--text2:#667788;--text3:#8899aa;--border:#1a2540;
+  --glass:rgba(10,14,26,0.92);
+}
+@font-face{font-family:'Mono';src:local('Cascadia Code'),local('Consolas'),local('monospace')}
+body{
+  font-family:Georgia,'Times New Roman',Times,serif;
+  background:var(--bg);color:var(--text);
+  line-height:1.75;font-size:17px;
+  overflow-x:hidden;
+}
+
+/* STARFIELD */
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.02;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.008) 2px,rgba(0,229,255,.008) 4px)}
+
+/* LAYOUT */
+.document{position:relative;z-index:2;max-width:860px;margin:0 auto;padding:60px 40px 100px}
+@media(max-width:768px){.document{padding:30px 20px 80px}}
+
+/* HEADER */
+.wp-header{text-align:center;padding:80px 0 60px;border-bottom:1px solid var(--border);margin-bottom:60px}
+.wp-header .logo-mark{display:inline-block;margin-bottom:30px}
+.wp-header .logo-mark svg{width:80px;height:80px;filter:drop-shadow(0 0 20px rgba(0,229,255,.3))}
+.wp-header h1{
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:42px;font-weight:800;
+  letter-spacing:6px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:12px;
+}
+.wp-header .subtitle{
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--text3);margin-bottom:8px;
+}
+.wp-header .version{font-size:12px;color:var(--text2);letter-spacing:2px;margin-bottom:6px}
+.wp-header .org{font-size:11px;color:var(--purple);letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.wp-header .divider{width:60px;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));margin:30px auto 0;border-radius:1px}
+
+/* TABLE OF CONTENTS */
+.toc{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:30px 36px;margin-bottom:60px}
+.toc-title{font-family:'Segoe UI',system-ui,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:18px;font-weight:700}
+.toc ol{list-style:none;counter-reset:toc-counter}
+.toc li{counter-increment:toc-counter;margin-bottom:8px}
+.toc li a{
+  display:flex;align-items:baseline;gap:10px;
+  color:var(--text3);text-decoration:none;font-size:14px;
+  font-family:'Segoe UI',system-ui,sans-serif;
+  transition:color .2s;padding:4px 0;
+}
+.toc li a:hover{color:var(--cyan)}
+.toc li a::before{content:counter(toc-counter,decimal-leading-zero);color:var(--text2);font-family:'Mono',monospace;font-size:12px;min-width:24px}
+.toc li a .toc-dots{flex:1;border-bottom:1px dotted var(--border);margin:0 4px;position:relative;top:-4px}
+
+/* SECTIONS */
+section{margin-bottom:56px}
+.section-num{
+  font-family:'Mono',monospace;font-size:12px;letter-spacing:2px;
+  color:var(--purple);display:block;margin-bottom:6px;font-weight:600;
+}
+h2{
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:24px;font-weight:700;
+  color:var(--text);letter-spacing:1px;margin-bottom:20px;
+  padding-bottom:12px;border-bottom:1px solid var(--border);
+}
+h3{
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:17px;font-weight:600;
+  color:var(--cyan);margin:28px 0 12px;letter-spacing:0.5px;
+}
+p{margin-bottom:16px;color:var(--text3)}
+p strong{color:var(--text);font-weight:600}
+ul,ol{margin:0 0 20px 24px;color:var(--text3)}
+li{margin-bottom:8px}
+li strong{color:var(--text)}
+
+/* BLOCKQUOTE */
+blockquote{
+  border-left:3px solid var(--purple);padding:14px 20px;margin:24px 0;
+  background:rgba(124,77,255,.04);border-radius:0 6px 6px 0;
+  font-size:14px;font-style:italic;color:var(--text2);
+}
+
+/* TABLES */
+.table-wrap{overflow-x:auto;margin:20px 0;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:14px;font-family:'Segoe UI',system-ui,sans-serif}
+thead{background:rgba(0,229,255,.06)}
+th{
+  text-align:left;padding:12px 16px;font-weight:600;font-size:11px;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);
+  border-bottom:1px solid var(--border);
+}
+td{padding:10px 16px;border-bottom:1px solid rgba(26,37,64,.5);color:var(--text3)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,229,255,.02)}
+td:last-child,.text-right{text-align:right}
+.total-row td{font-weight:700;color:var(--text);border-top:2px solid var(--cyan);background:rgba(0,229,255,.04)}
+
+/* CODE / DIAGRAM */
+.code-block{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:24px 28px;margin:20px 0;overflow-x:auto;
+  font-family:'Mono',monospace;font-size:13px;line-height:1.6;
+  color:var(--text3);
+}
+.code-block .kw{color:var(--cyan)}
+.code-block .cm{color:var(--text2)}
+.code-block .hi{color:var(--purple)}
+
+/* ALLOCATION BARS */
+.alloc-list{margin:20px 0}
+.alloc-item{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.alloc-label{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;color:var(--text3);min-width:180px}
+.alloc-bar-wrap{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.alloc-bar{height:100%;border-radius:4px;transition:width .6s ease}
+.alloc-pct{font-family:'Mono',monospace;font-size:12px;color:var(--text2);min-width:40px;text-align:right}
+
+/* ROADMAP */
+.roadmap{margin:20px 0}
+.rm-phase{display:flex;gap:20px;margin-bottom:24px;position:relative}
+.rm-marker{display:flex;flex-direction:column;align-items:center;min-width:40px}
+.rm-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--cyan);background:var(--bg);position:relative;z-index:1}
+.rm-line{width:2px;flex:1;background:var(--border);margin-top:4px}
+.rm-phase:last-child .rm-line{display:none}
+.rm-content{padding-bottom:8px}
+.rm-title{font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:6px}
+.rm-desc{font-size:14px;color:var(--text3);line-height:1.6}
+.rm-desc ul{margin:6px 0 0 16px}
+.rm-desc li{margin-bottom:4px;font-size:14px}
+
+/* FEATURE GRID */
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:20px 0}
+.feature-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:18px 20px;transition:border-color .2s,transform .2s;
+}
+.feature-card:hover{border-color:rgba(0,229,255,.25);transform:translateY(-2px)}
+.feature-card .fc-icon{font-size:20px;margin-bottom:8px}
+.feature-card .fc-title{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.feature-card .fc-desc{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* NAV BUTTONS */
+.nav-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:12px 20px;
+  background:rgba(10,14,26,.95);border-top:1px solid var(--border);
+  backdrop-filter:blur(16px);
+}
+.nav-btn{
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  padding:8px 18px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text3);cursor:pointer;transition:all .2s;
+}
+.nav-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.06)}
+.nav-btn.primary{background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(124,77,255,.12));border-color:var(--cyan);color:var(--cyan)}
+
+/* FOOTER */
+.wp-footer{
+  text-align:center;padding:40px 0 20px;
+  border-top:1px solid var(--border);margin-top:60px;
+}
+.wp-footer p{font-size:11px;color:var(--text2);letter-spacing:1px}
+
+/* PRINT */
+@media print{
+  body{background:#fff;color:#222;font-size:12pt;line-height:1.6}
+  canvas#starfield,.grain,.scanline,.nav-bar{display:none !important}
+  .document{max-width:100%;padding:0;margin:0}
+  .wp-header h1{background:none;-webkit-text-fill-color:#111;font-size:28pt}
+  .wp-header .subtitle,.wp-header .version,.wp-header .org{color:#555;-webkit-text-fill-color:#555}
+  .toc{background:#f5f5f5;border-color:#ddd}
+  .toc li a{color:#333}
+  h2{color:#111;border-bottom-color:#ccc}
+  h3{color:#333}
+  p,li{color:#444}
+  blockquote{border-left-color:#7c4dff;background:#f8f6ff;color:#555}
+  .code-block{background:#f5f5f5;border-color:#ddd;color:#333}
+  table{font-size:10pt}
+  th{background:#eee;color:#333}
+  td{color:#444}
+  .feature-card{border-color:#ddd;background:#f9f9f9}
+  .feature-card .fc-title{color:#222}
+  .feature-card .fc-desc{color:#555}
+  .rm-dot{border-color:#7c4dff}
+  a{color:#333}
+}
+
+/* SCROLL */
+html{scroll-behavior:smooth}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="grain"></div>
+<div class="scanline"></div>
+
+<div class="document">
+
+<!-- ===== HEADER ===== -->
+<header class="wp-header" id="top">
+  <div class="logo-mark">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" stroke="url(#g1)" stroke-width="1.5" fill="none" opacity=".6"/>
+      <polygon points="50,15 85,32.5 85,67.5 50,85 15,67.5 15,32.5" stroke="url(#g1)" stroke-width="1" fill="none" opacity=".3"/>
+      <text x="50" y="56" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="22" font-weight="800" fill="url(#g1)">ZNT</text>
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs>
+    </svg>
+  </div>
+  <h1>ZNT (ZITON)</h1>
+  <p class="subtitle">Digital Infrastructure Asset of the ZiCore Ecosystem</p>
+  <p class="version">Version 1.0</p>
+  <p class="org">Powered by ZineMotion Group</p>
+  <div class="divider"></div>
+</header>
+
+<!-- ===== TABLE OF CONTENTS ===== -->
+<nav class="toc">
+  <div class="toc-title">Table of Contents</div>
+  <ol>
+    <li><a href="#executive-summary">Executive Summary<span class="toc-dots"></span></a></li>
+    <li><a href="#vision">The Vision<span class="toc-dots"></span></a></li>
+    <li><a href="#architecture">Ecosystem Architecture<span class="toc-dots"></span></a></li>
+    <li><a href="#principles">Core Principles<span class="toc-dots"></span></a></li>
+    <li><a href="#modules">Ecosystem Modules<span class="toc-dots"></span></a></li>
+    <li><a href="#valuation">Intellectual Asset Valuation Framework<span class="toc-dots"></span></a></li>
+    <li><a href="#utility">ZNT Utility<span class="toc-dots"></span></a></li>
+    <li><a href="#economics">Token Economics (Illustrative)<span class="toc-dots"></span></a></li>
+    <li><a href="#roadmap">Roadmap<span class="toc-dots"></span></a></li>
+    <li><a href="#long-term">Long-Term Vision<span class="toc-dots"></span></a></li>
+  </ol>
+</nav>
+
+<!-- ===== 1. EXECUTIVE SUMMARY ===== -->
+<section id="executive-summary">
+  <span class="section-num">01</span>
+  <h2>Executive Summary</h2>
+  <p><strong>ZNT (ZITON)</strong> is the native digital asset of the ZiCore Ecosystem, an integrated technological platform designed to support artificial intelligence, aerospace engineering, digital finance, scientific research, intellectual property management, and future infrastructure projects.</p>
+  <p>Rather than functioning solely as a cryptocurrency, ZNT is intended to become the <strong>utility and governance layer</strong> connecting every service developed within the ZiCore platform.</p>
+  <p>The long-term vision is to establish a <strong>unified digital economy</strong> where research, software, infrastructure, services, and intellectual assets interact under a single interoperable ecosystem.</p>
+</section>
+
+<!-- ===== 2. THE VISION ===== -->
+<section id="vision">
+  <span class="section-num">02</span>
+  <h2>The Vision</h2>
+  <p>The ZiCore Ecosystem seeks to create an <strong>operating system for innovation</strong>. Instead of developing isolated applications, ZiCore connects independent modules into a unified technological environment capable of supporting:</p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="fc-icon">&#9881;</div>
+      <div class="fc-title">Artificial Intelligence</div>
+      <div class="fc-desc">Central intelligence engine powering all ecosystem services and decision-making.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#9992;</div>
+      <div class="fc-title">Aerospace Engineering</div>
+      <div class="fc-desc">Vehicle design, orbital mechanics, mission planning, and space infrastructure.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#9878;</div>
+      <div class="fc-title">Scientific Research</div>
+      <div class="fc-desc">Open knowledge repository, research databases, and experimental frameworks.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#9879;</div>
+      <div class="fc-title">Digital Banking</div>
+      <div class="fc-desc">Financial infrastructure for asset management, transactions, and programmable money.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#128218;</div>
+      <div class="fc-title">Knowledge Management</div>
+      <div class="fc-desc">Structured documentation, intellectual property registry, and knowledge bases.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#129302;</div>
+      <div class="fc-title">Robotics</div>
+      <div class="fc-desc">Autonomous systems, control algorithms, and robotic infrastructure.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#9881;</div>
+      <div class="fc-title">Digital Manufacturing</div>
+      <div class="fc-desc">3D printing, materializer engines, and parametric design systems.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#9889;</div>
+      <div class="fc-title">Energy Systems</div>
+      <div class="fc-desc">Power generation, solar, RTG, nuclear, and advanced energy research.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">&#128752;</div>
+      <div class="fc-title">Future Space Infrastructure</div>
+      <div class="fc-desc">Lunar bases, Mars habitats, orbital stations, and deep space systems.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. ECOSYSTEM ARCHITECTURE ===== -->
+<section id="architecture">
+  <span class="section-num">03</span>
+  <h2>Ecosystem Architecture</h2>
+  <p>The ZiCore Ecosystem is built on a <strong>modular, layered architecture</strong> where each component operates independently yet communicates through a shared protocol layer. ZNT serves as the connective tissue between all modules.</p>
+  <div class="code-block"><span class="cm">                        +-------------------------+</span>
+<span class="cm">                        |      ZNT PROTOCOL       |</span>
+<span class="cm">                        |   Utility & Governance  |</span>
+<span class="cm">                        +------------+------------+</span>
+                                     |
+          +--------------------------+--------------------------+
+          |                          |                          |
+<span class="kw">+---------v---------+</span>  <span class="kw">+-----------v-----------+</span>  <span class="kw">+----------v----------+</span>
+<span class="kw">|    ZiCore AI       |</span>  <span class="kw">|    ZiCore Bank        |</span>  <span class="kw">|    ZiCodex          |</span>
+<span class="kw">| Central Intelligence|</span>  <span class="kw">| Financial Infrastructure|</span>  <span class="kw">| Knowledge Repository |</span>
+<span class="kw">+---------+---------+</span>  <span class="kw">+-----------+-----------+</span>  <span class="kw">+----------+----------+</span>
+          |                          |                          |
+          +--------------------------+--------------------------+
+                                     |
+                        <span class="hi">+------------v------------+</span>
+                        <span class="hi">|    ZiCore.Space         |</span>
+                        <span class="hi">| Aerospace Division      |</span>
+                        <span class="hi">+-------------------------+</span></div>
+</section>
+
+<!-- ===== 4. CORE PRINCIPLES ===== -->
+<section id="principles">
+  <span class="section-num">04</span>
+  <h2>Core Principles</h2>
+
+  <h3>Decentralized Intelligence</h3>
+  <p>AI models, decision engines, and knowledge systems operate across distributed nodes, ensuring resilience, censorship resistance, and collective intelligence. No single point of failure governs the ecosystem.</p>
+
+  <h3>Knowledge Preservation</h3>
+  <p>Scientific research, engineering documentation, and intellectual contributions are immutably recorded on-chain. The ecosystem guarantees that knowledge persists across generations, immune to platform decay or institutional collapse.</p>
+
+  <h3>Modular Infrastructure</h3>
+  <p>Every module in the ZiCore Ecosystem is independent, interoperable, and upgradeable. New capabilities can be added without disrupting existing services, enabling organic growth from a simple toolkit to a full operating system for innovation.</p>
+
+  <h3>Digital Ownership</h3>
+  <p>Creators, researchers, and engineers retain sovereign ownership of their intellectual contributions. ZNT enables verifiable attribution, programmable royalties, and transparent licensing across the entire ecosystem.</p>
+</section>
+
+<!-- ===== 5. ECOSYSTEM MODULES ===== -->
+<section id="modules">
+  <span class="section-num">05</span>
+  <h2>Ecosystem Modules</h2>
+
+  <h3>ZiCore AI &mdash; Central Intelligence Engine</h3>
+  <p>ZiCore AI is the foundational intelligence layer of the ecosystem. It provides conversational AI, autonomous decision support, mission planning assistance, scientific analysis, engineering recommendations, and code generation. The engine operates on a dual-stack architecture: cloud inference via OpenRouter for heavy workloads, and local Ollama nodes for low-latency, privacy-sensitive operations.</p>
+
+  <h3>ZiCore Bank &mdash; Financial Infrastructure</h3>
+  <p>ZiCore Bank provides the programmable financial layer for the ecosystem. It supports asset tokenization, multi-currency wallets, automated escrow, micropayments for API consumption, and governance-weighted voting on treasury allocations. Every transaction within the ecosystem settles through ZiCore Bank, with ZNT as the native settlement asset.</p>
+
+  <h3>ZiCodex &mdash; Scientific Knowledge Repository</h3>
+  <p>ZiCodex is an open, structured repository for scientific papers, engineering standards, space databases, and research documentation. It serves as the memory of the ecosystem, ensuring that accumulated knowledge is searchable, verifiable, and permanently accessible. Contributions to ZiCodex are tracked on-chain, enabling academic credit and IP licensing.</p>
+
+  <h3>ZiCore.Space &mdash; Aerospace Division</h3>
+  <p>ZiCore.Space encompasses all aerospace capabilities: vehicle design, orbital mechanics simulation, mission control, propulsion engineering, payload management, and space infrastructure development. It connects directly to ZNT for resource allocation, computational credit consumption, and inter-agency collaboration on future missions.</p>
+</section>
+
+<!-- ===== 6. INTELLECTUAL ASSET VALUATION ===== -->
+<section id="valuation">
+  <span class="section-num">06</span>
+  <h2>Intellectual Asset Valuation Framework</h2>
+  <blockquote>The following framework is illustrative and intended for strategic planning. It is not an audited financial statement or an independent market valuation.</blockquote>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th class="text-right">Illustrative Value (USD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Software Platforms</td><td class="text-right">$4,500,000</td></tr>
+        <tr><td>AI Infrastructure</td><td class="text-right">$3,200,000</td></tr>
+        <tr><td>Intellectual Property</td><td class="text-right">$6,000,000</td></tr>
+        <tr><td>Scientific Documentation</td><td class="text-right">$2,000,000</td></tr>
+        <tr><td>Brand Portfolio</td><td class="text-right">$1,800,000</td></tr>
+        <tr><td>Aerospace Research</td><td class="text-right">$5,000,000</td></tr>
+        <tr><td>Banking Infrastructure</td><td class="text-right">$2,500,000</td></tr>
+        <tr><td>Knowledge Systems</td><td class="text-right">$1,500,000</td></tr>
+        <tr class="total-row"><td><strong>Illustrative Total</strong></td><td class="text-right"><strong>$26,500,000</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 7. ZNT UTILITY ===== -->
+<section id="utility">
+  <span class="section-num">07</span>
+  <h2>ZNT Utility</h2>
+  <p>ZNT is designed as a <strong>multi-purpose utility token</strong> with use cases spanning the entire ZiCore Ecosystem:</p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="fc-title">Platform Payments</div>
+      <div class="fc-desc">Native currency for all transactions within the ZiCore marketplace and services.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">Service Subscriptions</div>
+      <div class="fc-desc">Recurring access to premium modules, AI models, and engineering tools.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">AI Compute Credits</div>
+      <div class="fc-desc">Pay-per-inference for cloud AI, model fine-tuning, and autonomous analysis.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">Marketplace Transactions</div>
+      <div class="fc-desc">Buy and sell 3D models, research data, engineering templates, and digital assets.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">Governance Participation</div>
+      <div class="fc-desc">Vote on ecosystem upgrades, treasury allocations, and strategic direction.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">Digital Licensing</div>
+      <div class="fc-desc">Programmable IP licensing with automatic royalty distribution.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">IP Registration</div>
+      <div class="fc-desc">On-chain registration and timestamping of intellectual property.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">Premium Research Access</div>
+      <div class="fc-desc">Unlock exclusive datasets, papers, and scientific databases in ZiCodex.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">API Consumption</div>
+      <div class="fc-desc">Metered access to all ZiCore APIs with per-call ZNT billing.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-title">Node Participation</div>
+      <div class="fc-desc">Stake ZNT to run infrastructure nodes and earn protocol rewards.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8. TOKEN ECONOMICS ===== -->
+<section id="economics">
+  <span class="section-num">08</span>
+  <h2>Token Economics (Illustrative)</h2>
+  <p><strong>Maximum Supply:</strong> <span style="color:var(--cyan);font-family:'Mono',monospace;font-size:18px">1,000,000,000 ZNT</span></p>
+
+  <h3>Allocation</h3>
+  <div class="alloc-list">
+    <div class="alloc-item">
+      <span class="alloc-label">Ecosystem Development</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:30%;background:linear-gradient(90deg,var(--cyan),var(--purple))"></div></div>
+      <span class="alloc-pct">30%</span>
+    </div>
+    <div class="alloc-item">
+      <span class="alloc-label">Community Incentives</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:20%;background:linear-gradient(90deg,var(--green),var(--cyan))"></div></div>
+      <span class="alloc-pct">20%</span>
+    </div>
+    <div class="alloc-item">
+      <span class="alloc-label">Treasury</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:20%;background:linear-gradient(90deg,var(--purple),#b47cff)"></div></div>
+      <span class="alloc-pct">20%</span>
+    </div>
+    <div class="alloc-item">
+      <span class="alloc-label">Strategic Partners</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:10%;background:linear-gradient(90deg,#ff8800,var(--yellow))"></div></div>
+      <span class="alloc-pct">10%</span>
+    </div>
+    <div class="alloc-item">
+      <span class="alloc-label">Team &amp; Advisors</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:10%;background:linear-gradient(90deg,var(--red),#ff6666)"></div></div>
+      <span class="alloc-pct">10%</span>
+    </div>
+    <div class="alloc-item">
+      <span class="alloc-label">Research Reserve</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:5%;background:linear-gradient(90deg,var(--cyan),var(--green))"></div></div>
+      <span class="alloc-pct">5%</span>
+    </div>
+    <div class="alloc-item">
+      <span class="alloc-label">Emergency Reserve</span>
+      <div class="alloc-bar-wrap"><div class="alloc-bar" style="width:5%;background:linear-gradient(90deg,#888,#aaa)"></div></div>
+      <span class="alloc-pct">5%</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th class="text-right">Allocation</th>
+          <th class="text-right">Tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Ecosystem Development</td><td class="text-right">30%</td><td class="text-right">300,000,000</td></tr>
+        <tr><td>Community Incentives</td><td class="text-right">20%</td><td class="text-right">200,000,000</td></tr>
+        <tr><td>Treasury</td><td class="text-right">20%</td><td class="text-right">200,000,000</td></tr>
+        <tr><td>Strategic Partners</td><td class="text-right">10%</td><td class="text-right">100,000,000</td></tr>
+        <tr><td>Team &amp; Advisors</td><td class="text-right">10%</td><td class="text-right">100,000,000</td></tr>
+        <tr><td>Research Reserve</td><td class="text-right">5%</td><td class="text-right">50,000,000</td></tr>
+        <tr><td>Emergency Reserve</td><td class="text-right">5%</td><td class="text-right">50,000,000</td></tr>
+        <tr class="total-row"><td><strong>Total</strong></td><td class="text-right"><strong>100%</strong></td><td class="text-right"><strong>1,000,000,000</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 9. ROADMAP ===== -->
+<section id="roadmap">
+  <span class="section-num">09</span>
+  <h2>Roadmap</h2>
+  <div class="roadmap">
+    <div class="rm-phase">
+      <div class="rm-marker"><div class="rm-dot" style="background:var(--cyan);border-color:var(--cyan)"></div><div class="rm-line"></div></div>
+      <div class="rm-content">
+        <div class="rm-title">Phase I &mdash; Foundation</div>
+        <div class="rm-desc">
+          <ul>
+            <li>Portal &amp; Authentication System</li>
+            <li>AI Integration (ZIO Copilot)</li>
+            <li>Digital Wallet Infrastructure</li>
+            <li>Documentation &amp; Knowledge Base</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="rm-phase">
+      <div class="rm-marker"><div class="rm-dot" style="background:var(--purple);border-color:var(--purple)"></div><div class="rm-line"></div></div>
+      <div class="rm-content">
+        <div class="rm-title">Phase II &mdash; Expansion</div>
+        <div class="rm-desc">
+          <ul>
+            <li>Marketplace &amp; Asset Registry</li>
+            <li>Smart Services &amp; Programmable Payments</li>
+            <li>API Platform &amp; Developer Tools</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="rm-phase">
+      <div class="rm-marker"><div class="rm-dot" style="background:var(--green);border-color:var(--green)"></div></div>
+      <div class="rm-content">
+        <div class="rm-title">Phase III &mdash; Decentralization</div>
+        <div class="rm-desc">
+          <ul>
+            <li>Decentralized Infrastructure &amp; Node Network</li>
+            <li>Governance System &amp; DAO Framework</li>
+            <li>Distributed Knowledge Network</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10. LONG-TERM VISION ===== -->
+<section id="long-term">
+  <span class="section-num">10</span>
+  <h2>Long-Term Vision</h2>
+  <p>The ZiCore Ecosystem aims to establish a <strong>digital infrastructure where knowledge, artificial intelligence, engineering, finance, and scientific innovation converge into a unified platform</strong>.</p>
+  <p>ZNT is not merely a token &mdash; it is the <strong>coordination layer</strong> for an ecosystem that spans from terrestrial software to extraterrestrial operations. Every module, every service, every calculation, and every transaction flows through a single interoperable architecture.</p>
+  <p>The ultimate goal is a self-sustaining digital economy where contributions &mdash; whether code, research, engineering, or creativity &mdash; are permanently recorded, fairly compensated, and collectively governed by the participants who build it.</p>
+  <blockquote>ZNT is the connective tissue of a new technological civilization &mdash; one where intelligence, infrastructure, and innovation are unified under a single sovereign protocol.</blockquote>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="wp-footer">
+  <p>ZNT (ZITON) &mdash; Whitepaper Version 1.0</p>
+  <p style="margin-top:6px;color:var(--text2)">Powered by ZineMotion Group &bull; ZiCore Ecosystem</p>
+  <p style="margin-top:6px;font-size:10px;color:var(--text2)">This document is for informational purposes only and does not constitute financial advice.</p>
+</footer>
+
+</div>
+
+<!-- ===== NAV BAR ===== -->
+<div class="nav-bar">
+  <a href="#top" class="nav-btn">Top</a>
+  <button class="nav-btn" onclick="window.print()">Print / PDF</button>
+  <a href="#executive-summary" class="nav-btn primary">Read Whitepaper</a>
+</div>
+
+<!-- ===== STARFIELD ===== -->
+<script>
+(function(){
+  const c=document.getElementById('starfield');
+  const ctx=c.getContext('2d');
+  let w,h,stars=[];
+  function resize(){w=c.width=window.innerWidth;h=c.height=window.innerHeight;init()}
+  function init(){
+    stars=[];
+    const n=Math.floor((w*h)/3000);
+    for(let i=0;i<n;i++){
+      stars.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.2+0.2,a:Math.random(),da:Math.random()*0.008+0.002,d:Math.random()>0.5?1:-1});
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    for(const s of stars){
+      s.a+=s.da*s.d;
+      if(s.a>1||s.a<0.15)s.d*=-1;
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,214,229,${s.a*0.6})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);
+  resize();
+  draw();
+})();
+</script>
+
+</body>
+</html>

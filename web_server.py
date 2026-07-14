@@ -705,6 +705,16 @@ async def serve_zicore_bank():
     return FileResponse(str(FRONTEND_DIR / "zicore-bank.html"))
 
 
+@app.get("/whitepaper")
+async def serve_whitepaper():
+    return FileResponse(str(FRONTEND_DIR / "whitepaper.html"))
+
+
+@app.get("/ecosystem")
+async def serve_ecosystem():
+    return FileResponse(str(FRONTEND_DIR / "ecosystem.html"))
+
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(str(FRONTEND_DIR / "portal.html"))
