@@ -690,6 +690,11 @@ async def serve_mission_control():
     return FileResponse(str(FRONTEND_DIR / "mission-control.html"))
 
 
+@app.get("/solar-navigation")
+async def serve_solar_navigation():
+    return FileResponse(str(FRONTEND_DIR / "solar-navigation.html"))
+
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(str(FRONTEND_DIR / "portal.html"))

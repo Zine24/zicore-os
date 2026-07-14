@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Navegación Solar</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#020408;--bg2:#060a14;--bg3:#0a1020;--bg4:#101830;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;
+  --orange:#ff8800;--solar:#ffaa00;--yellow:#ffd600;--pink:#ff6ec7;
+  --text:#c8d6e5;--text2:#6a7b8a;--border:#0e1a2e;
+  --glass:rgba(4,8,16,0.92);--glass2:rgba(4,8,16,0.7);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.02;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.006) 2px,rgba(0,229,255,.006) 4px)}
+
+.app{position:relative;z-index:2;display:flex;height:100vh;width:100vw;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:380px;min-width:380px;background:var(--glass);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;backdrop-filter:blur(20px);z-index:10;overflow:hidden}
+.sidebar-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-hex{width:32px;height:32px;flex-shrink:0}
+.logo-hex svg{width:100%;height:100%}
+.brand-text{flex:1}
+.brand-text .b1{font-size:11px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-text .b2{font-size:9px;color:var(--text2);letter-spacing:2px}
+
+/* Search */
+.search-box{padding:10px 14px;border-bottom:1px solid var(--border)}
+.search-row{display:flex;gap:6px}
+.search-input{flex:1;background:rgba(0,229,255,.04);border:1px solid var(--border);color:var(--text);
+  padding:8px 12px;border-radius:6px;font-size:12px;font-family:inherit;transition:border .2s}
+.search-input:focus{outline:none;border-color:var(--cyan)}
+.search-input::placeholder{color:var(--text2)}
+.search-btn{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,77,255,.15));
+  border:1px solid rgba(0,229,255,.3);color:var(--cyan);padding:8px 14px;border-radius:6px;
+  cursor:pointer;font-size:11px;font-weight:700;letter-spacing:1px;transition:all .2s;white-space:nowrap}
+.search-btn:hover{background:rgba(0,229,255,.25);border-color:var(--cyan);box-shadow:0 0 15px rgba(0,229,255,.2)}
+
+/* Route planner */
+.route-planner{padding:10px 14px;border-bottom:1px solid var(--border)}
+.route-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.route-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.route-dot.origin{background:var(--green);box-shadow:0 0 6px rgba(0,255,136,.4)}
+.route-dot.dest{background:var(--red);box-shadow:0 0 6px rgba(255,51,51,.4)}
+.route-dot.waypoint{background:var(--solar);box-shadow:0 0 6px rgba(255,170,0,.4)}
+.route-field{flex:1;background:rgba(0,229,255,.04);border:1px solid var(--border);color:var(--text);
+  padding:7px 10px;border-radius:5px;font-size:11px;font-family:inherit;transition:border .2s}
+.route-field:focus{outline:none;border-color:var(--cyan)}
+.route-field::placeholder{color:var(--text2)}
+.swap-btn{background:transparent;border:1px solid var(--border);color:var(--text2);width:26px;height:26px;
+  border-radius:50%;cursor:pointer;font-size:12px;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.swap-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.route-actions{display:flex;gap:6px;margin-top:8px}
+.route-actions button{flex:1}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tabs button{flex:1;background:transparent;border:none;color:var(--text2);padding:8px;font-size:9px;
+  font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;
+  border-bottom:2px solid transparent}
+.tabs button:hover{color:var(--text)}
+.tabs button.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+/* Content area */
+.content{flex:1;overflow-y:auto;padding:0}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Directions panel */
+.directions{padding:12px 14px}
+.dir-summary{background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.15);border-radius:6px;
+  padding:10px 12px;margin-bottom:12px}
+.dir-summary h3{font-size:11px;color:var(--cyan);letter-spacing:1px;margin-bottom:6px}
+.dir-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dir-stat{background:rgba(0,0,0,.2);border-radius:4px;padding:6px 8px}
+.dir-stat .ds-val{font-size:14px;font-weight:700;color:var(--text);font-family:'Segoe UI',monospace}
+.dir-stat .ds-label{font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+.dir-step{display:flex;gap:10px;padding:8px 0;position:relative}
+.dir-step::after{content:'';position:absolute;left:14px;top:32px;bottom:-8px;width:2px;background:var(--border)}
+.dir-step:last-child::after{display:none}
+.dir-icon{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--bg);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:1;font-size:12px}
+.dir-icon.burn{border-color:var(--cyan);color:var(--cyan)}
+.dir-icon.cruise{border-color:var(--purple);color:var(--purple)}
+.dir-icon.arrive{border-color:var(--green);color:var(--green)}
+.dir-icon.assist{border-color:var(--solar);color:var(--solar)}
+.dir-icon.land{border-color:var(--orange);color:var(--orange)}
+.dir-info{flex:1}
+.dir-info .di-title{font-size:11px;font-weight:600;color:var(--text)}
+.dir-info .di-desc{font-size:9px;color:var(--text2);margin-top:2px;line-height:1.4}
+.dir-info .di-dv{font-size:9px;color:var(--cyan);font-family:monospace;margin-top:3px}
+.dir-info .di-time{font-size:8px;color:var(--purple);font-family:monospace;margin-top:1px}
+
+/* Route options */
+.route-options{padding:10px 14px;border-bottom:1px solid var(--border)}
+.route-opt{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);
+  border-radius:5px;margin-bottom:4px;cursor:pointer;transition:all .15s}
+.route-opt:hover{border-color:rgba(0,229,255,.2);background:rgba(0,229,255,.03)}
+.route-opt.active{border-color:var(--cyan);background:rgba(0,229,255,.06)}
+.route-opt .ro-icon{font-size:16px}
+.route-opt .ro-info{flex:1}
+.route-opt .ro-name{font-size:10px;font-weight:600;color:var(--text)}
+.route-opt .ro-detail{font-size:8px;color:var(--text2);margin-top:1px}
+.route-opt .ro-badge{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700}
+.ro-badge.fast{background:rgba(0,229,255,.1);color:var(--cyan)}
+.ro-badge.cheap{background:rgba(0,255,136,.1);color:var(--green)}
+.ro-badge.scenic{background:rgba(124,77,255,.1);color:var(--purple)}
+
+/* Launch windows */
+.windows-panel{padding:10px 14px}
+.win-card{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:5px;padding:8px 10px;
+  margin-bottom:4px;cursor:pointer;transition:all .15s}
+.win-card:hover{border-color:rgba(0,229,255,.2);background:rgba(0,229,255,.03)}
+.win-card.active{border-color:var(--cyan);background:rgba(0,229,255,.06)}
+.win-card.optimal{border-left:3px solid var(--green)}
+.win-card.good{border-left:3px solid var(--solar)}
+.win-card.acceptable{border-left:3px solid var(--orange)}
+.win-card.poor{border-left:3px solid var(--red)}
+.win-date{font-size:11px;font-weight:600;color:var(--text)}
+.win-detail{font-size:9px;color:var(--text2);margin-top:3px;display:flex;gap:10px}
+.win-detail span{display:flex;align-items:center;gap:3px}
+.win-detail .dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+
+/* ── MAP CANVAS ── */
+.map-container{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+#mapCanvas{width:100%;height:100%;display:block;cursor:grab}
+#mapCanvas:active{cursor:grabbing}
+
+/* Map HUD */
+.map-hud{position:absolute;top:10px;left:10px;pointer-events:none}
+.map-hud .mh-title{font-size:10px;font-weight:700;color:var(--cyan);letter-spacing:2px;
+  text-shadow:0 0 10px rgba(0,229,255,.4)}
+.map-hud .mh-sub{font-size:9px;color:var(--text2);letter-spacing:1px}
+.map-hud-r{position:absolute;top:10px;right:10px;text-align:right;pointer-events:none}
+.map-hud-r .mh-date{font-size:9px;color:var(--text2);letter-spacing:1px}
+.map-hud-r .mh-dist{font-size:10px;color:var(--purple);font-family:monospace;margin-top:2px}
+
+/* Scale bar */
+.scale-bar{position:absolute;bottom:60px;left:14px;display:flex;flex-direction:column;align-items:flex-start;pointer-events:none}
+.scale-line{height:2px;background:var(--cyan);opacity:.6}
+.scale-label{font-size:8px;color:var(--cyan);font-family:monospace;margin-top:2px;letter-spacing:1px}
+
+/* Compass */
+.compass{position:absolute;top:10px;left:50%;transform:translateX(-50%);pointer-events:none;
+  width:40px;height:40px;border:1px solid var(--border);border-radius:50%;
+  background:rgba(4,8,16,.7);display:flex;align-items:center;justify-content:center}
+.compass span{font-size:8px;color:var(--cyan);font-weight:700}
+
+/* Map controls */
+.map-controls{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:3px}
+.map-ctrl{width:32px;height:32px;background:rgba(4,8,16,.85);border:1px solid var(--border);border-radius:4px;
+  color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.map-ctrl:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.08)}
+
+/* Planet tooltip */
+.planet-tooltip{position:absolute;pointer-events:none;background:var(--glass);border:1px solid var(--cyan);
+  border-radius:6px;padding:8px 12px;backdrop-filter:blur(12px);z-index:100;display:none;min-width:140px}
+.planet-tooltip .pt-name{font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:4px}
+.planet-tooltip .pt-row{font-size:9px;color:var(--text2);display:flex;justify-content:space-between;gap:12px}
+.planet-tooltip .pt-val{color:var(--text);font-family:monospace}
+
+/* Status bar */
+.statusbar{position:absolute;bottom:0;left:0;right:0;height:28px;background:var(--glass);
+  border-top:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 14px;font-size:9px;color:var(--text2);z-index:5}
+.statusbar .spacer{flex:1}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);animation:pulse 2s infinite}
+
+/* Minimap */
+.minimap{position:absolute;bottom:40px;right:14px;width:140px;height:140px;
+  border:1px solid var(--border);border-radius:6px;overflow:hidden;background:rgba(4,8,16,.8);backdrop-filter:blur(8px)}
+#minimapCanvas{width:100%;height:100%;display:block}
+
+/* Btn */
+.btn{padding:5px 12px;border:1px solid var(--border);background:rgba(0,229,255,.06);color:var(--cyan);
+  border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;transition:all .15s;text-transform:uppercase;letter-spacing:1px}
+.btn:hover{background:rgba(0,229,255,.15);border-color:var(--cyan)}
+.btn.primary{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,77,255,.15));border-color:rgba(0,229,255,.3)}
+.btn.sm{padding:3px 8px;font-size:9px}
+.btn-group{display:flex;gap:4px}
+
+.glow-line{height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);margin:8px 0;opacity:.3}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes planetGlow{0%,100%{filter:drop-shadow(0 0 3px currentColor)}50%{filter:drop-shadow(0 0 8px currentColor)}}
+@keyframes orbitDash{to{stroke-dashoffset:-20}}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="grain"></div>
+<div class="scanline"></div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-hex">
+        <svg viewBox="0 0 40 40"><polygon points="20,2 38,12 38,28 20,38 2,28 2,12" fill="none" stroke="var(--cyan)" stroke-width="1.5"/>
+          <polygon points="20,8 32,14 32,26 20,32 8,26 8,14" fill="none" stroke="var(--purple)" stroke-width="1"/>
+          <circle cx="20" cy="20" r="4" fill="var(--cyan)" opacity=".6"/><circle cx="20" cy="20" r="2" fill="#fff"/></svg>
+      </div>
+      <div class="brand-text">
+        <div class="b1">ZICORE NAV</div>
+        <div class="b2">Navegación Solar</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
+      <div class="search-row">
+        <input class="search-input" id="searchInput" placeholder="Buscar destino... (Marte, Júpiter, Luna...)" oninput="onSearch(this.value)">
+        <button class="search-btn" onclick="navigateToSelected()">IR</button>
+      </div>
+      <div id="searchResults" style="margin-top:4px;max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Route planner -->
+    <div class="route-planner">
+      <div class="route-row">
+        <div class="route-dot origin"></div>
+        <input class="route-field" id="originField" placeholder="Origen (Tierra)" value="Tierra" oninput="onRouteChange()">
+      </div>
+      <div class="route-row">
+        <button class="swap-btn" onclick="swapRoute()">⇅</button>
+        <div style="flex:1"></div>
+      </div>
+      <div class="route-row">
+        <div class="route-dot dest"></div>
+        <input class="route-field" id="destField" placeholder="Destino (Marte)" value="" oninput="onRouteChange()">
+      </div>
+      <div class="route-actions">
+        <button class="btn primary" onclick="calculateRoute()">Calcular Ruta</button>
+        <button class="btn" onclick="clearRoute()">Limpiar</button>
+      </div>
+    </div>
+
+    <!-- Route options -->
+    <div class="route-options" id="routeOptions" style="display:none">
+      <div class="section-title" style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--purple);margin-bottom:6px">OPCIONES DE RUTA</div>
+      <div class="route-opt active" onclick="selectRouteType('fastest')" id="roFast">
+        <div class="ro-icon">⚡</div>
+        <div class="ro-info">
+          <div class="ro-name">Rápida</div>
+          <div class="ro-detail" id="roFastDetail">Menor duración, mayor ΔV</div>
+        </div>
+        <div class="ro-badge fast">RÁPIDA</div>
+      </div>
+      <div class="route-opt" onclick="selectRouteType('cheapest')" id="roCheap">
+        <div class="ro-icon">💰</div>
+        <div class="ro-info">
+          <div class="ro-name">Económica</div>
+          <div class="ro-detail" id="roCheapDetail">Menor ΔV, mayor duración</div>
+        </div>
+        <div class="ro-badge cheap">AHORRO</div>
+      </div>
+      <div class="route-opt" onclick="selectRouteType('gravity')" id="roGrav">
+        <div class="ro-icon">🪐</div>
+        <div class="ro-info">
+          <div class="ro-name">Asistencia Gravitacional</div>
+          <div class="ro-detail" id="roGravDetail">Usar planetas para ganar velocidad</div>
+        </div>
+        <div class="ro-badge scenic">ASSIST</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="active" onclick="showTab('directions')">Direcciones</button>
+      <button onclick="showTab('windows')">Ventanas</button>
+      <button onclick="showTab('info')">Info</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div id="tabDirections" class="tab-content">
+        <div class="directions" id="directionsPanel">
+          <div class="dir-summary" id="dirSummary">
+            <h3>Selecciona un destino para ver la ruta</h3>
+            <p style="font-size:9px;color:var(--text2);margin-top:4px">Haz clic en un planeta en el mapa o usa la barra de búsqueda</p>
+          </div>
+          <div id="dirSteps"></div>
+        </div>
+      </div>
+      <div id="tabWindows" class="tab-content" style="display:none">
+        <div class="windows-panel" id="windowsPanel"></div>
+      </div>
+      <div id="tabInfo" class="tab-content" style="display:none">
+        <div style="padding:12px 14px" id="infoPanel"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container" id="mapContainer">
+    <canvas id="mapCanvas"></canvas>
+
+    <div class="map-hud">
+      <div class="mh-title">SOLAR SYSTEM</div>
+      <div class="mh-sub" id="mapHudDest">Origen: Tierra</div>
+    </div>
+    <div class="map-hud-r">
+      <div class="mh-date" id="mapDate"></div>
+      <div class="mh-dist" id="mapDist"></div>
+    </div>
+
+    <div class="scale-bar">
+      <div class="scale-line" id="scaleLine" style="width:60px"></div>
+      <div class="scale-label" id="scaleLabel">1.0 AU</div>
+    </div>
+
+    <div class="compass"><span>N</span></div>
+
+    <div class="map-controls">
+      <button class="map-ctrl" onclick="mapZoom(1.3)" title="Acercar">+</button>
+      <button class="map-ctrl" onclick="mapZoom(0.7)" title="Alejar">−</button>
+      <button class="map-ctrl" onclick="mapReset()" title="Reiniciar vista">⟲</button>
+      <button class="map-ctrl" onclick="toggleOrbits()" title="Órbitas">◯</button>
+      <button class="map-ctrl" onclick="toggleLabels()" title="Nombres">Aa</button>
+      <button class="map-ctrl" onclick="toggleGrid()" title="Rejilla">#</button>
+      <button class="map-ctrl" onclick="toggleAnimation()" title="Animar">▶</button>
+    </div>
+
+    <div class="minimap"><canvas id="minimapCanvas"></canvas></div>
+
+    <div class="planet-tooltip" id="tooltip"></div>
+
+    <div class="statusbar">
+      <div class="status-dot"></div>
+      <span>SISTEMA SOLAR — MODO NAVEGACIÓN</span>
+      <span class="spacer"></span>
+      <span id="statusCoord"></span>
+      <span>|</span>
+      <span id="statusZoom">Zoom: 1.00x</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// ZICORE SOLAR NAV — Google Maps style
+// ═══════════════════════════════════════════════════════
+
+// ── Constants ──
+const AU = 150; // pixels per AU
+const SUN_GM = 1.327e11; // km³/s²
+const DEG = Math.PI / 180;
+
+// ── Planet Data ──
+const PLANETS = {
+  mercury: {
+    name:'Mercurio', nameEn:'Mercury', color:'#b5b5b5', radius:8, orbitAU:0.387, period:87.97,
+    mass:3.30e23, surfR:2440, gm:22032, gravity:3.7, soi:111000,
+    moons:0, desc:'El planeta más pequeño y cercano al Sol.',
+    facts:['Temperatura: -180°C a 430°C','Día solar: 176 días terrestres','Sin atmósfera significativa','Campo magnético débil']
+  },
+  venus: {
+    name:'Venus', nameEn:'Venus', color:'#e8cda0', radius:14, orbitAU:0.723, period:224.7,
+    mass:4.87e24, surfR:6052, gm:324900, gravity:8.87, soi:616000,
+    moons:0, desc:'El planeta más caliente del sistema solar.',
+    facts:['Temperatura: ~465°C permanente','Presión: 92 atm','Rotación retrógrada','Nubes de ácido sulfúrico']
+  },
+  earth: {
+    name:'Tierra', nameEn:'Earth', color:'#4488ff', radius:15, orbitAU:1.0, period:365.25,
+    mass:5.97e24, surfR:6371, gm:398600, gravity:9.81, soi:925000,
+    moons:1, desc:'N hogar. El tercer planeta desde el Sol.',
+    facts:['Agua líquida en superficie','Atmósfera: N₂ 78%, O₂ 21%','Un satélite natural: la Luna','Campo magnético protector']
+  },
+  mars: {
+    name:'Marte', nameEn:'Mars', color:'#cc4422', radius:12, orbitAU:1.524, period:687.0,
+    mass:6.42e23, surfR:3390, gm:42828, gravity:3.72, soi:577000,
+    moons:2, desc:'El planeta rojo. Objetivo principal de exploración.',
+    facts:['Olympus Mons: volcán más alto (21km)','Valles Marineris: cañón de 4000km','2 lunas: Fobos y Deimos','Atmósfera delgada: CO₂ 95%']
+  },
+  jupiter: {
+    name:'Júpiter', nameEn:'Jupiter', color:'#c8a050', radius:28, orbitAU:5.203, period:4332.6,
+    mass:1.90e27, surfR:69911, gm:126700000, gravity:24.79, soi:48200000,
+    moons:95, desc:'El gigante gaseoso más grande del sistema solar.',
+    facts:['Gran Mancha Roja: tormenta de 350+ años','Campo magnético 20,000× terrestre','95 lunas conocidas','Protege a la Tierra de asteroides']
+  },
+  saturn: {
+    name:'Saturno', nameEn:'Saturn', color:'#e8d080', radius:24, orbitAU:9.537, period:10759.2,
+    mass:5.68e26, surfR:58232, gm:37930000, gravity:10.44, soi:54500000,
+    moons:146, desc:'Famoso por sus espectaculares anillos de hielo.',
+    facts:['Anillos de hielo y roca (9,000 km de ancho)','Densidad menor que el agua','146 lunas, incluyendo Titán','Vientos de 1,800 km/h']
+  },
+  uranus: {
+    name:'Urano', nameEn:'Uranus', color:'#88ccdd', radius:20, orbitAU:19.19, period:30688.5,
+    mass:8.68e25, surfR:25362, gm:5790000, gravity:8.87, soi:51800000,
+    moons:27, desc:'Gigante de hielo con eje de rotación extremo.',
+    facts:['Eje inclinado 98° (gira de costado)','Temperatura: -224°C','Anillos tenues de materia oscura','27 lunas nombradas']
+  },
+  neptune: {
+    name:'Neptuno', nameEn:'Neptune', color:'#4466ee', radius:18, orbitAU:30.07, period:60182,
+    mass:1.02e26, surfR:24622, gm:6840000, gravity:11.15, soi:86900000,
+    moons:16, desc:'El planeta más lejano. Vientos más rápidos del sistema solar.',
+    facts:['Vientos: 2,100 km/h (los más rápidos)','Descubierto por math en 1846','Neptuno Trinton: luna más activa','6 lunas conocidas']
+  },
+  sun: {
+    name:'Sol', nameEn:'Sun', color:'#ffaa00', radius:40, orbitAU:0, period:0,
+    mass:1.989e30, surfR:696340, gm:1.327e11, gravity:274, soi:0,
+    moons:0, desc:'Nuestra estrella. Contiene el 99.86% de la masa del sistema solar.',
+    facts:['Temperatura superficie: 5,500°C','Temperatura núcleo: 15 millones °C','Edad: ~4.6 mil millones de años','Tipo espectral: G2V']
+  }
+};
+
+// ── Launch Windows Database ──
+const LAUNCH_WINDOWS = {
+  mercury: [
+    {launch:'2028-03-15',arrive:'2029-03-20',dur:'~12 meses',dv:5.8,quality:'good',type:'Hohmann'},
+    {launch:'2032-06-10',arrive:'2033-06-15',dur:'~12 meses',dv:5.6,quality:'optimal',type:'Hohmann'},
+    {launch:'2036-09-05',arrive:'2037-09-10',dur:'~12 meses',dv:5.7,quality:'good',type:'Hohmann'},
+  ],
+  venus: [
+    {launch:'2026-08-20',arrive:'2027-02-15',dur:'~6 meses',dv:3.5,quality:'good',type:'Hohmann'},
+    {launch:'2028-03-10',arrive:'2028-09-05',dur:'~6 meses',dv:3.7,quality:'acceptable',type:'Hohmann'},
+    {launch:'2029-10-05',arrive:'2030-04-01',dur:'~6 meses',dv:3.4,quality:'optimal',type:'Hohmann'},
+    {launch:'2031-05-15',arrive:'2031-11-10',dur:'~6 meses',dv:3.6,quality:'good',type:'Hohmann'},
+    {launch:'2033-12-01',arrive:'2034-05-28',dur:'~6 meses',dv:3.5,quality:'good',type:'Hohmann'},
+  ],
+  mars: [
+    {launch:'2028-06-15',arrive:'2029-03-10',dur:'~9 meses',dv:3.6,quality:'optimal',type:'Hohmann'},
+    {launch:'2030-09-01',arrive:'2031-06-01',dur:'~9 meses',dv:3.8,quality:'good',type:'Hohmann'},
+    {launch:'2033-12-10',arrive:'2034-09-05',dur:'~9 meses',dv:3.5,quality:'optimal',type:'Hohmann'},
+    {launch:'2035-02-20',arrive:'2035-11-15',dur:'~9 meses',dv:3.7,quality:'good',type:'Hohmann'},
+    {launch:'2037-04-15',arrive:'2038-01-10',dur:'~9 meses',dv:3.6,quality:'good',type:'Hohmann'},
+    {launch:'2039-06-25',arrive:'2040-03-20',dur:'~9 meses',dv:3.8,quality:'good',type:'Hohmann'},
+  ],
+  jupiter: [
+    {launch:'2026-11-01',arrive:'2027-11-01',dur:'~12 meses',dv:6.3,quality:'good',type:'Hohmann'},
+    {launch:'2028-12-15',arrive:'2029-12-15',dur:'~12 meses',dv:6.5,quality:'acceptable',type:'Hohmann'},
+    {launch:'2030-01-10',arrive:'2031-01-10',dur:'~12 meses',dv:6.2,quality:'optimal',type:'Hohmann'},
+    {launch:'2032-02-20',arrive:'2033-02-20',dur:'~12 meses',dv:6.4,quality:'good',type:'Hohmann'},
+  ],
+  saturn: [
+    {launch:'2028-09-10',arrive:'2032-06-05',dur:'~4 años',dv:7.2,quality:'good',type:'Hohmann'},
+    {launch:'2030-10-15',arrive:'2034-07-10',dur:'~4 años',dv:7.0,quality:'optimal',type:'Hohmann'},
+    {launch:'2033-11-20',arrive:'2037-08-15',dur:'~4 años',dv:7.1,quality:'good',type:'Hohmann'},
+  ],
+  uranus: [
+    {launch:'2029-04-01',arrive:'2038-04-01',dur:'~9 años',dv:8.5,quality:'optimal',type:'Gravity Assist (Jupiter)'},
+    {launch:'2033-06-01',arrive:'2042-06-01',dur:'~9 años',dv:8.7,quality:'good',type:'Gravity Assist (Jupiter)'},
+  ],
+  neptune: [
+    {launch:'2028-02-15',arrive:'2043-02-15',dur:'~15 años',dv:9.2,quality:'good',type:'Gravity Assist (Jupiter)'},
+    {launch:'2035-03-01',arrive:'2050-03-01',dur:'~15 años',dv:9.0,quality:'optimal',type:'Gravity Assist (Jupiter+Saturn)'},
+  ]
+};
+
+// ── State ──
+let mapCanvas, mapCtx;
+let miniCanvas, miniCtx;
+let W, H;
+let camX = 0, camY = 0, camZoom = 1;
+let showOrbits = true, showLabels = true, showGrid = false, animating = true;
+let animTime = 0;
+let dragging = false, dragStartX, dragStartY, camStartX, camStartY;
+let hoveredPlanet = null, selectedOrigin = 'earth', selectedDest = null;
+let routeResult = null;
+let currentRouteType = 'fastest';
+let spaceBg = [];
+let trailPoints = [];
+
+// ── Init ──
+function init() {
+  mapCanvas = document.getElementById('mapCanvas');
+  mapCtx = mapCanvas.getContext('2d');
+  miniCanvas = document.getElementById('minimapCanvas');
+  miniCtx = miniCanvas.getContext('2d');
+
+  resize();
+  window.addEventListener('resize', resize);
+  setupMouse();
+  generateStars();
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  document.getElementById('launchDate').min = '2026-01-01';
+
+  updateWindows();
+  showTab('directions');
+  requestAnimationFrame(loop);
+}
+
+function resize() {
+  const cont = document.getElementById('mapContainer');
+  W = cont.clientWidth;
+  H = cont.clientHeight;
+  mapCanvas.width = W;
+  mapCanvas.height = H;
+  miniCanvas.width = 140;
+  miniCanvas.height = 140;
+}
+
+function generateStars() {
+  spaceBg = [];
+  for (let i = 0; i < 600; i++) {
+    spaceBg.push({
+      x: Math.random() * 3000 - 1500,
+      y: Math.random() * 3000 - 1500,
+      size: Math.random() * 1.5 + 0.3,
+      alpha: Math.random() * 0.7 + 0.3,
+      twinkle: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// ── Coordinate Transform ──
+function worldToScreen(wx, wy) {
+  return {
+    x: W/2 + (wx * AU * camZoom) - camX,
+    y: H/2 + (wy * AU * camZoom) - camY
+  };
+}
+function screenToWorld(sx, sy) {
+  return {
+    x: ((sx - W/2 + camX) / (AU * camZoom)),
+    y: ((sy - H/2 + camY) / (AU * camZoom))
+  };
+}
+
+// ── Planet Position (Kepler) ──
+function getPlanetPos(key, time) {
+  const p = PLANETS[key];
+  if (key === 'sun') return {x:0, y:0};
+  const angle = ((time / p.period) * 360) % 360 * DEG;
+  return {
+    x: p.orbitAU * Math.cos(angle),
+    y: p.orbitAU * Math.sin(angle),
+    angle: angle
+  };
+}
+
+// ── Draw ──
+function draw() {
+  mapCtx.clearRect(0, 0, W, H);
+
+  // Background
+  mapCtx.fillStyle = '#020408';
+  mapCtx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (const s of spaceBg) {
+    const sp = worldToScreen(s.x / AU, s.y / AU);
+    const tw = Math.sin(animTime * 0.5 + s.twinkle) * 0.3 + 0.7;
+    mapCtx.globalAlpha = s.alpha * tw;
+    mapCtx.fillStyle = '#ffffff';
+    mapCtx.beginPath();
+    mapCtx.arc(sp.x, sp.y, s.size, 0, Math.PI*2);
+    mapCtx.fill();
+  }
+  mapCtx.globalAlpha = 1;
+
+  // Grid
+  if (showGrid) drawGrid();
+
+  // Orbits
+  if (showOrbits) drawOrbits();
+
+  // Route trajectory
+  if (routeResult) drawTrajectory();
+
+  // Planets
+  for (const key of Object.keys(PLANETS)) {
+    if (key === 'sun') continue;
+    const pos = getPlanetPos(key, animTime);
+    const sp = worldToScreen(pos.x, pos.y);
+    const p = PLANETS[key];
+    const displayR = Math.max(4, p.radius * camZoom * 0.5);
+
+    // Glow
+    const glow = mapCtx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, displayR * 3);
+    glow.addColorStop(0, p.color + '40');
+    glow.addColorStop(1, 'transparent');
+    mapCtx.fillStyle = glow;
+    mapCtx.beginPath();
+    mapCtx.arc(sp.x, sp.y, displayR * 3, 0, Math.PI*2);
+    mapCtx.fill();
+
+    // Planet body
+    mapCtx.fillStyle = p.color;
+    mapCtx.beginPath();
+    mapCtx.arc(sp.x, sp.y, displayR, 0, Math.PI*2);
+    mapCtx.fill();
+
+    // Highlight ring if selected
+    if (key === selectedOrigin || key === selectedDest) {
+      mapCtx.strokeStyle = key === selectedOrigin ? '#00ff88' : '#ff3333';
+      mapCtx.lineWidth = 2;
+      mapCtx.beginPath();
+      mapCtx.arc(sp.x, sp.y, displayR + 4, 0, Math.PI*2);
+      mapCtx.stroke();
+    }
+
+    // Label
+    if (showLabels) {
+      mapCtx.fillStyle = '#c8d6e5';
+      mapCtx.font = '9px "Segoe UI",system-ui';
+      mapCtx.textAlign = 'center';
+      mapCtx.fillText(p.name, sp.x, sp.y + displayR + 12);
+    }
+
+    // Store screen pos for hit testing
+    p._sx = sp.x;
+    p._sy = sp.y;
+    p._sr = displayR;
+  }
+
+  // Sun
+  drawSun();
+
+  // Trail
+  if (trailPoints.length > 1) {
+    mapCtx.strokeStyle = '#00e5ff';
+    mapCtx.lineWidth = 2;
+    mapCtx.setLineDash([4, 4]);
+    mapCtx.beginPath();
+    const tp0 = worldToScreen(trailPoints[0].x, trailPoints[0].y);
+    mapCtx.moveTo(tp0.x, tp0.y);
+    for (let i = 1; i < trailPoints.length; i++) {
+      const tp = worldToScreen(trailPoints[i].x, trailPoints[i].y);
+      mapCtx.lineTo(tp.x, tp.y);
+    }
+    mapCtx.stroke();
+    mapCtx.setLineDash([]);
+  }
+
+  // Minimap
+  drawMinimap();
+}
+
+function drawSun() {
+  const sp = worldToScreen(0, 0);
+  // Corona
+  const corona = mapCtx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, 80);
+  corona.addColorStop(0, 'rgba(255,170,0,0.3)');
+  corona.addColorStop(0.5, 'rgba(255,120,0,0.05)');
+  corona.addColorStop(1, 'transparent');
+  mapCtx.fillStyle = corona;
+  mapCtx.beginPath();
+  mapCtx.arc(sp.x, sp.y, 80, 0, Math.PI*2);
+  mapCtx.fill();
+
+  // Sun body
+  const sunR = Math.max(12, 40 * camZoom * 0.5);
+  const sg = mapCtx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sunR);
+  sg.addColorStop(0, '#fff8e0');
+  sg.addColorStop(0.4, '#ffcc00');
+  sg.addColorStop(0.8, '#ff8800');
+  sg.addColorStop(1, '#cc4400');
+  mapCtx.fillStyle = sg;
+  mapCtx.beginPath();
+  mapCtx.arc(sp.x, sp.y, sunR, 0, Math.PI*2);
+  mapCtx.fill();
+
+  if (showLabels) {
+    mapCtx.fillStyle = '#ffaa00';
+    mapCtx.font = 'bold 10px "Segoe UI",system-ui';
+    mapCtx.textAlign = 'center';
+    mapCtx.fillText('Sol', sp.x, sp.y + sunR + 14);
+  }
+
+  PLANETS.sun._sx = sp.x;
+  PLANETS.sun._sy = sp.y;
+}
+
+function drawOrbits() {
+  for (const key of Object.keys(PLANETS)) {
+    if (key === 'sun') continue;
+    const p = PLANETS[key];
+    const center = worldToScreen(0, 0);
+    const orbitR = p.orbitAU * AU * camZoom;
+    mapCtx.strokeStyle = p.color + '20';
+    mapCtx.lineWidth = 1;
+    mapCtx.beginPath();
+    mapCtx.arc(center.x, center.y, orbitR, 0, Math.PI*2);
+    mapCtx.stroke();
+  }
+}
+
+function drawGrid() {
+  const center = worldToScreen(0, 0);
+  mapCtx.strokeStyle = 'rgba(0,229,255,0.06)';
+  mapCtx.lineWidth = 0.5;
+  for (let au = 1; au <= 35; au++) {
+    const r = au * AU * camZoom;
+    mapCtx.beginPath();
+    mapCtx.arc(center.x, center.y, r, 0, Math.PI*2);
+    mapCtx.stroke();
+    // AU label
+    if (camZoom > 0.15) {
+      mapCtx.fillStyle = 'rgba(0,229,255,0.2)';
+      mapCtx.font = '8px monospace';
+      mapCtx.textAlign = 'left';
+      mapCtx.fillText(au + ' AU', center.x + r + 3, center.y - 3);
+    }
+  }
+  // Cross lines
+  mapCtx.beginPath();
+  mapCtx.moveTo(0, center.y); mapCtx.lineTo(W, center.y);
+  mapCtx.moveTo(center.x, 0); mapCtx.lineTo(center.x, H);
+  mapCtx.stroke();
+}
+
+function drawTrajectory() {
+  if (!routeResult || !routeResult.points) return;
+
+  const pts = routeResult.points;
+  // Draw transfer arc
+  mapCtx.strokeStyle = '#00e5ff';
+  mapCtx.lineWidth = 2.5;
+  mapCtx.setLineDash([8, 4]);
+  mapCtx.beginPath();
+  for (let i = 0; i < pts.length; i++) {
+    const sp = worldToScreen(pts[i].x, pts[i].y);
+    if (i === 0) mapCtx.moveTo(sp.x, sp.y);
+    else mapCtx.lineTo(sp.x, sp.y);
+  }
+  mapCtx.stroke();
+  mapCtx.setLineDash([]);
+
+  // Direction arrows along path
+  for (let i = 0; i < pts.length - 1; i += Math.max(1, Math.floor(pts.length / 8))) {
+    const sp1 = worldToScreen(pts[i].x, pts[i].y);
+    const sp2 = worldToScreen(pts[i+1].x, pts[i+1].y);
+    const ang = Math.atan2(sp2.y - sp1.y, sp2.x - sp1.x);
+    const mx = (sp1.x + sp2.x) / 2;
+    const my = (sp1.y + sp2.y) / 2;
+    mapCtx.fillStyle = '#00e5ff';
+    mapCtx.beginPath();
+    mapCtx.moveTo(mx + 5*Math.cos(ang), my + 5*Math.sin(ang));
+    mapCtx.lineTo(mx + 5*Math.cos(ang + 2.5), my + 5*Math.sin(ang + 2.5));
+    mapCtx.lineTo(mx + 5*Math.cos(ang - 2.5), my + 5*Math.sin(ang - 2.5));
+    mapCtx.fill();
+  }
+
+  // Spacecraft position on path
+  const prog = (animTime * 0.02) % 1;
+  const idx = Math.floor(prog * (pts.length - 1));
+  const sp = worldToScreen(pts[idx].x, pts[idx].y);
+
+  // Engine plume
+  const plume = mapCtx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, 10);
+  plume.addColorStop(0, 'rgba(0,229,255,0.6)');
+  plume.addColorStop(1, 'transparent');
+  mapCtx.fillStyle = plume;
+  mapCtx.beginPath();
+  mapCtx.arc(sp.x, sp.y, 10, 0, Math.PI*2);
+  mapCtx.fill();
+
+  // Spacecraft dot
+  mapCtx.fillStyle = '#ffffff';
+  mapCtx.beginPath();
+  mapCtx.arc(sp.x, sp.y, 3, 0, Math.PI*2);
+  mapCtx.fill();
+  mapCtx.strokeStyle = '#00e5ff';
+  mapCtx.lineWidth = 1;
+  mapCtx.stroke();
+
+  // Origin marker
+  const osp = worldToScreen(pts[0].x, pts[0].y);
+  mapCtx.fillStyle = '#00ff88';
+  mapCtx.beginPath();
+  mapCtx.arc(osp.x, osp.y, 6, 0, Math.PI*2);
+  mapCtx.fill();
+  mapCtx.fillStyle = '#fff';
+  mapCtx.font = 'bold 8px sans-serif';
+  mapCtx.textAlign = 'center';
+  mapCtx.fillText('A', osp.x, osp.y + 3);
+
+  // Destination marker
+  const dsp = worldToScreen(pts[pts.length-1].x, pts[pts.length-1].y);
+  mapCtx.fillStyle = '#ff3333';
+  mapCtx.beginPath();
+  mapCtx.arc(dsp.x, dsp.y, 6, 0, Math.PI*2);
+  mapCtx.fill();
+  mapCtx.fillStyle = '#fff';
+  mapCtx.fillText('B', dsp.x, dsp.y + 3);
+}
+
+function drawMinimap() {
+  miniCtx.fillStyle = '#020408';
+  miniCtx.fillRect(0, 0, 140, 140);
+
+  const mAU = 35; // max AU to show
+  const scale = 140 / (mAU * 2);
+  const cx = 70, cy = 70;
+
+  // Orbits
+  for (const key of Object.keys(PLANETS)) {
+    if (key === 'sun') continue;
+    const p = PLANETS[key];
+    const r = p.orbitAU * scale;
+    miniCtx.strokeStyle = p.color + '30';
+    miniCtx.lineWidth = 0.5;
+    miniCtx.beginPath();
+    miniCtx.arc(cx, cy, r, 0, Math.PI*2);
+    miniCtx.stroke();
+
+    const pos = getPlanetPos(key, animTime);
+    miniCtx.fillStyle = p.color;
+    miniCtx.beginPath();
+    miniCtx.arc(cx + pos.x * scale, cy + pos.y * scale, 2, 0, Math.PI*2);
+    miniCtx.fill();
+  }
+
+  // Sun
+  miniCtx.fillStyle = '#ffaa00';
+  miniCtx.beginPath();
+  miniCtx.arc(cx, cy, 3, 0, Math.PI*2);
+  miniCtx.fill();
+
+  // Viewport rectangle
+  const viewW = (W / (AU * camZoom)) * scale;
+  const viewH = (H / (AU * camZoom)) * scale;
+  const viewX = cx + (camX / (AU * camZoom)) * scale - viewW/2;
+  const viewY = cy + (camY / (AU * camZoom)) * scale - viewH/2;
+  miniCtx.strokeStyle = 'rgba(0,229,255,0.5)';
+  miniCtx.lineWidth = 1;
+  miniCtx.strokeRect(viewX, viewY, viewW, viewH);
+}
+
+// ── Mouse ──
+function setupMouse() {
+  mapCanvas.addEventListener('mousedown', e => {
+    dragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    camStartX = camX;
+    camStartY = camY;
+  });
+  window.addEventListener('mousemove', e => {
+    if (dragging) {
+      camX = camStartX - (e.clientX - dragStartX);
+      camY = camStartY - (e.clientY - dragStartY);
+    }
+    // Hover detection
+    const rect = mapCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    checkHover(mx, my, e.clientX, e.clientY);
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+
+  mapCanvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 0.87;
+    camZoom = Math.max(0.03, Math.min(8, camZoom * factor));
+    updateStatusZoom();
+  }, {passive: false});
+
+  // Double click to select planet
+  mapCanvas.addEventListener('dblclick', e => {
+    const rect = mapCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    for (const key of Object.keys(PLANETS)) {
+      const p = PLANETS[key];
+      if (!p._sx) continue;
+      const dist = Math.hypot(mx - p._sx, my - p._sy);
+      if (dist < p._sr + 10) {
+        selectPlanet(key);
+        return;
+      }
+    }
+  });
+
+  // Click to select planet
+  mapCanvas.addEventListener('click', e => {
+    if (dragging) return;
+    const rect = mapCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    for (const key of Object.keys(PLANETS)) {
+      const p = PLANETS[key];
+      if (!p._sx) continue;
+      const dist = Math.hypot(mx - p._sx, my - p._sy);
+      if (dist < p._sr + 10) {
+        selectPlanet(key);
+        return;
+      }
+    }
+  });
+}
+
+function checkHover(mx, my, clientX, clientY) {
+  hoveredPlanet = null;
+  for (const key of Object.keys(PLANETS)) {
+    const p = PLANETS[key];
+    if (!p._sx) continue;
+    const dist = Math.hypot(mx - p._sx, my - p._sy);
+    if (dist < p._sr + 8) {
+      hoveredPlanet = key;
+      showTooltip(p, clientX, clientY);
+      mapCanvas.style.cursor = 'pointer';
+      return;
+    }
+  }
+  hideTooltip();
+  mapCanvas.style.cursor = dragging ? 'grabbing' : 'grab';
+}
+
+function showTooltip(p, cx, cy) {
+  const tt = document.getElementById('tooltip');
+  tt.style.display = 'block';
+  tt.style.left = (cx - document.querySelector('.sidebar').offsetWidth + 15) + 'px';
+  tt.style.top = (cy - 60) + 'px';
+  tt.innerHTML = `
+    <div class="pt-name" style="color:${p.color}">${p.name}</div>
+    <div class="pt-row"><span>Distancia al Sol</span><span class="pt-val">${p.orbitAU} AU</span></div>
+    <div class="pt-row"><span>Período orbital</span><span class="pt-val">${p.period} días</span></div>
+    <div class="pt-row"><span>Gravedad</span><span class="pt-val">${p.gravity} m/s²</span></div>
+    <div class="pt-row"><span>Lunas</span><span class="pt-val">${p.moons}</span></div>
+  `;
+}
+function hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+
+// ── Planet Selection ──
+function selectPlanet(key) {
+  if (!selectedOrigin || selectedOrigin === key) {
+    selectedOrigin = key;
+    document.getElementById('originField').value = PLANETS[key].name;
+  } else {
+    selectedDest = key;
+    document.getElementById('destField').value = PLANETS[key].name;
+    document.getElementById('mapHudDest').textContent = `Ruta: ${PLANETS[selectedOrigin].name} → ${PLANETS[selectedDest].name}`;
+    calculateRoute();
+  }
+}
+
+// ── Route Calculation ──
+function calculateRoute() {
+  const originKey = findPlanetKey(document.getElementById('originField').value);
+  const destKey = findPlanetKey(document.getElementById('destField').value);
+  if (!originKey || !destKey || originKey === destKey) return;
+
+  selectedOrigin = originKey;
+  selectedDest = destKey;
+
+  const o = PLANETS[originKey];
+  const d = PLANETS[destKey];
+
+  // Hohmann transfer
+  const r1 = o.orbitAU;
+  const r2 = d.orbitAU;
+  const a_transfer = (r1 + r2) / 2;
+  const tof = Math.PI * Math.sqrt(a_transfer**3 / (SUN_GM / 1.327e11 * 1.496e8**3 / (365.25*24*3600)**2));
+
+  // Simplified TOF in days
+  const tofDays = Math.PI * Math.sqrt((a_transfer)**3) * 365.25 / (2 * Math.PI);
+  const tofMonths = Math.round(tofDays / 30.44);
+
+  // Delta-V
+  const mu = 1.327e11; // Sun GM km³/s²
+  const r1km = r1 * 1.496e8;
+  const r2km = r2 * 1.496e8;
+  const v1 = Math.sqrt(mu / r1km);
+  const v2 = Math.sqrt(mu / r2km);
+  const at_km = a_transfer * 1.496e8;
+  const v_trans = Math.sqrt(mu * (2/r1km - 1/at_km));
+  const dv1 = Math.abs(v_trans - v1);
+  const v_arr = Math.sqrt(mu * (2/r2km - 1/at_km));
+  const dv2 = Math.abs(v2 - v_arr);
+  const totalDV = (dv1 + dv2) / 1000; // km/s
+
+  // Generate transfer arc points
+  const points = [];
+  const steps = 100;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const angle = Math.PI * t; // 0 to π for Hohmann
+    const r = a_transfer * (1 - 0.01 * Math.cos(angle)); // slight eccentricity
+    // Interpolate angle from origin to destination
+    const oAngle = getPlanetPos(originKey, animTime).angle;
+    const dAngle = getPlanetPos(destKey, animTime + tofDays).angle;
+    const curAngle = oAngle + (dAngle - oAngle) * t;
+    points.push({
+      x: r * Math.cos(curAngle),
+      y: r * Math.sin(curAngle)
+    });
+  }
+
+  const durationText = tofMonths >= 12 ? `~${(tofMonths/12).toFixed(1)} años` : `~${tofMonths} meses`;
+
+  routeResult = {
+    origin: originKey,
+    dest: destKey,
+    tofDays,
+    tofMonths,
+    totalDV: totalDV.toFixed(2),
+    dv1: (dv1/1000).toFixed(2),
+    dv2: (dv2/1000).toFixed(2),
+    aTransfer: a_transfer.toFixed(2),
+    points,
+    durationText
+  };
+
+  updateDirectionsPanel();
+  updateWindows();
+  document.getElementById('routeOptions').style.display = 'block';
+  document.getElementById('mapDist').textContent = `${d.orbitAU} AU — ${durationText}`;
+
+  // Zoom to fit route
+  const maxR = Math.max(r1, r2) * 1.3;
+  camZoom = Math.min(3, 6 / maxR);
+  updateStatusZoom();
+}
+
+function findPlanetKey(name) {
+  const n = name.toLowerCase().trim();
+  for (const key of Object.keys(PLANETS)) {
+    if (PLANETS[key].name.toLowerCase() === n || PLANETS[key].nameEn.toLowerCase() === n) return key;
+  }
+  // Partial match
+  for (const key of Object.keys(PLANETS)) {
+    if (PLANETS[key].name.toLowerCase().includes(n) || n.includes(PLANETS[key].name.toLowerCase())) return key;
+  }
+  return null;
+}
+
+function updateDirectionsPanel() {
+  if (!routeResult) return;
+  const r = routeResult;
+  const o = PLANETS[r.origin];
+  const d = PLANETS[r.dest];
+
+  const summary = document.getElementById('dirSummary');
+  summary.innerHTML = `
+    <h3 style="color:var(--cyan)">${o.name} → ${d.name}</h3>
+    <div class="dir-stats" style="margin-top:8px">
+      <div class="dir-stat"><div class="ds-val" style="color:var(--cyan)">${r.durationText}</div><div class="ds-label">Duración</div></div>
+      <div class="dir-stat"><div class="ds-val" style="color:var(--green)">${r.totalDV} km/s</div><div class="ds-label">ΔV Total</div></div>
+      <div class="dir-stat"><div class="ds-val" style="color:var(--purple)">${r.aTransfer} AU</div><div class="ds-label">SMA Transfer</div></div>
+      <div class="dir-stat"><div class="ds-val" style="color:var(--solar)">${o.orbitAU} → ${d.orbitAU} AU</div><div class="ds-label">Distancia</div></div>
+    </div>
+  `;
+
+  const steps = document.getElementById('dirSteps');
+  steps.innerHTML = `
+    <div class="section-title" style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--purple);margin:12px 0 8px">DIRECCIONES DE VUELO</div>
+
+    <div class="dir-step">
+      <div class="dir-icon burn">🚀</div>
+      <div class="dir-info">
+        <div class="di-title">1. Salida de ${o.name}</div>
+        <div class="di-desc">Quemadura de inyección trans-${d.name}. Elevar periapsis para interceptar órbita de transferencia.</div>
+        <div class="di-dv">ΔV: ${r.dv1} km/s</div>
+        <div class="di-time">T+0:00:00</div>
+      </div>
+    </div>
+
+    <div class="dir-step">
+      <div class="dir-icon cruise">🌌</div>
+      <div class="dir-info">
+        <div class="di-title">2. Fase de crucero</div>
+        <div class="di-desc">Trayectoria de Hohmann en órbita de transferencia alrededor del Sol. Sin quemaduras durante el crucero.</div>
+        <div class="di-dv">ΔV: 0 km/s (coasting)</div>
+        <div class="di-time">T+${r.durationText}</div>
+      </div>
+    </div>
+
+    <div class="dir-step">
+      <div class="dir-icon arrive">🎯</div>
+      <div class="dir-info">
+        <div class="di-title">3. Inserción en órbita de ${d.name}</div>
+        <div class="di-desc">Quemadura de frenado para ser capturado por la gravedad de ${d.name}. Circularizar órbita.</div>
+        <div class="di-dv">ΔV: ${r.dv2} km/s</div>
+        <div class="di-time">T+${r.durationText}</div>
+      </div>
+    </div>
+
+    <div class="dir-step">
+      <div class="dir-icon land">🪂</div>
+      <div class="dir-info">
+        <div class="di-title">4. Descenso a superficie (opcional)</div>
+        <div class="di-desc">EDL: Entrada, Descenso y Aterrizaje. ${d.name === 'mars' ? 'Usar escudo térmico + paracaídas + retrocohetes.' : d.name === 'venus' ? 'Nave resistente a 465°C y 92 atm.' : 'Requiere sistema de aterrizaje especializado.'}</div>
+        <div class="di-dv">ΔV: ${d.gravity > 0 ? (d.gravity * 0.001 * d.surfR / 1000).toFixed(1) : 'N/A'} km/s (estimado)</div>
+        <div class="di-time">T+${r.durationText} + descenso</div>
+      </div>
+    </div>
+
+    <div class="dir-step">
+      <div class="dir-icon burn">↩️</div>
+      <div class="dir-info">
+        <div class="di-title">5. Retorno a ${o.name}</div>
+        <div class="di-desc">Ventana de retorno: ${getReturnWindow(r.dest, r.tofDays)}. Transferencia inversa con ΔV similar al outbound.</div>
+        <div class="di-dv">ΔV: ~${r.totalDV} km/s (retorno)</div>
+        <div class="di-time">T+${r.durationText} × 2 + espera</div>
+      </div>
+    </div>
+  `;
+}
+
+function getReturnWindow(destKey, outboundDays) {
+  const windows = LAUNCH_WINDOWS[destKey];
+  if (!windows || windows.length === 0) return 'No disponible';
+  const now = new Date();
+  for (const w of windows) {
+    const launch = new Date(w.launch);
+    if (launch > now) return w.launch;
+  }
+  return windows[0].launch;
+}
+
+// ── Launch Windows ──
+function updateWindows() {
+  const key = selectedDest || 'mars';
+  const windows = LAUNCH_WINDOWS[key] || [];
+  const panel = document.getElementById('windowsPanel');
+  const p = PLANETS[key];
+
+  let html = `<div class="section-title" style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--purple);margin-bottom:8px">VENTANAS DE LANZAMIENTO — ${p.name.toUpperCase()}</div>`;
+
+  const now = new Date();
+  for (const w of windows) {
+    const launchDate = new Date(w.launch);
+    const daysUntil = Math.ceil((launchDate - now) / (1000*60*60*24));
+    const isFuture = daysUntil > 0;
+    const urgency = daysUntil < 0 ? 'PASADA' : daysUntil < 365 ? `${daysUntil} días` : `${(daysUntil/365).toFixed(1)} años`;
+
+    html += `
+      <div class="win-card ${w.quality}" onclick="selectWindow('${w.launch}','${w.arrive}')" style="${isFuture ? '' : 'opacity:0.5'}">
+        <div class="win-date">${formatDate(w.launch)} → ${formatDate(w.arrive)}</div>
+        <div class="win-detail">
+          <span><span class="dot" style="background:${w.quality==='optimal'?'var(--green)':w.quality==='good'?'var(--solar)':'var(--orange)'}"></span>${w.quality==='optimal'?'Óptima':w.quality==='good'?'Buena':'Aceptable'}</span>
+          <span>⏱ ${w.dur}</span>
+          <span>ΔV ${w.dv} km/s</span>
+          <span>📅 ${urgency}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  panel.innerHTML = html;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function selectWindow(launch, arrive) {
+  document.getElementById('destField').value = PLANETS[selectedDest || 'mars'].name;
+  calculateRoute();
+}
+
+// ── Route Type ──
+function selectRouteType(type) {
+  currentRouteType = type;
+  document.querySelectorAll('.route-opt').forEach(el => el.classList.remove('active'));
+  document.getElementById(type === 'fastest' ? 'roFast' : type === 'cheapest' ? 'roCheap' : 'roGrav').classList.add('active');
+  if (routeResult) calculateRoute();
+}
+
+// ── Search ──
+function onSearch(val) {
+  const results = document.getElementById('searchResults');
+  if (!val.trim()) { results.innerHTML = ''; return; }
+  const n = val.toLowerCase();
+  let html = '';
+  for (const key of Object.keys(PLANETS)) {
+    const p = PLANETS[key];
+    if (p.name.toLowerCase().includes(n) || p.nameEn.toLowerCase().includes(n)) {
+      html += `<div style="padding:6px 8px;cursor:pointer;border-radius:4px;font-size:11px;transition:background .15s;
+        background:rgba(0,229,255,.03);margin-bottom:2px;border:1px solid var(--border)"
+        onmouseover="this.style.background='rgba(0,229,255,.1)'"
+        onmouseout="this.style.background='rgba(0,229,255,.03)'"
+        onclick="searchSelect('${key}')">
+        <span style="color:${p.color};font-weight:600">●</span> ${p.name} <span style="color:var(--text2);font-size:9px">(${p.orbitAU} AU)</span>
+      </div>`;
+    }
+  }
+  results.innerHTML = html;
+}
+
+function searchSelect(key) {
+  document.getElementById('searchInput').value = PLANETS[key].name;
+  document.getElementById('searchResults').innerHTML = '';
+  selectPlanet(key);
+}
+
+function navigateToSelected() {
+  const val = document.getElementById('searchInput').value;
+  const key = findPlanetKey(val);
+  if (key) {
+    selectedDest = key;
+    document.getElementById('destField').value = PLANETS[key].name;
+    document.getElementById('mapHudDest').textContent = `Destino: ${PLANETS[key].name}`;
+    calculateRoute();
+  }
+}
+
+function onRouteChange() {}
+
+function swapRoute() {
+  const o = document.getElementById('originField').value;
+  const d = document.getElementById('destField').value;
+  document.getElementById('originField').value = d;
+  document.getElementById('destField').value = o;
+  calculateRoute();
+}
+
+function clearRoute() {
+  routeResult = null;
+  selectedDest = null;
+  document.getElementById('destField').value = '';
+  document.getElementById('dirSummary').innerHTML = '<h3>Selecciona un destino para ver la ruta</h3><p style="font-size:9px;color:var(--text2);margin-top:4px">Haz clic en un planeta en el mapa o usa la barra de búsqueda</p>';
+  document.getElementById('dirSteps').innerHTML = '';
+  document.getElementById('routeOptions').style.display = 'none';
+  document.getElementById('mapDist').textContent = '';
+  document.getElementById('mapHudDest').textContent = 'Origen: Tierra';
+}
+
+// ── Tabs ──
+function showTab(id) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  event.currentTarget.classList.add('active');
+  document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1)).style.display = 'block';
+
+  if (id === 'info' && selectedDest) {
+    updateInfoPanel();
+  }
+}
+
+function updateInfoPanel() {
+  const p = PLANETS[selectedDest];
+  const panel = document.getElementById('infoPanel');
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:24px;height:24px;border-radius:50%;background:${p.color};box-shadow:0 0 10px ${p.color}60"></div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:${p.color}">${p.name}</div>
+        <div style="font-size:9px;color:var(--text2)">${p.nameEn}</div>
+      </div>
+    </div>
+    <p style="font-size:10px;color:var(--text);line-height:1.5;margin-bottom:10px">${p.desc}</p>
+    <div class="section-title" style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--purple);margin-bottom:6px">DATOS FÍSICOS</div>
+    <div style="font-size:10px;color:var(--text2);line-height:1.8">
+      <div>Masa: <span style="color:var(--text)">${p.mass.toExponential(2)} kg</span></div>
+      <div>Radio: <span style="color:var(--text)">${p.surfR.toLocaleString()} km</span></div>
+      <div>GM: <span style="color:var(--text)">${p.gm.toLocaleString()} km³/s²</span></div>
+      <div>Gravedad: <span style="color:var(--text)">${p.gravity} m/s²</span></div>
+      <div>Distancia al Sol: <span style="color:var(--text)">${p.orbitAU} AU</span></div>
+      <div>Período orbital: <span style="color:var(--text)">${p.period} días</span></div>
+      <div>Lunas: <span style="color:var(--text)">${p.moons}</span></div>
+      <div>SOI: <span style="color:var(--text)">${p.soi ? p.soi.toLocaleString() + ' km' : 'N/A'}</span></div>
+    </div>
+    <div class="section-title" style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--purple);margin:10px 0 6px">DATOS CURIOSOS</div>
+    <ul style="font-size:10px;color:var(--text);line-height:1.8;padding-left:16px">
+      ${p.facts.map(f => `<li>${f}</li>`).join('')}
+    </ul>
+  `;
+}
+
+// ── Controls ──
+function mapZoom(factor) {
+  camZoom = Math.max(0.03, Math.min(8, camZoom * factor));
+  updateStatusZoom();
+}
+function mapReset() { camX = 0; camY = 0; camZoom = 1; updateStatusZoom(); }
+function toggleOrbits() { showOrbits = !showOrbits; }
+function toggleLabels() { showLabels = !showLabels; }
+function toggleGrid() { showGrid = !showGrid; }
+function toggleAnimation() {
+  animating = !animating;
+  document.querySelector('.map-controls .map-ctrl:last-child').textContent = animating ? '⏸' : '▶';
+}
+function updateStatusZoom() {
+  document.getElementById('statusZoom').textContent = `Zoom: ${camZoom.toFixed(2)}x`;
+}
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById('mapDate').textContent = now.toLocaleDateString('es-ES', {day:'numeric',month:'short',year:'numeric'});
+}
+
+// ── Animation Loop ──
+function loop() {
+  if (animating) animTime += 0.5;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
