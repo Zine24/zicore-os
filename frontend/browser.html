@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Browser</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1c1c3a;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;--text:#c8d6e5;--text2:#667788;--border:#2a3555;--glass:rgba(26,26,46,0.95)}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column}
+.tab-bar{display:flex;align-items:center;background:#0d1117;border-bottom:1px solid var(--border);height:36px;min-height:36px;overflow-x:auto;overflow-y:hidden}
+.tab-bar::-webkit-scrollbar{height:0}
+.tab{display:flex;align-items:center;gap:6px;padding:0 12px;height:32px;cursor:pointer;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;font-size:11px;color:var(--text2);transition:all .15s;white-space:nowrap;max-width:200px;min-width:80px;position:relative;margin:0 1px}
+.tab:hover{background:rgba(0,229,255,.05);color:var(--text)}
+.tab.active{background:var(--bg);color:var(--cyan);border-color:var(--border);border-bottom-color:var(--bg)}
+.tab .fav{width:14px;height:14px;border-radius:2px;background:rgba(0,229,255,.1);display:flex;align-items:center;justify-content:center;font-size:8px;overflow:hidden}
+.tab .tab-title{overflow:hidden;text-overflow:ellipsis;flex:1}
+.tab .tab-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:10px;padding:2px;border-radius:3px;opacity:0;transition:opacity .15s}
+.tab:hover .tab-close{opacity:1}
+.tab .tab-close:hover{background:rgba(255,51,51,.2);color:var(--red)}
+.tab-add{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:16px;border-radius:4px;margin:0 4px;flex-shrink:0}
+.tab-add:hover{background:rgba(0,229,255,.1);color:var(--cyan)}
+.nav-bar{display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--bg2);border-bottom:1px solid var(--border);height:40px;min-height:40px}
+.nav-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;font-size:12px;transition:all .15s;flex-shrink:0}
+.nav-btn:hover{border-color:rgba(0,229,255,.3);color:var(--cyan);background:rgba(0,229,255,.05)}
+.nav-btn:disabled{opacity:.3;cursor:default;border-color:var(--border);color:var(--text2);background:transparent}
+.url-bar{flex:1;display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0 8px;height:28px;gap:6px;transition:border-color .15s}
+.url-bar:focus-within{border-color:rgba(0,229,255,.4)}
+.url-bar .proto{font-size:9px;color:var(--green);font-weight:600;letter-spacing:.5px;min-width:50px}
+.url-bar input{flex:1;background:transparent;border:none;color:var(--text);font-size:12px;outline:none;font-family:'Consolas','Cascadia Code',monospace}
+.url-bar input::placeholder{color:var(--text2)}
+.url-bar .go-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:3px}
+.url-bar .go-btn:hover{color:var(--cyan)}
+.nav-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+.bookmarks-bar{display:flex;align-items:center;gap:2px;padding:2px 8px;background:rgba(15,52,96,.3);border-bottom:1px solid var(--border);height:28px;min-height:28px;overflow-x:auto}
+.bookmarks-bar::-webkit-scrollbar{height:0}
+.bm-item{display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:3px;font-size:10px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s}
+.bm-item:hover{background:rgba(0,229,255,.08);color:var(--text)}
+.bm-item .bm-ico{font-size:10px}
+.browser-content{flex:1;position:relative;overflow:hidden;background:#fff}
+.browser-content iframe{width:100%;height:100%;border:none}
+.home-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:40px;background:linear-gradient(135deg,#0d1117 0%,#1a1a2e 50%,#16213e 100%)}
+.home-logo{font-size:36px;opacity:.3;animation:spin 20s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.home-title{font-size:24px;font-weight:300;letter-spacing:6px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.home-search{width:500px;max-width:90%;display:flex;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:24px;padding:4px;transition:border-color .2s}
+.home-search:focus-within{border-color:rgba(0,229,255,.4)}
+.home-search input{flex:1;background:transparent;border:none;color:var(--text);font-size:14px;padding:10px 16px;outline:none}
+.home-search input::placeholder{color:var(--text2)}
+.home-search button{background:rgba(0,229,255,.15);border:none;color:var(--cyan);padding:10px 20px;border-radius:20px;cursor:pointer;font-size:13px;transition:all .2s}
+.home-search button:hover{background:rgba(0,229,255,.25)}
+.home-quick{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.home-quick .hq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;min-width:100px}
+.home-quick .hq:hover{border-color:rgba(0,229,255,.3);transform:translateY(-2px);background:rgba(0,229,255,.03)}
+.home-quick .hq .hq-ico{font-size:20px}
+.home-quick .hq .hq-name{font-size:10px;color:var(--text2);letter-spacing:1px}
+.loading-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+.error-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:40px;text-align:center}
+.error-page .err-icon{font-size:48px;opacity:.4}
+.error-page .err-title{font-size:16px;font-weight:600;color:var(--text)}
+.error-page .err-msg{font-size:12px;color:var(--text2);max-width:400px;line-height:1.6}
+.error-page .err-btn{margin-top:8px;padding:8px 20px;border:1px solid var(--cyan);border-radius:4px;background:rgba(0,229,255,.1);color:var(--cyan);cursor:pointer;font-size:11px;transition:all .2s}
+.error-page .err-btn:hover{background:rgba(0,229,255,.2)}
+.history-sidebar{width:260px;background:var(--bg2);border-left:1px solid var(--border);display:none;flex-direction:column;overflow:hidden}
+.history-sidebar.open{display:flex}
+.hs-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text)}
+.hs-header .hs-close{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px}
+.hs-header .hs-close:hover{color:var(--red)}
+.hs-list{flex:1;overflow-y:auto;padding:4px 0}
+.hs-list::-webkit-scrollbar{width:3px}
+.hs-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.hs-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;transition:background .15s;font-size:10px;color:var(--text2)}
+.hs-item:hover{background:rgba(0,229,255,.05);color:var(--text)}
+.hs-item .hs-url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.hs-item .hs-time{font-size:8px;color:var(--text2);flex-shrink:0}
+.hs-clear{padding:8px 12px;border-top:1px solid var(--border)}
+.hs-clear button{width:100%;padding:6px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;font-size:10px}
+.hs-clear button:hover{border-color:rgba(255,51,51,.3);color:var(--red)}
+.status-bar{display:flex;align-items:center;gap:8px;padding:0 10px;height:22px;min-height:22px;background:var(--bg2);border-top:1px solid var(--border);font-size:9px;color:var(--text2)}
+.status-bar .spacer{flex:1}
+</style>
+</head>
+<body>
+<div class="tab-bar" id="tabBar">
+  <div class="tab active" data-id="0" onclick="switchTab(0)">
+    <div class="fav">◈</div>
+    <div class="tab-title">Inicio</div>
+  </div>
+  <div class="tab-add" onclick="newTab()">+</div>
+</div>
+<div class="nav-bar">
+  <button class="nav-btn" onclick="goBack()" id="btnBack" disabled>◀</button>
+  <button class="nav-btn" onclick="goForward()" id="btnForward" disabled>▶</button>
+  <button class="nav-btn" onclick="goHome()">⌂</button>
+  <button class="nav-btn" onclick="refreshPage()">↻</button>
+  <div class="url-bar">
+    <div class="proto" id="urlProto">ZICORE</div>
+    <input type="text" id="urlInput" placeholder="Buscar o escribir URL..." autocomplete="off" spellcheck="false"
+           onkeydown="if(event.key==='Enter')navigateTo(this.value)">
+    <button class="go-btn" onclick="navigateTo(document.getElementById('urlInput').value)">→</button>
+  </div>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" onclick="toggleHistory()" title="Historial">🕐</button>
+  <button class="nav-btn" onclick="addBookmark()" title="Marcador">★</button>
+</div>
+<div class="bookmarks-bar" id="bookmarksBar">
+  <div class="bm-item" onclick="navigateTo('https://zcs.zicore.space')"><span class="bm-ico">◈</span>ZICORE</div>
+  <div class="bm-item" onclick="navigateTo('https://zinemotion.com.mx')"><span class="bm-ico">◆</span>ZineMotion</div>
+  <div class="bm-item" onclick="navigateTo('https://www.google.com')"><span class="bm-ico">G</span>Google</div>
+  <div class="bm-item" onclick="navigateTo('https://github.com')"><span class="bm-ico">⚙</span>GitHub</div>
+  <div class="bm-item" onclick="navigateTo('https://www.youtube.com')"><span class="bm-ico">▶</span>YouTube</div>
+  <div class="bm-item" onclick="navigateTo('https://en.wikipedia.org')"><span class="bm-ico">W</span>Wikipedia</div>
+</div>
+<div style="display:flex;flex:1;overflow:hidden">
+  <div class="browser-content" id="browserContent"></div>
+  <div class="history-sidebar" id="historySidebar">
+    <div class="hs-header">Historial<button class="hs-close" onclick="toggleHistory()">✕</button></div>
+    <div class="hs-list" id="historyList"></div>
+    <div class="hs-clear"><button onclick="clearHistory()">Limpiar historial</button></div>
+  </div>
+</div>
+<div class="status-bar">
+  <span id="statusText">Listo</span>
+  <div class="spacer"></div>
+  <span id="statusUrl"></span>
+</div>
+<script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
+var tabs=[{id:0,url:'',title:'Inicio',history:[],histIdx:-1}];
+var activeTab=0,nextTabId=1;
+var historyData=JSON.parse(localStorage.getItem('zicoreBH')||'[]');
+
+function renderTabs(){
+  var bar=document.getElementById('tabBar');
+  bar.innerHTML='';
+  tabs.forEach(function(t){
+    var d=document.createElement('div');
+    d.className='tab'+(t.id===activeTab?' active':'');
+    d.dataset.id=t.id;
+    d.onclick=function(){switchTab(t.id)};
+    var ico=t.url?getFavicon(t.url):'◈';
+    d.innerHTML='<div class="fav">'+ico+'</div><div class="tab-title">'+(t.title||'Nueva pestaña')+'</div><button class="tab-close" onclick="event.stopPropagation();closeTab('+t.id+')">✕</button>';
+    bar.appendChild(d);
+  });
+  var a=document.createElement('div');
+  a.className='tab-add';a.textContent='+';a.onclick=newTab;
+  bar.appendChild(a);
+}
+function newTab(){var id=nextTabId++;tabs.push({id,url:'',title:'Nueva pestaña',history:[],histIdx:-1});switchTab(id)}
+function closeTab(id){if(tabs.length<=1)return;var idx=tabs.findIndex(function(t){return t.id===id});tabs.splice(idx,1);if(activeTab===id)switchTab(tabs[Math.min(idx,tabs.length-1)].id);else renderTabs()}
+function switchTab(id){
+  activeTab=id;var tab=tabs.find(function(t){return t.id===id});if(!tab)return;
+  renderTabs();
+  if(tab.url){showFrame(tab.url);document.getElementById('urlInput').value=tab.url;updateProto(tab.url)}
+  else{showHome();document.getElementById('urlInput').value='';document.getElementById('urlProto').textContent='ZICORE'}
+  updateNav();
+}
+function getFavicon(u){try{var h=new URL(u).hostname;return '<img src="https://www.google.com/s2/favicons?domain='+h+'&sz=16" width="14" height="14" onerror="this.parentElement.textContent=\'🌐\'">'}catch(e){return '🌐'}}
+
+function showHome(){
+  var c=document.getElementById('browserContent');
+  c.innerHTML='<div class="home-page"><div class="home-logo">◈</div><div class="home-title">ZICORE BROWSER</div><div class="home-search"><input type="text" id="homeSearch" placeholder="Buscar o escribir URL..." onkeydown="if(event.key===\'Enter\')searchWeb(this.value)"><button onclick="searchWeb(document.getElementById(\'homeSearch\').value)">Buscar</button></div><div class="home-quick"><div class="hq" onclick="navigateTo(\'https://www.google.com\')"><div class="hq-ico">🔍</div><div class="hq-name">Google</div></div><div class="hq" onclick="navigateTo(\'https://www.youtube.com\')"><div class="hq-ico">▶</div><div class="hq-name">YouTube</div></div><div class="hq" onclick="navigateTo(\'https://github.com\')"><div class="hq-ico">⚙</div><div class="hq-name">GitHub</div></div><div class="hq" onclick="navigateTo(\'https://en.wikipedia.org\')"><div class="hq-ico">📖</div><div class="hq-name">Wikipedia</div></div><div class="hq" onclick="navigateTo(\'https://www.reddit.com\')"><div class="hq-ico">💬</div><div class="hq-name">Reddit</div></div><div class="hq" onclick="navigateTo(\'https://news.ycombinator.com\')"><div class="hq-ico">📰</div><div class="hq-name">Hacker News</div></div></div></div>';
+  document.getElementById('statusText').textContent='Listo';
+}
+
+function extractYouTubeId(url){
+  if(!url)return null;
+  var m=url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return m?m[1]:null;
+}
+function isYouTubeUrl(url){return extractYouTubeId(url)!==null}
+
+function showFrame(url){
+  var c=document.getElementById('browserContent');
+  // YouTube: render embed directly (proxy blocks X-Frame-Options)
+  if(isYouTubeUrl(url)){
+    var vid=extractYouTubeId(url);
+    c.innerHTML='';
+    var wrap=document.createElement('div');
+    wrap.style.cssText='width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000';
+    var emb=document.createElement('iframe');
+    emb.src='https://www.youtube.com/embed/'+vid+'?autoplay=1&rel=0&modestbranding=1';
+    emb.style.cssText='width:min(100%,960px);aspect-ratio:16/9;height:auto;border:none;border-radius:4px';
+    emb.allow='autoplay; encrypted-media; fullscreen; picture-in-picture';
+    emb.allowFullscreen=true;
+    emb.onload=function(){document.getElementById('statusText').textContent='YouTube — '+vid};
+    emb.onerror=function(){showError(url,'No se pudo cargar el video')};
+    wrap.appendChild(emb);
+    c.appendChild(wrap);
+    return;
+  }
+  c.innerHTML='<div class="loading-page"><div class="spinner"></div><div style="font-size:11px;color:var(--text2)">Cargando '+url+'...</div></div>';
+  var iframe=document.createElement('iframe');
+  iframe.style.cssText='width:100%;height:100%;border:none;position:absolute;top:0;left:0';
+  iframe.sandbox='allow-same-origin allow-scripts allow-forms allow-popups';
+  iframe.onload=function(){document.getElementById('statusText').textContent='Completado'};
+  iframe.onerror=function(){showError(url,'No se pudo cargar la pagina')};
+  var token=localStorage.getItem('zicore_sso_token')||'';
+  var proxyUrl='/api/proxy?url='+encodeURIComponent(url);
+  if(token)proxyUrl+='&token='+encodeURIComponent(token);
+  iframe.src=proxyUrl;
+  c.appendChild(iframe);
+}
+
+function showError(url,msg){
+  var c=document.getElementById('browserContent');
+  c.innerHTML='<div class="error-page"><div class="err-icon">⚠</div><div class="err-title">Error</div><div class="err-msg">'+msg+'<br><small>'+url+'</small></div><button class="err-btn" onclick="navigateTo(\''+url.replace(/'/g,"\\'")+'\')">Reintentar</button><button class="err-btn" onclick="openExternal(\''+url.replace(/'/g,"\\'")+'\')">Abrir en pestana nueva</button><button class="err-btn" onclick="goHome()">Inicio</button></div>';
+  document.getElementById('statusText').textContent='Error';
+}
+function openExternal(url){window.open(url,'_blank')}
+
+function navigateTo(input){
+  if(!input||!input.trim())return;
+  var url=input.trim();
+  if(!url.match(/^https?:\/\//i)){if(url.includes('.')&&!url.includes(' '))url='https://'+url;else url='https://www.google.com/search?q='+encodeURIComponent(url)}
+  var tab=tabs.find(function(t){return t.id===activeTab});if(!tab)return;
+  tab.url=url;tab.title=extractTitle(url);
+  if(tab.histIdx<tab.history.length-1)tab.history=tab.history.slice(0,tab.histIdx+1);
+  tab.history.push(url);tab.histIdx=tab.history.length-1;
+  addHistory(url,tab.title);
+  document.getElementById('urlInput').value=url;
+  updateProto(url);document.getElementById('statusUrl').textContent=url;
+  document.getElementById('statusText').textContent='Cargando...';
+  showFrame(url);renderTabs();updateNav();
+}
+function goBack(){var tab=tabs.find(function(t){return t.id===activeTab});if(!tab||tab.histIdx<=0)return;tab.histIdx--;var u=tab.history[tab.histIdx];tab.url=u;document.getElementById('urlInput').value=u;updateProto(u);showFrame(u);renderTabs();updateNav()}
+function goForward(){var tab=tabs.find(function(t){return t.id===activeTab});if(!tab||tab.histIdx>=tab.history.length-1)return;tab.histIdx++;var u=tab.history[tab.histIdx];tab.url=u;document.getElementById('urlInput').value=u;updateProto(u);showFrame(u);renderTabs();updateNav()}
+function goHome(){var tab=tabs.find(function(t){return t.id===activeTab});if(tab){tab.url='';tab.title='Inicio'}showHome();document.getElementById('urlInput').value='';document.getElementById('urlProto').textContent='ZICORE';renderTabs();updateNav()}
+function refreshPage(){var tab=tabs.find(function(t){return t.id===activeTab});if(tab&&tab.url){showFrame(tab.url);document.getElementById('statusText').textContent='Recargando...'}}
+function updateNav(){var tab=tabs.find(function(t){return t.id===activeTab});document.getElementById('btnBack').disabled=!tab||tab.histIdx<=0;document.getElementById('btnForward').disabled=!tab||tab.histIdx>=tab.history.length-1}
+function updateProto(u){var p=document.getElementById('urlProto');if(u.startsWith('https://')){p.textContent='🔒 HTTPS';p.style.color='var(--green)'}else if(u.startsWith('http://')){p.textContent='⚠ HTTP';p.style.color='var(--orange)'}else{p.textContent='ZICORE';p.style.color='var(--cyan)'}}
+function extractTitle(u){try{return new URL(u).hostname}catch(e){return u.substring(0,30)}}
+function searchWeb(q){if(!q||!q.trim())return;navigateTo('https://www.google.com/search?q='+encodeURIComponent(q.trim()))}
+function addBookmark(){var tab=tabs.find(function(t){return t.id===activeTab});if(!tab||!tab.url)return;var bar=document.getElementById('bookmarksBar');var it=document.createElement('div');it.className='bm-item';it.onclick=function(){navigateTo(tab.url)};it.innerHTML='<span class="bm-ico">★</span>'+(tab.title||extractTitle(tab.url));bar.appendChild(it)}
+function addHistory(u,t){historyData.unshift({url:u,title:t||u,time:new Date().toLocaleTimeString()});if(historyData.length>200)historyData=historyData.slice(0,200);localStorage.setItem('zicoreBH',JSON.stringify(historyData));renderHistory()}
+function renderHistory(){var l=document.getElementById('historyList');l.innerHTML='';historyData.forEach(function(h){var it=document.createElement('div');it.className='hs-item';it.onclick=function(){navigateTo(h.url)};it.innerHTML='<div class="hs-url" title="'+h.url+'">'+h.title+'</div><div class="hs-time">'+h.time+'</div>';l.appendChild(it)})}
+function toggleHistory(){document.getElementById('historySidebar').classList.toggle('open');renderHistory()}
+function clearHistory(){historyData=[];localStorage.removeItem('zicoreBH');renderHistory()}
+document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='l'){e.preventDefault();document.getElementById('urlInput').focus();document.getElementById('urlInput').select()}if(e.ctrlKey&&e.key==='t'){e.preventDefault();newTab()}if(e.ctrlKey&&e.key==='w'){e.preventDefault();closeTab(activeTab)}if(e.ctrlKey&&e.key==='r'){e.preventDefault();refreshPage()}});
+renderHistory();showHome();updateNav();
+</script>
+</body>
+</html>

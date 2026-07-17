@@ -94,3 +94,22 @@ docker-compose.override.yaml
 native/target/
 *.o
 *.obj
+
+# Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/gradle/wrapper/gradle-wrapper.jar
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/app/src/main/res/mipmap-*/
+android/app/src/main/res/xml/file_paths.xml
+
+# Distribution / APK binaries
+distro/
+installers/*.apk
+
+# Data artifacts
+data/camera_test.jpg
+data/thumbnails/

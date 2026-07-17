@@ -298,6 +298,7 @@ body{display:flex;flex-direction:column;background:#04060c}
     <a class="link-chip" href="https://grok.ai" target="_blank" rel="noopener">GROK</a>
     <a class="link-chip" href="https://z.ai" target="_blank" rel="noopener">Z.AI</a>
     <a class="link-chip" href="https://zinemotion.com.mx" target="_blank" rel="noopener">ZINEMOTION</a>
+    <a class="link-chip" href="https://zzz.zinemotion.com" target="_blank" rel="noopener" style="border-color:rgba(0,229,255,.3);color:var(--cyan)">TIENDA</a>
   </div>
 
   <div class="menu">
@@ -752,5 +753,7 @@ function showMenu(){
   fetch('/api/status').then(function(){document.getElementById('connDot').classList.add('active');}).catch(function(){});
 })();
 </script>
+<script src="/js/zicore-translate.js"></script>
+<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
 </body>
 </html>

@@ -56,6 +56,14 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 #pauseOverlay.show{display:flex}
 #pauseOverlay .pause-text{font-size:28px;color:#00e5ff;letter-spacing:4px;margin-bottom:8px}
 #pauseOverlay .pause-sub{font-size:11px;color:#556;letter-spacing:2px}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -92,9 +100,16 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
     <button class="play-btn" onclick="startLevel(currentLevel)">RETRY</button>
     <button class="back-btn" onclick="showLevelSelect()">LEVELS</button>
   </div>
-</div>
-
-<div id="levelComplete" class="screen">
+  <div class="social-share">
+    <div style="font-size:11px;color:#556;margin-bottom:6px">SHARE</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','Arkanoid',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','Arkanoid',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Arkanoid',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','Arkanoid',score)">Copy Link</button>
+    </div>
+  </div>
+</div> class="screen">
   <div class="lc-title">LEVEL COMPLETE</div>
   <div class="lc-score" id="lcScore">SCORE: 0</div>
   <div class="lc-stars" id="lcStars"></div>
@@ -110,6 +125,7 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
     <div class="hud-level">LEVEL <span id="hLevel">1</span></div>
     <div class="hud-lives">LIVES <span id="hLives">3</span></div>
     <div class="hud-balls">BALLS <span id="hBalls">1</span></div>
+    <div id="muteBtn" onclick="initSound();toggleSound()" style="cursor:pointer;padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px;font-size:14px;letter-spacing:0">🔊</div>
   </div>
   <div style="position:relative">
     <canvas id="game" width="540" height="420"></canvas>
@@ -118,6 +134,18 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 </div>
 
 <script>
+var soundMuted=false,audioCtx=null;
+function initSound(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+function tone(f,d,v,t,dl){if(soundMuted||!audioCtx)return;v=v||.06;t=t||'square';dl=dl||0;var n=audioCtx.currentTime+dl,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=t;o.frequency.setValueAtTime(f,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+d)}
+function toggleSound(){soundMuted=!soundMuted;var b=document.getElementById('muteBtn');if(b)b.textContent=soundMuted?'\u{1F507}':'\u{1F506}'}
+function sfxPaddle(){tone(800,.06,.05,'sine')}
+function sfxBrickHit(){tone(500,.04,.04)}
+function sfxBrickDestroy(){tone(300,.06,.05,'sawtooth');tone(600,.08,.04,'sine',.03)}
+function sfxPowerup(){tone(660,.1,.06,'sine');tone(880,.1,.05,'sine',.08);tone(1100,.12,.04,'sine',.16)}
+function sfxLaser(){tone(1200,.05,.05,'sawtooth');tone(800,.08,.04,'square',.02)}
+function sfxBallLost(){tone(400,.15,.06,'sawtooth');tone(250,.2,.07,'sawtooth',.12)}
+function sfxLevelClear(){tone(523,.12,.06,'sine');tone(659,.12,.06,'sine',.1);tone(784,.12,.06,'sine',.2);tone(1047,.2,.07,'sine',.3)}
+function sfxGameOver(){tone(400,.2,.06,'sawtooth');tone(300,.2,.06,'sawtooth',.15);tone(200,.3,.07,'sawtooth',.3)}
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=540,H=420;
 
@@ -243,6 +271,7 @@ function showStart(){showScreen('startScreen')}
 function showLevelSelect(){buildLevelGrid();showScreen('levelSelect')}
 
 function startLevel(idx){
+  initSound();
   const lv=LEVELS[idx];
   currentLevel=idx;
   score=0;lives=lv.lives;
@@ -338,6 +367,7 @@ function updatePaddle(){
 
 function fireLaser(){
   if(paddle.laser<=0)return;
+  sfxLaser();
   lasers.push({x:paddle.x-paddle.w/4,y:H-30,vy:-8});
   lasers.push({x:paddle.x+paddle.w/4,y:H-30,vy:-8});
   paddle.laser--;
@@ -361,6 +391,7 @@ function updateBalls(){
       b.vx=Math.cos(angle)*newSpd;
       b.vy=Math.sin(angle)*newSpd;
       b.y=pH-b.r;
+      sfxPaddle();
       spawnParticles(b.x,b.y,'#00e5ff',4);
     }
     if(b.y>H+20){
@@ -368,6 +399,7 @@ function updateBalls(){
     }
   }
   if(balls.length===0){
+    sfxBallLost();
     lives--;
     document.getElementById('hLives').textContent=lives;
     if(lives<=0){
@@ -405,6 +437,7 @@ function checkBrickCollisions(){
         if(br.type!=='unbreakable'){
           br.hp--;
           if(br.hp<=0){
+            sfxBrickDestroy();
             const pts=br.type==='tough'?200:br.type==='powerup'?50:100;
             score+=pts*(currentLevel>=10?2:1);
             spawnParticles(br.x+br.w/2,br.y+br.h/2,br.color,8);
@@ -413,6 +446,7 @@ function checkBrickCollisions(){
             }
             bricks.splice(i,1);
           }else{
+            sfxBrickHit();
             spawnParticles(br.x+br.w/2,br.y+br.h/2,'#ffffff',3);
           }
         }else{
@@ -454,6 +488,7 @@ function updatePowerups(){
     p.y+=p.vy;
     if(p.y>H){powerups.splice(i,1);continue}
     if(p.y+6>=H-30&&p.x>paddle.x-paddle.w/2-10&&p.x<paddle.x+paddle.w/2+10){
+      sfxPowerup();
       applyPowerup(p.type);
       spawnParticles(p.x,p.y,p.color,10);
       powerups.splice(i,1);
@@ -483,12 +518,14 @@ function endGame(won){
   prog.totalScore=(prog.totalScore||0)+score;
   saveProgress(prog);
   if(won){
+    sfxLevelClear();
     const stars=score>2000?3:score>1000?2:1;
     document.getElementById('lcScore').textContent='SCORE: '+score;
     document.getElementById('lcStars').textContent='\u2605'.repeat(stars)+'\u2606'.repeat(3-stars);
     document.getElementById('lcNext').style.display=currentLevel<19?'inline-block':'none';
     showScreen('levelComplete');
   }else{
+    sfxGameOver();
     document.getElementById('goScore').textContent='SCORE: '+score;
     document.getElementById('goLevel').textContent='LEVEL '+(currentLevel+1);
     showScreen('gameOver');
@@ -689,6 +726,15 @@ canvas.addEventListener('click',()=>{
 });
 
 showLevelSelect();
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

@@ -78,10 +78,30 @@ class ZICoreAgent:
             return "generate_3d"
         if any(w in msg for w in ["run code", "execute code", "run python", "execute python", "run script"]):
             return "code"
+        if any(w in msg for w in ["write code", "create function", "write function", "generate code", "code for", "write a script", "create a script", "write a program"]):
+            return "code_write"
+        if any(w in msg for w in ["debug", "find bug", "fix code", "error in", "what's wrong with this code", "review code"]):
+            return "code_debug"
+        if any(w in msg for w in ["explain code", "what does this code do", "how does this work", "describe this function"]):
+            return "code_explain"
+        if any(w in msg for w in ["simulate", "simulation", "sim", "run simulation"]):
+            return "simulate"
         if any(w in msg for w in ["edit video", "cut video", "trim video", "video editor"]):
             return "video"
         if any(w in msg for w in ["system status", "health check", "system health", "show stats"]):
             return "status"
+        if any(w in msg for w in [
+            "aerospace", "vehicle design", "propulsion", "orbital", "trajectory",
+            "launch", "spacecraft", "rocket", "payload", "delta-v", "thrust",
+            "fuel", "engine", "satellite", "orbit", "lunar", "mars", "lander",
+            "booster", "stage", "nozzle", "turbopump", "avionics",
+            "structural analysis", "stress", "buckling", "fatigue", "safety factor",
+            "aerodynamics", "lift", "drag", "mach", "heat shield", "thermal",
+            "life support", "eclss", "habitat", "rover", "isru",
+            "create improvement", "design improvement", "enhance design",
+            "bracket", "mount", "flange", "fitting", "manifold",
+        ]):
+            return "aerospace_design"
         return "chat"
 
     async def process(self, message: str, context: Optional[Dict] = None) -> Dict[str, Any]:
@@ -102,6 +122,65 @@ class ZICoreAgent:
                     "text": f"Request received: {intent}. Use the Materializer workspace to process this request.",
                 },
             }
+
+        if intent == "code_write":
+            reply = self._ollama_chat(
+                "You are a coding assistant. Write clean, well-commented code based on this request. "
+                "Return ONLY the code inside ```python blocks. No explanation needed.\n\n" + message
+            )
+            self.history.append({"role": "user", "content": message})
+            self.history.append({"role": "assistant", "content": reply})
+            return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
+
+        if intent == "code_debug":
+            reply = self._ollama_chat(
+                "You are a code debugger. Analyze this code, find bugs, and suggest fixes. "
+                "Be specific about line numbers and issues.\n\n" + message
+            )
+            self.history.append({"role": "user", "content": message})
+            self.history.append({"role": "assistant", "content": reply})
+            return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
+
+        if intent == "code_explain":
+            reply = self._ollama_chat(
+                "You are a code explainer. Explain what this code does step by step. "
+                "Be clear and concise.\n\n" + message
+            )
+            self.history.append({"role": "user", "content": message})
+            self.history.append({"role": "assistant", "content": reply})
+            return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
+
+        if intent == "simulate":
+            reply = self._ollama_chat(
+                "You are a simulation expert for aerospace systems. "
+                "Describe the simulation setup, parameters, and expected results. "
+                "Use ZICORE simulation modules when available.\n\n" + message
+            )
+            self.history.append({"role": "user", "content": message})
+            self.history.append({"role": "assistant", "content": reply})
+            return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
+
+        if intent == "aerospace_design":
+            aerospace_system = (
+                "You are ZIO Aerospace Engineering Copilot — an expert aerospace design assistant. "
+                "You specialize in: vehicle design (rockets, landers, orbiters, probes), "
+                "propulsion systems (chemical, electric, nuclear, fusion), "
+                "orbital mechanics (Hohmann transfers, gravity assists, delta-v budgeting), "
+                "structural analysis (stress, buckling, fatigue, safety factors), "
+                "aerodynamics (lift, drag, Mach number, heating), "
+                "thermal control, life support (ECLSS), power systems, "
+                "payload integration, and mission planning. "
+                "Provide SPECIFIC technical answers with numbers, equations, and actionable recommendations. "
+                "Include mass estimates, performance metrics, and trade analyses when relevant. "
+                "Reference ZICORE modules (Materializer, Propulsion Lab, Orbital Mechanics, Vehicle Designer) "
+                "for procedural generation when appropriate. "
+                "If the user asks to create/improve a design, provide a detailed specification "
+                "with dimensions, materials, mass properties, and performance characteristics."
+            )
+            reply = self._ollama_chat(aerospace_system + "\n\n" + message)
+            self.history.append({"role": "user", "content": message})
+            self.history.append({"role": "assistant", "content": reply})
+            return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
 
         reply = self._ollama_chat(message)
         self.history.append({"role": "user", "content": message})

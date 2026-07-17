@@ -1,0 +1,364 @@
+/* ═══════════════════════════════════════════════════════════════
+   ZICORE UI — Unified Design System
+   Star Wars Minimalist · Holographic · Geometric
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+/* ── Design Tokens ─────────────────────────────────────────── */
+:root{
+  /* Backgrounds */
+  --bg:#04060c;
+  --bg-alt:#080c16;
+  --surface:rgba(8,12,22,0.92);
+  --glass:rgba(8,12,22,0.75);
+  --elevated:rgba(12,18,32,0.95);
+
+  /* Primary Palette */
+  --cyan:#00e5ff;
+  --purple:#7c4dff;
+  --green:#00ff88;
+  --red:#ff3333;
+  --orange:#ffa500;
+  --yellow:#ffcc00;
+
+  /* Text */
+  --text:#c8d6e5;
+  --text-secondary:#7a8ba8;
+  --text-muted:#4a5568;
+
+  /* Borders & Lines */
+  --border:rgba(0,229,255,0.08);
+  --border-active:rgba(0,229,255,0.25);
+  --border-subtle:rgba(255,255,255,0.04);
+
+  /* Glows */
+  --glow-cyan:0 0 20px rgba(0,229,255,0.15);
+  --glow-purple:0 0 20px rgba(124,77,255,0.15);
+  --glow-green:0 0 20px rgba(0,255,136,0.15);
+
+  /* Typography */
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Cascadia Code','Consolas',monospace;
+
+  /* Spacing */
+  --topbar-h:48px;
+  --sidebar-w:220px;
+  --radius:6px;
+  --radius-lg:10px;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text)}
+
+/* ── Starfield Canvas ──────────────────────────────────────── */
+canvas.zicore-stars{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* ── Grain Overlay ─────────────────────────────────────────── */
+.zicore-grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.018;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:128px}
+
+/* ── Scanline ──────────────────────────────────────────────── */
+.zicore-scanline{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.008) 2px,rgba(0,229,255,0.008) 4px)}
+
+/* ══════════════════════════════════════════════════════════════
+   TOPBAR — Unified user control bar
+   ══════════════════════════════════════════════════════════════ */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--elevated);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;
+  z-index:100;backdrop-filter:blur(24px);gap:12px}
+
+/* Logo */
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);flex-shrink:0}
+.topbar-hex{width:30px;height:30px;position:relative}
+.topbar-hex svg{width:100%;height:100%}
+.topbar-brand{font-size:12px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-sub{font-size:7px;letter-spacing:2px;color:var(--text-muted);margin-top:1px}
+
+/* Separator */
+.topbar-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+
+/* Navigation tabs */
+.topbar-nav{display:flex;gap:2px;flex-shrink:0}
+.topbar-tab{background:none;border:none;color:var(--text-muted);font-size:10px;letter-spacing:1px;
+  padding:6px 12px;cursor:pointer;border-radius:var(--radius);transition:all .2s;
+  font-family:var(--font);white-space:nowrap;text-transform:uppercase}
+.topbar-tab:hover{color:var(--text);background:rgba(0,229,255,0.04)}
+.topbar-tab.active{color:var(--cyan);background:rgba(0,229,255,0.06)}
+
+/* Spacer */
+.topbar-spacer{flex:1}
+
+/* User Section — Right side */
+.topbar-user{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-znt{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--radius);
+  background:rgba(0,229,255,0.04);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+.topbar-znt:hover{border-color:var(--border-active);background:rgba(0,229,255,0.08)}
+.topbar-znt .icon{font-size:12px}
+.topbar-znt .amount{font-size:11px;font-family:var(--mono);font-weight:600;color:var(--cyan)}
+.topbar-znt .label{font-size:8px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+
+/* User Menu Button */
+.topbar-menu-btn{width:32px;height:32px;border-radius:50%;background:rgba(0,229,255,0.06);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s;font-size:13px;color:var(--text)}
+.topbar-menu-btn:hover{border-color:var(--border-active);background:rgba(0,229,255,0.1)}
+
+/* User Dropdown */
+.topbar-dropdown{position:absolute;top:calc(var(--topbar-h) - 4px);right:16px;
+  background:var(--elevated);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:6px;min-width:200px;z-index:200;display:none;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);backdrop-filter:blur(24px)}
+.topbar-dropdown.open{display:block}
+.topbar-dropdown-item{display:flex;align-items:center;gap:10px;padding:8px 12px;
+  border-radius:var(--radius);font-size:12px;color:var(--text);cursor:pointer;transition:background .15s;text-decoration:none}
+.topbar-dropdown-item:hover{background:rgba(0,229,255,0.06)}
+.topbar-dropdown-item .icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.topbar-dropdown-item.danger{color:var(--red)}
+.topbar-dropdown-sep{height:1px;background:var(--border);margin:4px 0}
+.topbar-dropdown-info{padding:8px 12px;font-size:10px;color:var(--text-muted);border-bottom:1px solid var(--border);margin-bottom:4px}
+.topbar-dropdown-info .email{color:var(--text);font-size:11px;word-break:break-all}
+
+/* Clock */
+.topbar-clock{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:1px;flex-shrink:0}
+
+/* Status Dot */
+.topbar-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);animation:zicore-pulse 2s infinite;flex-shrink:0}
+@keyframes zicore-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ══════════════════════════════════════════════════════════════
+   LAYOUT — App shell
+   ══════════════════════════════════════════════════════════════ */
+.zicore-app{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh}
+.zicore-body{flex:1;padding-top:var(--topbar-h);overflow-y:auto;overflow-x:hidden}
+
+/* With sidebar */
+.zicore-shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;grid-template-rows:var(--topbar-h) 1fr;height:100vh;position:relative;z-index:2}
+.zicore-shell .topbar{grid-column:1/-1}
+
+/* ══════════════════════════════════════════════════════════════
+   SIDEBAR
+   ══════════════════════════════════════════════════════════════ */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;
+  flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px)}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.sb-section{padding:14px 16px 6px;font-size:8px;letter-spacing:2px;color:var(--text-muted);
+  text-transform:uppercase;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;
+  transition:all .15s;border-left:2px solid transparent;font-size:12px;color:var(--text-secondary)}
+.sb-item:hover{background:rgba(0,229,255,0.03);color:var(--text)}
+.sb-item.active{background:rgba(0,229,255,0.05);color:var(--cyan);border-left-color:var(--cyan)}
+.sb-item .ico{width:18px;text-align:center;font-size:13px;flex-shrink:0}
+.sb-divider{height:1px;background:var(--border);margin:8px 16px}
+.sb-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+.sb-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted)}
+
+/* ══════════════════════════════════════════════════════════════
+   CARDS — Service/Module cards
+   ══════════════════════════════════════════════════════════════ */
+.zicore-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px;transition:all .25s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden}
+.zicore-card:hover{border-color:var(--border-active);transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.3),var(--glow-cyan)}
+.zicore-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .25s}
+.zicore-card:hover::before{opacity:0.5}
+
+/* Card icon */
+.zicore-card-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.zicore-card-icon.cyan{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12)}
+.zicore-card-icon.purple{background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.12)}
+.zicore-card-icon.green{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.12)}
+.zicore-card-icon.orange{background:rgba(255,165,0,0.06);border:1px solid rgba(255,165,0,0.12)}
+.zicore-card-icon.red{background:rgba(255,51,51,0.06);border:1px solid rgba(255,51,51,0.12)}
+
+/* Card header */
+.zicore-card-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.zicore-card-name{font-size:14px;font-weight:600}
+.zicore-card-desc{font-size:12px;color:var(--text-secondary);line-height:1.5}
+
+/* Card badge */
+.zicore-badge{font-size:8px;padding:2px 7px;border-radius:3px;letter-spacing:1px;
+  text-transform:uppercase;font-weight:600;flex-shrink:0}
+.zicore-badge.free{background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.15)}
+.zicore-badge.premium{background:rgba(124,77,255,0.08);color:var(--purple);border:1px solid rgba(124,77,255,0.15)}
+.zicore-badge.pro{background:rgba(255,165,0,0.08);color:var(--orange);border:1px solid rgba(255,165,0,0.15)}
+
+/* Card tags */
+.zicore-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.zicore-tag{font-size:8px;padding:2px 6px;border-radius:3px;background:rgba(0,229,255,0.04);
+  color:var(--text-muted);border:1px solid var(--border-subtle);letter-spacing:0.5px}
+
+/* ══════════════════════════════════════════════════════════════
+   BUTTONS
+   ══════════════════════════════════════════════════════════════ */
+.zicore-btn{padding:8px 16px;border-radius:var(--radius);font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;border:1px solid var(--border);font-family:var(--font);
+  letter-spacing:0.5px;display:inline-flex;align-items:center;gap:6px}
+.zicore-btn:hover{border-color:var(--border-active)}
+.zicore-btn.primary{background:rgba(0,229,255,0.08);color:var(--cyan);border-color:rgba(0,229,255,0.2)}
+.zicore-btn.primary:hover{background:rgba(0,229,255,0.15);box-shadow:var(--glow-cyan)}
+.zicore-btn.danger{background:rgba(255,51,51,0.06);color:var(--red);border-color:rgba(255,51,51,0.15)}
+.zicore-btn.danger:hover{background:rgba(255,51,51,0.12)}
+.zicore-btn.ghost{background:transparent;color:var(--text-secondary)}
+.zicore-btn.ghost:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMS
+   ══════════════════════════════════════════════════════════════ */
+.zicore-input{width:100%;padding:10px 12px;border-radius:var(--radius);background:rgba(0,0,0,0.25);
+  border:1px solid var(--border);color:var(--text);font-size:12px;font-family:var(--font);
+  transition:border-color .2s}
+.zicore-input:focus{border-color:var(--cyan);outline:none}
+.zicore-input::placeholder{color:var(--text-muted)}
+
+.zicore-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;
+  display:block;margin-bottom:6px}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTIONS
+   ══════════════════════════════════════════════════════════════ */
+.zicore-section{margin-bottom:32px}
+.zicore-section-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.zicore-section-header h2{font-size:15px;font-weight:700;letter-spacing:0.5px}
+.zicore-section-header .line{flex:1;height:1px;background:var(--border)}
+.zicore-section-header .count{font-size:10px;font-family:var(--mono);color:var(--text-muted)}
+
+/* Grid layouts */
+.zicore-grid{display:grid;gap:12px}
+.zicore-grid-2{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.zicore-grid-3{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.zicore-grid-4{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+
+/* ══════════════════════════════════════════════════════════════
+   HERO
+   ══════════════════════════════════════════════════════════════ */
+.zicore-hero{display:flex;align-items:center;gap:28px;margin-bottom:32px;padding:28px;
+  background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-lg);
+  backdrop-filter:blur(12px);position:relative;overflow:hidden}
+.zicore-hero::before{content:'';position:absolute;top:-50%;right:-10%;width:350px;height:350px;
+  background:radial-gradient(circle,rgba(0,229,255,0.04),transparent);pointer-events:none}
+.zicore-hero-icon{font-size:56px;flex-shrink:0}
+.zicore-hero h1{font-size:26px;font-weight:700;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.zicore-hero p{color:var(--text-secondary);font-size:12px;line-height:1.6}
+.zicore-hero .stats{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+.zicore-hero .stat{background:rgba(0,229,255,0.04);border:1px solid var(--border);
+  border-radius:var(--radius);padding:5px 10px;font-size:10px;font-family:var(--mono)}
+.zicore-hero .stat .val{color:var(--cyan);font-weight:700}
+
+/* ══════════════════════════════════════════════════════════════
+   STATUS BAR
+   ══════════════════════════════════════════════════════════════ */
+.zicore-status{display:flex;gap:16px;padding:12px 16px;background:var(--glass);
+  border:1px solid var(--border);border-radius:var(--radius);flex-wrap:wrap;margin-top:24px}
+.zicore-status-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted)}
+.zicore-status-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.zicore-status-dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.zicore-status-dot.cyan{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.zicore-status-dot.orange{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+.zicore-status-dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+
+/* ══════════════════════════════════════════════════════════════
+   MODAL
+   ══════════════════════════════════════════════════════════════ */
+.zicore-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.zicore-modal.hidden{display:none}
+.zicore-modal-card{background:var(--elevated);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:24px;width:380px;max-width:90vw}
+.zicore-modal-card h3{font-size:14px;color:var(--cyan);margin-bottom:16px;letter-spacing:1px}
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+   ══════════════════════════════════════════════════════════════ */
+.zicore-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  padding:10px 20px;border-radius:var(--radius);font-size:12px;font-weight:600;
+  z-index:400;animation:zicore-toast-in .3s ease}
+.zicore-toast.success{background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.25);color:var(--green)}
+.zicore-toast.error{background:rgba(255,51,51,0.12);border:1px solid rgba(255,51,51,0.25);color:var(--red)}
+.zicore-toast.info{background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.25);color:var(--cyan)}
+@keyframes zicore-toast-in{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ══════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.12);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.25)}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════════════════════ */
+.zicore-flex{display:flex}
+.zicore-flex-center{display:flex;align-items:center;justify-content:center}
+.zicore-gap-8{gap:8px}
+.zicore-gap-12{gap:12px}
+.zicore-gap-16{gap:16px}
+.zicore-mono{font-family:var(--mono)}
+.zicore-text-cyan{color:var(--cyan)}
+.zicore-text-green{color:var(--green)}
+.zicore-text-purple{color:var(--purple)}
+.zicore-text-orange{color:var(--orange)}
+.zicore-text-red{color:var(--red)}
+.zicore-text-muted{color:var(--text-muted)}
+
+/* ══════════════════════════════════════════════════════════════
+   ZTOPBAR — Standalone topbar component (no auth required)
+   ══════════════════════════════════════════════════════════════ */
+.ztopbar{position:fixed;top:0;left:0;right:0;height:48px;background:rgba(6,8,16,0.95);
+  border-bottom:1px solid rgba(0,229,255,0.06);z-index:100;backdrop-filter:blur(24px)}
+.ztopbar-inner{display:flex;align-items:center;height:100%;padding:0 16px;gap:12px}
+.ztopbar-brand{display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0}
+.ztopbar-title{font-size:12px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ztopbar-tabs{display:flex;gap:2px}
+.ztopbar-tab{font-size:10px;letter-spacing:1px;color:var(--text-muted);text-decoration:none;
+  padding:6px 10px;border-radius:var(--radius);transition:all .2s;text-transform:uppercase;white-space:nowrap}
+.ztopbar-tab:hover{color:var(--text);background:rgba(0,229,255,0.04)}
+.ztopbar-tab.active{color:var(--cyan);background:rgba(0,229,255,0.06)}
+.ztopbar-spacer{flex:1}
+.ztopbar-user{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ztopbar-znt{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius);
+  background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.08);font-size:11px;cursor:pointer;transition:all .2s}
+.ztopbar-znt:hover{border-color:rgba(0,229,255,0.2)}
+.ztopbar-znt-icon{font-size:11px}
+.ztopbar-znt-amt{font-family:var(--mono);font-weight:600;color:var(--cyan)}
+.ztopbar-clock{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:1px}
+.ztopbar-menu-btn{width:30px;height:30px;border-radius:50%;background:rgba(0,229,255,0.06);
+  border:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:12px;color:var(--text);font-weight:600;transition:all .2s}
+.ztopbar-menu-btn:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.1)}
+.ztopbar-login{font-size:10px;letter-spacing:2px;padding:6px 14px;border:1px solid rgba(0,229,255,0.2);
+  border-radius:var(--radius);color:var(--cyan);text-decoration:none;text-transform:uppercase;transition:all .2s}
+.ztopbar-login:hover{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.06)}
+
+/* Dropdown */
+.ztopbar-dropdown{position:absolute;top:44px;right:16px;background:rgba(12,18,32,0.98);
+  border:1px solid rgba(0,229,255,0.1);border-radius:var(--radius-lg);padding:6px;min-width:200px;
+  z-index:200;display:none;box-shadow:0 12px 40px rgba(0,0,0,0.6);backdrop-filter:blur(24px)}
+.ztopbar-dropdown.open{display:block}
+.ztopbar-dd-header{padding:8px 12px;border-bottom:1px solid rgba(0,229,255,0.06);margin-bottom:4px}
+.ztopbar-dd-name{font-size:12px;font-weight:600;color:var(--text)}
+.ztopbar-dd-email{font-size:10px;color:var(--text-muted);word-break:break-all;margin-top:2px}
+.ztopbar-dd-balance{font-size:10px;color:var(--text-muted);margin-top:4px}
+.ztopbar-dd-balance span{color:var(--cyan);font-family:var(--mono);font-weight:600}
+.ztopbar-dd-sep{height:1px;background:rgba(0,229,255,0.06);margin:4px 0}
+.ztopbar-dd-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:var(--radius);
+  font-size:11px;color:var(--text);cursor:pointer;transition:background .15s;text-decoration:none}
+.ztopbar-dd-item:hover{background:rgba(0,229,255,0.05)}
+.ztopbar-dd-item span{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+.ztopbar-dd-item.danger{color:#ff5555}

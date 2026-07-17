@@ -45,6 +45,14 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 .tile.new{animation:tilePop .2s ease}
 .controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
 .controls-help span{color:#00e5ff55}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -61,8 +69,16 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
   <div class="go-title">GAME OVER</div>
   <div class="go-score" id="finalScore">SCORE: 0</div>
   <button class="btn" onclick="startGame()">RETRY</button>
-</div>
-<div id="winScreen" class="screen">
+  <div class="social-share">
+    <div style="font-size:11px;color:#556;margin-bottom:6px">SHARE</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','2048',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','2048',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','2048',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','2048',score)">Copy Link</button>
+    </div>
+  </div>
+</div> class="screen">
   <div class="go-title">2048!</div>
   <div class="go-score" id="winScore">SCORE: 0</div>
   <button class="btn" onclick="continueGame()">CONTINUE</button>
@@ -72,12 +88,22 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
   <div id="hud">
     <div class="score">SCORE: <span id="hudScore">0</span></div>
     <div class="best">BEST: <span id="hudBest">0</span></div>
+    <div id="muteBtn" onclick="initSound();toggleSound()" style="cursor:pointer;padding:6px 14px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px;font-size:14px">🔊</div>
   </div>
   <div class="board" id="board"></div>
 </div>
 <div class="controls-help"><span>←→↑↓</span> SLIDE <span>P</span> PAUSE</div>
 
 <script>
+var soundMuted=false,audioCtx=null;
+function initSound(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+function tone(f,d,v,t,dl){if(soundMuted||!audioCtx)return;v=v||.06;t=t||'square';dl=dl||0;var n=audioCtx.currentTime+dl,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=t;o.frequency.setValueAtTime(f,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+d)}
+function toggleSound(){soundMuted=!soundMuted;var b=document.getElementById('muteBtn');if(b)b.textContent=soundMuted?'\u{1F507}':'\u{1F506}'}
+function sfxSlide(){tone(300,.05,.03,'sine')}
+function sfxMerge(){tone(500,.08,.06,'sine');tone(700,.06,.04,'sine',.04)}
+function sfxNewTile(){tone(400,.04,.03,'sine')}
+function sfxVictory(){tone(523,.12,.07,'sine');tone(659,.12,.07,'sine',.1);tone(784,.12,.07,'sine',.2);tone(1047,.15,.08,'sine',.3);tone(1319,.2,.07,'sine',.4)}
+function sfxGameOver(){tone(400,.2,.06,'sawtooth');tone(300,.2,.06,'sawtooth',.15);tone(200,.3,.07,'sawtooth',.3)}
 let grid,score,best=0,won,keepPlaying,moving,animFrame;
 const boardEl=document.getElementById('board');
 
@@ -94,6 +120,7 @@ function addRandomTile(){
   if(cells.length===0)return;
   const{r,c}=cells[Math.floor(Math.random()*cells.length)];
   grid[r][c]=Math.random()<0.9?2:4;
+  sfxNewTile();
   return{r,c};
 }
 
@@ -113,40 +140,42 @@ function slide(row){
     if(arr[i]===arr[i+1]){arr[i]*=2;score+=arr[i];arr.splice(i+1,1);merged=true;}
   }
   while(arr.length<4)arr.push(0);
-  return{result:arr,changed:arr.some((v,i)=>v!==row[i])};
+  return{result:arr,changed:arr.some((v,i)=>v!==row[i]),merged};
 }
 
 function move(dir){
   if(moving)return;
-  let changed=false;
+  let changed=false,mergedAny=false;
   const oldGrid=grid.map(r=>[...r]);
   if(dir==='left'){
-    for(let r=0;r<4;r++){const{s,changed:c}=slide(grid[r]);grid[r]=s;changed=changed||c;}
+    for(let r=0;r<4;r++){const{s,changed:c,merged:m}=slide(grid[r]);grid[r]=s;changed=changed||c;mergedAny=mergedAny||m;}
   }else if(dir==='right'){
-    for(let r=0;r<4;r++){const{result,changed:c}=slide([...grid[r]].reverse());grid[r]=result.reverse();changed=changed||c;}
+    for(let r=0;r<4;r++){const{result,changed:c,merged:m}=slide([...grid[r]].reverse());grid[r]=result.reverse();changed=changed||c;mergedAny=mergedAny||m;}
   }else if(dir==='up'){
     for(let c=0;c<4;c++){
       const col=[grid[0][c],grid[1][c],grid[2][c],grid[3][c]];
-      const{result,changed:c2}=slide(col);
+      const{result,changed:c2,merged:m}=slide(col);
       for(let r=0;r<4;r++)grid[r][c]=result[r];
-      changed=changed||c2;
+      changed=changed||c2;mergedAny=mergedAny||m;
     }
   }else if(dir==='down'){
     for(let c=0;c<4;c++){
       const col=[grid[3][c],grid[2][c],grid[1][c],grid[0][c]];
-      const{result,changed:c2}=slide(col);
+      const{result,changed:c2,merged:m}=slide(col);
       for(let r=0;r<4;r++)grid[r][c]=result[3-r];
-      changed=changed||c2;
+      changed=changed||c2;mergedAny=mergedAny||m;
     }
   }
   if(changed){
     moving=true;
+    sfxSlide();
+    if(mergedAny)sfxMerge();
     const newTile=addRandomTile();
     render(newTile);
     if(score>best)best=score;
     updateHUD();
     if(!won){
-      for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(grid[r][c]===2048){won=true;showWin();return;}
+      for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(grid[r][c]===2048){won=true;sfxVictory();showWin();return;}
     }
     if(!canMove()){setTimeout(()=>endGame(),300);}
     setTimeout(()=>{moving=false;},100);
@@ -173,6 +202,7 @@ function updateHUD(){
 }
 
 function startGame(){
+  initSound();
   document.getElementById('startScreen').classList.remove('active');
   document.getElementById('gameOver').classList.remove('active');
   document.getElementById('winScreen').classList.remove('active');
@@ -188,6 +218,7 @@ function continueGame(){
 }
 
 function endGame(){
+  sfxGameOver();
   document.getElementById('finalScore').textContent='SCORE: '+score;
   document.getElementById('gameOver').classList.add('active');
   document.getElementById('gameWrap').classList.remove('active');
@@ -217,6 +248,15 @@ document.addEventListener('touchend',e=>{
   if(Math.abs(dx)>Math.abs(dy)){move(dx>0?'right':'left');}
   else{move(dy>0?'down':'up');}
 });
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

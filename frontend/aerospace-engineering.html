@@ -102,6 +102,83 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .modal h3{font-size:12px;color:var(--text);margin-bottom:12px;letter-spacing:1px}
 .modal .close{float:right;cursor:pointer;color:var(--text2);font-size:14px}
 .modal .close:hover{color:var(--red)}
+
+/* ═══ AI MESH PANEL ═══ */
+.ai-mesh-panel{position:absolute;top:0;right:0;width:320px;height:100%;background:var(--glass);border-left:1px solid var(--border);backdrop-filter:blur(16px);display:flex;flex-direction:column;z-index:10;transform:translateX(100%);transition:transform .25s ease}
+.ai-mesh-panel.open{transform:translateX(0)}
+.ai-mesh-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.3)}
+.ai-mesh-header .title{font-size:9px;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;font-weight:700}
+.ai-mesh-header .spacer{flex:1}
+.ai-mesh-header .btn{font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--text2);background:transparent;transition:all .15s}
+.ai-mesh-header .btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.ai-mesh-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.ai-mesh-body::-webkit-scrollbar{width:3px}
+.ai-mesh-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.ai-mesh-prompt{width:100%;min-height:80px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:11px;font-family:'Mono',monospace;resize:vertical;outline:none;line-height:1.5}
+.ai-mesh-prompt:focus{border-color:var(--cyan)}
+.ai-mesh-select{width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:3px;font-size:10px;outline:none;cursor:pointer}
+.ai-mesh-select:focus{border-color:var(--cyan)}
+.ai-mesh-gen-btn{width:100%;padding:10px;border:1px solid var(--cyan);border-radius:4px;background:rgba(0,229,255,.08);color:var(--cyan);font-size:10px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .2s;font-family:inherit;text-transform:uppercase}
+.ai-mesh-gen-btn:hover{background:rgba(0,229,255,.18);box-shadow:0 0 12px rgba(0,229,255,.2)}
+.ai-mesh-gen-btn:disabled{opacity:.4;cursor:not-allowed}
+.ai-mesh-progress{width:100%;height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none}
+.ai-mesh-progress.active{display:block}
+.ai-mesh-progress-bar{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));width:0%;transition:width .3s;border-radius:2px}
+.ai-mesh-log{flex:1;min-height:60px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;font-family:'Mono',monospace;font-size:9px;color:var(--text2);white-space:pre-wrap;line-height:1.6;overflow-y:auto}
+.ai-mesh-log .ok{color:var(--green)}
+.ai-mesh-log .err{color:var(--red)}
+.ai-mesh-log .info{color:var(--cyan)}
+.ai-mesh-log .warn{color:var(--orange)}
+.ai-mesh-presets{display:flex;flex-wrap:wrap;gap:4px}
+.ai-mesh-preset{font-size:8px;padding:3px 7px;border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--text2);background:transparent;transition:all .15s;letter-spacing:.5px}
+.ai-mesh-preset:hover{border-color:var(--purple);color:var(--purple);background:rgba(124,77,255,.08)}
+
+/* ═══ TRANSFORM TOOLBAR ═══ */
+.transform-toolbar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:3px;background:rgba(0,0,0,.7);border:1px solid var(--border);border-radius:6px;padding:3px;backdrop-filter:blur(12px);z-index:10}
+.transform-toolbar .tb-btn{font-size:9px;padding:5px 12px;border:1px solid transparent;border-radius:4px;cursor:pointer;color:var(--text2);background:transparent;transition:all .15s;letter-spacing:1px;font-family:inherit;white-space:nowrap}
+.transform-toolbar .tb-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.transform-toolbar .tb-btn.active{color:var(--cyan);border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.1)}
+.transform-toolbar .tb-sep{width:1px;background:var(--border);margin:2px 2px}
+.transform-toolbar .tb-snap{font-size:8px;padding:4px 8px;border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--text2);background:transparent;transition:all .15s}
+.transform-toolbar .tb-snap.active{color:var(--green);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08)}
+
+/* ═══ SCENE HIERARCHY ═══ */
+.hierarchy-panel{position:absolute;top:8px;left:8px;width:180px;max-height:260px;background:rgba(0,0,0,.75);border:1px solid var(--border);border-radius:6px;backdrop-filter:blur(12px);z-index:10;overflow:hidden;display:none}
+.hierarchy-panel.open{display:block}
+.hierarchy-header{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);font-size:8px;letter-spacing:1.5px;color:var(--text2);text-transform:uppercase}
+.hierarchy-list{max-height:200px;overflow-y:auto;padding:4px}
+.hierarchy-list::-webkit-scrollbar{width:2px}
+.hierarchy-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:1px}
+.hierarchy-item{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:3px;cursor:pointer;font-size:9px;color:var(--text2);transition:all .1s}
+.hierarchy-item:hover{background:rgba(0,229,255,.06);color:var(--text)}
+.hierarchy-item.selected{background:rgba(0,229,255,.1);color:var(--cyan)}
+.hierarchy-item .h-icon{width:14px;text-align:center;font-size:10px;flex-shrink:0}
+.hierarchy-item .h-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hierarchy-item .h-vis{font-size:9px;cursor:pointer;opacity:.5;transition:opacity .15s}
+.hierarchy-item .h-vis:hover{opacity:1}
+.hierarchy-item .h-vis.hidden{opacity:.2;color:var(--red)}
+.hierarchy-item .h-lock{font-size:8px;cursor:pointer;opacity:.3;transition:opacity .15s}
+.hierarchy-item .h-lock:hover{opacity:1}
+.hierarchy-item .h-lock.locked{opacity:.8;color:var(--orange)}
+
+/* ═══ MEASUREMENT TOOL ═══ */
+.measure-info{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.75);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:10px;color:var(--cyan);font-family:'Mono',monospace;letter-spacing:1px;display:none;z-index:10;backdrop-filter:blur(12px)}
+.measure-info.active{display:block}
+
+/* ═══ MATERIAL LIBRARY ═══ */
+.material-lib{display:flex;flex-wrap:wrap;gap:4px;padding:4px 0}
+.material-swatch{width:28px;height:28px;border-radius:4px;border:2px solid var(--border);cursor:pointer;transition:all .15s;position:relative}
+.material-swatch:hover{border-color:var(--cyan);transform:scale(1.1)}
+.material-swatch.active{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.3)}
+.material-swatch .mat-tip{position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:2px 6px;font-size:8px;color:var(--text2);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s}
+.material-swatch:hover .mat-tip{opacity:1}
+
+/* ═══ SNAP TOGGLE ═══ */
+.snap-popup{position:absolute;bottom:45px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid var(--border);border-radius:6px;padding:6px;display:none;gap:4px;z-index:11;backdrop-filter:blur(12px)}
+.snap-popup.open{display:flex}
+.snap-opt{font-size:8px;padding:4px 8px;border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--text2);background:transparent;transition:all .15s}
+.snap-opt:hover{color:var(--text)}
+.snap-opt.active{color:var(--green);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08)}
 </style>
 </head>
 <body>
@@ -163,6 +240,86 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <button class="vp-btn" onclick="toggleWireframe()">WIREFRAME</button>
         <button class="vp-btn" onclick="toggleGrid()">GRID</button>
         <button class="vp-btn" onclick="exportSTL()">EXPORT STL</button>
+        <button class="vp-btn" onclick="toggleHierarchy()">HIERARCHY</button>
+        <button class="vp-btn" onclick="toggleMeasureMode()">MEASURE</button>
+      </div>
+
+      <!-- Scene Hierarchy -->
+      <div class="hierarchy-panel" id="hierarchyPanel">
+        <div class="hierarchy-header">
+          <span>SCENE</span>
+          <span style="flex:1"></span>
+          <span id="hierarchyCount" style="color:var(--cyan)">0</span>
+        </div>
+        <div class="hierarchy-list" id="hierarchyList"></div>
+      </div>
+
+      <!-- Measurement Info -->
+      <div class="measure-info" id="measureInfo">CLICK TWO POINTS TO MEASURE</div>
+
+      <!-- Transform Toolbar (always visible) -->
+      <div class="transform-toolbar" id="transformToolbar">
+        <button class="tb-btn active" data-mode="translate" onclick="setTransformMode('translate')">MOVE</button>
+        <button class="tb-btn" data-mode="rotate" onclick="setTransformMode('rotate')">ROTATE</button>
+        <button class="tb-btn" data-mode="scale" onclick="setTransformMode('scale')">SCALE</button>
+        <div class="tb-sep"></div>
+        <button class="tb-snap" id="snapToggle" onclick="toggleSnap()">SNAP</button>
+        <button class="tb-btn" onclick="resetTransform()">RESET</button>
+      </div>
+
+      <!-- Snap Options Popup -->
+      <div class="snap-popup" id="snapPopup">
+        <button class="snap-opt active" data-snap="grid" onclick="setSnapMode('grid')">GRID</button>
+        <button class="snap-opt" data-snap="vertex" onclick="setSnapMode('vertex')">VERTEX</button>
+        <button class="snap-opt" data-snap="edge" onclick="setSnapMode('edge')">EDGE MID</button>
+      </div>
+
+      <!-- AI Mesh Panel (floating) -->
+      <div class="ai-mesh-panel" id="aiMeshPanel">
+        <div class="ai-mesh-header">
+          <div class="title">OLLAMA 3D</div>
+          <div class="spacer"></div>
+          <button class="btn" onclick="toggleAIPanel()">✕</button>
+        </div>
+        <div class="ai-mesh-body">
+          <div>
+            <div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px">MODEL</div>
+            <select class="ai-mesh-select" id="ollamaModel">
+              <option value="tinyllama">tinyllama</option>
+              <option value="qwen3:0.6b">qwen3:0.6b</option>
+              <option value="gemma3:1b" selected>gemma3:1b</option>
+              <option value="stablelm2:1.6b">stablelm2:1.6b</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px">ENGINE</div>
+            <select class="ai-mesh-select" id="ollamaEngine">
+              <option value="local">Local (trimesh)</option>
+              <option value="openscad">OpenSCAD</option>
+              <option value="procedural">Procedural</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px">PRESETS</div>
+            <div class="ai-mesh-presets">
+              <button class="ai-mesh-preset" onclick="setAIPrompt('rocket with 4 fins and a nose cone')">Rocket</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('satellite with solar panels and antenna')">Satellite</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('space station with rotating ring')">Station</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('drone with 4 propellers')">Drone</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('landing gear with shock absorbers')">Landing Gear</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('engine nozzle bell shape')">Nozzle</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('gear with 16 teeth')">Gear</button>
+              <button class="ai-mesh-preset" onclick="setAIPrompt('terrain with mountains and valleys')">Terrain</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px">PROMPT</div>
+            <textarea class="ai-mesh-prompt" id="ollamaPrompt" placeholder="Describe the 3D model you want to generate...&#10;&#10;Examples:&#10;- rocket with 4 fins and a nose cone&#10;- satellite with solar panels&#10;- gear with 24 teeth&#10;- terrain with craters"></textarea>
+          </div>
+          <button class="ai-mesh-gen-btn" id="ollamaGenBtn" onclick="generateOllama3D()">GENERATE</button>
+          <div class="ai-mesh-progress" id="ollamaProgress"><div class="ai-mesh-progress-bar" id="ollamaProgressBar"></div></div>
+          <div class="ai-mesh-log" id="ollamaLog">Ready. Type a prompt and click GENERATE.</div>
+        </div>
       </div>
     </div>
 
@@ -201,6 +358,15 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 <script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
 // ═══════════════════════════════════════════════════════════════════
 // ZICORE Aerospace Engineering — Main Controller
 // ═══════════════════════════════════════════════════════════════════
@@ -290,7 +456,7 @@ function initViewport() {
   canvas.addEventListener('wheel', e => { dist = Math.max(2, Math.min(20, dist + e.deltaY * 0.005)); updateCamera(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-  // Click to select
+  // Click to select (or measure)
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   canvas.addEventListener('click', e => {
@@ -299,6 +465,10 @@ function initViewport() {
     mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(sceneObjects, true);
+    if (measureMode && intersects.length > 0) {
+      handleMeasureClick(intersects[0].point);
+      return;
+    }
     selectObject(intersects.length > 0 ? intersects[0].object : null);
   });
 
@@ -309,6 +479,20 @@ function initViewport() {
   transformControls = new THREE.TransformControls(camera, renderer.domElement);
   transformControls.addEventListener('dragging-changed', e => {
     // Disable orbit when transforming
+    if (e.value) {
+      canvas.style.cursor = currentTransformMode === 'translate' ? 'move' : currentTransformMode === 'rotate' ? 'crosshair' : 'nwse-resize';
+    } else {
+      canvas.style.cursor = 'default';
+    }
+  });
+  transformControls.addEventListener('objectChange', () => {
+    if (selectedObject && snapEnabled && currentTransformMode === 'translate') {
+      selectedObject.position.x = snapValue(selectedObject.position.x);
+      selectedObject.position.y = snapValue(selectedObject.position.y);
+      selectedObject.position.z = snapValue(selectedObject.position.z);
+    }
+    updatePropsPanel();
+    if (hierarchyVisible) updateHierarchy();
   });
   scene.add(transformControls);
 
@@ -328,6 +512,7 @@ function addMeshToScene(geometry, color, name) {
   sceneObjects.push(mesh);
   selectObject(mesh);
   updateStats();
+  if (hierarchyVisible) updateHierarchy();
   return mesh;
 }
 
@@ -338,8 +523,15 @@ function selectObject(obj) {
   selectedObject = obj;
   if (obj) {
     obj.material.emissive && obj.material.emissive.setHex(0x002244);
+    if (!obj.userData.locked && transformControls) {
+      transformControls.attach(obj);
+      transformControls.setMode(currentTransformMode);
+    }
+  } else if (transformControls) {
+    transformControls.detach();
   }
   updatePropsPanel();
+  if (hierarchyVisible) updateHierarchy();
 }
 
 function updateStats() {
@@ -487,6 +679,8 @@ const TABS = {
   },
   ai3d: {
     tools: [
+      {cat:'OLLAMA LOCAL'},
+      {id:'ai_ollama',ico:'🧠',name:'Ollama 3D (AI)',action:'ollama3d'},
       {cat:'AI ENGINES'},
       {id:'ai_tripo',ico:'◎',name:'Tripo3D',engine:'tripo3d'},
       {id:'ai_meshy',ico:'◆',name:'Meshy AI',engine:'meshy'},
@@ -578,7 +772,10 @@ function toolAction(tabId, toolId) {
   if (tabId === 'primitives') generatePrimitive(tool);
   else if (tabId === 'aero') generateAero(tool);
   else if (tabId === 'cad') openCADEditor(tool);
-  else if (tabId === 'ai3d') openAI3DPanel(tool);
+  else if (tabId === 'ai3d') {
+    if (tool.action === 'ollama3d') { toggleAIPanel(); }
+    else openAI3DPanel(tool);
+  }
   else if (tabId === 'procedural') generateProcedural(tool);
   else if (tabId === 'modifiers') applyModifier(tool);
   else if (tabId === 'booleans') applyBoolean(tool);
@@ -1262,17 +1459,25 @@ function updatePropsPanel() {
     </div>
     <div class="prop-section">
       <div class="prop-title">ACTIONS</div>
-      <button class="prop-btn danger" onclick="deleteSelected()">DELETE</button>
+      <button class="prop-btn" onclick="duplicateSelected()">DUPLICATE</button>
+      <button class="prop-btn danger" onclick="deleteSelected()" style="margin-top:4px">DELETE</button>
+    </div>
+    <div class="prop-section">
+      ${renderMaterialLib()}
     </div>`;
 }
 
 function deleteSelected() {
   if (!selectedObject) return;
+  if (transformControls && transformControls.object === selectedObject) {
+    transformControls.detach();
+  }
   scene.remove(selectedObject);
   sceneObjects = sceneObjects.filter(o => o !== selectedObject);
   selectedObject = null;
   updateStats();
   updatePropsPanel();
+  if (hierarchyVisible) updateHierarchy();
   setStatus('Object deleted');
 }
 
@@ -1304,6 +1509,357 @@ function setStatus(msg, isErr) {
 function goBack() {
   try { parent.zicorePortal.back(); } catch(e) { window.location = '/'; }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// MATERIAL LIBRARY
+// ═══════════════════════════════════════════════════════════════════
+
+const MATERIALS = [
+  {name:'Aluminum',color:0xb8b8b8,roughness:0.4,metalness:0.8,hex:'#b8b8b8'},
+  {name:'Titanium',color:0x6b6b6b,roughness:0.35,metalness:0.85,hex:'#6b6b6b'},
+  {name:'Steel',color:0xc0c0c0,roughness:0.3,metalness:0.9,hex:'#c0c0c0'},
+  {name:'Carbon Fiber',color:0x222222,roughness:0.5,metalness:0.2,hex:'#222222'},
+  {name:'Copper',color:0xb87333,roughness:0.3,metalness:0.9,hex:'#b87333'},
+  {name:'Gold',color:0xffd700,roughness:0.2,metalness:1.0,hex:'#ffd700'},
+  {name:'PLA White',color:0xf0f0f0,roughness:0.7,metalness:0.0,hex:'#f0f0f0'},
+  {name:'PLA Black',color:0x1a1a1a,roughness:0.7,metalness:0.0,hex:'#1a1a1a'},
+  {name:'PLA Blue',color:0x2255cc,roughness:0.7,metalness:0.0,hex:'#2255cc'},
+  {name:'PLA Red',color:0xcc2222,roughness:0.7,metalness:0.0,hex:'#cc2222'},
+  {name:'PLA Green',color:0x22aa44,roughness:0.7,metalness:0.0,hex:'#22aa44'},
+  {name:'PLA Orange',color:0xff8800,roughness:0.7,metalness:0.0,hex:'#ff8800'},
+  {name:'Glass',color:0xaaccff,roughness:0.05,metalness:0.1,hex:'#aaccff'},
+  {name:'Rubber',color:0x333333,roughness:0.95,metalness:0.0,hex:'#333333'},
+  {name:'Ceramic',color:0xe8e0d0,roughness:0.6,metalness:0.05,hex:'#e8e0d0'},
+];
+
+let selectedMaterialIdx = -1;
+
+function renderMaterialLib() {
+  return `<div class="prop-title">MATERIAL LIBRARY</div>
+    <div class="material-lib">${MATERIALS.map((m,i) =>
+      `<div class="material-swatch${selectedMaterialIdx===i?' active':''}" style="background:${m.hex}" onclick="selectMaterial(${i})" title="${m.name}"><div class="mat-tip">${m.name}</div></div>`
+    ).join('')}</div>
+    <div style="font-size:8px;color:var(--text2);margin-top:6px;line-height:1.5">
+      Click material, then click object to assign.<br>
+      Roughness: <span id="matRoughVal" style="color:var(--cyan)">0.5</span> ·
+      Metalness: <span id="matMetalVal" style="color:var(--cyan)">0.5</span>
+    </div>`;
+}
+
+function selectMaterial(idx) {
+  selectedMaterialIdx = idx;
+  document.querySelectorAll('.material-swatch').forEach((el,i) => el.classList.toggle('active', i===idx));
+  const m = MATERIALS[idx];
+  document.getElementById('matRoughVal').textContent = m.roughness;
+  document.getElementById('matMetalVal').textContent = m.metalness;
+  if (selectedObject && selectedObject.material) {
+    assignMaterialToObject(selectedObject, m);
+    setStatus('Assigned ' + m.name + ' to ' + (selectedObject.name || 'object'));
+  }
+}
+
+function assignMaterialToObject(obj, matDef) {
+  if (!obj || !obj.material) return;
+  obj.material.color.setHex(matDef.color);
+  obj.material.roughness = matDef.roughness;
+  obj.material.metalness = matDef.metalness;
+  if (obj.material.isMeshPhongMaterial) {
+    obj.material.shininess = (1 - matDef.roughness) * 100;
+    obj.material.specular = new THREE.Color(matDef.metalness > 0.5 ? 0x444444 : 0x111111);
+  }
+  obj.material.needsUpdate = true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TRANSFORM GIZMO CONTROLS
+// ═══════════════════════════════════════════════════════════════════
+
+let currentTransformMode = 'translate';
+let snapEnabled = false;
+let snapMode = 'grid';
+const snapGridSize = 0.5;
+
+function setTransformMode(mode) {
+  currentTransformMode = mode;
+  document.querySelectorAll('.transform-toolbar .tb-btn[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  if (transformControls && selectedObject) {
+    transformControls.setMode(mode);
+    transformControls.attach(selectedObject);
+  }
+}
+
+function toggleSnap() {
+  snapEnabled = !snapEnabled;
+  document.getElementById('snapToggle').classList.toggle('active', snapEnabled);
+  document.getElementById('snapPopup').classList.toggle('open', snapEnabled);
+}
+
+function setSnapMode(mode) {
+  snapMode = mode;
+  document.querySelectorAll('.snap-opt').forEach(b => b.classList.toggle('active', b.dataset.snap === mode));
+}
+
+function snapValue(val) {
+  if (!snapEnabled || snapMode !== 'grid') return val;
+  return Math.round(val / snapGridSize) * snapGridSize;
+}
+
+function resetTransform() {
+  if (!selectedObject) return;
+  if (currentTransformMode === 'translate') {
+    selectedObject.position.set(0, 0, 0);
+  } else if (currentTransformMode === 'rotate') {
+    selectedObject.rotation.set(0, 0, 0);
+  } else if (currentTransformMode === 'scale') {
+    selectedObject.scale.set(1, 1, 1);
+  }
+  updatePropsPanel();
+  updateHierarchy();
+  setStatus('Transform reset');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SCENE HIERARCHY
+// ═══════════════════════════════════════════════════════════════════
+
+let hierarchyVisible = false;
+
+function toggleHierarchy() {
+  hierarchyVisible = !hierarchyVisible;
+  document.getElementById('hierarchyPanel').classList.toggle('open', hierarchyVisible);
+  if (hierarchyVisible) updateHierarchy();
+}
+
+function updateHierarchy() {
+  if (!hierarchyVisible) return;
+  const list = document.getElementById('hierarchyList');
+  document.getElementById('hierarchyCount').textContent = sceneObjects.length;
+  list.innerHTML = sceneObjects.map((obj, i) => {
+    const isSelected = obj === selectedObject;
+    const isHidden = !obj.visible;
+    const isLocked = obj.userData.locked;
+    const icon = obj.isGroup ? '⊞' : (obj.geometry?.type || '◎').replace('Geometry', '').substring(0, 2);
+    return `<div class="hierarchy-item${isSelected ? ' selected' : ''}" onclick="selectFromHierarchy(${i})" data-idx="${i}">
+      <span class="h-icon">${icon}</span>
+      <span class="h-name">${obj.name || 'Object_' + (i+1)}</span>
+      <span class="h-vis${isHidden ? ' hidden' : ''}" onclick="event.stopPropagation();toggleVis(${i})" title="Toggle visibility">${isHidden ? '👁‍🗨' : '👁'}</span>
+      <span class="h-lock${isLocked ? ' locked' : ''}" onclick="event.stopPropagation();toggleLock(${i})" title="Toggle lock">${isLocked ? '🔒' : '🔓'}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectFromHierarchy(idx) {
+  if (idx >= 0 && idx < sceneObjects.length) {
+    selectObject(sceneObjects[idx]);
+    updateHierarchy();
+  }
+}
+
+function toggleVis(idx) {
+  if (idx >= 0 && idx < sceneObjects.length) {
+    sceneObjects[idx].visible = !sceneObjects[idx].visible;
+    updateHierarchy();
+  }
+}
+
+function toggleLock(idx) {
+  if (idx >= 0 && idx < sceneObjects.length) {
+    const obj = sceneObjects[idx];
+    obj.userData.locked = !obj.userData.locked;
+    if (obj.userData.locked && transformControls && transformControls.object === obj) {
+      transformControls.detach();
+    }
+    updateHierarchy();
+  }
+}
+
+function duplicateSelected() {
+  if (!selectedObject) return;
+  const clone = selectedObject.clone();
+  clone.name = (selectedObject.name || 'object') + '_copy';
+  clone.position.x += 1;
+  if (clone.material) clone.material = clone.material.clone();
+  scene.add(clone);
+  sceneObjects.push(clone);
+  meshCount++;
+  selectObject(clone);
+  updateStats();
+  updateHierarchy();
+  setStatus('Duplicated ' + clone.name);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MEASUREMENT TOOL
+// ═══════════════════════════════════════════════════════════════════
+
+let measureMode = false;
+let measurePoints = [];
+let measureLine = null;
+let measureLabel = null;
+const measureUnit = 'm';
+
+function toggleMeasureMode() {
+  measureMode = !measureMode;
+  const info = document.getElementById('measureInfo');
+  info.classList.toggle('active', measureMode);
+  measurePoints = [];
+  if (measureLine) { scene.remove(measureLine); measureLine = null; }
+  if (measureLabel) { scene.remove(measureLabel); measureLabel = null; }
+  if (measureMode) {
+    setStatus('MEASURE: Click two points on objects');
+    info.textContent = 'CLICK FIRST POINT';
+  } else {
+    setStatus('Measurement tool deactivated');
+  }
+}
+
+function handleMeasureClick(point) {
+  if (!measureMode) return false;
+  measurePoints.push(point.clone());
+  if (measurePoints.length === 1) {
+    document.getElementById('measureInfo').textContent = 'CLICK SECOND POINT';
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), new THREE.MeshBasicMaterial({color:0x00e5ff}));
+    dot.position.copy(point);
+    dot.userData.measureDot = true;
+    scene.add(dot);
+    return true;
+  }
+  if (measurePoints.length >= 2) {
+    const p1 = measurePoints[0], p2 = measurePoints[1];
+    const dist = p1.distanceTo(p2);
+    const dir = p2.clone().sub(p1);
+    const mid = p1.clone().add(p2).multiplyScalar(0.5);
+
+    const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    if (measureLine) scene.remove(measureLine);
+    measureLine = new THREE.Line(geo, new THREE.LineBasicMaterial({color:0x00ff88, linewidth:2}));
+    scene.add(measureLine);
+
+    document.querySelectorAll('.measure-dot').forEach(d => scene.remove(d));
+    [p1, p2].forEach(p => {
+      const d = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), new THREE.MeshBasicMaterial({color:0x00ff88}));
+      d.position.copy(p);
+      d.userData.measureDot = true;
+      scene.add(d);
+    });
+
+    const unitScale = {mm:1000, cm:100, m:1};
+    const val = (dist * (unitScale[measureUnit] || 1)).toFixed(2);
+    document.getElementById('measureInfo').textContent = `${val} ${measureUnit}`;
+    setStatus(`Distance: ${val} ${measureUnit}`);
+    measurePoints = [];
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OLLAMA AI 3D GENERATION
+// ═══════════════════════════════════════════════════════════════════
+
+function setAIPrompt(text) {
+  document.getElementById('ollamaPrompt').value = text;
+}
+
+function toggleAIPanel() {
+  document.getElementById('aiMeshPanel').classList.toggle('open');
+}
+
+function aiLog(msg, cls) {
+  const log = document.getElementById('ollamaLog');
+  log.innerHTML += `\n<span class="${cls || ''}">${msg}</span>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+async function generateOllama3D() {
+  const prompt = document.getElementById('ollamaPrompt').value.trim();
+  const model = document.getElementById('ollamaModel').value;
+  const engine = document.getElementById('ollamaEngine').value;
+  const btn = document.getElementById('ollamaGenBtn');
+  const progress = document.getElementById('ollamaProgress');
+  const bar = document.getElementById('ollamaProgressBar');
+
+  if (!prompt) { aiLog('Please enter a prompt.', 'err'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'GENERATING...';
+  progress.classList.add('active');
+  bar.style.width = '10%';
+  aiLog(`\n> ${prompt}`, 'info');
+  aiLog(`Model: ${model} · Engine: ${engine}`, 'info');
+
+  try {
+    bar.style.width = '30%';
+    aiLog('Sending to Ollama for parsing...', '');
+
+    const resp = await fetch(API + '/api/ai3d/ollama-generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prompt, model, engine}),
+    });
+
+    bar.style.width = '60%';
+    const data = await resp.json();
+
+    if (data.status === 'ok') {
+      bar.style.width = '90%';
+      aiLog(`Parsed: ${data.parsed_type || 'unknown'}`, 'ok');
+      if (data.params) aiLog(`Params: ${JSON.stringify(data.params)}`, '');
+      if (data.file) {
+        aiLog(`File: ${data.file}`, 'ok');
+        loadSTLFromServer(data.file);
+      }
+      bar.style.width = '100%';
+      aiLog('Done!', 'ok');
+    } else {
+      aiLog(`Error: ${data.error || 'unknown error'}`, 'err');
+      if (data.fallback) {
+        aiLog('Trying local fallback...', 'warn');
+        bar.style.width = '50%';
+        const fb = await fetch(API + '/api/ai3d/generate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({engine: 'local', prompt}),
+        });
+        const fbData = await fb.json();
+        if (fbData.status === 'ok' && fbData.file) {
+          loadSTLFromServer(fbData.file);
+          aiLog('Fallback generated OK', 'ok');
+        } else {
+          aiLog(`Fallback error: ${fbData.error}`, 'err');
+        }
+      }
+    }
+  } catch(e) {
+    aiLog(`Network error: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'GENERATE';
+    setTimeout(() => { progress.classList.remove('active'); bar.style.width = '0%'; }, 1000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════════
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  switch(e.key.toLowerCase()) {
+    case 'g': setTransformMode('translate'); break;
+    case 'r': setTransformMode('rotate'); break;
+    case 's': setTransformMode('scale'); break;
+    case 'delete': case 'backspace': if (selectedObject) { e.preventDefault(); deleteSelected(); } break;
+    case 'd': if (e.ctrlKey || e.metaKey) { e.preventDefault(); duplicateSelected(); } break;
+    case 'h': toggleHierarchy(); break;
+    case 'm': toggleMeasureMode(); break;
+    case 'escape':
+      if (measureMode) toggleMeasureMode();
+      if (document.getElementById('aiMeshPanel').classList.contains('open')) toggleAIPanel();
+      break;
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // INIT

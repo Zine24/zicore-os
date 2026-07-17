@@ -12,6 +12,8 @@ import secrets
 import logging
 import sqlite3
 import time
+import uuid
+import asyncio
 import threading
 from datetime import datetime, timezone, timedelta
 import uvicorn
@@ -26,6 +28,35 @@ from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger("zicore.web")
+
+# DoH DNS resolver - ISP blocks UDP port 53, use HTTPS DNS instead
+import socket as _socket
+_orig_getaddrinfo = _socket.getaddrinfo
+_doh_cache = {}
+def _doh_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    cache_key = (host, port, family, type)
+    if cache_key in _doh_cache:
+        return _doh_cache[cache_key]
+    if host in ('localhost', '127.0.0.1', '::1') or host.startswith('192.168.') or host.startswith('10.') or host.startswith('172.'):
+        return _orig_getaddrinfo(host, port, family, type, proto, flags)
+    try:
+        import requests as _r
+        resp = _r.get(f"https://1.1.1.1/dns-query?name={host}&type=A",
+            headers={"Accept": "application/dns-json", "Host": "cloudflare-dns.com"},
+            timeout=5, verify=False)
+        data = resp.json()
+        result = []
+        for ans in data.get("Answer", []):
+            if ans.get("type") == 1:
+                result.append((_socket.AF_INET, _socket.SOCK_STREAM, 6, '', (ans["data"], port or 443)))
+        if result:
+            _doh_cache[cache_key] = result
+            return result
+    except Exception:
+        pass
+    return _orig_getaddrinfo(host, port, family, type, proto, flags)
+_socket.getaddrinfo = _doh_getaddrinfo
+logger.info("DoH DNS resolver active (ISP blocks UDP 53)")
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 OUTPUT_DIR = Path(__file__).parent / "output"
@@ -620,8 +651,213 @@ app.add_middleware(
 app.add_middleware(TrafficMiddleware)
 
 
+# ─── SSO Auth Middleware — Login obligatorio ─────────────────────────────────
+# Sin token valido no se accede a NADA excepto login y APIs de auth
+class SSOAuthMiddleware:
+    """Middleware that enforces SSO login on all routes."""
+
+    # Rutas publicas (no requieren autenticacion)
+    PUBLIC_PATHS = {
+        "/login",
+        "/api/sso/login",
+        "/api/sso/register",
+        "/api/sso/plans",
+        "/api/sso/check-username",
+        "/api/mail/check-username",
+        "/api/mail/validate-email",
+        "/api/system/stats",
+        "/api/health",
+        "/api/games/catalog",
+        "/api/games/scores",
+        "/api/downloads",
+        "/",
+        "/zinemotion",
+        "/whitepaper",
+        "/ecosystem",
+        "/zicodex",
+        "/download",
+        "/installers",
+        "/mobile",
+        "/api-docs",
+        "/docs",
+        "/services",
+        "/aerospace-portal",
+        "/zine-motion",
+        "/developer-portal",
+        "/solar-navigation",
+        "/mission-control",
+        "/vehicle-designer",
+        "/propulsion-lab",
+        "/orbital-mechanics",
+        "/engineering",
+        "/aerospace-engineering",
+        "/games",
+        "/outpreview",
+        "/materializer",
+        "/video-editor",
+        "/zicore-bank",
+        "/zicore-print",
+        "/ziprint",
+        "/download/apk",
+        "/terms-of-service",
+        "/privacy-policy",
+        "/mail",
+        "/mail-portal",
+        "/mail-accounts",
+        "/mail-incoming",
+        "/mail/register",
+        "/zinemotion-mail",
+        "/settings",
+        "/dashboard",
+        "/web-stats",
+        "/browser",
+        "/zio",
+        "/zicore",
+        "/videochat",
+        "/storage",
+        "/multimedia",
+        "/crypto-pay",
+        "/environment",
+        "/redgen",
+        "/zishield",
+        "/governance",
+        "/asset-registry",
+        "/vr-viewer",
+        "/display-monitor",
+        "/api/vr/sessions",
+        "/api/mail/admin-check",
+    }
+
+    # Prefijos publicos (static files necesarios para login)
+    PUBLIC_PREFIXES = (
+        "/output/",    # generated content (images, meshes, etc.)
+        "/css/",
+        "/js/",
+        "/favicon",
+        "/games/",     # game files accessible without login
+        "/media/",     # media files
+        "/static/",    # static assets
+        "/installers/", # downloadable installers and APKs
+    )
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        path = scope.get("path", "")
+
+        # Allow public paths
+        if path in self.PUBLIC_PATHS:
+            return await self.app(scope, receive, send)
+
+        # Allow public prefixes
+        for prefix in self.PUBLIC_PREFIXES:
+            if path.startswith(prefix):
+                return await self.app(scope, receive, send)
+
+        # Allow WebSocket (auth handled per-connection)
+        if scope["type"] == "websocket":
+            return await self.app(scope, receive, send)
+
+        # Check for SSO token in cookie or Authorization header
+        headers = dict(scope.get("headers", []))
+        auth_header = headers.get(b"authorization", b"").decode("utf-8", "replace")
+
+        # Also check query params for token (useful for initial page load)
+        query_string = scope.get("query_string", b"").decode("utf-8", "replace")
+        token = None
+
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        elif "token=" in query_string:
+            for param in query_string.split("&"):
+                if param.startswith("token="):
+                    token = param[6:]
+                    break
+
+        # If no token, check for SSO cookie in headers
+        if not token:
+            cookie_header = headers.get(b"cookie", b"").decode("utf-8", "replace")
+            for part in cookie_header.split(";"):
+                part = part.strip()
+                if part.startswith("zicore_sso_token="):
+                    token = part.split("=", 1)[1]
+                    break
+
+        # Validate token
+        if token and sso:
+            result = sso.verify_token(token)
+            if result.get("success") and result.get("user"):
+                # Token valid — attach user to scope
+                scope["state"] = scope.get("state", {})
+                scope["state"]["sso_user"] = result["user"]
+                return await self.app(scope, receive, send)
+
+        # No valid token — redirect to login (for HTML pages)
+        # or return 401 (for API calls)
+        accept = headers.get(b"accept", b"").decode("utf-8", "replace")
+
+        if "text/html" in accept:
+            # Browser request — redirect to login
+            from fastapi.responses import RedirectResponse
+            redirect_url = f"/login?redirect={path}"
+            response = RedirectResponse(url=redirect_url, status_code=302)
+            await response(scope, receive, send)
+        else:
+            # API request — return 401
+            response = JSONResponse(
+                {"status": "error", "error": "Authentication required", "login_url": "/login"},
+                status_code=401
+            )
+            await response(scope, receive, send)
+
+
+app.add_middleware(SSOAuthMiddleware)
+
+
+# ─── Module-level singletons ─────────────────────────────────────────────────
+try:
+    from zicore.generation_library import GenerationLibrary
+    generation_library = GenerationLibrary()
+except Exception as _e:
+    logger.warning(f"Generation Library unavailable: {_e}")
+    generation_library = None
+
+try:
+    from zicore.outpreview import OutPreview
+    outpreview = OutPreview()
+except Exception as _e:
+    logger.warning(f"OutPreview unavailable: {_e}")
+    outpreview = None
+
+try:
+    from zicore.materializer import ZICOREMaterializer
+    materializer = ZICOREMaterializer()
+except Exception as _e:
+    logger.warning(f"ZICOREMaterializer unavailable: {_e}")
+    materializer = None
+
+try:
+    from zicore.vr_stream import vr_stream_manager
+except Exception as _e:
+    logger.warning(f"VR Stream Manager unavailable: {_e}")
+    vr_stream_manager = None
+
+# ─── ZICORE SSO Singleton ────────────────────────────────────────────────────
+try:
+    from zicore.sso import ZICORESSO
+    sso = ZICORESSO()
+except Exception as _e:
+    logger.warning(f"SSO unavailable: {_e}")
+    sso = None
+
+
 @app.get("/")
 async def serve_main_menu(request: Request):
+    """Main entry point — public landing page."""
     host = request.headers.get("host", "")
     if "zinemotion.com.mx" in host:
         return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
@@ -685,6 +921,16 @@ async def serve_mail_portal():
     return FileResponse(str(FRONTEND_DIR / "mail-portal.html"))
 
 
+@app.get("/mail-accounts")
+async def serve_mail_accounts():
+    return FileResponse(str(FRONTEND_DIR / "mail-accounts.html"))
+
+
+@app.get("/mail-incoming")
+async def serve_mail_incoming():
+    return FileResponse(str(FRONTEND_DIR / "mail-incoming.html"))
+
+
 @app.get("/mission-control")
 async def serve_mission_control():
     return FileResponse(str(FRONTEND_DIR / "mission-control.html"))
@@ -730,9 +976,45 @@ async def serve_developer():
     return FileResponse(str(FRONTEND_DIR / "developer.html"))
 
 
+@app.get("/api-docs")
+@app.get("/docs")
+async def serve_api_docs():
+    return FileResponse(str(FRONTEND_DIR / "api-docs.html"))
+
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(str(FRONTEND_DIR / "portal.html"))
+
+
+@app.get("/services")
+async def serve_services():
+    return FileResponse(str(FRONTEND_DIR / "services.html"))
+
+
+@app.get("/aerospace-portal")
+async def serve_aerospace_portal():
+    return FileResponse(str(FRONTEND_DIR / "aerospace-portal.html"))
+
+
+@app.get("/zine-motion")
+async def serve_zinemotion_portal():
+    return FileResponse(str(FRONTEND_DIR / "zinemotion-portal.html"))
+
+
+@app.get("/developer-portal")
+async def serve_developer_portal():
+    return FileResponse(str(FRONTEND_DIR / "developer-portal.html"))
+
+
+@app.get("/download/apk")
+async def download_apk():
+    fpath = INSTALLERS_DIR / "zicore-android.apk"
+    if not fpath.exists():
+        return JSONResponse({"status": "error", "error": "APK not found"}, status_code=404)
+    count = _load_downloads() + 1
+    _save_downloads(count)
+    return FileResponse(str(fpath), media_type="application/vnd.android.package-archive", filename="zicore-android.apk")
 
 
 @app.get("/download")
@@ -749,19 +1031,51 @@ INSTALLERS_DIR = Path(__file__).parent / "installers"
 
 @app.get("/installers/{filename}")
 async def download_installer(filename: str):
-    allowed = {"install_zicore.ps1", "install_zicore.sh", "install_zicore_mac.sh"}
+    allowed = {"install_zicore.ps1", "install_zicore.sh", "install_zicore_mac.sh", "zicore-android.apk"}
     if filename not in allowed:
         return JSONResponse({"status": "error", "error": "File not found"}, status_code=404)
     fpath = INSTALLERS_DIR / filename
     if not fpath.exists():
         return JSONResponse({"status": "error", "error": "File not found"}, status_code=404)
-    media_type = "text/plain" if filename.endswith(".sh") else "text/plain"
+    count = _load_downloads() + 1
+    _save_downloads(count)
+    if filename.endswith(".apk"):
+        media_type = "application/vnd.android.package-archive"
+    elif filename.endswith(".sh"):
+        media_type = "text/plain"
+    else:
+        media_type = "text/plain"
     return FileResponse(str(fpath), media_type=media_type, filename=filename)
 
 
 @app.get("/dashboard")
 async def serve_dashboard():
     return FileResponse(str(FRONTEND_DIR / "dashboard.html"))
+
+
+@app.get("/materializer")
+async def serve_materializer():
+    return FileResponse(str(FRONTEND_DIR / "materializer.html"))
+
+
+@app.get("/video-editor")
+async def serve_video_editor():
+    return FileResponse(str(FRONTEND_DIR / "video-editor.html"))
+
+
+@app.get("/login")
+async def serve_sso_login():
+    return FileResponse(str(FRONTEND_DIR / "sso-login.html"))
+
+
+@app.get("/terms-of-service")
+async def serve_terms():
+    return FileResponse(str(FRONTEND_DIR / "terms-of-service.html"))
+
+
+@app.get("/privacy-policy")
+async def serve_privacy():
+    return FileResponse(str(FRONTEND_DIR / "privacy-policy.html"))
 
 
 @app.get("/zio")
@@ -782,6 +1096,11 @@ async def serve_flight_sim():
 @app.get("/emulatorjs")
 async def serve_emulatorjs():
     return RedirectResponse(url="http://localhost:4001")
+
+
+@app.get("/crypto-pay")
+async def serve_crypto_pay():
+    return FileResponse(str(FRONTEND_DIR / "crypto-pay.html"))
 
 
 @app.get("/games")
@@ -820,6 +1139,9 @@ GAMES_CATALOG = [
     {"id": "tic-tac-toe", "name": "Tic-Tac-Toe", "category": "strategy", "icon": "&#10060;"},
     {"id": "minesweeper", "name": "Minesweeper", "category": "puzzle", "icon": "&#128163;"},
     {"id": "chess", "name": "Chess", "category": "strategy", "icon": "&#9823;"},
+    {"id": "asteroids", "name": "Asteroids", "category": "arcade", "icon": "&#128165;"},
+    {"id": "contra", "name": "Contra", "category": "action", "icon": "&#128299;"},
+    {"id": "mario-bros3", "name": "Mario Bros 3", "category": "arcade", "icon": "&#127918;"},
 ]
 
 
@@ -882,6 +1204,94 @@ async def serve_multimedia():
 @app.get("/settings")
 async def serve_settings():
     return FileResponse(str(FRONTEND_DIR / "settings.html"))
+
+
+@app.get("/browser")
+async def serve_browser():
+    return FileResponse(str(FRONTEND_DIR / "browser.html"))
+
+
+@app.get("/outpreview")
+async def serve_outpreview():
+    return FileResponse(str(FRONTEND_DIR / "outpreview.html"))
+
+
+@app.get("/storage")
+async def serve_storage():
+    return FileResponse(str(FRONTEND_DIR / "storage.html"))
+
+
+@app.get("/api/proxy")
+async def proxy_fetch(url: str = "", headers_json: str = ""):
+    """Proxy HTTP requests to bypass CORS/iframe restrictions. Uses DoH for DNS."""
+    import asyncio
+    import urllib.parse
+    import urllib.error as ue
+    import ssl
+    import requests as _req
+
+    if not url:
+        return JSONResponse({"error": "No URL provided"}, status_code=400)
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return JSONResponse({"error": "Only http/https URLs allowed"}, status_code=400)
+
+    def _do_fetch():
+        extra_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+        if headers_json:
+            try:
+                extra_headers.update(json.loads(headers_json))
+            except Exception:
+                pass
+        resp = _req.get(url, headers=extra_headers, timeout=15, verify=False, allow_redirects=True)
+        content_type = resp.headers.get("Content-Type", "text/html")
+        body = resp.text
+        if "text/html" in content_type:
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            body = body.replace('href="/', f'href="{base_url}/')
+            body = body.replace("src=\"/", f"src=\"{base_url}/")
+            body = body.replace("src='/", f"src='{base_url}/")
+        return body, content_type, resp.status_code
+
+    loop = asyncio.get_event_loop()
+    try:
+        body, content_type, status_code = await asyncio.wait_for(
+            loop.run_in_executor(None, _do_fetch), timeout=25
+        )
+        if status_code == 403:
+            return HTMLResponse(
+                content=f"<html><body style='font-family:monospace;background:#0d1117;color:#c8d6e5;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1 style='color:#ff8800'>403 - Acceso Denegado</h1><p style='color:#667788'>El sitio <code>{parsed.netloc}</code> bloqueo el acceso.</p><p style='color:#667788;font-size:12px'>Intenta abrir la pagina directamente en una pestana nueva.</p></div></body></html>",
+                headers={"Content-Type": "text/html"},
+            )
+        return HTMLResponse(content=body, headers={"Content-Type": content_type})
+    except ue.HTTPError as e:
+        return HTMLResponse(
+            content=f"<html><body style='font-family:monospace;background:#0d1117;color:#c8d6e5;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1 style='color:#ff3333'>HTTP {e.code}</h1><p style='color:#667788'>{e.reason}</p><p style='color:#667788;font-size:12px'>{url}</p></div></body></html>",
+            headers={"Content-Type": "text/html"},
+        )
+    except asyncio.TimeoutError:
+        return HTMLResponse(
+            content="<html><body style='font-family:monospace;background:#0d1117;color:#c8d6e5;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1 style='color:#ff8800'>Timeout</h1><p style='color:#667788'>La pagina tardo demasiado en responder.</p></div></body></html>",
+            headers={"Content-Type": "text/html"},
+        )
+    except ue.URLError as e:
+        return HTMLResponse(
+            content=f"<html><body style='font-family:monospace;background:#0d1117;color:#c8d6e5;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1 style='color:#ff3333'>Conexion Fallida</h1><p style='color:#667788'>{e.reason}</p></div></body></html>",
+            headers={"Content-Type": "text/html"},
+        )
+    except Exception as e:
+        return HTMLResponse(
+            content=f"<html><body style='font-family:monospace;background:#0d1117;color:#c8d6e5;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1 style='color:#ff3333'>Error</h1><p style='color:#667788'>{str(e)}</p></div></body></html>",
+            headers={"Content-Type": "text/html"},
+        )
 
 
 MEDIA_CATEGORIES = {
@@ -1151,6 +1561,9 @@ async def provider_chat(body: dict):
     config = load_config()
     provider_name = body.get("provider", config.get("zio_engine", {}).get("active_provider", "zicore_native"))
     message = body.get("message", "")
+
+    if provider_name == "aerospace-engineering":
+        provider_name = "zicore_native"
 
     if provider_name == "zicore_native":
         try:
@@ -2192,6 +2605,484 @@ async def materialize(body: dict):
         return {"success": False, "error": str(e)}
 
 
+# ─── Enhanced Materializer Routes ────────────────────────────────────────────
+
+@app.post("/api/materialize/audio")
+async def materialize_audio(body: dict):
+    try:
+        prompt = body.get("prompt", "")
+        audio_type = body.get("type", "sfx")
+        duration = body.get("duration", 5)
+        params = body.get("params", {})
+        if not prompt:
+            return JSONResponse({"status": "error", "error": "prompt required"}, status_code=400)
+
+        from agent.generator import ZICoreGenerator
+        gen = ZICoreGenerator()
+        result = gen.generate_audio(prompt, audio_type=audio_type, duration=duration, **params)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        logger.error(f"Audio materialize error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/materialize/video")
+async def materialize_video(body: dict):
+    try:
+        prompt = body.get("prompt", "")
+        video_type = body.get("type", "procedural")
+        duration = body.get("duration", 5)
+        fps = body.get("fps", 24)
+        params = body.get("params", {})
+        if not prompt:
+            return JSONResponse({"status": "error", "error": "prompt required"}, status_code=400)
+
+        from agent.generator import ZICoreGenerator
+        gen = ZICoreGenerator()
+        result = gen.generate_video(prompt, video_type=video_type, duration=duration, fps=fps, **params)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        logger.error(f"Video materialize error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/materialize/simulation")
+async def materialize_simulation(body: dict):
+    try:
+        prompt = body.get("prompt", "")
+        scene_type = body.get("scene_type", "space")
+        params = body.get("params", {})
+        if not prompt:
+            return JSONResponse({"status": "error", "error": "prompt required"}, status_code=400)
+
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+
+        scene = outpreview.create_scene_from_prompt(prompt, engine_results=[params])
+        return {"status": "ok", "scene": scene}
+    except Exception as e:
+        logger.error(f"Simulation materialize error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/materialize/engines")
+async def materialize_engines():
+    try:
+        from zicore.materializer import ZICOREMaterializer
+        mat = ZICOREMaterializer()
+        engines = getattr(mat, "engines", {})
+        return {"status": "ok", "engines": {k: str(v) for k, v in engines.items()} if isinstance(engines, dict) else engines}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/materialize/engine")
+async def materialize_set_engine(body: dict):
+    try:
+        output_type = body.get("output_type", "")
+        engine_name = body.get("engine_name", "")
+        if not output_type or not engine_name:
+            return JSONResponse({"status": "error", "error": "output_type and engine_name required"}, status_code=400)
+
+        from zicore.materializer import ZICOREMaterializer
+        mat = ZICOREMaterializer()
+        if hasattr(mat, "set_engine"):
+            mat.set_engine(output_type, engine_name)
+            return {"status": "ok", "output_type": output_type, "engine": engine_name}
+        return {"status": "error", "error": "Engine selection not supported by this materializer"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+_materialize_queue = {}
+_materialize_queue_counter = 0
+
+
+@app.post("/api/materialize/queue")
+async def materialize_queue(body: dict):
+    global _materialize_queue_counter
+    try:
+        prompt = body.get("prompt", "")
+        output_type = body.get("type", "auto")
+        priority = body.get("priority", 0)
+        if not prompt:
+            return JSONResponse({"status": "error", "error": "prompt required"}, status_code=400)
+
+        _materialize_queue_counter += 1
+        task_id = str(_materialize_queue_counter)
+        _materialize_queue[task_id] = {
+            "id": task_id,
+            "prompt": prompt,
+            "type": output_type,
+            "priority": priority,
+            "status": "queued",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        return {"status": "ok", "task_id": task_id, "queue_size": len(_materialize_queue)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/materialize/queue/status")
+async def materialize_queue_status():
+    queued = [t for t in _materialize_queue.values() if t["status"] == "queued"]
+    running = [t for t in _materialize_queue.values() if t["status"] == "running"]
+    completed = [t for t in _materialize_queue.values() if t["status"] == "completed"]
+    return {
+        "status": "ok",
+        "queue_size": len(queued),
+        "running": len(running),
+        "completed": len(completed),
+        "tasks": list(_materialize_queue.values()),
+    }
+
+
+@app.delete("/api/materialize/queue/{task_id}")
+async def materialize_queue_cancel(task_id: str):
+    task = _materialize_queue.get(task_id)
+    if not task:
+        return JSONResponse({"status": "error", "error": "Task not found"}, status_code=404)
+    if task["status"] in ("completed", "cancelled"):
+        return JSONResponse({"status": "error", "error": "Task already finished"}, status_code=400)
+    task["status"] = "cancelled"
+    return {"status": "ok", "task_id": task_id}
+
+
+# ─── Generation Library API ──────────────────────────────────────────────────
+
+@app.get("/api/library/list")
+async def library_list(
+    type: Optional[str] = None,
+    folder: Optional[int] = None,
+    favorite: Optional[bool] = None,
+    search: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        results = generation_library.list(
+            output_type=type,
+            folder_id=folder,
+            favorite=bool(favorite) if favorite is not None else False,
+            search=search,
+            limit=limit,
+            offset=offset,
+        )
+        return {"status": "ok", "generations": results, "count": len(results)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/library/add")
+async def library_add(body: dict):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        prompt = body.get("prompt", "")
+        output_type = body.get("type", "unknown")
+        engine = body.get("engine", "")
+        file_path = body.get("file_path", "")
+        file_format = body.get("format", "")
+        tags = body.get("tags", [])
+        metadata = body.get("metadata", {})
+        folder_id = body.get("folder_id")
+
+        if not file_path:
+            return JSONResponse({"status": "error", "error": "file_path required"}, status_code=400)
+
+        gen_id = generation_library.add(
+            prompt=prompt,
+            output_type=output_type,
+            engine=engine,
+            file_path=file_path,
+            file_format=file_format,
+            tags=tags,
+            metadata=metadata,
+            folder_id=folder_id,
+        )
+        return {"status": "ok", "id": gen_id}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/get/{gen_id}")
+async def library_get(gen_id: int):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        gen = generation_library.get(gen_id)
+        if gen is None:
+            return JSONResponse({"status": "error", "error": "Generation not found"}, status_code=404)
+        return {"status": "ok", "generation": gen}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.put("/api/library/update/{gen_id}")
+async def library_update(gen_id: int, body: dict):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        kwargs = {}
+        if "tags" in body:
+            kwargs["tags"] = body["tags"]
+        if "favorite" in body:
+            kwargs["is_favorite"] = body["favorite"]
+        if "folder_id" in body:
+            kwargs["folder_id"] = body["folder_id"]
+        if "prompt" in body:
+            kwargs["prompt"] = body["prompt"]
+        if "metadata" in body:
+            kwargs["metadata"] = body["metadata"]
+
+        ok = generation_library.update(gen_id, **kwargs)
+        if not ok:
+            return JSONResponse({"status": "error", "error": "Generation not found or no changes"}, status_code=404)
+        return {"status": "ok", "id": gen_id}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.delete("/api/library/delete/{gen_id}")
+async def library_delete(gen_id: int):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        ok = generation_library.delete(gen_id)
+        if not ok:
+            return JSONResponse({"status": "error", "error": "Generation not found"}, status_code=404)
+        return {"status": "ok", "id": gen_id}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/search")
+async def library_search(q: str = "", limit: int = 50):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        if not q:
+            return JSONResponse({"status": "error", "error": "Search query (q) required"}, status_code=400)
+        results = generation_library.search(q, limit=limit)
+        return {"status": "ok", "results": results, "count": len(results)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/stats")
+async def library_stats():
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        stats = generation_library.get_stats()
+        return {"status": "ok", "stats": stats}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/library/folder")
+async def library_create_folder(body: dict):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        name = body.get("name", "")
+        parent_id = body.get("parent_id")
+        if not name:
+            return JSONResponse({"status": "error", "error": "Folder name required"}, status_code=400)
+        folder_id = generation_library.create_folder(name, parent_id=parent_id)
+        return {"status": "ok", "folder_id": folder_id}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/folders")
+async def library_folders():
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        folders = generation_library.list_folders()
+        return {"status": "ok", "folders": folders}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/latest")
+async def library_latest():
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        gen = generation_library.get_latest()
+        if gen is None:
+            return {"status": "ok", "generation": None}
+        return {"status": "ok", "generation": gen}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/recent")
+async def library_recent(limit: int = 10):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        results = generation_library.get_recent(limit=limit)
+        return {"status": "ok", "generations": results, "count": len(results)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/library/move/{gen_id}")
+async def library_move(gen_id: int, body: dict):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        folder_id = body.get("folder_id")
+        ok = generation_library.move_to_folder(gen_id, folder_id)
+        if not ok:
+            return JSONResponse({"status": "error", "error": "Generation not found"}, status_code=404)
+        return {"status": "ok", "id": gen_id, "folder_id": folder_id}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/library/tag/{gen_id}")
+async def library_add_tag(gen_id: int, body: dict):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        tag = body.get("tag", "")
+        if not tag:
+            return JSONResponse({"status": "error", "error": "tag required"}, status_code=400)
+        ok = generation_library.add_tag(gen_id, tag)
+        if not ok:
+            return JSONResponse({"status": "error", "error": "Generation not found"}, status_code=404)
+        return {"status": "ok", "id": gen_id, "tag": tag}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.delete("/api/library/tag/{gen_id}/{tag}")
+async def library_remove_tag(gen_id: int, tag: str):
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        ok = generation_library.remove_tag(gen_id, tag)
+        if not ok:
+            return JSONResponse({"status": "error", "error": "Generation not found"}, status_code=404)
+        return {"status": "ok", "id": gen_id, "tag": tag}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ─── OutPreview API ──────────────────────────────────────────────────────────
+
+@app.get("/api/outpreview/current")
+async def outpreview_current():
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        current = outpreview.get_current()
+        return {"status": "ok", "current": current}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/outpreview/set")
+async def outpreview_set(body: dict):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        result = outpreview.set_generation(body)
+        return {"status": "ok", "generation": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/outpreview/history")
+async def outpreview_history(limit: int = 20):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        history = outpreview.get_history(limit=limit)
+        return {"status": "ok", "history": history, "count": len(history)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/outpreview/edit")
+async def outpreview_edit(body: dict):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        gen_id = body.get("gen_id")
+        operation = body.get("operation", "analyze")
+        params = body.get("params", {})
+        result = outpreview.edit_mesh(gen_id=gen_id, operation=operation, params=params)
+        if result is None:
+            return JSONResponse({"status": "error", "error": f"Edit operation failed: {operation}"}, status_code=500)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/outpreview/analyze/{gen_id}")
+async def outpreview_analyze(gen_id: str):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        result = outpreview.edit_mesh(gen_id=gen_id, operation="analyze")
+        if result is None:
+            return JSONResponse({"status": "error", "error": "Analysis failed or generation not found"}, status_code=404)
+        return {"status": "ok", "analysis": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/outpreview/save-to-library")
+async def outpreview_save_to_library(body: dict):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        gen_id = body.get("gen_id")
+        tags = body.get("tags", [])
+        folder_id = body.get("folder_id")
+        lib_id = outpreview.save_to_library(gen_id=gen_id, tags=tags, folder_id=folder_id)
+        if lib_id is None:
+            return JSONResponse({"status": "error", "error": "Failed to save to library"}, status_code=500)
+        return {"status": "ok", "library_id": lib_id}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/outpreview/export-print/{gen_id}")
+async def outpreview_export_print(gen_id: str, body: dict = {}):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        printer = body.get("printer", "ender3")
+        material = body.get("material", "PLA")
+        result = outpreview.export_for_print(gen_id=gen_id, printer=printer, material=material)
+        if result is None:
+            return JSONResponse({"status": "error", "error": "Print export failed"}, status_code=500)
+        return {"status": "ok", "export": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/outpreview/export-vr/{gen_id}")
+async def outpreview_export_vr(gen_id: str):
+    try:
+        if outpreview is None:
+            return JSONResponse({"status": "error", "error": "OutPreview not available"}, status_code=503)
+        result = outpreview.export_for_vr(gen_id=gen_id)
+        if result is None:
+            return JSONResponse({"status": "error", "error": "VR export failed"}, status_code=500)
+        return {"status": "ok", "scene": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @app.post("/api/generate")
 async def api_generate(data: dict = {}):
     gen_type = data.get("type", "image")
@@ -2267,6 +3158,177 @@ async def api_ai3d_engines():
         return {"status": "ok", "engines": ai3d.list_engines()}
     except ImportError:
         return {"status": "error", "error": "ai3d_engines module not found"}
+
+
+@app.post("/api/ai3d/ollama-generate")
+async def api_ai3d_ollama_generate(data: dict = {}):
+    """
+    Ollama-powered 3D generation:
+    1. Send prompt to Ollama to parse into structured JSON
+    2. Use parsed params to generate mesh via local_generators or OpenSCAD
+    3. Return file path for frontend to load
+    """
+    prompt = data.get("prompt", "")
+    model = data.get("model", "gemma3:1b")
+    engine = data.get("engine", "local")
+
+    if not prompt:
+        return {"status": "error", "error": "prompt required"}
+
+    config = load_config()
+    base_url = config.get("providers", {}).get("ollama", {}).get("base_url", OLLAMA_BASE_URL)
+    if not base_url.startswith("http"):
+        base_url = f"http://{base_url}"
+
+    # Step 1: Call Ollama to parse the prompt into structured JSON
+    parse_prompt = f"""You are a 3D model parameter parser. Given a user description, output ONLY a JSON object (no markdown, no explanation) with these fields:
+{{
+  "type": "rocket|satellite|station|drone|nozzle|landing_leg|solar_panel|antenna|habitat|rover|payload_bay|engine|fuel_tank|nose_cone|fin|cube|sphere|cylinder|cone|torus|gear|terrain",
+  "params": {{
+    "fin_count": <number, default 4>,
+    "stages": <number, default 1>,
+    "nose_cone": <boolean, default true>,
+    "has_solar_panels": <boolean, default false>,
+    "has_antenna": <boolean, default false>,
+    "teeth": <number for gears, default 12>,
+    "radius": <number, default 0.5>,
+    "height": <number, default 1.0>,
+    "width": <number, default 1.0>,
+    "depth": <number, default 1.0>
+  }}
+}}
+User description: {prompt}"""
+
+    parsed_type = "cube"
+    parsed_params = {}
+
+    try:
+        ollama_payload = json.dumps({
+            "model": model,
+            "prompt": parse_prompt,
+            "stream": False,
+            "options": {"temperature": 0.1, "num_predict": 256}
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            f"{base_url}/api/generate",
+            data=ollama_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            ollama_result = json.loads(resp.read().decode("utf-8"))
+
+        raw_text = ollama_result.get("response", "").strip()
+        # Extract JSON from response (handle markdown code blocks)
+        json_match = re.search(r'\{[\s\S]*\}', raw_text)
+        if json_match:
+            parsed = json.loads(json_match.group())
+            parsed_type = parsed.get("type", "cube")
+            parsed_params = parsed.get("params", {})
+            logger.info(f"Ollama parsed: type={parsed_type}, params={parsed_params}")
+        else:
+            logger.warning(f"Ollama could not parse prompt, raw: {raw_text[:200]}")
+            # Try keyword matching fallback
+            p = prompt.lower()
+            fallback_map = {
+                "rocket": ["rocket", "launch"], "satellite": ["satellite"],
+                "station": ["station"], "drone": ["drone"],
+                "nozzle": ["nozzle"], "gear": ["gear"],
+                "terrain": ["terrain"], "cube": ["cube", "box"],
+                "sphere": ["sphere", "ball"], "cylinder": ["cylinder", "tube"],
+                "cone": ["cone"], "torus": ["torus", "ring"],
+            }
+            for t, kws in fallback_map.items():
+                if any(k in p for k in kws):
+                    parsed_type = t
+                    break
+    except Exception as e:
+        logger.error(f"Ollama parse failed: {e}")
+        # Keyword fallback
+        p = prompt.lower()
+        for kw in ["rocket", "satellite", "station", "drone", "nozzle", "gear", "terrain", "cube", "sphere", "cylinder", "cone", "torus"]:
+            if kw in p:
+                parsed_type = kw
+                break
+
+    # Step 2: Generate mesh based on parsed type
+    output_file = None
+
+    if engine == "openscad":
+        # Generate OpenSCAD script from parsed params
+        scad_script = _generate_openscad_from_parsed(parsed_type, parsed_params)
+        try:
+            from zicore.ai3d_engines import ai3d
+            result = ai3d.generate(engine_key="openscad", script=scad_script, prompt=prompt)
+            result_dict = result.to_dict() if hasattr(result, 'to_dict') else result
+            if result_dict.get("status") == "ok":
+                output_file = result_dict.get("file", "")
+        except Exception as e:
+            logger.error(f"OpenSCAD generation failed: {e}")
+
+    if not output_file:
+        # Use local trimesh generator
+        try:
+            from zicore.local_generators import MeshGenerator
+            mesh = MeshGenerator.generate_aerospace(parsed_type, parsed_params)
+            if mesh is None:
+                mesh = MeshGenerator.generate_basic(parsed_type, parsed_params)
+            if mesh is None:
+                mesh = MeshGenerator.generate_basic("cube")
+
+            output_dir = OUTPUT_DIR / "ai3d"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = f"/output/ai3d/ollama_{parsed_type}_{int(time.time())}.stl"
+            abs_path = Path(__file__).parent / output_file.lstrip("/")
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(str(abs_path))
+        except Exception as e:
+            logger.error(f"Local mesh generation failed: {e}")
+            return {"status": "error", "error": f"Generation failed: {e}"}
+
+    return {
+        "status": "ok",
+        "parsed_type": parsed_type,
+        "params": parsed_params,
+        "engine": engine,
+        "model": model,
+        "file": output_file,
+    }
+
+
+def _generate_openscad_from_parsed(ptype: str, params: dict) -> str:
+    """Generate an OpenSCAD script from parsed type and parameters."""
+    r = params.get("radius", 0.5)
+    h = params.get("height", 1.0)
+    w = params.get("width", 1.0)
+    d = params.get("depth", 1.0)
+    fins = params.get("fin_count", 4)
+    teeth = params.get("teeth", 12)
+
+    templates = {
+        "rocket": f'''// AI-Generated Rocket
+difference() {{
+  cylinder(r={r*20}, h={h*40}, $fn=64);
+  translate([0, 0, {h*35}]) sphere(r={r*15}, $fn=64);
+}}
+for (i = [0:{fins-1}]) {{
+  rotate([0, 0, i*{360//fins}])
+    translate([{r*25}, 0, 5])
+      cube([{w*15}, 1, {h*15}], center=true);
+}}''',
+        "satellite": f'''// AI-Generated Satellite
+cube([{w*20}, {d*15}, {h*15}], center=true);
+translate([0, {h*12}, 0]) cube([{w*50}, 1, {d*20}], center=true);
+translate([0, {-h*12}, 0]) cube([{w*50}, 1, {d*20}], center=true);''',
+        "gear": f'''// AI-Generated Gear
+cylinder(r={r*20}, h=5, $fn={teeth*2});''',
+        "cube": f'''cube([{w*20}, {h*20}, {d*20}], center=true);''',
+        "sphere": f'''sphere(r={r*20}, $fn=64);''',
+        "cylinder": f'''cylinder(r={r*20}, h={h*30}, $fn=64);''',
+        "cone": f'''cylinder(r1={r*20}, r2=0, h={h*30}, $fn=64);''',
+    }
+    return templates.get(ptype, templates["cube"])
 
 
 @app.post("/api/code/execute")
@@ -2494,6 +3556,8 @@ async def zio_websocket(websocket: WebSocket):
                     active_provider = config.get("zio_engine", {}).get("active_provider", "zicore_native")
                     if provider_name in (None, "", "zicorex"):
                         provider_name = active_provider
+                    if provider_name == "aerospace-engineering":
+                        provider_name = "zicore_native"
 
                     t0 = __import__("time").time()
 
@@ -2557,6 +3621,8 @@ async def zio_websocket(websocket: WebSocket):
                     active_provider = config.get("zio_engine", {}).get("active_provider", "zicore_native")
                     if provider_name in (None, "", "zicorex"):
                         provider_name = active_provider
+                    if provider_name == "aerospace-engineering":
+                        provider_name = "zicore_native"
 
                     t0 = __import__("time").time()
 
@@ -2773,6 +3839,235 @@ async def telemetry_websocket(websocket: WebSocket):
         logger.info("Telemetry WS disconnected")
 
 
+@app.websocket("/ws/materializer-vr")
+async def materializer_vr_websocket(websocket: WebSocket):
+    """WebSocket for VR stereo stream from Materializer.
+
+    Client sends JSON commands:
+      {"action":"start", "scene":"planetary_surface", "prompt":"...", "stereo":true, "width":640, "height":480, "fps":30}
+      {"action":"camera", "yaw":0, "pitch":0, "roll":0, "x":0, "y":1.7, "z":0}
+      {"action":"stop"}
+      {"action":"ping"}
+    Server streams frames as JSON:
+      {"type":"stereo_frame", "left":"base64...", "right":"base64...", "width":640, "height":480, "frame":0}
+      {"type":"frame", "data":"base64...", "width":640, "height":480, "frame":0}
+    """
+    await websocket.accept()
+    client_id = uuid.uuid4().hex[:8]
+    session_id = None
+    streaming = False
+    stream_task = None
+    logger.info(f"VR WS connected: {client_id}")
+
+    async def stream_frames(sid, fps):
+        """Background task: render and send frames."""
+        nonlocal streaming
+        frame_interval = 1.0 / fps
+        while streaming and session_id:
+            try:
+                t0 = time.time()
+                frame_data = vr_stream_manager.render_frame(sid)
+                if frame_data:
+                    await websocket.send_json(frame_data)
+                else:
+                    await websocket.send_json({"type": "error", "message": "Frame render failed"})
+                    break
+                elapsed = time.time() - t0
+                sleep_time = max(0, frame_interval - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+                else:
+                    await asyncio.sleep(0.001)
+            except Exception:
+                break
+        streaming = False
+
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            try:
+                data = json.loads(msg)
+            except json.JSONDecodeError:
+                await websocket.send_json({"error": "invalid JSON"})
+                continue
+
+            action = data.get("action", "")
+
+            if action == "start":
+                if vr_stream_manager is None:
+                    await websocket.send_json({"type": "error", "message": "VR Stream not available"})
+                    continue
+
+                # Stop existing stream
+                if stream_task and not stream_task.done():
+                    streaming = False
+                    stream_task.cancel()
+
+                scene = data.get("scene", "planetary_surface")
+                prompt = data.get("prompt", "")
+                stereo = data.get("stereo", True)
+                width = min(data.get("width", 640), 1280)
+                height = min(data.get("height", 480), 720)
+                fps = min(data.get("fps", 30), 60)
+
+                session_id = vr_stream_manager.create_session(
+                    scene_type=scene, prompt=prompt,
+                    width=width, height=height, fps=fps, stereo=stereo,
+                )
+                vr_stream_manager.add_client(session_id, client_id)
+                streaming = True
+
+                await websocket.send_json({
+                    "type": "session_started",
+                    "session_id": session_id,
+                    "scene": scene,
+                    "stereo": stereo,
+                    "width": width,
+                    "height": height,
+                    "fps": fps,
+                })
+
+                # Start streaming in background
+                stream_task = asyncio.create_task(stream_frames(session_id, fps))
+
+            elif action == "camera":
+                if session_id and vr_stream_manager:
+                    vr_stream_manager.update_camera(
+                        session_id,
+                        yaw=data.get("yaw"),
+                        pitch=data.get("pitch"),
+                        roll=data.get("roll"),
+                        x=data.get("x"),
+                        y=data.get("y"),
+                        z=data.get("z"),
+                    )
+
+            elif action == "stop":
+                streaming = False
+                if stream_task and not stream_task.done():
+                    stream_task.cancel()
+                if session_id and vr_stream_manager:
+                    vr_stream_manager.remove_client(session_id, client_id)
+                    vr_stream_manager.close_session(session_id)
+                    session_id = None
+                await websocket.send_json({"type": "stopped"})
+
+            elif action == "ping":
+                await websocket.send_json({"type": "pong"})
+
+            elif action == "sessions":
+                if vr_stream_manager:
+                    sessions = vr_stream_manager.list_sessions()
+                    await websocket.send_json({"type": "sessions", "data": sessions})
+                else:
+                    await websocket.send_json({"type": "sessions", "data": []})
+
+    except WebSocketDisconnect:
+        streaming = False
+        if stream_task and not stream_task.done():
+            stream_task.cancel()
+        if session_id and vr_stream_manager:
+            vr_stream_manager.remove_client(session_id, client_id)
+        logger.info(f"VR WS disconnected: {client_id}")
+
+
+@app.websocket("/ws/display-stream")
+async def display_stream_websocket(websocket: WebSocket):
+    """WebSocket for external display/monitor streaming.
+
+    Pushes rendered frames to external monitors (USB/WiFi connected).
+    Client sends: {"action":"subscribe", "session_id":"..."}
+    Server streams: {"type":"frame", "data":"base64...", "width":W, "height":H, "frame":N}
+    """
+    await websocket.accept()
+    client_id = uuid.uuid4().hex[:8]
+    subscribed_session = None
+    streaming = False
+    stream_task = None
+    logger.info(f"Display stream WS connected: {client_id}")
+
+    async def push_frames(sid):
+        """Background task: push frames to display."""
+        nonlocal streaming
+        while streaming and subscribed_session:
+            try:
+                frame_data = vr_stream_manager.render_frame(sid)
+                if frame_data:
+                    await websocket.send_json(frame_data)
+                await asyncio.sleep(1.0 / 30)
+            except Exception:
+                break
+        streaming = False
+
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            try:
+                data = json.loads(msg)
+            except json.JSONDecodeError:
+                await websocket.send_json({"error": "invalid JSON"})
+                continue
+
+            action = data.get("action", "")
+
+            if action == "subscribe":
+                sid = data.get("session_id", "")
+                if vr_stream_manager is None:
+                    await websocket.send_json({"type": "error", "message": "VR Stream not available"})
+                    continue
+
+                # Stop existing stream
+                if stream_task and not stream_task.done():
+                    streaming = False
+                    stream_task.cancel()
+
+                sessions = vr_stream_manager.list_sessions()
+                session_ids = [s["id"] for s in sessions]
+
+                if sid not in session_ids:
+                    # Auto-create a mono display session
+                    scene = data.get("scene", "planetary_surface")
+                    width = min(data.get("width", 640), 1280)
+                    height = min(data.get("height", 480), 720)
+                    sid = vr_stream_manager.create_session(
+                        scene_type=scene, width=width, height=height,
+                        fps=30, stereo=False,
+                    )
+
+                subscribed_session = sid
+                vr_stream_manager.add_client(sid, client_id)
+                streaming = True
+                await websocket.send_json({"type": "subscribed", "session_id": sid})
+
+                # Start pushing frames in background
+                stream_task = asyncio.create_task(push_frames(sid))
+
+            elif action == "unsubscribe":
+                streaming = False
+                if stream_task and not stream_task.done():
+                    stream_task.cancel()
+                if subscribed_session and vr_stream_manager:
+                    vr_stream_manager.remove_client(subscribed_session, client_id)
+                subscribed_session = None
+                await websocket.send_json({"type": "unsubscribed"})
+
+            elif action == "ping":
+                await websocket.send_json({"type": "pong"})
+
+            elif action == "list_sessions":
+                if vr_stream_manager:
+                    sessions = vr_stream_manager.list_sessions()
+                    await websocket.send_json({"type": "sessions", "data": sessions})
+
+    except WebSocketDisconnect:
+        streaming = False
+        if stream_task and not stream_task.done():
+            stream_task.cancel()
+        if subscribed_session and vr_stream_manager:
+            vr_stream_manager.remove_client(subscribed_session, client_id)
+        logger.info(f"Display stream WS disconnected: {client_id}")
+
+
 @app.get("/api/content/library")
 async def content_library(type: str = "", search: str = ""):
     """Get all generated content (images, sounds, videos, 3D meshes)."""
@@ -2958,6 +4253,35 @@ from zicore.mail_integration import MailServer
 mail_server = MailServer()
 
 
+@app.get("/api/mail/admin-check")
+async def mail_admin_check(request: Request):
+    """Check if current user is a mail admin.
+
+    Accepts SSO Bearer token OR mail credentials (user/password query params).
+    Returns {admin: true/false, email: "...", role: "..."}.
+    """
+    # Try SSO token first
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer ") and sso is not None:
+        token = auth[7:]
+        result = sso.verify_token(token)
+        if result.get("success"):
+            user = result.get("user", {})
+            is_admin = user.get("role") == "admin"
+            return {"admin": is_admin, "email": user.get("email", ""), "role": user.get("role", "user"), "source": "sso"}
+
+    # Try mail credentials
+    user_email = request.query_params.get("user", "")
+    if user_email and mail_server is not None:
+        users = mail_server.list_users()
+        for u in users:
+            if u.get("email", "").lower() == user_email.lower():
+                role = u.get("role", "user")
+                return {"admin": role == "admin", "email": user_email, "role": role, "source": "mail"}
+
+    return {"admin": False, "email": "", "role": "none", "source": "none"}
+
+
 @app.get("/api/mail/status")
 async def mail_status():
     """Get mail server status."""
@@ -2965,32 +4289,88 @@ async def mail_status():
 
 
 @app.post("/api/mail/start")
-async def mail_start():
-    """Start mail server containers."""
+async def mail_start(request: Request):
+    """Start mail server containers. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
     return {"status": "ok", "result": mail_server.start()}
 
 
 @app.post("/api/mail/stop")
-async def mail_stop():
-    """Stop mail server containers."""
+async def mail_stop(request: Request):
+    """Stop mail server containers. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
     return {"status": "ok", "result": mail_server.stop()}
 
 
 @app.post("/api/mail/restart")
-async def mail_restart():
-    """Restart mail server containers."""
+async def mail_restart(request: Request):
+    """Restart mail server containers. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
     return {"status": "ok", "result": mail_server.restart()}
 
 
+async def _require_mail_admin(request: Request):
+    """Check SSO token for admin role. Returns error response if not admin, None if OK."""
+    user = await get_current_user(request)
+    if not user or user.get("role") != "admin":
+        return JSONResponse({"status": "error", "error": "Admin access required"}, status_code=403)
+    return None
+
+
 @app.get("/api/mail/users")
-async def mail_list_users():
-    """List all email users."""
-    return {"status": "ok", "users": mail_server.list_users()}
+async def mail_list_users(request: Request):
+    """List all email users. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
+    users = mail_server.list_users()
+    return {"status": "ok", "users": users}
+
+
+@app.post("/api/mail/users/role")
+async def mail_update_role(request: Request):
+    """Update a user's role. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
+    data = await request.json()
+    email = data.get("email", "")
+    role = data.get("role", "user")
+    result = mail_server.update_role(email, role)
+    return {"status": "ok" if result.get("success") else "error", **result}
+
+
+@app.get("/api/mail/stats")
+async def mail_stats(request: Request):
+    """Get mail server statistics. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
+    return {"status": "ok", **mail_server.get_stats()}
+
+
+@app.post("/api/mail/restart/{service}")
+async def mail_restart_service(service: str, request: Request):
+    """Restart a mail service. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
+    result = mail_server.restart_service(service)
+    return {"status": "ok" if result.get("success") else "error", **result}
 
 
 @app.post("/api/mail/users")
 async def mail_create_user(request: Request):
-    """Create a new email user."""
+    """Create a new email user. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
     data = await request.json()
     email_addr = data.get("email", "")
     password = data.get("password", "")
@@ -2999,8 +4379,11 @@ async def mail_create_user(request: Request):
 
 
 @app.delete("/api/mail/users/{email}")
-async def mail_delete_user(email: str):
-    """Deactivate an email user."""
+async def mail_delete_user(email: str, request: Request):
+    """Deactivate an email user. Admin only."""
+    err = await _require_mail_admin(request)
+    if err:
+        return err
     return {"status": "ok", "result": mail_server.delete_user(email)}
 
 
@@ -3121,9 +4504,168 @@ async def serve_mail_register():
     return FileResponse(FRONTEND_DIR / "mail-register.html")
 
 
+def _send_welcome_email(email: str, name: str, domain: str):
+    """Send welcome email to newly created mailbox.
+    
+    Stores the welcome email in the user's Maildir.
+    """
+    import time as _time
+    from pathlib import Path
+
+    domain_name = domain.lstrip("@")
+    first_name = name.split()[0] if name else "Member"
+
+    subject = "Welcome to the ZiCore Ecosystem"
+
+    body = f"""Welcome to the ZiCore Ecosystem
+
+Hello {first_name},
+
+Welcome, and thank you for joining ZineMotion.
+
+Your registration has been successfully completed, and you are now part of the ZiCore Ecosystem—a growing platform where artificial intelligence, aerospace innovation, advanced engineering, and scientific exploration come together to shape the future.
+
+We are excited to have you with you.
+
+What is ZiCore?
+===============
+
+ZiCore is the central intelligence engine powering the ZineMotion ecosystem.
+
+It is designed to integrate cutting-edge technologies, intelligent systems, scientific research, and future-oriented projects into a single collaborative platform built for innovators, researchers, creators, and explorers.
+
+What You'll Discover
+=====================
+
+ZiCore AI
+    An intelligent assistant designed to support research, engineering, creativity, and decision-making.
+
+ZiCore.Space
+    Our aerospace initiative focused on space exploration, orbital systems, advanced propulsion concepts, and the technologies that will enable humanity's expansion beyond Earth.
+
+ZiCodex
+    The central knowledge library of the ecosystem, where technical documentation, scientific publications, engineering concepts, and strategic research are continuously developed and shared.
+
+Featured Projects
+==================
+
+    OBSIDIANA — Advanced materials research
+    ZiLunar — Lunar exploration systems
+    BlackVanta — Stealth aerospace technology
+    E-LIQUID — Next-gen liquid propulsion
+    RedGen — Energy generation systems
+    ZiGenesis — Foundational AI systems
+    ZiMind — Neural interface research
+    ZiShield — Cybersecurity framework
+
+...and many more innovations currently under development.
+
+Your ZICORE Mail Account
+=========================
+
+  Email:      {email}
+  IMAP:       mail.{domain_name}:993 (SSL)
+  SMTP:       mail.{domain_name}:587 (STARTTLS)
+  Webmail:    https://zcs.zicore.space/mail-portal
+
+What's Coming Next
+===================
+
+As a registered member, you will receive early access to new features, including:
+
+    - AI-powered tools and assistants
+    - Engineering and simulation modules
+    - Collaborative workspaces
+    - Scientific publications
+    - Project management systems
+    - Aerospace research updates
+    - Exclusive beta releases
+    - Community events and announcements
+
+Our platform will continue evolving, and you'll be among the first to experience every new milestone.
+
+Our Vision
+==========
+
+We believe that the future belongs to those who combine knowledge, technology, creativity, and purpose.
+
+ZiCore is more than software.
+
+It is the foundation of a next-generation ecosystem dedicated to advancing science, engineering, artificial intelligence, and space exploration through collaboration and innovation.
+
+Every member contributes to building technologies that may one day shape humanity's future beyond our planet.
+
+Stay Connected
+===============
+
+Visit your dashboard regularly to discover new tools, research, publications, and project updates.
+
+    Official Portal: https://zinemotion.com.mx
+
+Thank you for becoming part of our journey.
+
+Together, we are building tomorrow.
+
+Welcome to ZiCore.
+
+Engineering Tomorrow. Building Beyond.
+
+The ZiCore Team
+Powered by ZineMotion Group
+
+http://www.ZineMotion.com.mx
+
+---
+AVISO DE CONFIDENCIALIDAD
+Este correo electronico es confidencial y para uso exclusivo de la(s) persona(s) a quien(es) se dirige. Si el lector de esta transmision electronica no es el destinatario, se le notifica que cualquier distribucion o copia de la misma esta estrictamente prohibida. Si ha recibido este correo por error le solicitamos notificar inmediatamente a la persona que lo envio y borrarlo definitivamente de su sistema.
+
+ZICORE Mail v5.0 | {domain_name}
+"""
+
+    # Store in user's Maildir
+    local_part = email.split("@")[0]
+    maildir_new = Path(f"/var/mail/vmail/{domain_name}/{local_part}/Maildir/new")
+    maildir_new.mkdir(parents=True, exist_ok=True)
+
+    # Generate Maildir filename
+    ts = int(_time.time())
+    filename = f"{ts}.{ts}.2:,S={len(body)},L={len(body.encode('utf-8'))}"
+
+    # Build raw email
+    raw_email = f"From: ZICORE Mail <postmaster@{domain_name}>\r\n"
+    raw_email += f"To: {name} <{email}>\r\n"
+    raw_email += f"Subject: {subject}\r\n"
+    raw_email += f"Date: {_time.strftime('%a, %d %b %Y %H:%M:%S %z')}\r\n"
+    raw_email += f"Message-ID: <welcome-{ts}@{domain_name}>\r\n"
+    raw_email += f"MIME-Version: 1.0\r\n"
+    raw_email += f"Content-Type: text/plain; charset=utf-8\r\n"
+    raw_email += f"X-Mailer: ZICORE-Mail/5.0\r\n"
+    raw_email += f"X-Priority: 1\r\n"
+    raw_email += "\r\n"
+    raw_email += body
+
+    filepath = maildir_new / filename
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(raw_email)
+
+    logger.info(f"Welcome email stored: {filepath} for {email}")
+
+    # Also create Maildir folders
+    for sub in ["cur", "tmp"]:
+        (maildir_new.parent / sub).mkdir(exist_ok=True)
+
+    return True
+
+
 @app.post("/api/mail/register")
 async def mail_register_user(request: Request):
-    """Register a new mail user account with validation and security."""
+    """Register a new mail user account.
+    
+    Free plan: only @zinemotion.com.mx, 1 account per user.
+    Basic ($5/10 ZTN): 3 accounts, @zinemotion.com.mx.
+    Pro ($25/50 ZTN): 10 accounts, multiple domains.
+    Ultimate ($100/200 ZTN): unlimited accounts, all domains.
+    """
     try:
         data = await request.json()
     except Exception:
@@ -3143,8 +4685,16 @@ async def mail_register_user(request: Request):
     if not email or not _validate_email(email):
         return {"status": "error", "error": "Invalid email format"}
 
-    if not email.endswith("@zinemotion.com.mx"):
-        return {"status": "error", "error": "Email must be @zinemotion.com.mx"}
+    # Free plan: ONLY @zinemotion.com.mx allowed
+    # @zicore.space and @zinemotion.com = admin exclusive
+    allowed_domains = ["@zinemotion.com.mx"]
+    domain = None
+    for d in allowed_domains:
+        if email.endswith(d):
+            domain = d
+            break
+    if not domain:
+        return {"status": "error", "error": "Free accounts only available with @zinemotion.com.mx"}
 
     if not name or len(name) < 2:
         return {"status": "error", "error": "Name must be at least 2 characters"}
@@ -3162,11 +4712,30 @@ async def mail_register_user(request: Request):
         if u.get("email") == email and u.get("active"):
             return {"status": "error", "error": "Email already registered"}
 
-    # Create user
-    result = mail_server.create_user(email, password, name)
+    # Check account limit for free plan (1 account per user)
+    # Extract username prefix to check for existing accounts
+    username = email.split("@")[0]
+    same_user_count = sum(1 for u in existing_users
+                         if u.get("email", "").startswith(username + "@")
+                         and u.get("active"))
+    if same_user_count >= 1:
+        return {
+            "status": "error",
+            "error": "Free plan: 1 account only. Upgrade to Basic for 3 accounts ($5/mo or 10 ZTN)."
+        }
+
+    # Create user with plan='free'
+    result = mail_server.create_user(email, password, name, plan="free")
     if result and "error" not in str(result).lower():
-        logger.info(f"New mail user registered: {email}")
-        return {"status": "ok", "message": f"Account {email} created successfully"}
+        logger.info(f"New mail user registered: {email} (free plan)")
+
+        # Send welcome email to the new mailbox
+        try:
+            _send_welcome_email(email, name, domain)
+        except Exception as e:
+            logger.warning(f"Failed to send welcome email: {e}")
+
+        return {"status": "ok", "message": f"Account {email} created successfully. Welcome email sent!"}
     else:
         return {"status": "error", "error": f"Failed to create account: {result}"}
 
@@ -3186,17 +4755,1242 @@ async def mail_validate_email(request: Request):
 
 
 @app.get("/api/mail/check-username")
-async def mail_check_username(username: str = ""):
-    """Check if a username is available for @zinemotion.com.mx."""
+async def mail_check_username(username: str = "", domain: str = "zinemotion.com.mx"):
+    """Check if a username is available for the given domain.
+    
+    Free plan: only @zinemotion.com.mx
+    @zicore.space and @zinemotion.com = admin exclusive
+    """
     username = username.strip().lower()
     if not username or not re.match(r'^[a-z0-9._-]+$', username):
         return {"status": "ok", "available": False, "error": "Invalid username format"}
-    email = f"{username}@zinemotion.com.mx"
+    
+    # Free plan: only zinemotion.com.mx allowed
+    if domain not in ["zinemotion.com.mx"]:
+        return {"status": "ok", "available": False, "error": "Free accounts only available with @zinemotion.com.mx"}
+    
+    email = f"{username}@{domain}"
     existing_users = mail_server.list_users()
     for u in existing_users:
         if u.get("email") == email and u.get("active"):
             return {"status": "ok", "available": False, "error": "Username already taken"}
     return {"status": "ok", "available": True}
+
+
+@app.post("/api/mail/upgrade-plan")
+async def mail_upgrade_plan(request: Request):
+    """Upgrade user mail plan. Requires ZNT payment verification."""
+    try:
+        data = await request.json()
+    except Exception:
+        return {"status": "error", "error": "Invalid JSON"}
+    
+    email = data.get("email", "").strip().lower()
+    new_plan = data.get("plan", "")
+    
+    valid_plans = ["free", "basic", "pro", "ultimate"]
+    if new_plan not in valid_plans:
+        return {"status": "error", "error": f"Invalid plan. Choose: {', '.join(valid_plans)}"}
+    
+    plan_limits = {
+        "free": {"max_accounts": 1, "domains": ["zinemotion.com.mx"], "price_ztn": 0},
+        "basic": {"max_accounts": 3, "domains": ["zinemotion.com.mx"], "price_ztn": 10},
+        "pro": {"max_accounts": 10, "domains": ["zinemotion.com.mx", "zicore.space"], "price_ztn": 50},
+        "ultimate": {"max_accounts": -1, "domains": ["zinemotion.com.mx", "zicore.space", "zinemotion.com"], "price_ztn": 200},
+    }
+    
+    # TODO: Verify ZNT payment before upgrading
+    # For now, direct upgrade
+    
+    try:
+        safe_email = mail_server._sanitize_sql(email)
+        safe_plan = mail_server._sanitize_sql(new_plan)
+        sql = f"UPDATE virtual_users SET plan='{safe_plan}' WHERE email='{safe_email}'"
+        result = subprocess.run(
+            ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+             f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+             "zicore_mail", "-e", sql],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            limits = plan_limits[new_plan]
+            return {
+                "status": "ok",
+                "message": f"Upgraded to {new_plan}",
+                "plan": new_plan,
+                "limits": limits
+            }
+        else:
+            return {"status": "error", "error": "Upgrade failed"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# --- Mail Account Configuration (IMAP/POP3/External) ---
+
+MAIL_ACCOUNTS_FILE = Path(__file__).parent / "data" / "config" / "mail_accounts.json"
+
+def _load_mail_accounts() -> list:
+    """Load mail accounts from config file."""
+    try:
+        if MAIL_ACCOUNTS_FILE.exists():
+            with open(MAIL_ACCOUNTS_FILE, "r") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading mail accounts: {e}")
+    return []
+
+def _save_mail_accounts(accounts: list):
+    """Save mail accounts to config file."""
+    MAIL_ACCOUNTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(MAIL_ACCOUNTS_FILE, "w") as f:
+        json.dump(accounts, f, indent=2)
+
+@app.get("/api/mail/accounts")
+async def mail_accounts_list():
+    """List all configured external mail accounts."""
+    accounts = _load_mail_accounts()
+    safe_accounts = []
+    for acc in accounts:
+        safe = {k: v for k, v in acc.items() if k != "password"}
+        safe["has_password"] = bool(acc.get("password"))
+        safe_accounts.append(safe)
+    return {"status": "ok", "accounts": safe_accounts}
+
+@app.post("/api/mail/accounts")
+async def mail_accounts_add(request: Request):
+    """Add a new external mail account (IMAP/POP3)."""
+    data = await request.json()
+    name = data.get("name", "").strip()
+    email_addr = data.get("email", "").strip()
+    password = data.get("password", "")
+    protocol = data.get("protocol", "imap").lower()  # imap, pop3
+    server = data.get("server", "").strip()
+    port = int(data.get("port", 0))
+    use_ssl = data.get("ssl", True)
+    smtp_server = data.get("smtp_server", "").strip()
+    smtp_port = int(data.get("smtp_port", 0))
+    smtp_ssl = data.get("smtp_ssl", True)
+    sync_enabled = data.get("sync_enabled", True)
+    sync_interval = int(data.get("sync_interval", 300))  # seconds
+
+    if not email_addr or not password or not server:
+        return {"status": "error", "error": "Email, password, and server are required"}
+
+    # Auto-detect ports
+    if port == 0:
+        port = 993 if protocol == "imap" and use_ssl else 143 if protocol == "imap" else 995 if use_ssl else 110
+    if smtp_port == 0:
+        smtp_port = 465 if smtp_ssl else 587
+
+    # Presets for common providers
+    presets = {
+        "gmail.com": {"imap": "imap.gmail.com", "pop3": "pop.gmail.com", "smtp": "smtp.gmail.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 465},
+        "outlook.com": {"imap": "outlook.office365.com", "pop3": "outlook.office365.com", "smtp": "smtp.office365.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 587},
+        "hotmail.com": {"imap": "outlook.office365.com", "pop3": "outlook.office365.com", "smtp": "smtp.office365.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 587},
+        "yahoo.com": {"imap": "imap.mail.yahoo.com", "pop3": "pop.mail.yahoo.com", "smtp": "smtp.mail.yahoo.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 465},
+        "icloud.com": {"imap": "imap.mail.me.com", "pop3": "pop.mail.me.com", "smtp": "smtp.mail.me.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 587},
+        "protonmail.com": {"imap": "127.0.0.1", "pop3": "127.0.0.1", "smtp": "127.0.0.1", "imap_port": 1143, "pop3_port": 1195, "smtp_port": 1025},
+        "zoho.com": {"imap": "imap.zoho.com", "pop3": "pop.zoho.com", "smtp": "smtp.zoho.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 465},
+        "aol.com": {"imap": "imap.aol.com", "pop3": "pop.aol.com", "smtp": "smtp.aol.com", "imap_port": 993, "pop3_port": 995, "smtp_port": 465},
+    }
+
+    domain = email_addr.split("@")[-1].lower()
+    preset = presets.get(domain, {})
+
+    accounts = _load_mail_accounts()
+    account_id = secrets.token_hex(8)
+
+    account = {
+        "id": account_id,
+        "name": name or email_addr,
+        "email": email_addr,
+        "password": password,
+        "protocol": protocol,
+        "server": server or preset.get(protocol, ""),
+        "port": port or preset.get(f"{protocol}_port", 993 if protocol == "imap" else 995),
+        "ssl": use_ssl,
+        "smtp_server": smtp_server or preset.get("smtp", ""),
+        "smtp_port": smtp_port or preset.get("smtp_port", 465),
+        "smtp_ssl": smtp_ssl,
+        "sync_enabled": sync_enabled,
+        "sync_interval": sync_interval,
+        "last_sync": None,
+        "status": "configured",
+        "created": datetime.now().isoformat(),
+    }
+
+    accounts.append(account)
+    _save_mail_accounts(accounts)
+
+    return {"status": "ok", "account": {k: v for k, v in account.items() if k != "password"}}
+
+@app.put("/api/mail/accounts/{account_id}")
+async def mail_accounts_update(account_id: str, request: Request):
+    """Update an existing mail account."""
+    data = await request.json()
+    accounts = _load_mail_accounts()
+
+    for i, acc in enumerate(accounts):
+        if acc["id"] == account_id:
+            for key in ["name", "email", "password", "protocol", "server", "port", "ssl",
+                         "smtp_server", "smtp_port", "smtp_ssl", "sync_enabled", "sync_interval"]:
+                if key in data:
+                    accounts[i][key] = data[key]
+            accounts[i]["updated"] = datetime.now().isoformat()
+            _save_mail_accounts(accounts)
+            safe = {k: v for k, v in accounts[i].items() if k != "password"}
+            safe["has_password"] = bool(accounts[i].get("password"))
+            return {"status": "ok", "account": safe}
+
+    return {"status": "error", "error": "Account not found"}
+
+@app.delete("/api/mail/accounts/{account_id}")
+async def mail_accounts_delete(account_id: str):
+    """Delete a mail account."""
+    accounts = _load_mail_accounts()
+    accounts = [a for a in accounts if a["id"] != account_id]
+    _save_mail_accounts(accounts)
+    return {"status": "ok", "deleted": account_id}
+
+@app.post("/api/mail/accounts/{account_id}/test")
+async def mail_accounts_test(account_id: str):
+    """Test connection to a mail account."""
+    accounts = _load_mail_accounts()
+    acc = next((a for a in accounts if a["id"] == account_id), None)
+    if not acc:
+        return {"status": "error", "error": "Account not found"}
+
+    result = {"imap": None, "smtp": None}
+
+    # Test IMAP/POP3
+    try:
+        if acc["protocol"] == "imap":
+            import imaplib
+            if acc["ssl"]:
+                m = imaplib.IMAP4_SSL(acc["server"], acc["port"])
+            else:
+                m = imaplib.IMAP4(acc["server"], acc["port"])
+            m.login(acc["email"], acc["password"])
+            status, data = m.select("INBOX")
+            msg_count = int(data[0]) if status == "OK" else 0
+            m.logout()
+            result["imap"] = {"status": "ok", "message": f"Connected. {msg_count} messages in INBOX."}
+        else:
+            import poplib
+            if acc["ssl"]:
+                m = poplib.POP3_SSL(acc["server"], acc["port"])
+            else:
+                m = poplib.POP3(acc["server"], acc["port"])
+            m.user(acc["email"])
+            m.pass_(acc["password"])
+            count, size = m.stat()
+            m.quit()
+            result["imap"] = {"status": "ok", "message": f"Connected. {count} messages, {size} bytes."}
+    except Exception as e:
+        result["imap"] = {"status": "error", "message": str(e)}
+
+    # Test SMTP
+    try:
+        import smtplib
+        if acc["smtp_ssl"]:
+            m = smtplib.SMTP_SSL(acc["smtp_server"], acc["smtp_port"], timeout=10)
+        else:
+            m = smtplib.SMTP(acc["smtp_server"], acc["smtp_port"], timeout=10)
+            m.starttls()
+        m.login(acc["email"], acc["password"])
+        m.quit()
+        result["smtp"] = {"status": "ok", "message": "SMTP connection successful"}
+    except Exception as e:
+        result["smtp"] = {"status": "error", "message": str(e)}
+
+    return {"status": "ok", "result": result}
+
+@app.post("/api/mail/accounts/{account_id}/sync")
+async def mail_accounts_sync(account_id: str):
+    """Trigger immediate sync for an account."""
+    accounts = _load_mail_accounts()
+    acc = next((a for a in accounts if a["id"] == account_id), None)
+    if not acc:
+        return {"status": "error", "error": "Account not found"}
+
+    # Run sync in background
+    try:
+        import subprocess
+        script = f"""python3 -c "
+import imaplib, email, os, time
+m = imaplib.IMAP4_SSL('{acc['server']}', {acc['port']})
+m.login('{acc['email']}', '{acc['password']}')
+m.select('INBOX')
+status, data = m.search(None, 'UNSEEN')
+if status == 'OK':
+    for num in data[0].split():
+        status2, msg_data = m.fetch(num, '(RFC822)')
+        if status2 == 'OK':
+            msg = email.message_from_bytes(msg_data[0][1])
+            print(f'Found: {{msg.get(\"subject\", \"No subject\")[:50]}}')
+m.logout()
+" """
+        # Schedule for background execution
+        accounts[i]["last_sync"] = datetime.now().isoformat()
+        _save_mail_accounts(accounts)
+        return {"status": "ok", "message": "Sync started"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+@app.get("/api/mail/accounts/providers")
+async def mail_accounts_providers():
+    """Get list of supported mail providers with presets."""
+    providers = {
+        "gmail.com": {"name": "Gmail", "imap": "imap.gmail.com", "pop3": "pop.gmail.com", "smtp": "smtp.gmail.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "outlook.com": {"name": "Microsoft Outlook", "imap": "outlook.office365.com", "pop3": "outlook.office365.com", "smtp": "smtp.office365.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "hotmail.com": {"name": "Hotmail", "imap": "outlook.office365.com", "pop3": "outlook.office365.com", "smtp": "smtp.office365.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "yahoo.com": {"name": "Yahoo Mail", "imap": "imap.mail.yahoo.com", "pop3": "pop.mail.yahoo.com", "smtp": "smtp.mail.yahoo.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "icloud.com": {"name": "iCloud Mail", "imap": "imap.mail.me.com", "pop3": "pop.mail.me.com", "smtp": "smtp.mail.me.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "zoho.com": {"name": "Zoho Mail", "imap": "imap.zoho.com", "pop3": "pop.zoho.com", "smtp": "smtp.zoho.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "aol.com": {"name": "AOL Mail", "imap": "imap.aol.com", "pop3": "pop.aol.com", "smtp": "smtp.aol.com", "ports": {"imap": 993, "pop3": 995, "smtp_ssl": 465, "smtp_starttls": 587}},
+        "protonmail.com": {"name": "ProtonMail Bridge", "imap": "127.0.0.1", "pop3": "127.0.0.1", "smtp": "127.0.0.1", "ports": {"imap": 1143, "pop3": 1195, "smtp_ssl": 1025, "smtp_starttls": 1025}},
+    }
+    return {"status": "ok", "providers": providers}
+
+@app.get("/api/mail/accounts/presets")
+async def mail_accounts_presets():
+    """Get quick-add presets for common providers."""
+    return {"status": "ok", "presets": [
+        {"id": "gmail", "name": "Gmail", "icon": "📧", "protocol": "imap", "server": "imap.gmail.com", "port": 993, "ssl": True, "smtp_server": "smtp.gmail.com", "smtp_port": 465, "smtp_ssl": True},
+        {"id": "outlook", "name": "Microsoft Outlook", "icon": "📨", "protocol": "imap", "server": "outlook.office365.com", "port": 993, "ssl": True, "smtp_server": "smtp.office365.com", "smtp_port": 587, "smtp_ssl": False},
+        {"id": "yahoo", "name": "Yahoo Mail", "icon": "📬", "protocol": "imap", "server": "imap.mail.yahoo.com", "port": 993, "ssl": True, "smtp_server": "smtp.mail.yahoo.com", "smtp_port": 465, "smtp_ssl": True},
+        {"id": "icloud", "name": "iCloud Mail", "icon": "🍎", "protocol": "imap", "server": "imap.mail.me.com", "port": 993, "ssl": True, "smtp_server": "smtp.mail.me.com", "smtp_port": 587, "smtp_ssl": False},
+        {"id": "zoho", "name": "Zoho Mail", "icon": "✉️", "protocol": "imap", "server": "imap.zoho.com", "port": 993, "ssl": True, "smtp_server": "smtp.zoho.com", "smtp_port": 465, "smtp_ssl": True},
+        {"id": "aol", "name": "AOL Mail", "icon": "📮", "protocol": "imap", "server": "imap.aol.com", "port": 993, "ssl": True, "smtp_server": "smtp.aol.com", "smtp_port": 465, "smtp_ssl": True},
+        {"id": "custom", "name": "Custom Server", "icon": "⚙️", "protocol": "imap", "server": "", "port": 993, "ssl": True, "smtp_server": "", "smtp_port": 587, "smtp_ssl": False},
+    ]}
+
+
+# --- Incoming Mail (from Cloudflare Worker) ---
+
+MAIL_INCOMING_SECRET = "zicore-mail-worker-2026"
+INCOMING_MAIL_LOG = Path(__file__).parent / "data" / "incoming_mail.json"
+
+@app.post("/api/mail/incoming")
+async def mail_incoming(request: Request):
+    """Receive email forwarded by Cloudflare Worker.
+    
+    Called by Cloudflare Worker when email arrives at zicore.space.
+    Stores email in local mailbox and optional forwarding.
+    """
+    # Verify secret
+    secret = request.headers.get("X-Mail-Secret", "")
+    if secret != MAIL_INCOMING_SECRET:
+        return JSONResponse({"status": "error", "error": "Invalid secret"}, status_code=403)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"status": "error", "error": "Invalid JSON"}, status_code=400)
+
+    to_addr = data.get("to", "")
+    from_addr = data.get("from", "")
+    subject = data.get("subject", "(sin asunto)")
+    body = data.get("body", "")
+    headers = data.get("headers", {})
+
+    logger.info(f"Incoming mail: {from_addr} -> {to_addr} | {subject}")
+
+    # Determine which mailbox to store in
+    # Parse local part from to_addr (e.g., admin@zicore.space -> admin)
+    local_part = to_addr.split("@")[0] if "@" in to_addr else "admin"
+    domain = to_addr.split("@")[1] if "@" in to_addr else "zicore.space"
+
+    # Store in Maildir format
+    maildir_base = Path("/var/mail/vmail")
+    maildir = maildir_base / domain / local_part / "Maildir" / "new"
+
+    try:
+        maildir.mkdir(parents=True, exist_ok=True)
+
+        # Generate filename (timestamp.pid.message-id)
+        ts = int(time.time())
+        msg_id = headers.get("message-id", f"{ts}@zicore.space").strip("<>")
+        filename = f"{ts}.{ts}.2:,S={len(body)},L={len(body.encode())}"
+
+        # Build raw email in Maildir format
+        raw_email = f"From: {from_addr}\r\n"
+        raw_email += f"To: {to_addr}\r\n"
+        raw_email += f"Subject: {subject}\r\n"
+        raw_email += f"Date: {headers.get('date', time.strftime('%a, %d %b %Y %H:%M:%S %z'))}\r\n"
+        if headers.get("message-id"):
+            raw_email += f"Message-ID: {headers['message-id']}\r\n"
+        if headers.get("reply-to"):
+            raw_email += f"Reply-To: {headers['reply-to']}\r\n"
+        raw_email += f"Content-Type: {headers.get('content-type', 'text/plain; charset=utf-8')}\r\n"
+        raw_email += f"X-ZICORE-Source: cloudflare-worker\r\n"
+        raw_email += f"X-ZICORE-Forwarded: {time.strftime('%Y-%m-%d %H:%M:%S')}\r\n"
+        raw_email += "\r\n"
+        raw_email += body
+
+        # Write to Maildir
+        filepath = maildir / filename
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(raw_email)
+
+        logger.info(f"Email stored: {filepath}")
+
+        # Log to incoming_mail.json for tracking
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "from": from_addr,
+            "to": to_addr,
+            "subject": subject,
+            "size": len(raw_email),
+            "file": str(filepath),
+        }
+        try:
+            log_data = []
+            if INCOMING_MAIL_LOG.exists():
+                with open(INCOMING_MAIL_LOG, "r") as f:
+                    log_data = json.load(f)
+            log_data.append(log_entry)
+            # Keep last 1000 entries
+            log_data = log_data[-1000:]
+            with open(INCOMING_MAIL_LOG, "w") as f:
+                json.dump(log_data, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to log incoming mail: {e}")
+
+        return {"status": "ok", "stored": str(filepath), "mailbox": f"{local_part}@{domain}"}
+
+    except Exception as e:
+        logger.error(f"Failed to store incoming mail: {e}")
+        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+
+
+@app.get("/api/mail/incoming")
+async def mail_incoming_list(request: Request):
+    """List recent incoming emails (from Cloudflare Worker)."""
+    limit = int(request.query_params.get("limit", "50"))
+    try:
+        if INCOMING_MAIL_LOG.exists():
+            with open(INCOMING_MAIL_LOG, "r") as f:
+                log_data = json.load(f)
+            return {"status": "ok", "emails": log_data[-limit:], "total": len(log_data)}
+    except Exception:
+        pass
+    return {"status": "ok", "emails": [], "total": 0}
+
+
+# ─── ZICORE SSO API ─────────────────────────────────────────────────────────
+
+SSO_PLANS = {
+    "free": {
+        "name": "Free",
+        "price_ztn": 0,
+        "mail_accounts": 1,
+        "mail_domains": ["zinemotion.com.mx"],
+        "zio_daily_messages": 20,
+        "storage_mb": 500,
+        "services": ["ZIO AI", "Game Center", "Settings"],
+    },
+    "basic": {
+        "name": "Basic",
+        "price_ztn": 10,
+        "mail_accounts": 3,
+        "mail_domains": ["zinemotion.com.mx"],
+        "zio_daily_messages": 100,
+        "storage_mb": 2048,
+        "services": ["ZIO AI", "Materializer", "Game Center", "Settings", "Knowledge Base"],
+    },
+    "pro": {
+        "name": "Pro",
+        "price_ztn": 50,
+        "mail_accounts": 10,
+        "mail_domains": ["zinemotion.com.mx", "zicore.space"],
+        "zio_daily_messages": -1,
+        "storage_mb": 10240,
+        "services": ["ZIO AI", "Materializer", "Mission Control", "Flight Simulator", "Engineering", "Game Center", "Settings", "Knowledge Base"],
+    },
+    "ultimate": {
+        "name": "Ultimate",
+        "price_ztn": 200,
+        "mail_accounts": -1,
+        "mail_domains": ["zinemotion.com.mx", "zicore.space", "zinemotion.com"],
+        "zio_daily_messages": -1,
+        "storage_mb": -1,
+        "services": "__all__",
+    },
+}
+
+
+async def get_current_user(request: Request) -> Optional[dict]:
+    """Extract Bearer token from Authorization header and verify via SSO.
+
+    Returns user dict on success, or None if unauthenticated.
+    """
+    if sso is None:
+        return None
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:]
+    result = sso.verify_token(token)
+    if result.get("success"):
+        return result.get("user")
+    return None
+
+
+def _require_admin(user: dict) -> Optional[JSONResponse]:
+    """Return a JSONResponse error if user is not admin, else None."""
+    if not user or user.get("role") != "admin":
+        return JSONResponse({"status": "error", "error": "Admin access required"}, status_code=403)
+    return None
+
+
+# ─── Auth Routes ─────────────────────────────────────────────────────────────
+
+@app.post("/api/sso/register")
+async def sso_register(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        data = await request.json()
+        email = data.get("email", "").strip().lower()
+        password = data.get("password", "")
+        name = data.get("name", "").strip()
+
+        if not email or not _validate_email(email):
+            return {"status": "error", "error": "Invalid email format"}
+        if not password or len(password) < 6:
+            return {"status": "error", "error": "Password must be at least 6 characters"}
+        if not name or len(name) < 2:
+            return {"status": "error", "error": "Name must be at least 2 characters"}
+
+        username = email.split("@")[0]
+        result = sso.register_user(username, password, email=email, display_name=name)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Registration failed")}
+
+        user = result["user"]
+
+        # Sync with mail system
+        try:
+            mail_server.create_user(email, password, name, plan="free")
+            logger.info(f"SSO: Mail account created for {email}")
+        except Exception as e:
+            logger.warning(f"SSO: Failed to create mail account for {email}: {e}")
+
+        return {"status": "ok", "user": user}
+    except Exception as e:
+        logger.error(f"SSO register error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/login")
+async def sso_login(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        data = await request.json()
+        email = data.get("email", "").strip().lower()
+        password = data.get("password", "")
+
+        if not email or not password:
+            return {"status": "error", "error": "Email and password are required"}
+
+        username = email.split("@")[0]
+        client_ip = request.client.host if request.client else "unknown"
+        ua = request.headers.get("User-Agent", "")
+        result = sso.login(username, password, service="zicore-web", ip_address=client_ip, user_agent=ua)
+
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Login failed")}
+
+        # Sync plan to mail system
+        try:
+            user = result["user"]
+            mail_server.update_role(email, user.get("role", "user"))
+        except Exception:
+            pass
+
+        return {"status": "ok", "token": result["token"], "expires_at": result["expires_at"], "user": result["user"]}
+    except Exception as e:
+        logger.error(f"SSO login error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/logout")
+async def sso_logout(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        auth = request.headers.get("Authorization", "")
+        token = auth[7:] if auth.startswith("Bearer ") else ""
+        if token:
+            sso.logout(token)
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/me")
+async def sso_me(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        # Attach plan info
+        plan_name = user.get("role", "user")
+        if plan_name not in SSO_PLANS:
+            plan_name = "free"
+        user["plan"] = plan_name
+        user["plan_info"] = SSO_PLANS.get(plan_name, SSO_PLANS["free"])
+
+        return {"status": "ok", "user": user}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/change-password")
+async def sso_change_password(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        old_password = data.get("old_password", "")
+        new_password = data.get("new_password", "")
+
+        if not old_password or not new_password:
+            return {"status": "error", "error": "Both old and new passwords are required"}
+        if len(new_password) < 6:
+            return {"status": "error", "error": "New password must be at least 6 characters"}
+
+        result = sso.change_password(user["id"], old_password, new_password)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Password change failed")}
+
+        return {"status": "ok", "message": "Password changed successfully"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/reset-password")
+async def sso_reset_password(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        data = await request.json()
+        email = data.get("email", "").strip().lower()
+
+        if not email or not _validate_email(email):
+            return {"status": "error", "error": "Invalid email format"}
+
+        # For now, just log the reset request (no email sending)
+        logger.info(f"SSO: Password reset requested for {email}")
+        return {"status": "ok", "message": "If an account with that email exists, a reset link has been sent."}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/confirm-reset")
+async def sso_confirm_reset(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        data = await request.json()
+        token = data.get("token", "")
+        new_password = data.get("new_password", "")
+
+        if not token or not new_password:
+            return {"status": "error", "error": "Token and new password are required"}
+        if len(new_password) < 6:
+            return {"status": "error", "error": "Password must be at least 6 characters"}
+
+        # Verify the reset token via SSO session
+        result = sso.verify_token(token)
+        if not result.get("success"):
+            return {"status": "error", "error": "Invalid or expired reset token"}
+
+        user = result["user"]
+        reset_result = sso.admin_reset_password(user["id"], new_password)
+        if not reset_result.get("success"):
+            return {"status": "error", "error": reset_result.get("error", "Reset failed")}
+
+        return {"status": "ok", "message": "Password reset successfully"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ─── Plan Routes ─────────────────────────────────────────────────────────────
+
+@app.get("/api/sso/plans")
+async def sso_plans():
+    try:
+        plans = {}
+        for key, info in SSO_PLANS.items():
+            plans[key] = {
+                "name": info["name"],
+                "price_ztn": info["price_ztn"],
+                "mail_accounts": info["mail_accounts"],
+                "zio_daily_messages": info["zio_daily_messages"],
+                "storage_mb": info["storage_mb"],
+            }
+        return {"status": "ok", "plans": plans}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/upgrade")
+async def sso_upgrade(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        new_plan = data.get("plan", "")
+
+        if new_plan not in SSO_PLANS:
+            return {"status": "error", "error": f"Invalid plan. Choose: {', '.join(SSO_PLANS.keys())}"}
+
+        # Map plan name to role for SSO user
+        result = sso.update_user(user["id"], role=new_plan)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Upgrade failed")}
+
+        # Sync plan to mail system
+        try:
+            email = user.get("email", "")
+            if email:
+                mail_server.update_role(email, new_plan)
+        except Exception:
+            pass
+
+        return {"status": "ok", "plan": new_plan, "plan_info": SSO_PLANS[new_plan]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/limits")
+async def sso_limits(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        plan_name = user.get("role", "free")
+        if plan_name not in SSO_PLANS:
+            plan_name = "free"
+
+        return {"status": "ok", "plan": plan_name, "limits": SSO_PLANS[plan_name]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ─── Service Routes ──────────────────────────────────────────────────────────
+
+@app.get("/api/sso/services")
+async def sso_services():
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        result = sso.list_services()
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed to list services")}
+        return {"status": "ok", "services": result["services"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/my-services")
+async def sso_my_services(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        result = sso.get_user_services(user["id"])
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed to get services")}
+        return {"status": "ok", "services": result["services"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/activate-service")
+async def sso_activate_service(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        service_id = data.get("service_id")
+
+        if not service_id:
+            return {"status": "error", "error": "service_id required"}
+
+        # Check plan allows this service
+        plan_name = user.get("role", "free")
+        plan_info = SSO_PLANS.get(plan_name, SSO_PLANS["free"])
+        allowed_services = plan_info.get("services", [])
+
+        svc_result = sso.get_service(service_id)
+        if not svc_result.get("success"):
+            return {"status": "error", "error": "Service not found"}
+
+        svc_name = svc_result["service"]["name"]
+        if allowed_services != "__all__" and svc_name not in allowed_services:
+            return {"status": "error", "error": f"Service '{svc_name}' not available on {plan_name} plan. Upgrade to access it."}
+
+        result = sso.grant_service(user["id"], service_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Activation failed")}
+
+        return {"status": "ok", "message": f"Service '{svc_name}' activated"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/deactivate-service")
+async def sso_deactivate_service(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        service_id = data.get("service_id")
+
+        if not service_id:
+            return {"status": "error", "error": "service_id required"}
+
+        result = sso.revoke_service(user["id"], service_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Deactivation failed")}
+
+        return {"status": "ok", "message": "Service deactivated"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/check-access/{service_name}")
+async def sso_check_access(service_name: str, request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        result = sso.check_service_access(user["id"], service_name)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Check failed")}
+
+        return {"status": "ok", "has_access": result["has_access"], "role": result["role"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ─── Admin Routes ────────────────────────────────────────────────────────────
+
+@app.get("/api/sso/admin/users")
+async def sso_admin_users(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+
+        result = sso.list_users(include_inactive=True)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed to list users")}
+
+        return {"status": "ok", "users": result["users"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.put("/api/sso/admin/user/{user_id}")
+async def sso_admin_update_user(user_id: int, request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+
+        data = await request.json()
+        email = data.get("email")
+        display_name = data.get("display_name")
+        role = data.get("role")
+
+        result = sso.update_user(user_id, email=email, display_name=display_name, role=role)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Update failed")}
+
+        return {"status": "ok", "user": result["user"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/admin/grant-service")
+async def sso_admin_grant_service(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+
+        data = await request.json()
+        target_user_id = data.get("user_id")
+        service_id = data.get("service_id")
+
+        if not target_user_id or not service_id:
+            return {"status": "error", "error": "user_id and service_id required"}
+
+        result = sso.grant_service(target_user_id, service_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Grant failed")}
+
+        return {"status": "ok", "message": "Service granted"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/admin/stats")
+async def sso_admin_stats(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+
+        result = sso.stats()
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Stats failed")}
+
+        return {"status": "ok", "stats": {
+            "users": result["users"],
+            "active_sessions": result["active_sessions"],
+            "services": result["services"],
+            "audit_entries": result["audit_entries"],
+        }}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# --- Crypto Payments ---
+
+from zicore.crypto_payment import (
+    create_payment, get_payment, confirm_payment,
+    get_user_payments, get_all_payments, get_stats as get_crypto_stats,
+    get_services, DEPOSIT_ADDRESSES
+)
+
+
+@app.get("/api/crypto/services")
+async def crypto_services():
+    """Get available services and pricing."""
+    return {"status": "ok", "services": get_services(), "addresses": DEPOSIT_ADDRESSES}
+
+
+@app.post("/api/crypto/pay")
+async def crypto_create_payment(request: Request):
+    """Create a new crypto payment."""
+    data = await request.json()
+    service_id = data.get("service", "")
+    user_email = data.get("email", "")
+    crypto = data.get("crypto", "ztn")
+    result = create_payment(service_id, user_email, crypto)
+    return {"status": "ok" if "error" not in result else "error", **result}
+
+
+@app.get("/api/crypto/pay/{payment_id}")
+async def crypto_get_payment(payment_id: str):
+    """Get payment details."""
+    payment = get_payment(payment_id)
+    if payment:
+        return {"status": "ok", "payment": payment}
+    return {"status": "error", "error": "Payment not found"}
+
+
+@app.post("/api/crypto/pay/{payment_id}/confirm")
+async def crypto_confirm_payment(payment_id: str):
+    """Confirm a payment (admin)."""
+    return confirm_payment(payment_id)
+
+
+@app.get("/api/crypto/payments")
+async def crypto_user_payments(request: Request):
+    """Get payments for a user."""
+    email = request.query_params.get("email", "")
+    if email:
+        return {"status": "ok", "payments": get_user_payments(email)}
+    return {"status": "ok", "payments": get_all_payments()}
+
+
+@app.get("/api/crypto/stats")
+async def crypto_stats():
+    """Get payment statistics."""
+    return {"status": "ok", **get_crypto_stats()}
+
+
+# --- ZICORE Bank API ---
+
+import sqlite3
+from pathlib import Path
+
+BANK_DB = Path(__file__).parent / "data" / "bank.db"
+
+def init_bank_db():
+    """Initialize bank database."""
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        email TEXT NOT NULL,
+        znt_balance REAL DEFAULT 0,
+        plan TEXT DEFAULT 'free',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_user TEXT,
+        to_user TEXT,
+        amount REAL NOT NULL,
+        currency TEXT DEFAULT 'ZNT',
+        tx_type TEXT DEFAULT 'transfer',
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS staking (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        apy REAL DEFAULT 15.0,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES accounts(user_id)
+    )''')
+    conn.commit()
+    conn.close()
+
+init_bank_db()
+
+@app.get("/api/bank/account")
+async def bank_account(request: Request):
+    """Get or create bank account for current user."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    email = user.get("email", "")
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute("SELECT * FROM accounts WHERE user_id=?", (user_id,))
+    row = c.fetchone()
+    if not row:
+        c.execute("INSERT INTO accounts (user_id, email) VALUES (?, ?)", (user_id, email))
+        conn.commit()
+        c.execute("SELECT * FROM accounts WHERE user_id=?", (user_id,))
+        row = c.fetchone()
+    conn.close()
+
+    return {
+        "status": "ok",
+        "account": {
+            "id": row[0], "user_id": row[1], "email": row[2],
+            "znt_balance": row[3], "plan": row[4], "created_at": row[5]
+        }
+    }
+
+@app.get("/api/bank/balance")
+async def bank_balance(request: Request):
+    """Get ZNT balance."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute("SELECT znt_balance FROM accounts WHERE user_id=?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+
+    return {"status": "ok", "balance": row[0] if row else 0, "currency": "ZNT"}
+
+@app.get("/api/bank/transactions")
+async def bank_transactions(request: Request, limit: int = 50):
+    """Get transaction history."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute("""SELECT * FROM transactions
+                 WHERE from_user=? OR to_user=?
+                 ORDER BY created_at DESC LIMIT ?""", (user_id, user_id, limit))
+    rows = c.fetchall()
+    conn.close()
+
+    txs = [{"id": r[0], "from": r[1], "to": r[2], "amount": r[3], "currency": r[4],
+            "type": r[5], "description": r[6], "created_at": r[7]} for r in rows]
+    return {"status": "ok", "transactions": txs}
+
+@app.post("/api/bank/send")
+async def bank_send(request: Request):
+    """Send ZNT to another user."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    data = await request.json()
+    to_email = data.get("to", "")
+    amount = float(data.get("amount", 0))
+    description = data.get("description", "")
+
+    if amount <= 0:
+        return {"error": "Invalid amount"}
+    if not to_email:
+        return {"error": "Recipient required"}
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+
+    # Check sender balance
+    c.execute("SELECT znt_balance FROM accounts WHERE user_id=?", (user_id,))
+    sender = c.fetchone()
+    if not sender or sender[0] < amount:
+        conn.close()
+        return {"error": "Insufficient balance"}
+
+    # Find or create recipient
+    c.execute("SELECT user_id FROM accounts WHERE email=?", (to_email,))
+    recipient = c.fetchone()
+    if not recipient:
+        conn.close()
+        return {"error": "Recipient not found"}
+
+    to_id = recipient[0]
+
+    # Execute transfer
+    c.execute("UPDATE accounts SET znt_balance = znt_balance - ? WHERE user_id=?", (amount, user_id))
+    c.execute("UPDATE accounts SET znt_balance = znt_balance + ? WHERE user_id=?", (amount, to_id))
+    c.execute("INSERT INTO transactions (from_user, to_user, amount, description) VALUES (?, ?, ?, ?)",
+              (user_id, to_id, amount, description))
+    conn.commit()
+    conn.close()
+
+    return {"status": "ok", "message": f"Sent {amount} ZNT to {to_email}"}
+
+@app.get("/api/bank/staking")
+async def bank_staking(request: Request):
+    """Get staking info."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute("SELECT * FROM staking WHERE user_id=?", (user_id,))
+    rows = c.fetchall()
+    conn.close()
+
+    stakes = [{"id": r[0], "amount": r[2], "apy": r[3], "started_at": r[4]} for r in rows]
+    total_staked = sum(s["amount"] for s in stakes)
+    return {"status": "ok", "staking": stakes, "total_staked": total_staked, "apy": 15.0}
+
+@app.post("/api/bank/stake")
+async def bank_stake(request: Request):
+    """Stake ZNT tokens."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    data = await request.json()
+    amount = float(data.get("amount", 0))
+    if amount <= 0:
+        return {"error": "Invalid amount"}
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute("SELECT znt_balance FROM accounts WHERE user_id=?", (user_id,))
+    row = c.fetchone()
+    if not row or row[0] < amount:
+        conn.close()
+        return {"error": "Insufficient balance"}
+
+    c.execute("UPDATE accounts SET znt_balance = znt_balance - ? WHERE user_id=?", (amount, user_id))
+    c.execute("INSERT INTO staking (user_id, amount) VALUES (?, ?)", (user_id, amount))
+    c.execute("INSERT INTO transactions (from_user, amount, tx_type, description) VALUES (?, ?, 'stake', 'Staked ZNT')",
+              (user_id, amount))
+    conn.commit()
+    conn.close()
+
+    return {"status": "ok", "message": f"Staked {amount} ZNT at 15% APY"}
+
+@app.get("/api/bank/portfolio")
+async def bank_portfolio(request: Request):
+    """Get full portfolio (balance + staking + value)."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id", user.get("email", ""))
+    if not user_id:
+        return {"error": "Authentication required"}, 401
+
+    conn = sqlite3.connect(str(BANK_DB))
+    c = conn.cursor()
+    c.execute("SELECT znt_balance FROM accounts WHERE user_id=?", (user_id,))
+    balance = c.fetchone()
+    c.execute("SELECT SUM(amount) FROM staking WHERE user_id=?", (user_id,))
+    staked = c.fetchone()
+    conn.close()
+
+    bal = balance[0] if balance else 0
+    stk = staked[0] if staked and staked[0] else 0
+    znt_price = 2.47  # mock price
+
+    return {
+        "status": "ok",
+        "portfolio": {
+            "znt_balance": bal,
+            "znt_staked": stk,
+            "znt_total": bal + stk,
+            "usd_value": round((bal + stk) * znt_price, 2),
+            "znt_price": znt_price,
+            "apy": 15.0
+        }
+    }
 
 
 # --- ZIO Machine Learning ---
@@ -3896,8 +6690,598 @@ async def increment_downloads():
     return {"count": count}
 
 
+# ─── ZICORE Print — Manufacturing Division ───────────────────────────────────
+
+@app.get("/zicore-print")
+async def serve_zicore_print():
+    return FileResponse(str(FRONTEND_DIR / "zicore-print.html"))
+
+@app.get("/ziprint")
+async def serve_ziprint():
+    f = FRONTEND_DIR / "ziprint.html"
+    if f.exists():
+        return FileResponse(str(f))
+    return {"error": "ZiPrint not deployed yet", "status": 503}, 503
+
+@app.get("/api/print/printers")
+async def print_list_printers():
+    from zicore.print_driver import print_manager
+    return {"printers": list(print_manager.printers.values())}
+
+@app.get("/api/print/materials")
+async def print_materials():
+    from zicore.print_driver import MATERIAL_DATABASE
+    return {"materials": MATERIAL_DATABASE}
+
+@app.post("/api/print/connect/{printer_id}")
+async def print_connect(printer_id: str):
+    from zicore.print_driver import print_manager
+    ok = await print_manager.connect_printer(printer_id)
+    return {"status": "ok" if ok else "error", "connected": ok}
+
+@app.post("/api/print/disconnect/{printer_id}")
+async def print_disconnect(printer_id: str):
+    from zicore.print_driver import print_manager
+    await print_manager.disconnect_printer(printer_id)
+    return {"status": "ok"}
+
+@app.get("/api/print/status/{printer_id}")
+async def print_status(printer_id: str):
+    from zicore.print_driver import print_manager
+    return await print_manager.get_printer_status(printer_id)
+
+@app.get("/api/print/all-status")
+async def print_all_status():
+    from zicore.print_driver import print_manager
+    return {"printers": await print_manager.get_all_status()}
+
+@app.post("/api/print/feeder")
+async def print_feeder(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    feeder = int(body.get("feeder", 0))
+    mm = float(body.get("mm", 0))
+    speed = int(body.get("speed", 200))
+    action = body.get("action", "")
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if not driver:
+        return JSONResponse({"error": "Driver not connected"}, status_code=400)
+    # Tool selection action
+    if action == "select" and hasattr(driver, "select_tool"):
+        ok = await driver.select_tool(feeder)
+        return {"status": "ok" if ok else "error", "tool": feeder}
+    # Feeder move action
+    if hasattr(driver, "feeder_move"):
+        ok = await driver.feeder_move(feeder, mm, speed)
+        return {"status": "ok" if ok else "error"}
+    return JSONResponse({"error": "Driver does not support feeders"}, status_code=400)
+
+@app.post("/api/print/feeder-name")
+async def print_feeder_name(request: Request):
+    """Set custom name for a feeder."""
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    feeder = int(body.get("feeder", 0))
+    name = body.get("name", "").strip()
+    if not name:
+        return {"status": "error", "error": "Name required"}
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver and hasattr(driver, "set_feeder_name"):
+        driver.set_feeder_name(feeder, name)
+        # Also update printers.json config
+        try:
+            config_path = Path(__file__).parent / "data" / "config" / "printers.json"
+            if config_path.exists():
+                with open(config_path, "r") as f:
+                    cfg = json.load(f)
+                for p in cfg.get("printers", []):
+                    if p.get("id") == printer_id:
+                        if "feeder_names" not in p:
+                            p["feeder_names"] = {}
+                        p["feeder_names"][str(feeder)] = name
+                        break
+                with open(config_path, "w") as f:
+                    json.dump(cfg, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to save feeder name to config: {e}")
+        return {"status": "ok", "feeder": feeder, "name": name}
+    return JSONResponse({"error": "Driver not connected or no feeder support"}, status_code=400)
+
+@app.post("/api/print/temperature")
+async def print_temperature(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    tool = body.get("tool", "hotend")
+    temp = int(body.get("temp", 0))
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        if tool == "bed":
+            ok = await driver.set_bed_temperature(temp)
+        else:
+            ok = await driver.set_temperature(0, temp)
+        return {"status": "ok" if ok else "error"}
+    return JSONResponse({"error": "Driver not connected"}, status_code=400)
+
+@app.post("/api/print/gcode")
+async def print_gcode(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    gcode = body.get("gcode", "")
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        result = await driver.send_gcode(gcode)
+        return {"status": "ok", "response": result}
+    return JSONResponse({"error": "Driver not connected"}, status_code=400)
+
+@app.post("/api/print/move")
+async def print_move(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        ok = await driver.move(
+            x=body.get("x"), y=body.get("y"), z=body.get("z"),
+            speed=body.get("speed", 100)
+        )
+        return {"status": "ok" if ok else "error"}
+    return JSONResponse({"error": "Driver not connected"}, status_code=400)
+
+@app.post("/api/print/extrude")
+async def print_extrude(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    mm = body.get("mm", 0)
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        ok = await driver.extrude(mm, body.get("speed", 100))
+        return {"status": "ok" if ok else "error"}
+    return JSONResponse({"error": "Driver not connected"}, status_code=400)
+
+@app.post("/api/print/action")
+async def print_action(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    action = body.get("action", "")
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        if action == "home": ok = await driver.home()
+        elif action == "pause": ok = await driver.pause_print()
+        elif action == "resume": ok = await driver.resume_print()
+        elif action == "cancel": ok = await driver.cancel_print()
+        elif action == "stop": ok = await driver.emergency_stop()
+        else: return JSONResponse({"error": f"Unknown action: {action}"}, status_code=400)
+        return {"status": "ok" if ok else "error"}
+    return JSONResponse({"error": "Driver not connected"}, status_code=400)
+
+@app.post("/api/print/start")
+async def print_start(request: Request):
+    body = await request.json()
+    printer_id = body.get("printer_id")
+    filename = body.get("filename", "")
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        ok = await driver.start_print(filename)
+        return {"status": "ok" if ok else "error"}
+    return JSONResponse({"error": "Driver not connected"}, status_code=400)
+
+@app.get("/api/print/files/{printer_id}")
+async def print_files(printer_id: str):
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if driver:
+        files = await driver.get_files()
+        return {"files": files}
+    return {"files": []}
+
+@app.post("/api/print/purge")
+async def print_purge(request: Request):
+    body = await request.json()
+    from zicore.print_driver import print_manager
+    from_mat = body.get("from", "pla")
+    to_mat = body.get("to", "pla")
+    amount = print_manager.get_purge_amount(from_mat, to_mat)
+    return {"purge_mm": amount, "from": from_mat, "to": to_mat}
+
+
+@app.get("/api/print/camera/{printer_id}")
+async def print_camera_stream(printer_id: str):
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if not driver or not hasattr(driver, 'host'):
+        return JSONResponse({"error": "Printer not connected"}, status_code=400)
+    host = driver.host
+    stream_port = getattr(driver, 'stream_port', 81)
+    import urllib.request
+    try:
+        url = f"http://{host}:{stream_port}/stream"
+        req = urllib.request.Request(url)
+        r = urllib.request.urlopen(req, timeout=10)
+        content_type = r.headers.get('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
+        async def stream_gen():
+            try:
+                while True:
+                    chunk = r.read(4096)
+                    if not chunk:
+                        break
+                    yield chunk
+            except:
+                pass
+        from starlette.responses import StreamingResponse
+        return StreamingResponse(stream_gen(), media_type=content_type)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/print/capture/{printer_id}")
+async def print_camera_capture(printer_id: str):
+    from zicore.print_driver import print_manager
+    driver = print_manager.drivers.get(printer_id)
+    if not driver or not hasattr(driver, 'host'):
+        return JSONResponse({"error": "Printer not connected"}, status_code=400)
+    host = driver.host
+    import urllib.request
+    try:
+        url = f"http://{host}/capture"
+        r = urllib.request.urlopen(url, timeout=10)
+        img = r.read()
+        from starlette.responses import Response
+        return Response(content=img, media_type="image/jpeg")
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/print/ports")
+async def print_list_ports():
+    try:
+        import serial.tools.list_ports
+        ports = serial.tools.list_ports.comports()
+        result = []
+        for p in ports:
+            result.append({
+                'port': p.device,
+                'description': p.description,
+                'hwid': p.hwid,
+                'vid': p.vid,
+                'pid': p.pid,
+                'manufacturer': p.manufacturer or '',
+            })
+        return {"ports": result}
+    except ImportError:
+        return {"ports": [], "error": "pyserial not installed"}
+
+
+@app.post("/api/print/flash")
+async def print_flash_board(request: Request):
+    """Flash firmware to printer boards.
+    
+    Supported board_types:
+      - esp32s3: ESP32-S3 Z1_Control feeder hub (camera + 4 feeders)
+      - tinybee: MKS Tinybee STM32F407 (Klipper via WSL)
+      - ramps: RAMPS 1.4 ATmega2560 (Marlin)
+      - cnc_shield: CNC Shield V3 ATmega328P (feeder node)
+      - esp32_feeder: ESP32 standalone feeder controller
+    """
+    body = await request.json()
+    port = body.get("port", "")
+    board_type = body.get("board_type", "esp32s3")
+    wifi_ssid = body.get("wifi_ssid", "")
+    wifi_pass = body.get("wifi_pass", "")
+
+    if not port:
+        return JSONResponse({"error": "Port required"}, status_code=400)
+
+    import subprocess, os
+
+    # Board configurations
+    boards = {
+        "esp32s3": {
+            "name": "ESP32-S3 Z1_Control",
+            "project": r"C:\Users\zinem\Documents\PlatformIO\Projects\Z1_Control",
+            "env": "esp32s3_feeder",
+            "timeout": 180,
+            "needs_wifi": True,
+        },
+        "tinybee": {
+            "name": "MKS Tinybee (Klipper)",
+            "project": r"C:\Users\zinem\Documents\PlatformIO\Projects\Z1_Control",
+            "env": "tinybee_klipper",
+            "timeout": 300,
+            "needs_wifi": False,
+            "note": "Requiere WSL con Klipper instalado",
+        },
+        "ramps": {
+            "name": "RAMPS 1.4 (Marlin)",
+            "project": None,  # Uses esptool or avrdude
+            "env": "ramps",
+            "timeout": 120,
+            "needs_wifi": False,
+            "uses_avrdude": True,
+            "mcu": "atmega2560",
+        },
+        "cnc_shield": {
+            "name": "CNC Shield V3 (ATmega328P)",
+            "project": r"C:\Users\zinem\Documents\PlatformIO\Projects\Z1_Control",
+            "env": "feeder_nodo",
+            "timeout": 60,
+            "needs_wifi": False,
+            "uses_avrdude": True,
+            "mcu": "atmega328p",
+        },
+        "esp32_feeder": {
+            "name": "ESP32 Feeder Controller",
+            "project": r"C:\Users\zinem\Documents\PlatformIO\Projects\Z1_Control",
+            "env": "esp32s3_feeder",
+            "timeout": 180,
+            "needs_wifi": True,
+        },
+    }
+
+    board = boards.get(board_type)
+    if not board:
+        return JSONResponse({"error": f"Unknown board type: {board_type}. Supported: {', '.join(boards.keys())}"}, status_code=400)
+
+    result_log = []
+
+    try:
+        # Tinybee uses WSL + Klipper make flash
+        if board_type == "tinybee":
+            cmd = ["wsl", "bash", "-c", "cd ~/klipper && make flash FLASH_DEVICE=0483:df11"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=board["timeout"])
+            return {
+                "success": result.returncode == 0,
+                "board": board["name"],
+                "stdout": result.stdout[-2000:] if result.stdout else "",
+                "stderr": result.stderr[-1000:] if result.stderr else "",
+                "note": board.get("note", ""),
+            }
+
+        # RAMPS / CNC Shield use avrdude
+        if board.get("uses_avrdude"):
+            # Try to find hex file or compile first
+            hex_file = None
+            if board_type == "ramps":
+                # Check for pre-compiled Marlin hex
+                possible_paths = [
+                    r"C:\Users\zinem\Documents\PlatformIO\Projects\Z1_Control\.pio\build\mega2560\firmware.hex",
+                    r"C:\Users\zinem\Documents\PlatformIO\Projects\Marlin\.pio\build\mega2560\firmware.hex",
+                ]
+                for p in possible_paths:
+                    if os.path.exists(p):
+                        hex_file = p
+                        break
+
+            if board_type == "cnc_shield":
+                # Compile feeder_nodo first
+                project_dir = board["project"]
+                cmd = ["pio", "run", "-e", "feeder_nodo", "-t", "upload", "--upload-port", port]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=board["timeout"], cwd=project_dir)
+                return {
+                    "success": result.returncode == 0,
+                    "board": board["name"],
+                    "stdout": result.stdout[-2000:] if result.stdout else "",
+                    "stderr": result.stderr[-1000:] if result.stderr else "",
+                }
+
+            if hex_file:
+                # Flash with avrdude
+                cmd = [
+                    "avrdude",
+                    "-p", board["mcu"],
+                    "-c", "wiring",  # or "arduino"
+                    "-P", port,
+                    "-b", "115200",
+                    "-D",
+                    "-U", f"flash:w:{hex_file}:i"
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=board["timeout"])
+                return {
+                    "success": result.returncode == 0,
+                    "board": board["name"],
+                    "hex_file": hex_file,
+                    "stdout": result.stdout[-2000:] if result.stdout else "",
+                    "stderr": result.stderr[-1000:] if result.stderr else "",
+                }
+            else:
+                return {
+                    "success": False,
+                    "board": board["name"],
+                    "error": f"No hex file found for {board['name']}. Compile firmware first.",
+                    "note": "Place firmware.hex in the project build directory or compile with PlatformIO",
+                }
+
+        # ESP32 boards use PlatformIO
+        if board["project"]:
+            cmd = ["pio", "run", "-e", board["env"], "-t", "upload", "--upload-port", port]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=board["timeout"], cwd=board["project"])
+            return {
+                "success": result.returncode == 0,
+                "board": board["name"],
+                "stdout": result.stdout[-2000:] if result.stdout else "",
+                "stderr": result.stderr[-1000:] if result.stderr else "",
+            }
+
+        return JSONResponse({"error": f"No flash method configured for {board_type}"}, status_code=400)
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "board": board["name"], "error": f"Flash timed out ({board['timeout']}s)"}
+    except FileNotFoundError as e:
+        return {"success": False, "board": board["name"], "error": f"Tool not found: {e}"}
+    except Exception as e:
+        return {"success": False, "board": board["name"], "error": str(e)}
+
+
+@app.get("/api/print/boards")
+async def print_boards_list():
+    """List supported board types for flashing."""
+    return {"boards": [
+        {"id": "esp32s3", "name": "ESP32-S3 Z1_Control", "desc": "Feeder hub central + camara OV2640 + streaming MJPEG", "mcu": "ESP32-S3", "firmware": "Z1_Control Arduino", "needs_wifi": True},
+        {"id": "tinybee", "name": "MKS Tinybee (Klipper)", "desc": "Impresora 3D con STM32F407, Klipper via WSL", "mcu": "STM32F407VGT6", "firmware": "Klipper", "needs_wifi": False},
+        {"id": "ramps", "name": "RAMPS 1.4 (Marlin)", "desc": "Impresora ATmega2560 con RAMPS shield, Marlin firmware", "mcu": "ATmega2560", "firmware": "Marlin", "needs_wifi": False},
+        {"id": "cnc_shield", "name": "CNC Shield V3 (Feeders)", "desc": "Controlador de feeders ATmega328P con CNC Shield + A4988", "mcu": "ATmega328P", "firmware": "Feeder Node", "needs_wifi": False},
+        {"id": "esp32_feeder", "name": "ESP32 Feeder Controller", "desc": "Controlador WiFi de feeders con ESP32 standalone", "mcu": "ESP32", "firmware": "Z1_Control ESP32", "needs_wifi": True},
+    ]}
+
+
+@app.post("/api/print/serial")
+async def print_serial_send(request: Request):
+    body = await request.json()
+    port = body.get("port", "")
+    command = body.get("command", "")
+    baud = body.get("baud", 115200)
+
+    if not port or not command:
+        return JSONResponse({"error": "Port and command required"}, status_code=400)
+
+    try:
+        import serial
+        s = serial.Serial(port, baud, timeout=3)
+        s.reset_input_buffer()
+        s.write((command + "\n").encode())
+        import time
+        time.sleep(0.5)
+        response = s.read(4096).decode('utf-8', errors='ignore')
+        s.close()
+        return {"response": response}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ─── Video Chat ──────────────────────────────────────────────────────────────
+
+@app.get("/videochat")
+async def serve_videochat():
+    return FileResponse(str(FRONTEND_DIR / "videochat.html"))
+
+@app.get("/mobile")
+async def serve_mobile_monitor():
+    return FileResponse(str(FRONTEND_DIR / "mobile-monitor.html"))
+
+@app.get("/vr-viewer")
+async def serve_vr_viewer():
+    f = FRONTEND_DIR / "vr-viewer.html"
+    if f.exists():
+        return FileResponse(str(f))
+    return JSONResponse({"error": "VR Viewer not deployed"}, status_code=503)
+
+@app.get("/display-monitor")
+async def serve_display_monitor():
+    f = FRONTEND_DIR / "display-monitor.html"
+    if f.exists():
+        return FileResponse(str(f))
+    return JSONResponse({"error": "Display Monitor not deployed"}, status_code=503)
+
+@app.get("/api/vr/sessions")
+async def vr_sessions():
+    if vr_stream_manager is None:
+        return JSONResponse({"error": "VR Stream not available"}, status_code=503)
+    return JSONResponse({"sessions": vr_stream_manager.list_sessions()})
+
+@app.get("/api/vr/session/{session_id}")
+async def vr_session_info(session_id: str):
+    if vr_stream_manager is None:
+        return JSONResponse({"error": "VR Stream not available"}, status_code=503)
+    info = vr_stream_manager.get_session(session_id)
+    if not info:
+        return JSONResponse({"error": "Session not found"}, status_code=404)
+    return JSONResponse(info)
+
+@app.delete("/api/vr/session/{session_id}")
+async def vr_session_close(session_id: str):
+    if vr_stream_manager is None:
+        return JSONResponse({"error": "VR Stream not available"}, status_code=503)
+    vr_stream_manager.close_session(session_id)
+    return JSONResponse({"ok": True})
+
+@app.get("/redgen")
+async def serve_redgen():
+    return FileResponse(str(FRONTEND_DIR / "redgen.html"))
+
+@app.get("/zishield")
+async def serve_zishield():
+    return FileResponse(str(FRONTEND_DIR / "zishield.html"))
+
+@app.get("/governance")
+async def serve_governance():
+    f = FRONTEND_DIR / "governance.html"
+    if f.exists():
+        return FileResponse(str(f))
+    return JSONResponse({"error": "Module not deployed"}, status_code=503)
+
+@app.get("/asset-registry")
+async def serve_asset_registry():
+    return FileResponse(str(FRONTEND_DIR / "asset-registry.html"))
+
+
+@app.get("/api/videochat/ice")
+async def videochat_ice():
+    return {
+        "iceServers": [
+            {"urls": "stun:stun.l.google.com:19302"},
+            {"urls": "stun:stun1.l.google.com:19302"}
+        ]
+    }
+
+_videochat_rooms = {}
+
+@app.post("/api/videochat/room")
+async def create_videochat_room(request: Request):
+    body = await request.json()
+    room_id = str(__import__("random").randint(100000, 999999))
+    _videochat_rooms[room_id] = {"created": __import__("time").time(), "peers": []}
+    return {"room_id": room_id, "url": f"/videochat?room={room_id}"}
+
+@app.get("/api/videochat/room/{room_id}")
+async def get_videochat_room(room_id: str):
+    room = _videochat_rooms.get(room_id)
+    if not room:
+        return JSONResponse({"error": "Room not found"}, status_code=404)
+    return {"room_id": room_id, "peers": len(room["peers"])}
+
+@app.post("/api/videochat/room/{room_id}/signal")
+async def videochat_signal(room_id: str, request: Request):
+    body = await request.json()
+    room = _videochat_rooms.get(room_id)
+    if not room:
+        return JSONResponse({"error": "Room not found"}, status_code=404)
+    room["peers"].append(body)
+    return {"status": "ok"}
+
+@app.post("/api/videochat/room/{room_id}/join")
+async def videochat_join(room_id: str):
+    room = _videochat_rooms.get(room_id)
+    if not room:
+        _videochat_rooms[room_id] = {"created": __import__("time").time(), "peers": []}
+        room = _videochat_rooms[room_id]
+    room["peers"].append(__import__("time").time())
+    return {"status": "ok", "peers": len(room["peers"])}
+
+
+app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js-files")
+app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css-files")
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 app.mount("/output", StaticFiles(directory=str(OUTPUT_DIR)), name="output")
+
+# Static mounts for new output types
+_AUDIO_DIR = OUTPUT_DIR / "audio"
+_SCENES_DIR = OUTPUT_DIR / "scenes"
+_VIDEO_DIR = OUTPUT_DIR / "video"
+_AI3D_DIR = OUTPUT_DIR / "ai3d"
+_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+_SCENES_DIR.mkdir(parents=True, exist_ok=True)
+_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+_AI3D_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/output/audio", StaticFiles(directory=str(_AUDIO_DIR)), name="audio-output")
+app.mount("/output/scenes", StaticFiles(directory=str(_SCENES_DIR)), name="scenes-output")
+app.mount("/output/video", StaticFiles(directory=str(_VIDEO_DIR)), name="video-output")
+
 if (FRONTEND_DIR / "games").exists():
     app.mount("/games", StaticFiles(directory=str(FRONTEND_DIR / "games")), name="games")
 app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE SYSTEM — Materializer</title>
+<title>ZICORE SYSTEM — Visualizer</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
@@ -288,6 +288,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       <a class="ext-link" href="https://grok.ai" target="_blank" rel="noopener">GROK</a>
       <a class="ext-link" href="https://z.ai" target="_blank" rel="noopener">Z.AI</a>
       <a class="ext-link" href="https://zinemotion.com.mx" target="_blank" rel="noopener">ZINEMOTION</a>
+      <a class="ext-link" href="https://zzz.zinemotion.com" target="_blank" rel="noopener" style="color:#00e5ff">TIENDA</a>
     </div>
     <div id="topRight">
       <span style="font-size:6px;letter-spacing:2px;color:#2a3040">ZICORE v5.0</span>
@@ -2551,36 +2552,43 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     }).catch(function(){});
   }
 
-  function speakText(text){
+  function speakText(text, lang){
     if(!window.speechSynthesis)return;
+    window.speechSynthesis.cancel();
     var utter=new SpeechSynthesisUtterance(text);
     utter.rate=1.0;utter.pitch=1.0;
+    utter.lang=lang||'es';
     var voices=speechSynthesis.getVoices();
     var voiceSelect=document.getElementById('voxVoice');
-    if(voiceSelect&&voices[voiceSelect.value])utter.voice=voices[voiceSelect.value];
+    if(voiceSelect&&voices[voiceSelect.value]){utter.voice=voices[voiceSelect.value];}
+    else{var best=voices.find(function(v){return v.lang&&v.lang.startsWith(utter.lang)});if(best)utter.voice=best;}
     utter.onstart=function(){var el=document.getElementById('voxStatus');if(el)el.textContent='SPEAKING';};
     utter.onend=function(){var el=document.getElementById('voxStatus');if(el)el.textContent='IDLE';};
     speechSynthesis.speak(utter);
   }
 
+  var _dashMicRecog=null;
   function startListening(callback){
     var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SpeechRecognition){appendLog('[STT] Not supported');return;}
-    var recognition=new SpeechRecognition();
-    recognition.continuous=false;recognition.interimResults=false;recognition.lang='en-US';
+    if(!SpeechRecognition){appendLog('[STT] Not supported in this browser. Use Chrome or Edge.');return;}
     var el=document.getElementById('voxStatus');
-    if(el)el.textContent='LISTENING';
-    recognition.onresult=function(event){
-      var text=event.results[0][0].transcript;
-      if(el)el.textContent='IDLE';
+    if(_dashMicRecog){_dashMicRecog.stop();_dashMicRecog=null;return;}
+    _dashMicRecog=new SpeechRecognition();
+    _dashMicRecog.continuous=false;_dashMicRecog.interimResults=true;
+    _dashMicRecog.lang=(typeof ZICORE_TRANSLATE!=='undefined')?ZICORE_TRANSLATE.getSourceLang():'es';
+    if(el){el.textContent='LISTENING';el.style.color='var(--green)';}
+    _dashMicRecog.onresult=function(event){
+      var text='';
+      for(var i=event.resultIndex;i<event.results.length;i++)text+=event.results[i][0].transcript;
       callback(text);
     };
-    recognition.onerror=function(event){
-      if(el)el.textContent='IDLE';
-      appendLog('[STT] Error: '+event.error);
+    _dashMicRecog.onend=function(){if(el){el.textContent='IDLE';el.style.color='';}_dashMicRecog=null;};
+    _dashMicRecog.onerror=function(e){
+      if(el){el.textContent='ERROR';el.style.color='var(--red)';setTimeout(function(){el.textContent='IDLE';el.style.color='';},3000);}
+      appendLog('[STT] Error: '+e.error+(e.error==='not-allowed'?' — Enable microphone in browser settings':''));
+      _dashMicRecog=null;
     };
-    recognition.onend=function(){if(el)el.textContent='IDLE';};
-    recognition.start();
+    try{_dashMicRecog.start();}catch(e){appendLog('[STT] Failed to start: '+e.message);}
   }
 
   var galleryItems=[];
@@ -4524,5 +4532,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   setInterval(updateEngineStatus, 30000);
 })();
 </script>
+<script src="/js/zicore-translate.js"></script>
+<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
 </body>
 </html>

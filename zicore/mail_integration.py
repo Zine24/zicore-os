@@ -123,12 +123,27 @@ class MailServer:
         value = value.replace("\0", "")
         return value
 
-    def create_user(self, email: str, password: str, name: str = "") -> dict:
-        """Create a new email user in the database."""
+    def create_user(self, email: str, password: str, name: str = "", plan: str = "free") -> dict:
+        """Create a new email user in the database.
+        
+        Plans: free (1 account, @zinemotion.com.mx only), 
+               basic ($5/10 ZTN, 3 accounts),
+               pro ($25/50 ZTN, 10 accounts, multi-domain),
+               ultimate ($100/200 ZTN, unlimited).
+        """
         try:
             # Validate email format
             if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
                 return {"success": False, "error": "Invalid email format"}
+
+            # Free plan: only @zinemotion.com.mx allowed
+            if plan == "free" and not email.endswith("@zinemotion.com.mx"):
+                return {"success": False, "error": "Free plan only supports @zinemotion.com.mx"}
+
+            # Validate plan
+            valid_plans = ["free", "basic", "pro", "ultimate"]
+            if plan not in valid_plans:
+                plan = "free"
 
             # Generate SHA512-CRYPT password hash
             salt_cmd = subprocess.run(
@@ -142,14 +157,45 @@ class MailServer:
             )
             password_hash = hash_cmd.stdout.strip()
 
+            # Determine domain_id
+            domain = email.split("@")[1] if "@" in email else ""
+            domain_result = subprocess.run(
+                ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                 f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                 "zicore_mail", "-N", "-e",
+                 f"SELECT id FROM virtual_domains WHERE name='{domain}'"],
+                capture_output=True, text=True, timeout=5
+            )
+            domain_id = domain_result.stdout.strip()
+            if not domain_id.isdigit():
+                # Insert domain if not exists
+                subprocess.run(
+                    ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                     f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                     "zicore_mail", "-e",
+                     f"INSERT IGNORE INTO virtual_domains (name) VALUES ('{domain}')"],
+                    capture_output=True, text=True, timeout=5
+                )
+                domain_result = subprocess.run(
+                    ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                     f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                     "zicore_mail", "-N", "-e",
+                     f"SELECT id FROM virtual_domains WHERE name='{domain}'"],
+                    capture_output=True, text=True, timeout=5
+                )
+                domain_id = domain_result.stdout.strip()
+            if not domain_id.isdigit():
+                domain_id = "1"
+
             # Sanitize inputs
             safe_email = self._sanitize_sql(email)
             safe_name = self._sanitize_sql(name)
             safe_hash = self._sanitize_sql(password_hash)
+            safe_plan = self._sanitize_sql(plan)
 
-            sql = f"""INSERT INTO virtual_users (domain_id, email, password, name)
-                      VALUES (1, '{safe_email}', '{safe_hash}', '{safe_name}')
-                      ON DUPLICATE KEY UPDATE password='{safe_hash}', name='{safe_name}'"""
+            sql = f"""INSERT INTO virtual_users (domain_id, email, password, name, plan)
+                      VALUES ({domain_id}, '{safe_email}', '{safe_hash}', '{safe_name}', '{safe_plan}')
+                      ON DUPLICATE KEY UPDATE password='{safe_hash}', name='{safe_name}', plan='{safe_plan}'"""
             
             result = subprocess.run(
                 ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
@@ -157,7 +203,7 @@ class MailServer:
                  "zicore_mail", "-e", sql],
                 capture_output=True, text=True, timeout=10
             )
-            return {"success": result.returncode == 0, "email": email}
+            return {"success": result.returncode == 0, "email": email, "plan": plan}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -179,7 +225,7 @@ class MailServer:
     def list_users(self) -> list:
         """List all email users."""
         try:
-            sql = "SELECT email, name, active, created_at FROM virtual_users ORDER BY email"
+            sql = "SELECT email, name, active, created_at, role FROM virtual_users ORDER BY email"
             result = subprocess.run(
                 ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
                  f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
@@ -195,6 +241,7 @@ class MailServer:
                         "name": parts[1],
                         "active": parts[2] == "1",
                         "created_at": parts[3] if len(parts) > 3 else "",
+                        "role": parts[4] if len(parts) > 4 else "user",
                     })
             return users
         except Exception:
@@ -337,3 +384,71 @@ class MailServer:
             },
             "note": "Replace <YOUR_SERVER_IP> with your actual server IP address"
         }
+
+    def update_role(self, email: str, role: str) -> dict:
+        """Update a user's role."""
+        try:
+            safe_email = self._sanitize_sql(email)
+            safe_role = self._sanitize_sql(role)
+            sql = f"UPDATE virtual_users SET role='{safe_role}' WHERE email='{safe_email}'"
+            result = subprocess.run(
+                ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                 f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                 "zicore_mail", "-e", sql],
+                capture_output=True, text=True, timeout=10
+            )
+            return {"success": result.returncode == 0, "email": email, "role": role}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def get_stats(self) -> dict:
+        """Get mail server statistics."""
+        stats = {"total": 0, "active": 0, "domains": 0, "admins": 0}
+        try:
+            r = subprocess.run(
+                ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                 f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                 "zicore_mail", "-N", "-e",
+                 "SELECT COUNT(*) FROM virtual_users"],
+                capture_output=True, text=True, timeout=5
+            )
+            stats["total"] = int(r.stdout.strip()) if r.stdout.strip().isdigit() else 0
+            r = subprocess.run(
+                ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                 f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                 "zicore_mail", "-N", "-e",
+                 "SELECT COUNT(*) FROM virtual_users WHERE active=1"],
+                capture_output=True, text=True, timeout=5
+            )
+            stats["active"] = int(r.stdout.strip()) if r.stdout.strip().isdigit() else 0
+            r = subprocess.run(
+                ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                 f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                 "zicore_mail", "-N", "-e",
+                 "SELECT COUNT(*) FROM virtual_domains"],
+                capture_output=True, text=True, timeout=5
+            )
+            stats["domains"] = int(r.stdout.strip()) if r.stdout.strip().isdigit() else 0
+            r = subprocess.run(
+                ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
+                 f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+                 "zicore_mail", "-N", "-e",
+                 "SELECT COUNT(*) FROM virtual_users WHERE role='admin'"],
+                capture_output=True, text=True, timeout=5
+            )
+            stats["admins"] = int(r.stdout.strip()) if r.stdout.strip().isdigit() else 0
+        except Exception:
+            pass
+        return stats
+
+    def restart_service(self, service: str) -> dict:
+        """Restart a mail service container."""
+        container = service if "zicore-" in service else f"zicore-{service}"
+        try:
+            result = subprocess.run(
+                ["docker", "restart", container],
+                capture_output=True, text=True, timeout=30
+            )
+            return {"success": result.returncode == 0, "service": container}
+        except Exception as e:
+            return {"success": False, "error": str(e)}

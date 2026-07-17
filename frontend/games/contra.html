@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contra — ZICORE Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;height:100vh}
+canvas{display:block;margin:0 auto;image-rendering:pixelated;cursor:crosshair}
+.hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:10px 20px;font-family:'Courier New',monospace;color:#fff;z-index:10;pointer-events:none;font-size:14px;text-shadow:0 0 8px rgba(255,255,255,0.4)}
+.hud .score-val{color:#0ff;font-size:18px;font-weight:700}
+.hud .lives{display:flex;gap:6px;align-items:center}
+.hud .lives span{color:#0f0;font-size:16px}
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);z-index:20;color:#fff;font-family:'Courier New',monospace;text-align:center}
+.overlay h1{font-size:52px;color:#f44;text-shadow:0 0 30px rgba(255,68,68,0.6);letter-spacing:4px}
+.overlay h2{font-size:16px;color:#888;margin:8px 0 20px;letter-spacing:2px}
+.overlay .info{font-size:12px;color:#666;margin-bottom:24px;line-height:2}
+.overlay .start{padding:12px 40px;border:2px solid #f44;background:rgba(255,68,68,0.1);color:#f44;font-size:16px;font-family:inherit;cursor:pointer;letter-spacing:3px;transition:all .2s}
+.overlay .start:hover{background:rgba(255,68,68,0.2);box-shadow:0 0 20px rgba(255,68,68,0.4)}
+.hidden{display:none}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div><div class="score-val" id="score">0</div><div style="font-size:10px;color:#888">SCORE</div></div>
+  <div><span id="weapon" style="color:#ff0;font-size:12px">NORMAL</span></div>
+  <div><div class="lives" id="lives"></div><div style="font-size:10px;color:#888">VIDAS</div></div>
+</div>
+<canvas id="game"></canvas>
+
+<div class="overlay" id="startScreen">
+  <h1>CONTRA</h1>
+  <h2>ZICORE GAMES</h2>
+  <div class="info">
+    WASD/FLECHAS MOVER &nbsp;|&nbsp; ESPACIO DISPARAR<br>
+    ↑ APUNTAR ARRIBA &nbsp;|&nbsp; S/↓ AGACHARSE<br>
+    R RECARGAR &nbsp;|&nbsp; P PAUSA
+  </div>
+  <button class="start" onclick="startGame()">INICIAR</button>
+</div>
+
+<div class="overlay hidden" id="gameOver">
+  <h1 style="color:#f00">GAME OVER</h1>
+  <div id="finalScore" style="font-size:24px;color:#0ff;margin:12px 0"></div>
+  <div id="highScore" style="font-size:14px;color:#888;margin-bottom:20px"></div>
+  <button class="start" onclick="startGame()">REINICIAR</button>
+  <div class="social-share">
+    <div style="font-size:11px;color:#666;margin-bottom:6px">COMPARTIR</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','Contra',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','Contra',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Contra',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','Contra',score)">Copiar link</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="stageClear">
+  <h1 style="color:#0f0">STAGE CLEAR</h1>
+  <div id="stageBonus" style="font-size:18px;color:#ff0;margin:12px 0"></div>
+  <button class="start" onclick="nextStage()" style="border-color:#0f0;color:#0f0">CONTINUAR</button>
+</div>
+
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const GW=800,GH=480,TILE=32;
+canvas.width=GW;canvas.height=GH;
+
+const GRAVITY=0.6,JUMP_FORCE=-12,MOVE_SPEED=4,BULLET_SPEED=10,MAX_BULLETS=30;
+const WEAPONS={normal:{color:'#ff0',speed:BULLET_SPEED,damage:1,pattern:'single',name:'NORMAL'},
+  spread:{color:'#f0f',speed:7,damage:1,pattern:'spread',name:'SPREAD'},
+  laser:{color:'#0ff',speed:16,damage:2,pattern:'single',name:'LASER'},
+  machine:{color:'#f80',speed:12,damage:1,pattern:'single',name:'MACHINE GUN'}};
+
+let player,bullets,enemyBullets,enemies,particles,powerups,platforms;
+let cameraX,cameraX2,score,lives,weapon,gameRunning,pauseKey,stage,stageLen;
+let bgStars=[],bgBuildings=[],groundTiles=[];
+let keys={},shootCD=0,invTimer=0;
+let totalEnemiesKilled=0,stageEnemiesKilled=0;
+
+// Generate background
+for(let i=0;i<200;i++)bgStars.push({x:Math.random()*5000,y:Math.random()*GH*2,s:Math.random()*1.5+0.5,a:Math.random()});
+for(let i=0;i<40;i++)bgBuildings.push({x:i*120+Math.random()*60,h:60+Math.random()*120,w:40+Math.random()*50,c:`hsl(${200+Math.random()*40},30%,${8+Math.random()*8}%)`});
+
+function generateStage(){
+  platforms=[];enemies=[];enemyBullets=[];powerups=[];stageEnemiesKilled=0;
+  stageLen=2000+stage*500;
+  // Ground
+  for(let x=0;x<stageLen;x+=TILE){
+    groundTiles.push({x,y:GH-TILE,w:TILE,h:TILE});
+  }
+  // Platforms
+  for(let x=200;x<stageLen-200;x+=200+Math.random()*300){
+    const pw=64+Math.random()*128;
+    platforms.push({x,y:GH-100-Math.random()*160,w:pw,h:12});
+  }
+  // Enemies
+  const enemyCount=8+stage*5;
+  for(let i=0;i<enemyCount;i++){
+    const ex=400+i*(stageLen-400)/enemyCount+Math.random()*100;
+    const type=Math.random()<0.3?'turret':Math.random()<0.5?'flyer':'runner';
+    enemies.push(createEnemy(ex,type));
+  }
+}
+
+function createEnemy(x,type){
+  const y=type==='flyer'?GH-200-Math.random()*150:GH-TILE-40;
+  return{x,y,vx:type==='runner'?(Math.random()<0.5?-2:2):0,vy:0,
+    type,hp:type==='turret'?3:type==='flyer'?2:1,
+    maxHp:type==='turret'?3:type==='flyer'?2:1,
+    shootCD:60+Math.random()*60,size:type==='turret'?20:type==='flyer'?14:16,
+    alive:true,spriteColor:type==='turret'?'#f44':type==='flyer'?'#f0f':'#ff0'};
+}
+
+function initGame(){
+  player={x:100,y:GH-TILE-40,vx:0,vy:0,w:20,h:28,dir:1,grounded:false,climbing:false,aimUp:false};
+  cameraX=0;score=0;lives=3;weapon=WEAPONS.normal;stage=1;invTimer=0;
+  totalEnemiesKilled=0;
+  bullets=[];enemyBullets=[];particles=[];platforms=[];enemies=[];powerups=[];
+  groundTiles=[];bgStars=[];bgBuildings=[];
+  for(let i=0;i<200;i++)bgStars.push({x:Math.random()*5000,y:Math.random()*GH*2,s:Math.random()*1.5+0.5,a:Math.random()});
+  for(let i=0;i<40;i++)bgBuildings.push({x:i*120+Math.random()*60,h:60+Math.random()*120,w:40+Math.random()*50,c:`hsl(${200+Math.random()*40},30%,${8+Math.random()*8}%)`});
+  generateStage();
+  updateHUD();
+}
+
+function shoot(){
+  if(bullets.length>=MAX_BULLETS)return;
+  const bw=weapon.pattern==='laser'?16:4,bh=weapon.pattern==='laser'?3:3;
+  const bpx=player.x+player.dir*12,bpy=player.y-8;
+  if(weapon.pattern==='spread'){
+    for(let a=-0.3;a<=0.3;a+=0.15){
+      const ang=player.aimUp?-Math.PI/2+player.dir*0:a;
+      bullets.push({x:bpx,y:bpy,vx:Math.cos(ang)*weapon.speed*(player.dir),vy:Math.sin(ang)*weapon.speed,dmg:weapon.damage,color:weapon.color,life:80,w:bw,h:bh});
+    }
+  }else{
+    const ang=player.aimUp?-Math.PI/2:0;
+    bullets.push({x:bpx,y:bpy,vx:Math.cos(ang)*weapon.speed*player.dir,vy:player.aimUp?-weapon.speed:Math.sin(ang)*weapon.speed,dmg:weapon.damage,color:weapon.color,life:80,w:bw,h:bh});
+  }
+  spawnParticles(bpx,bpy,weapon.color,3);
+}
+
+function spawnParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2,s=Math.random()*3+1;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:15+Math.random()*10,maxLife:25,color,sz:Math.random()*2+1});
+  }
+}
+
+function spawnExplosion(x,y,color='#f80'){
+  spawnParticles(x,y,color,12);
+}
+
+function update(){
+  if(pauseKey||gameRunning!==true)return;
+
+  // Player movement
+  player.vx=0;
+  if(keys['ArrowLeft']||keys['KeyA']){player.vx=-MOVE_SPEED;player.dir=-1}
+  if(keys['ArrowRight']||keys['KeyD']){player.vx=MOVE_SPEED;player.dir=1}
+  player.aimUp=keys['ArrowUp']||keys['KeyW'];
+  
+  if((keys['Space']||keys['KeyZ'])&&shootCD<=0){shoot();shootCD=weapon.pattern==='machine'?5:10}
+  if(shootCD>0)shootCD--;
+
+  // Jump
+  if((keys['ArrowUp']||keys['KeyW']||keys['KeyX'])&&player.grounded&&keys['Space']&&player.aimUp){
+    // Climbing platform
+  }
+  if((keys['ArrowUp']||keys['KeyW']||keys['KeyX'])&&player.grounded){
+    if(!player.aimUp)player.vy=JUMP_FORCE;
+  }
+
+  // Gravity
+  player.vy+=GRAVITY;
+  player.x+=player.vx;player.y+=player.vy;
+
+  // Ground collision
+  player.grounded=false;
+  // Ground
+  if(player.y+player.h>=GH-TILE){
+    player.y=GH-TILE-player.h;player.vy=0;player.grounded=true;
+  }
+  // Platforms
+  platforms.forEach(p=>{
+    if(player.vy>=0&&player.x+player.w/2>p.x&&player.x-player.w/2<p.x+p.w&&
+       player.y+player.h>=p.y&&player.y+player.h<=p.y+p.h+12){
+      player.y=p.y-player.h;player.vy=0;player.grounded=true;
+    }
+  });
+
+  // Camera
+  const targetCam=player.x-GW/3;
+  cameraX+=(targetCam-cameraX)*0.08;
+  if(cameraX<0)cameraX=0;
+  if(cameraX>stageLen-GW)cameraX=stageLen-GW;
+
+  // Bullets
+  bullets=bullets.filter(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    // Hit enemies
+    for(const e of enemies){
+      if(!e.alive)continue;
+      if(Math.abs(b.x-e.x)<e.size+4&&Math.abs(b.y-e.y)<e.size+4){
+        e.hp-=b.dmg;
+        spawnParticles(e.x,e.y,'#fff',4);
+        if(e.hp<=0){
+          e.alive=false;score+=e.type==='turret'?200:e.type==='flyer'?150:100;
+          spawnExplosion(e.x,e.y,e.spriteColor);
+          stageEnemiesKilled++;totalEnemiesKilled++;
+          // Powerup drop
+          if(Math.random()<0.15){
+            const types=['spread','laser','machine'];
+            powerups.push({x:e.x,y:e.y,type:types[Math.floor(Math.random()*types.length)],life:300});
+          }
+        }
+        return false;
+      }
+    }
+    return b.life>0&&b.x>-50&&b.x<stageLen+50&&b.y>-50&&b.y<GH+50;
+  });
+
+  // Enemy bullets
+  enemyBullets=enemyBullets.filter(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    if(invTimer<=0&&Math.abs(b.x-player.x)<14&&Math.abs(b.y-player.y)<16){
+      hitPlayer();return false;
+    }
+    return b.life>0&&b.x>-50&&b.x<stageLen+50&&b.y>-50&&b.y<GH+50;
+  });
+
+  // Enemies
+  enemies.forEach(e=>{
+    if(!e.alive)return;
+    // Movement
+    if(e.type==='runner'){
+      e.x+=e.vx;
+      if(Math.abs(e.x-player.x)<400){
+        e.vx=e.x>player.x?-2:2;
+      }
+    }
+    if(e.type==='flyer'){
+      e.x+=(e.x>player.x?-1.5:1.5);
+      e.y+=Math.sin(Date.now()*0.005)*1.5;
+    }
+    // Shooting
+    e.shootCD--;
+    if(e.shootCD<=0&&Math.abs(e.x-player.x)<500){
+      const ang=Math.atan2(player.y-e.y,player.x-e.x);
+      const spd=e.type==='turret'?3:2.5;
+      enemyBullets.push({x:e.x,y:e.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:120,color:'#f44'});
+      e.shootCD=e.type==='turret'?80:120;
+    }
+    // Player collision
+    if(invTimer<=0&&Math.abs(e.x-player.x)<e.size+10&&Math.abs(e.y-player.y)<e.size+14){
+      hitPlayer();
+    }
+  });
+
+  // Powerups
+  powerups=powerups.filter(p=>{
+    p.life--;p.y+=Math.sin(Date.now()*0.005)*0.5;
+    if(Math.abs(p.x-player.x)<20&&Math.abs(p.y-player.y)<20){
+      weapon=WEAPONS[p.type];score+=500;
+      spawnParticles(p.x,p.y,'#0ff',10);
+      return false;
+    }
+    return p.life>0;
+  });
+
+  // Particles
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life--;return p.life>0});
+
+  // Invincibility
+  if(invTimer>0)invTimer--;
+
+  // Stage clear
+  if(enemies.every(e=>!e.alive)){
+    gameRunning=false;
+    const bonus=stage*1000+lives*500;
+    score+=bonus;
+    document.getElementById('stageBonus').textContent=`+${bonus} pts (${stage*1000} stage + ${lives*500} lives)`;
+    document.getElementById('stageClear').classList.remove('hidden');
+  }
+
+  updateHUD();
+}
+
+function hitPlayer(){
+  lives--;invTimer=90;
+  spawnExplosion(player.x,player.y,'#f00');
+  if(lives<=0){gameRunning=false;endGame()}
+}
+
+function draw(){
+  ctx.fillStyle='#050510';ctx.fillRect(0,0,GW,GH);
+
+  ctx.save();ctx.translate(-cameraX,0);
+
+  // Background stars
+  bgStars.forEach(s=>{
+    const sx=s.x-cameraX*0.1;
+    ctx.fillStyle=`rgba(200,220,255,${s.a*0.4})`;
+    ctx.beginPath();ctx.arc(((sx%GW)+GW)%GW,s.y%GH,s.s,0,Math.PI*2);ctx.fill();
+  });
+
+  // Background buildings
+  bgBuildings.forEach(b=>{
+    const bx=b.x-cameraX*0.2;
+    ctx.fillStyle=b.c;ctx.fillRect(bx,GH-TILE-b.h,b.w,b.h+TILE);
+    // Windows
+    ctx.fillStyle='rgba(0,229,255,0.15)';
+    for(let wy=GH-TILE-b.h+8;wy<GH-TILE;wy+=16){
+      for(let wx=bx+6;wx<bx+b.w-6;wx+=14){
+        if(Math.random()>0.3)ctx.fillRect(wx,wy,6,8);
+      }
+    }
+  });
+
+  // Ground
+  ctx.fillStyle='#1a3a1a';
+  ctx.fillRect(cameraX,GH-TILE,GW,TILE);
+  ctx.fillStyle='#2a5a2a';
+  for(let x=Math.floor(cameraX/TILE)*TILE;x<cameraX+GW+TILE;x+=TILE){
+    ctx.fillRect(x,GH-TILE,TILE-1,4);
+  }
+
+  // Platforms
+  platforms.forEach(p=>{
+    if(p.x+p.w<cameraX-50||p.x>cameraX+GW+50)return;
+    ctx.fillStyle='#3a3a5a';ctx.fillRect(p.x,p.y,p.w,p.h);
+    ctx.fillStyle='#5a5a8a';ctx.fillRect(p.x,p.y,p.w,3);
+  });
+
+  // Powerups
+  powerups.forEach(p=>{
+    const glow=Math.sin(Date.now()*0.005)*0.3+0.7;
+    ctx.fillStyle=p.type==='spread'?'#f0f':p.type==='laser'?'#0ff':'#f80';
+    ctx.globalAlpha=glow;
+    ctx.fillRect(p.x-8,p.y-8,16,16);
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#fff';ctx.font='8px monospace';ctx.textAlign='center';
+    ctx.fillText(p.type[0].toUpperCase(),p.x,p.y+3);
+  });
+
+  // Enemies
+  enemies.forEach(e=>{
+    if(!e.alive||e.x<cameraX-50||e.x>cameraX+GW+50)return;
+    ctx.fillStyle=e.spriteColor;
+    if(e.type==='turret'){
+      ctx.fillRect(e.x-12,e.y-12,24,24);
+      ctx.fillStyle='#800';ctx.fillRect(e.x-8,e.y-8,16,16);
+      // HP bar
+      ctx.fillStyle='#400';ctx.fillRect(e.x-12,e.y-20,24,3);
+      ctx.fillStyle='#f00';ctx.fillRect(e.x-12,e.y-20,24*(e.hp/e.maxHp),3);
+    }else if(e.type==='flyer'){
+      ctx.beginPath();
+      ctx.moveTo(e.x,e.y-e.size);ctx.lineTo(e.x-e.size,e.y+e.size/2);ctx.lineTo(e.x+e.size,e.y+e.size/2);
+      ctx.closePath();ctx.fill();
+    }else{
+      ctx.fillRect(e.x-e.size/2,e.y-e.size,e.size,e.size*1.5);
+      ctx.fillStyle='#aa0';ctx.fillRect(e.x-e.size/2,e.y-e.size,e.size,6);
+    }
+  });
+
+  // Enemy bullets
+  ctx.fillStyle='#f44';
+  enemyBullets.forEach(b=>{
+    ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);ctx.fill();
+  });
+
+  // Player bullets
+  bullets.forEach(b=>{
+    ctx.fillStyle=b.color;
+    ctx.fillRect(b.x-b.w/2,b.y-b.h/2,b.w,b.h);
+    ctx.globalAlpha=0.3;ctx.fillRect(b.x-b.w,b.y-b.h,b.w*2,b.h*2);ctx.globalAlpha=1;
+  });
+
+  // Player
+  if(invTimer<=0||Math.floor(invTimer/3)%2===0){
+    ctx.save();ctx.translate(player.x,player.y);
+    // Body
+    ctx.fillStyle='#0af';
+    ctx.fillRect(-player.w/2,-player.h,player.w,player.h);
+    // Head
+    ctx.fillStyle='#0bf';ctx.fillRect(-6,-player.h-8,12,10);
+    // Gun
+    ctx.fillStyle='#888';
+    if(player.aimUp){
+      ctx.fillRect(-2,-player.h-4,4,-14);
+    }else{
+      ctx.fillRect(player.dir>0?player.w/2:-player.w/2-8,-10,10,4);
+    }
+    // Legs
+    ctx.fillStyle='#08a';
+    const legOffset=player.vx?Math.sin(Date.now()*0.02)*4:0;
+    ctx.fillRect(-5,0,4,8+legOffset);ctx.fillRect(1,0,4,8-legOffset);
+    ctx.restore();
+  }
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.fillStyle=p.color;ctx.globalAlpha=p.life/p.maxLife;
+    ctx.fillRect(p.x-p.sz/2,p.y-p.sz/2,p.sz,p.sz);
+  });
+  ctx.globalAlpha=1;
+
+  ctx.restore();
+
+  // Stage progress bar
+  const progress=Math.min(1,player.x/stageLen);
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(0,GH-4,GW,4);
+  ctx.fillStyle='#0f0';ctx.fillRect(0,GH-4,GW*progress,4);
+}
+
+function updateHUD(){
+  document.getElementById('score').textContent=score.toLocaleString();
+  document.getElementById('weapon').textContent=weapon.name;
+  let l='';for(let i=0;i<lives;i++)l+='<span>&#9829;</span>';
+  document.getElementById('lives').innerHTML=l;
+}
+
+function endGame(){
+  document.getElementById('gameOver').classList.remove('hidden');
+  document.getElementById('finalScore').textContent='SCORE: '+score.toLocaleString();
+  const hs=parseInt(localStorage.getItem('contra_hs')||'0');
+  if(score>hs){localStorage.setItem('contra_hs',score);document.getElementById('highScore').textContent='¡NUEVO RÉCORD!';}
+  else document.getElementById('highScore').textContent='Récord: '+hs.toLocaleString();
+}
+
+function nextStage(){
+  document.getElementById('stageClear').classList.add('hidden');
+  stage++;generateStage();
+  player.x=100;player.y=GH-TILE-40;cameraX=0;
+  gameRunning=true;
+}
+
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='KeyP')pauseKey=!pauseKey;
+  if(e.code==='Space')e.preventDefault();
+});
+document.addEventListener('keyup',e=>{keys[e.code]=false});
+
+function gameLoop(){
+  update();draw();requestAnimationFrame(gameLoop);
+}
+
+function startGame(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameOver').classList.add('hidden');
+  document.getElementById('stageClear').classList.add('hidden');
+  initGame();gameRunning=true;
+}
+
+startGame();gameLoop();
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
+</script>
+</body>
+</html>

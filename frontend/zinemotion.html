@@ -195,8 +195,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
     <a href="#servicios">Servicios</a>
     <a href="#materializer">Materializer</a>
     <a href="#modulos">Módulos</a>
+    <a href="#descargas">Descargas</a>
     <a href="#nosotros">Nosotros</a>
     <a href="#contacto">Contacto</a>
+    <a href="https://zzz.zinemotion.com" target="_blank" rel="noopener" style="color:var(--cyan)">Tienda</a>
   </div>
   <button class="nav-cta" onclick="document.getElementById('contacto').scrollIntoView({behavior:'smooth'})">Hablemos</button>
 </nav>
@@ -362,6 +364,52 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
         <div class="mod-desc">Servicio de correo electrónico. Bandeja, envío, usuarios, configuración DNS.</div>
         <div class="mod-tag">Comunicación</div>
       </a>
+      <a class="mod reveal" href="https://zzz.zinemotion.com" target="_blank" rel="noopener">
+        <div class="mod-icon">🛍</div>
+        <div class="mod-name">Tienda ZineMotion</div>
+        <div class="mod-desc">TechWear, ZiCapsules, frames 3D y productos del ecosistema ZineMotion.</div>
+        <div class="mod-tag">Tienda</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DOWNLOADS -->
+<section class="section" id="descargas" style="padding:120px 40px">
+  <div class="section-inner">
+    <div class="section-tag reveal">002b — Descargas</div>
+    <h2 class="section-title reveal reveal-delay-1">Descarga ZICORE<br>en tu dispositivo</h2>
+    <p class="section-desc reveal reveal-delay-2">Disponible para Windows, Linux, macOS y Android. Instalación en minutos.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:48px;background:var(--border)">
+      <a class="mod reveal" href="/installers/zicore-android.apk" download>
+        <div class="mod-icon">📱</div>
+        <div class="mod-name">Android</div>
+        <div class="mod-desc">APK nativo. WebView, SSO, VR estéreo, Termux.</div>
+        <div class="mod-tag">~3 MB</div>
+      </a>
+      <a class="mod purple reveal reveal-delay-1" href="/installers/install_zicore.ps1" download>
+        <div class="mod-icon">⊞</div>
+        <div class="mod-name">Windows</div>
+        <div class="mod-desc">PowerShell script. Python, Node.js, Git automáticos.</div>
+        <div class="mod-tag">~10 KB</div>
+      </a>
+      <a class="mod green reveal reveal-delay-2" href="/installers/install_zicore.sh" download>
+        <div class="mod-icon">◉</div>
+        <div class="mod-name">Linux</div>
+        <div class="mod-desc">Bash script. Ubuntu, Debian, Fedora, Arch.</div>
+        <div class="mod-tag">~10 KB</div>
+      </a>
+      <a class="mod reveal reveal-delay-3" href="/installers/install_zicore_mac.sh" download>
+        <div class="mod-icon">◈</div>
+        <div class="mod-name">macOS</div>
+        <div class="mod-desc">Homebrew. Apple Silicon e Intel.</div>
+        <div class="mod-tag">~9 KB</div>
+      </a>
+    </div>
+    <div style="text-align:center;margin-top:32px" class="reveal">
+      <a href="/installers" class="btn-primary" style="display:inline-block;text-decoration:none">VER TODAS LAS DESCARGAS</a>
     </div>
   </div>
 </section>

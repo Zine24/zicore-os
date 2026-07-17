@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Governance — ZNT Voting</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060a12;--surface:#0b1120;--surface2:#111a2e;--s3:#162035;--border:rgba(0,229,255,0.1);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d3d;--orange:#ff8800;--yellow:#ffcc00;--text:#d8e2f0;--muted:#5a6a80;--glass:rgba(11,17,32,0.85)}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(124,77,255,0.03) 0%,transparent 50%),var(--bg)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:3px}
+
+.hero{text-align:center;padding:48px 32px 24px;position:relative}
+.hero::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.3}
+.hero .znt-logo{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:inline-flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#000;margin-bottom:16px;box-shadow:0 0 40px rgba(0,229,255,0.2)}
+.hero h1{font-size:32px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,var(--text),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:14px;max-width:600px;margin:0 auto;line-height:1.6}
+.hero .tagline{margin-top:12px;font-size:11px;color:var(--purple);text-transform:uppercase;letter-spacing:2px}
+
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;max-width:1100px;margin:24px auto;padding:0 32px}
+.stat-card{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:20px 16px;text-align:center;transition:all .2s;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));opacity:0;transition:opacity .2s}
+.stat-card:hover::before{opacity:1}
+.stat-card:hover{border-color:rgba(0,229,255,0.25);transform:translateY(-2px)}
+.stat-card .sv{font-size:26px;font-weight:800;font-family:'Courier New',monospace}
+.stat-card .sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px}
+.stat-card .si{font-size:11px;color:var(--green);margin-top:4px}
+.sc-cyan .sv{color:var(--cyan)}
+.sc-purple .sv{color:var(--purple)}
+.sc-green .sv{color:var(--green)}
+.sc-orange .sv{color:var(--orange)}
+.sc-yellow .sv{color:var(--yellow)}
+
+.nav{display:flex;justify-content:center;gap:6px;padding:16px 32px;position:sticky;top:0;z-index:10;background:var(--glass);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.nav-btn{padding:10px 20px;border-radius:8px;background:transparent;color:var(--muted);font-size:12px;border:1px solid transparent;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;font-weight:600;font-family:inherit}
+.nav-btn:hover{color:var(--text);border-color:var(--border)}
+.nav-btn.active{color:var(--cyan);border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06)}
+
+.main{padding:24px 32px;max-width:1100px;margin:0 auto}
+
+.section-title{font-size:20px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.section-title .accent{color:var(--cyan)}
+.section-title .badge{font-size:10px;padding:3px 10px;border-radius:12px;background:rgba(0,229,255,0.1);color:var(--cyan);font-weight:600}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.fbtn{padding:6px 14px;border-radius:6px;font-size:11px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit}
+.fbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+.fbtn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08)}
+
+.pcard{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px;transition:all .2s;position:relative;overflow:hidden}
+.pcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));opacity:0;transition:opacity .2s}
+.pcard:hover::before{opacity:1}
+.pcard:hover{border-color:rgba(0,229,255,0.2)}
+.pcard.voted{border-color:rgba(0,255,136,0.15)}
+.p-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.p-id{font-size:11px;color:var(--purple);font-weight:700;background:rgba(124,77,255,0.1);padding:3px 10px;border-radius:6px}
+.p-title{font-size:17px;font-weight:700;flex:1}
+.p-cat{font-size:9px;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.p-cat.treasury{color:var(--cyan);background:rgba(0,229,255,0.1)}
+.p-cat.protocol{color:var(--purple);background:rgba(124,77,255,0.1)}
+.p-cat.feature{color:var(--green);background:rgba(0,255,136,0.1)}
+.p-cat.community{color:var(--orange);background:rgba(255,136,0,0.1)}
+.p-status{font-size:10px;padding:4px 12px;border-radius:20px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.p-status.active{color:var(--green);background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2)}
+.p-status.passed{color:var(--cyan);background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2)}
+.p-status.rejected{color:var(--red);background:rgba(255,61,61,0.08);border:1px solid rgba(255,61,61,0.2)}
+.p-status.pending{color:var(--orange);background:rgba(255,136,0,0.08);border:1px solid rgba(255,136,0,0.2)}
+.p-status.executed{color:var(--yellow);background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.2)}
+.p-body{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+.p-meta{display:flex;gap:16px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap}
+.p-meta span{display:flex;align-items:center;gap:4px}
+
+.vote-section{margin-top:12px}
+.quorum-bar{height:4px;border-radius:2px;background:var(--s3);margin-bottom:10px;position:relative;overflow:visible}
+.quorum-bar .qf{height:100%;border-radius:2px;transition:width .5s}
+.quorum-bar .qt{position:absolute;right:-40px;top:-8px;font-size:9px;color:var(--muted)}
+.vote-bar{height:8px;border-radius:4px;background:var(--s3);overflow:hidden;display:flex}
+.vote-bar .vf{height:100%;transition:width .4s}
+.vf.yes{background:linear-gradient(90deg,#00c853,var(--green))}
+.vf.no{background:linear-gradient(90deg,var(--red),#ff1744)}
+.vf.abstain{background:linear-gradient(90deg,#455a64,#607d8b)}
+.vote-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px}
+.vote-labels .vl{display:flex;align-items:center;gap:4px}
+.vote-labels .vl::before{content:'';width:8px;height:8px;border-radius:2px}
+.vote-labels .vl.y::before{background:var(--green)}
+.vote-labels .vl.n::before{background:var(--red)}
+.vote-labels .vl.a::before{background:#607d8b}
+.vote-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.vbtn{padding:10px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:inherit;display:flex;align-items:center;gap:6px}
+.vbtn.yes{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.25)}
+.vbtn.yes:hover{background:rgba(0,255,136,0.2);transform:translateY(-1px)}
+.vbtn.no{background:rgba(255,61,61,0.1);color:var(--red);border:1px solid rgba(255,61,61,0.25)}
+.vbtn.no:hover{background:rgba(255,61,61,0.2);transform:translateY(-1px)}
+.vbtn.abstain{background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid var(--border)}
+.vbtn.abstain:hover{background:rgba(255,255,255,0.08)}
+.vbtn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.vbtn.voted{border-width:2px;font-weight:800}
+
+.treasury-section{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.t-card{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:14px;padding:24px}
+.t-card h3{font-size:14px;font-weight:700;margin-bottom:16px;color:var(--cyan)}
+.t-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.t-item{padding:16px;background:var(--s3);border-radius:10px;text-align:center;border:1px solid var(--border);transition:all .2s}
+.t-item:hover{border-color:rgba(0,229,255,0.2)}
+.t-item .tv{font-size:22px;font-weight:800;font-family:'Courier New',monospace}
+.t-item .tl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.t-item.t-cyan .tv{color:var(--cyan)}
+.t-item.t-green .tv{color:var(--green)}
+.t-item.t-purple .tv{color:var(--purple)}
+.t-item.t-orange .tv{color:var(--orange)}
+.alloc-list{display:flex;flex-direction:column;gap:10px}
+.alloc-row{padding:12px;background:var(--s3);border-radius:8px;border:1px solid var(--border)}
+.alloc-row .aheader{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.alloc-row .aname{font-size:13px;font-weight:600}
+.alloc-row .aamount{font-size:13px;color:var(--cyan);font-weight:700;font-family:'Courier New',monospace}
+.alloc-row .afooter{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px}
+.alloc-bar{height:4px;border-radius:2px;background:var(--bg);overflow:hidden;margin-top:6px}
+.alloc-bar .abf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--green))}
+
+.delegate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.d-card{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:all .2s;position:relative}
+.d-card:hover{border-color:rgba(0,229,255,0.25);transform:translateY(-2px)}
+.d-rank{position:absolute;top:12px;left:12px;font-size:10px;color:var(--muted);font-weight:700;background:var(--s3);padding:2px 6px;border-radius:4px}
+.d-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;margin-bottom:10px;border:2px solid var(--border)}
+.d-avatar.av1{background:linear-gradient(135deg,rgba(0,229,255,0.2),rgba(124,77,255,0.2));border-color:var(--cyan);color:var(--cyan)}
+.d-avatar.av2{background:linear-gradient(135deg,rgba(124,77,255,0.2),rgba(0,255,136,0.2));border-color:var(--purple);color:var(--purple)}
+.d-avatar.av3{background:linear-gradient(135deg,rgba(0,255,136,0.2),rgba(255,136,0,0.2));border-color:var(--green);color:var(--green)}
+.d-avatar.av4{background:linear-gradient(135deg,rgba(255,136,0,0.2),rgba(255,204,0,0.2));border-color:var(--orange);color:var(--orange)}
+.d-avatar.av5{background:linear-gradient(135deg,rgba(255,61,61,0.2),rgba(124,77,255,0.2));border-color:var(--red);color:var(--red)}
+.d-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.d-votes{font-size:11px;color:var(--muted);margin-bottom:8px}
+.d-pct{font-size:20px;font-weight:800;color:var(--cyan);font-family:'Courier New',monospace}
+.d-stats{display:flex;gap:12px;margin-top:10px;font-size:10px;color:var(--muted)}
+.d-stats span{display:flex;flex-direction:column;align-items:center}
+.d-stats .ds-v{font-size:14px;font-weight:700;color:var(--text)}
+
+.create-section{max-width:640px}
+.create-card{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:14px;padding:28px}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:600}
+.form-row input,.form-row textarea,.form-row select{width:100%;padding:11px 14px;border-radius:8px;background:var(--s3);color:var(--text);border:1px solid var(--border);font-size:13px;font-family:inherit;transition:border-color .15s}
+.form-row input:focus,.form-row textarea:focus,.form-row select:focus{outline:none;border-color:var(--cyan)}
+.form-row textarea{height:100px;resize:vertical}
+.form-row select option{background:var(--surface2)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.submit-btn{padding:12px 28px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#0091ea);color:#000;font-weight:800;font-size:14px;border:none;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(0,229,255,0.3)}
+
+.history-card{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:12px;display:flex;align-items:center;gap:16px;transition:all .2s}
+.history-card:hover{border-color:rgba(0,229,255,0.2)}
+.h-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.h-icon.passed{background:rgba(0,255,136,0.1);color:var(--green)}
+.h-icon.rejected{background:rgba(255,61,61,0.1);color:var(--red)}
+.h-icon.executed{background:rgba(255,204,0,0.1);color:var(--yellow)}
+.h-info{flex:1}
+.h-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.h-meta{font-size:11px;color:var(--muted)}
+.h-result{text-align:right}
+.h-pct{font-size:18px;font-weight:800;font-family:'Courier New',monospace}
+.h-pct.passed{color:var(--green)}
+.h-pct.rejected{color:var(--red)}
+.h-votes{font-size:10px;color:var(--muted)}
+
+.hidden{display:none}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--green);color:var(--green);padding:14px 24px;border-radius:10px;font-size:13px;z-index:100;animation:tIn .3s;font-weight:600}
+@keyframes tIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="znt-logo">ZNT</div>
+  <h1>ZICORE Governance</h1>
+  <p>Sistema de gobernanza descentralizado. Los holders de ZNT votan propuestas, delegan poder, y controlan el tesoro del ecosistema ZICORE.</p>
+  <div class="tagline">Decentralized Autonomous Governance</div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card sc-cyan"><div class="sv">1,000,000,000</div><div class="sl">Supply Total ZNT</div></div>
+  <div class="stat-card sc-purple"><div class="sv">47,382</div><div class="sl">Votantes</div><div class="si">+312 esta semana</div></div>
+  <div class="stat-card sc-green"><div class="sv">156</div><div class="sl">Propuestas</div><div class="si">12 activas</div></div>
+  <div class="stat-card sc-orange"><div class="sv">156M</div><div class="sl">Tesoro ZNT</div><div class="si">15.6% del supply</div></div>
+  <div class="stat-card sc-yellow"><div class="sv">68%</div><div class="sl">Quorum Promedio</div><div class="si">Meta: 51%</div></div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showSection('proposals',this)">Propuestas</button>
+  <button class="nav-btn" onclick="showSection('treasury',this)">Tesorería</button>
+  <button class="nav-btn" onclick="showSection('delegates',this)">Delegados</button>
+  <button class="nav-btn" onclick="showSection('create',this)">Crear Propuesta</button>
+  <button class="nav-btn" onclick="showSection('history',this)">Historial</button>
+</div>
+
+<div class="main">
+
+<!-- PROPOSALS -->
+<div id="proposals">
+  <div class="section-title">Propuestas <span class="accent">Activas</span> <span class="badge">12 activas</span></div>
+  <div class="filter-bar">
+    <button class="fbtn active" onclick="filterProposals('all',this)">Todas</button>
+    <button class="fbtn" onclick="filterProposals('treasury',this)">Tesorería</button>
+    <button class="fbtn" onclick="filterProposals('protocol',this)">Protocolo</button>
+    <button class="fbtn" onclick="filterProposals('feature',this)">Funcionalidad</button>
+    <button class="fbtn" onclick="filterProposals('community',this)">Comunidad</button>
+  </div>
+
+  <div class="pcard" data-cat="treasury">
+    <div class="p-header">
+      <span class="p-id">ZIP-001</span>
+      <span class="p-title">Activar staking de ZNT en bancos Tier 3+</span>
+      <span class="p-cat treasury">Tesorería</span>
+      <span class="p-status active">Activa</span>
+    </div>
+    <div class="p-body">Habilitar staking con APY del 15% para holders de ZNT con al menos 10,000 ZNT en los niveles Vault y Ultimate del ZICORE Bank. El staking generará rendimiento pasivo y reducirá la circulación libre, fortaleciendo el valor del token.</div>
+    <div class="p-meta">
+      <span>&#128197; 15 Jul 2026</span><span>&#128100; @zinemotion</span><span>&#128498; 3,847 votantes</span><span>&#9878; Quorum: 62% / 51%</span><span>&#128176; 500,000 ZNT stake req.</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-bar"><div class="vf yes" style="width:68%"></div><div class="vf no" style="width:22%"></div><div class="vf abstain" style="width:10%"></div></div>
+      <div class="vote-labels">
+        <span class="vl y">A favor: 2,616 (68%)</span>
+        <span class="vl n">En contra: 847 (22%)</span>
+        <span class="vl a">Abstención: 384 (10%)</span>
+      </div>
+    </div>
+    <div class="vote-actions">
+      <button class="vbtn yes" onclick="castVote('yes',this,'ZIP-001')">&#10003; A favor</button>
+      <button class="vbtn no" onclick="castVote('no',this,'ZIP-001')">&#10007; En contra</button>
+      <button class="vbtn abstain" onclick="castVote('abstain',this,'ZIP-001')">&mdash; Abstención</button>
+    </div>
+  </div>
+
+  <div class="pcard" data-cat="feature">
+    <div class="p-header">
+      <span class="p-id">ZIP-002</span>
+      <span class="p-title">Financiar desarrollo de módulo de Minería Lunar</span>
+      <span class="p-cat feature">Funcionalidad</span>
+      <span class="p-status active">Activa</span>
+    </div>
+    <div class="p-body">Asignar 5,000,000 ZNT del tesoro para el desarrollo del módulo de minería lunar ISRU dentro de ZI Environment. Incluye prospección de regolito, extracción de oxígeno, y construcción de estructuras. Desarrollo estimado: 8 meses.</div>
+    <div class="p-meta">
+      <span>&#128197; 12 Jul 2026</span><span>&#128100; @lunar-dev</span><span>&#128498; 2,156 votantes</span><span>&#9878; Quorum: 41% / 51%</span><span>&#128176; 5,000,000 ZNT</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-bar"><div class="vf yes" style="width:54%"></div><div class="vf no" style="width:30%"></div><div class="vf abstain" style="width:16%"></div></div>
+      <div class="vote-labels">
+        <span class="vl y">A favor: 1,164 (54%)</span>
+        <span class="vl n">En contra: 647 (30%)</span>
+        <span class="vl a">Abstención: 345 (16%)</span>
+      </div>
+    </div>
+    <div class="vote-actions">
+      <button class="vbtn yes" onclick="castVote('yes',this,'ZIP-002')">&#10003; A favor</button>
+      <button class="vbtn no" onclick="castVote('no',this,'ZIP-002')">&#10007; En contra</button>
+      <button class="vbtn abstain" onclick="castVote('abstain',this,'ZIP-002')">&mdash; Abstención</button>
+    </div>
+  </div>
+
+  <div class="pcard" data-cat="protocol">
+    <div class="p-header">
+      <span class="p-id">ZIP-003</span>
+      <span class="p-title">Integración de ZNT con cadena de suministro aerospace</span>
+      <span class="p-cat protocol">Protocolo</span>
+      <span class="p-status active">Activa</span>
+    </div>
+    <div class="p-body">Usar ZNT como token de pago para servicios de manufactura aditiva, impresión 3D, y cadena de suministro de componentes aerospace. Los fabricantes registrados en el Marketplace podrán cobrar en ZNT con comisión del 2%.</div>
+    <div class="p-meta">
+      <span>&#128197; 10 Jul 2026</span><span>&#128100; @mfg-engineer</span><span>&#128498; 1,203 votantes</span><span>&#9878; Quorum: 18% / 51%</span><span>&#128176; Sin costo</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-bar"><div class="vf yes" style="width:72%"></div><div class="vf no" style="width:16%"></div><div class="vf abstain" style="width:12%"></div></div>
+      <div class="vote-labels">
+        <span class="vl y">A favor: 866 (72%)</span>
+        <span class="vl n">En contra: 192 (16%)</span>
+        <span class="vl a">Abstención: 145 (12%)</span>
+      </div>
+    </div>
+    <div class="vote-actions">
+      <button class="vbtn yes" onclick="castVote('yes',this,'ZIP-003')">&#10003; A favor</button>
+      <button class="vbtn no" onclick="castVote('no',this,'ZIP-003')">&#10007; En contra</button>
+      <button class="vbtn abstain" onclick="castVote('abstain',this,'ZIP-003')">&mdash; Abstención</button>
+    </div>
+  </div>
+
+  <div class="pcard" data-cat="community">
+    <div class="p-header">
+      <span class="p-id">ZIP-005</span>
+      <span class="p-title">Lanzar programa de becas ZNT para investigadores</span>
+      <span class="p-cat community">Comunidad</span>
+      <span class="p-status active">Activa</span>
+    </div>
+    <div class="p-body">Crear un fondo de 10,000,000 ZNT para becar investigadores en propulsión avanzada, fusión nuclear, y vida de soporte. Los investigadores recibirán ZNT mensual durante 12 meses con reportes de progreso trimestrales.</div>
+    <div class="p-meta">
+      <span>&#128197; 14 Jul 2026</span><span>&#128100; @zilab-director</span><span>&#128498; 1,890 votantes</span><span>&#9878; Quorum: 35% / 51%</span><span>&#128176; 10,000,000 ZNT</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-bar"><div class="vf yes" style="width:79%"></div><div class="vf no" style="width:13%"></div><div class="vf abstain" style="width:8%"></div></div>
+      <div class="vote-labels">
+        <span class="vl y">A favor: 1,493 (79%)</span>
+        <span class="vl n">En contra: 245 (13%)</span>
+        <span class="vl a">Abstención: 152 (8%)</span>
+      </div>
+    </div>
+    <div class="vote-actions">
+      <button class="vbtn yes" onclick="castVote('yes',this,'ZIP-005')">&#10003; A favor</button>
+      <button class="vbtn no" onclick="castVote('no',this,'ZIP-005')">&#10007; En contra</button>
+      <button class="vbtn abstain" onclick="castVote('abstain',this,'ZIP-005')">&mdash; Abstención</button>
+    </div>
+  </div>
+
+  <div class="pcard" data-cat="treasury">
+    <div class="p-header">
+      <span class="p-id">ZIP-006</span>
+      <span class="p-title">Fondos para expansión de red de correo ZineMotion</span>
+      <span class="p-cat treasury">Tesorería</span>
+      <span class="p-status pending">Pendiente</span>
+    </div>
+    <div class="p-body">Asignar 3,000,000 ZNT para expandir la infraestructura de correo ZineMotion con nodos en Europa y Asia. Incluye certificados SSL, servidores Dovecot adicionales, y CDN para adjuntos.</div>
+    <div class="p-meta">
+      <span>&#128197; 16 Jul 2026</span><span>&#128100; @mail-ops</span><span>&#128498; 423 votantes</span><span>&#9878; Quorum: 6% / 51%</span><span>&#128176; 3,000,000 ZNT</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-bar"><div class="vf yes" style="width:88%"></div><div class="vf no" style="width:7%"></div><div class="vf abstain" style="width:5%"></div></div>
+      <div class="vote-labels">
+        <span class="vl y">A favor: 372 (88%)</span>
+        <span class="vl n">En contra: 30 (7%)</span>
+        <span class="vl a">Abstención: 21 (5%)</span>
+      </div>
+    </div>
+    <div class="vote-actions">
+      <button class="vbtn yes" onclick="castVote('yes',this,'ZIP-006')">&#10003; A favor</button>
+      <button class="vbtn no" onclick="castVote('no',this,'ZIP-006')">&#10007; En contra</button>
+      <button class="vbtn abstain" onclick="castVote('abstain',this,'ZIP-006')">&mdash; Abstención</button>
+    </div>
+  </div>
+
+  <div class="pcard rejected" data-cat="protocol">
+    <div class="p-header">
+      <span class="p-id">ZIP-004</span>
+      <span class="p-title">Aumentar supply máximo de ZNT a 2,000,000,000</span>
+      <span class="p-cat protocol">Protocolo</span>
+      <span class="p-status rejected">Rechazada</span>
+    </div>
+    <div class="p-body">Propuesta para duplicar el supply máximo de ZNT de 1B a 2B para financiar nuevos módulos de exploración. Rechazada por la comunidad por riesgo de inflación y dilución del valor.</div>
+    <div class="p-meta">
+      <span>&#128197; 5 Jul 2026</span><span>&#128100; @inflation-hawk</span><span>&#128498; 8,921 votantes</span><span>&#9878; Quorum: 95%</span>
+    </div>
+    <div class="vote-section">
+      <div class="vote-bar"><div class="vf yes" style="width:18%"></div><div class="vf no" style="width:82%"></div></div>
+      <div class="vote-labels">
+        <span class="vl y">A favor: 1,606 (18%)</span>
+        <span class="vl n">En contra: 7,316 (82%)</span>
+        <span class="vl a">Abstención: 0 (0%)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TREASURY -->
+<div id="treasury" class="hidden">
+  <div class="section-title">Tesorería <span class="accent">ZICORE</span></div>
+  <div class="treasury-section">
+    <div class="t-card">
+      <h3>Resumen del Tesoro</h3>
+      <div class="t-grid">
+        <div class="t-item t-cyan"><div class="tv">156,000,000</div><div class="tl">ZNT Total</div></div>
+        <div class="t-item t-green"><div class="tv">89,000,000</div><div class="tl">Disponible</div></div>
+        <div class="t-item t-purple"><div class="tv">52,000,000</div><div class="tl">Comprometido</div></div>
+        <div class="t-item t-orange"><div class="tv">15,000,000</div><div class="tl">Reserva</div></div>
+      </div>
+    </div>
+    <div class="t-card">
+      <h3>Fuentes de Ingreso</h3>
+      <div class="alloc-list">
+        <div class="alloc-row">
+          <div class="aheader"><span class="aname">Marketplace (2% comisión)</span><span class="aamount">12.4M ZNT</span></div>
+          <div class="alloc-bar"><div class="abf" style="width:45%"></div></div>
+          <div class="afooter"><span>Mensual</span><span>45% del ingreso</span></div>
+        </div>
+        <div class="alloc-row">
+          <div class="aheader"><span class="aname">ZICORE Bank (spread bancario)</span><span class="aamount">8.7M ZNT</span></div>
+          <div class="alloc-bar"><div class="abf" style="width:32%"></div></div>
+          <div class="afooter"><span>Mensual</span><span>32% del ingreso</span></div>
+        </div>
+        <div class="alloc-row">
+          <div class="aheader"><span class="aname">Print Services (consumo filamento)</span><span class="aamount">4.2M ZNT</span></div>
+          <div class="alloc-bar"><div class="abf" style="width:15%"></div></div>
+          <div class="afooter"><span>Mensual</span><span>15% del ingreso</span></div>
+        </div>
+        <div class="alloc-row">
+          <div class="aheader"><span class="aname">Licencias Enterprise</span><span class="aamount">2.5M ZNT</span></div>
+          <div class="alloc-bar"><div class="abf" style="width:8%"></div></div>
+          <div class="afooter"><span>Mensual</span><span>8% del ingreso</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="t-card">
+    <h3>Asignaciones Activas</h3>
+    <div class="alloc-list">
+      <div class="alloc-row">
+        <div class="aheader"><span class="aname">Desarrollo Motor Raptor-X</span><span class="aamount">20,000,000 ZNT</span></div>
+        <div class="alloc-bar"><div class="abf" style="width:38%"></div></div>
+        <div class="afooter"><span>Fase 2/4</span><span>38% ejecutado</span></div>
+      </div>
+      <div class="alloc-row">
+        <div class="aheader"><span class="aname">Base Lunar Tranquillitatis</span><span class="aamount">15,000,000 ZNT</span></div>
+        <div class="alloc-bar"><div class="abf" style="width:29%"></div></div>
+        <div class="afooter"><span>Fase 1/3</span><span>29% ejecutado</span></div>
+      </div>
+      <div class="alloc-row">
+        <div class="aheader"><span class="aname">Fondo de Becas Investigación</span><span class="aamount">10,000,000 ZNT</span></div>
+        <div class="alloc-bar"><div class="abf" style="width:19%"></div></div>
+        <div class="afooter"><span>Mes 3/12</span><span>19% ejecutado</span></div>
+      </div>
+      <div class="alloc-row">
+        <div class="aheader"><span class="aname">Infraestructura Mail/Comunicaciones</span><span class="aamount">7,000,000 ZNT</span></div>
+        <div class="alloc-bar"><div class="abf" style="width:13%"></div></div>
+        <div class="afooter"><span>Fase 1/2</span><span>13% ejecutado</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELEGATES -->
+<div id="delegates" class="hidden">
+  <div class="section-title">Delegados <span class="accent">Activos</span> <span class="badge">5 delegados</span></div>
+  <div class="delegate-grid">
+    <div class="d-card">
+      <div class="d-rank">#1</div>
+      <div class="d-avatar av1">ZE</div>
+      <div class="d-name">ZineMotion</div>
+      <div class="d-votes">12,450 votos delegados</div>
+      <div class="d-pct">12.45%</div>
+      <div class="d-stats"><span><span class="ds-v">34</span>Propuestas</span><span><span class="ds-v">91%</span>Aprobación</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-rank">#2</div>
+      <div class="d-avatar av2">LD</div>
+      <div class="d-name">Lunar Dev</div>
+      <div class="d-votes">8,320 votos delegados</div>
+      <div class="d-pct">8.32%</div>
+      <div class="d-stats"><span><span class="ds-v">21</span>Propuestas</span><span><span class="ds-v">87%</span>Aprobación</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-rank">#3</div>
+      <div class="d-avatar av3">ME</div>
+      <div class="d-name">MFG Engineer</div>
+      <div class="d-votes">6,100 votos delegados</div>
+      <div class="d-pct">6.10%</div>
+      <div class="d-stats"><span><span class="ds-v">18</span>Propuestas</span><span><span class="ds-v">83%</span>Aprobación</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-rank">#4</div>
+      <div class="d-avatar av4">ZL</div>
+      <div class="d-name">ZiLab Director</div>
+      <div class="d-votes">5,890 votos delegados</div>
+      <div class="d-pct">5.89%</div>
+      <div class="d-stats"><span><span class="ds-v">15</span>Propuestas</span><span><span class="ds-v">89%</span>Aprobación</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-rank">#5</div>
+      <div class="d-avatar av5">AS</div>
+      <div class="d-name">Aero Systems</div>
+      <div class="d-votes">4,200 votos delegados</div>
+      <div class="d-pct">4.20%</div>
+      <div class="d-stats"><span><span class="ds-v">12</span>Propuestas</span><span><span class="ds-v">76%</span>Aprobación</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE PROPOSAL -->
+<div id="create" class="hidden">
+  <div class="section-title">Crear <span class="accent">Propuesta</span></div>
+  <div class="create-card create-section">
+    <div class="form-row"><label>Título de la propuesta</label><input type="text" id="propTitle" placeholder="Ej: Financiar desarrollo de propulsión iónica..."></div>
+    <div class="form-row"><label>Descripción detallada</label><textarea id="propDesc" placeholder="Describe el objetivo, alcance, presupuesto, y criterios de éxito..."></textarea></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Categoría</label><select id="propCat"><option value="treasury">Uso de Tesoro</option><option value="protocol">Cambio de Protocolo</option><option value="feature">Nueva Funcionalidad</option><option value="community">Comunidad</option></select></div>
+      <div class="form-row"><label>Presupuesto (ZNT)</label><input type="number" id="propBudget" placeholder="0" min="0"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Stake mínimo para votar</label><input type="number" id="propStake" value="1000" min="100"></div>
+      <div class="form-row"><label>Duración (días)</label><input type="number" id="propDuration" value="14" min="3" max="90"></div>
+    </div>
+    <button class="submit-btn" onclick="submitProposal()">&#10003; Enviar Propuesta</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="history" class="hidden">
+  <div class="section-title">Historial de <span class="accent">Propuestas</span></div>
+  <div class="history-card">
+    <div class="h-icon rejected">&#10007;</div>
+    <div class="h-info"><div class="h-title">Aumentar supply máximo de ZNT a 2B</div><div class="h-meta">ZIP-004 &middot; 5 Jul 2026 &middot; 8,921 votantes &middot; @inflation-hawk</div></div>
+    <div class="h-result"><div class="h-pct rejected">18%</div><div class="h-votes">Rechazada</div></div>
+  </div>
+  <div class="history-card">
+    <div class="h-icon executed">&#9881;</div>
+    <div class="h-info"><div class="h-title">Activación del sistema de gobernanza ZNT</div><div class="h-meta">ZIP-000 &middot; 1 Jul 2026 &middot; 12,450 votantes &middot; @zinemotion</div></div>
+    <div class="h-result"><div class="h-pct passed">94%</div><div class="h-votes">Ejecutada</div></div>
+  </div>
+  <div class="history-card">
+    <div class="h-icon passed">&#10003;</div>
+    <div class="h-info"><div class="h-title">Aprobar budget Q3 2026 para ZI Aerospace</div><div class="h-meta">ZIP-007 &middot; 28 Jun 2026 &middot; 6,234 votantes &middot; @aero-sys</div></div>
+    <div class="h-result"><div class="h-pct passed">71%</div><div class="h-votes">Aprobada</div></div>
+  </div>
+  <div class="history-card">
+    <div class="h-icon rejected">&#10007;</div>
+    <div class="h-info"><div class="h-title">Eliminar tier Explorer del ZICORE Bank</div><div class="h-meta">ZIP-008 &middot; 20 Jun 2026 &middot; 4,102 votantes &middot; @bank-dev</div></div>
+    <div class="h-result"><div class="h-pct rejected">32%</div><div class="h-votes">Rechazada</div></div>
+  </div>
+  <div class="history-card">
+    <div class="h-icon passed">&#10003;</div>
+    <div class="h-info"><div class="h-title">Integrar ZNT como método de pago en Marketplace</div><div class="h-meta">ZIP-009 &middot; 15 Jun 2026 &middot; 9,870 votantes &middot; @mkt-dev</div></div>
+    <div class="h-result"><div class="h-pct passed">88%</div><div class="h-votes">Ejecutada</div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+function showSection(id,btn){
+  document.querySelectorAll('.main>div').forEach(d=>d.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+
+function filterProposals(cat,btn){
+  document.querySelectorAll('.filter-bar .fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.pcard').forEach(c=>{
+    if(cat==='all'){c.style.display='';return;}
+    c.style.display=c.dataset.cat===cat?'':'none';
+  });
+}
+
+function castVote(type,btn,id){
+  const card=btn.closest('.pcard');
+  card.querySelectorAll('.vbtn').forEach(b=>{b.disabled=true;b.style.opacity='.3'});
+  btn.disabled=false;btn.style.opacity='1';btn.classList.add('voted');
+  card.classList.add('voted');
+  const msg=type==='yes'?'Voto registrado: A favor ✓':type==='no'?'Voto registrado: En contra ✗':'Abstención registrada —';
+  toast(msg+' ('+id+')');
+}
+
+function submitProposal(){
+  const t=document.getElementById('propTitle').value;
+  if(!t.trim()){toast('Ingresa un título');return;}
+  document.getElementById('propTitle').value='';
+  document.getElementById('propDesc').value='';
+  toast('Propuesta "'+t+'" enviada para revisión');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast';
+  setTimeout(()=>t.className='toast hidden',3000);
+}
+
+showSection('proposals');
+</script>
+</body>
+</html>

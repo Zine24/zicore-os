@@ -7,7 +7,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#04060c;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'Segoe UI',system-ui,sans-serif;color:#c0d0e0;overflow:hidden;user-select:none}
-canvas{border:1px solid rgba(0,229,255,.15);border-radius:4px;display:block}
+canvas{border:1px solid rgba(0,229,255,.15);border-radius:4px;display:block;transform-origin:center center}
+.music-toggle{position:fixed;bottom:12px;right:12px;z-index:100;padding:6px 12px;font-size:11px;font-weight:700;border:1px solid rgba(124,77,255,.3);background:rgba(124,77,255,.1);color:#7c4dff;border-radius:4px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+.music-toggle:hover{background:rgba(124,77,255,.25);box-shadow:0 0 10px rgba(124,77,255,.3)}
 .screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;pointer-events:auto}
 .screen.hidden{display:none;pointer-events:none}
 .title{font-size:clamp(28px,5vw,42px);font-weight:800;letter-spacing:2px;background:linear-gradient(135deg,#00e5ff,#7c4dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
@@ -33,6 +35,14 @@ canvas{border:1px solid rgba(0,229,255,.15);border-radius:4px;display:block}
 .stat .val{font-size:28px;font-weight:800;color:#00e5ff}
 .stat .lbl{font-size:10px;color:rgba(192,208,224,.5);text-transform:uppercase;letter-spacing:1px}
 .section-title{font-size:14px;color:rgba(0,229,255,.5);letter-spacing:3px;text-transform:uppercase;margin:12px 0 4px}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -66,6 +76,15 @@ canvas{border:1px solid rgba(0,229,255,.15);border-radius:4px;display:block}
   </div>
   <button class="btn" onclick="restartLevel()">RETRY</button>
   <button class="btn sm purple" onclick="showLevelSelect()">LEVELS</button>
+  <div class="social-share">
+    <div style="font-size:11px;color:rgba(192,208,224,.4);margin-bottom:6px">SHARE</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','Flappy Bird',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','Flappy Bird',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Flappy Bird',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','Flappy Bird',score)">Copy Link</button>
+    </div>
+  </div>
 </div>
 
 <div class="screen hidden" id="winScreen">
@@ -79,6 +98,7 @@ canvas{border:1px solid rgba(0,229,255,.15);border-radius:4px;display:block}
   <button class="btn sm purple" onclick="showLevelSelect()">LEVELS</button>
 </div>
 
+<button class="music-toggle" id="musicToggle" onclick="toggleMusic()">♫ MUSIC</button>
 <canvas id="game"></canvas>
 
 <script>
@@ -86,6 +106,158 @@ const C = document.getElementById('game');
 const ctx = C.getContext('2d');
 const W = 360, H = 540;
 C.width = W; C.height = H;
+
+let audioCtx = null;
+let musicEnabled = false;
+let musicOscillators = [];
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, duration, type, volume, detune) {
+  try {
+    const ac = getAudioCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    if (detune) osc.detune.value = detune;
+    gain.gain.setValueAtTime(volume || 0.15, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    osc.stop(ac.currentTime + duration);
+  } catch(e) {}
+}
+
+function sfxFlap() {
+  playTone(800, 0.08, 'sine', 0.12);
+  setTimeout(() => playTone(1100, 0.06, 'sine', 0.08), 30);
+}
+
+function sfxScore() {
+  playTone(880, 0.1, 'sine', 0.12);
+  setTimeout(() => playTone(1100, 0.15, 'sine', 0.1), 60);
+  setTimeout(() => playTone(1320, 0.2, 'sine', 0.08), 120);
+}
+
+function sfxPipePass() {
+  try {
+    const ac = getAudioCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ac.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.06, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    osc.stop(ac.currentTime + 0.1);
+  } catch(e) {}
+}
+
+function sfxDeath() {
+  try {
+    const ac = getAudioCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(400, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.15, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    osc.stop(ac.currentTime + 0.5);
+    setTimeout(() => { playTone(80, 0.3, 'square', 0.08); }, 150);
+  } catch(e) {}
+}
+
+function sfxPowerup() {
+  playTone(523, 0.08, 'sine', 0.1);
+  setTimeout(() => playTone(659, 0.08, 'sine', 0.1), 60);
+  setTimeout(() => playTone(784, 0.08, 'sine', 0.1), 120);
+  setTimeout(() => playTone(1047, 0.15, 'sine', 0.08), 180);
+}
+
+function sfxWin() {
+  const notes = [523, 659, 784, 1047, 784, 1047, 1318];
+  notes.forEach((n, i) => setTimeout(() => playTone(n, 0.18, 'sine', 0.1), i * 100));
+}
+
+function startMusic() {
+  if (!musicEnabled) return;
+  try {
+    const ac = getAudioCtx();
+    const notes = [261, 293, 329, 349, 392, 349, 329, 293];
+    let idx = 0;
+    function playNote() {
+      if (!musicEnabled) return;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = notes[idx % notes.length];
+      gain.gain.setValueAtTime(0.04, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.4);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + 0.4);
+      const bassOsc = ac.createOscillator();
+      const bassGain = ac.createGain();
+      bassOsc.type = 'sine';
+      bassOsc.frequency.value = notes[idx % notes.length] / 2;
+      bassGain.gain.setValueAtTime(0.03, ac.currentTime);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.6);
+      bassOsc.connect(bassGain);
+      bassGain.connect(ac.destination);
+      bassOsc.start();
+      bassOsc.stop(ac.currentTime + 0.6);
+      musicOscillators.push({ osc, gain, bassOsc, bassGain });
+      idx++;
+      if (musicEnabled) musicTimer = setTimeout(playNote, 500);
+    }
+    playNote();
+  } catch(e) {}
+}
+
+let musicTimer = null;
+
+function stopMusic() {
+  musicEnabled = false;
+  if (musicTimer) clearTimeout(musicTimer);
+  musicOscillators.forEach(o => { try { o.osc.stop(); o.bassOsc.stop(); } catch(e) {} });
+  musicOscillators = [];
+  document.getElementById('musicToggle').textContent = '♫ MUSIC';
+  document.getElementById('musicToggle').style.borderColor = 'rgba(124,77,255,.3)';
+  document.getElementById('musicToggle').style.background = 'rgba(124,77,255,.1)';
+}
+
+function toggleMusic() {
+  if (musicEnabled) { stopMusic(); }
+  else {
+    musicEnabled = true;
+    document.getElementById('musicToggle').textContent = '♫ ON';
+    document.getElementById('musicToggle').style.borderColor = '#00ff88';
+    document.getElementById('musicToggle').style.background = 'rgba(0,255,136,.15)';
+    startMusic();
+  }
+}
+
+function resizeCanvas() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const scale = Math.min(vw / W, vh / H, 2);
+  C.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
 const STORAGE_KEY = 'zicore_flappy_bird_v2';
 const GRAVITY_BASE = 0.38;
@@ -358,8 +530,21 @@ function drawHUD() {
   ctx.fillText(score, W / 2, 22);
 
   const barW = 80, barX = W / 2 - barW / 2, barY = 26;
+  ctx.shadowColor = progress >= 1 ? '#00ff88' : '#00e5ff';
+  ctx.shadowBlur = progress >= 1 ? 8 : 4;
   ctx.fillStyle = 'rgba(0,229,255,0.1)'; ctx.fillRect(barX, barY, barW, 4);
   ctx.fillStyle = progress >= 1 ? '#00ff88' : '#00e5ff'; ctx.fillRect(barX, barY, barW * progress, 4);
+  ctx.shadowBlur = 0;
+
+  const remaining = targetScore - score;
+  if (remaining > 0 && remaining <= 5 && state === 'playing') {
+    ctx.globalAlpha = 0.5 + Math.sin(frame * 0.12) * 0.3;
+    ctx.fillStyle = '#ffb300';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(remaining + (remaining === 1 ? ' POINT TO GO!' : ' POINTS TO GO'), W / 2, 40);
+    ctx.globalAlpha = 1;
+  }
 
   let iy = 42;
   const indicators = [];
@@ -383,6 +568,8 @@ function drawHUD() {
     ctx.globalAlpha = 1;
   }
 }
+
+const colors_map = { slow: '#00e5ff', shield: '#00ff88', small: '#7c4dff' };
 
 function update() {
   if (state !== 'playing') return;
@@ -428,6 +615,7 @@ function update() {
     if (!p.scored && p.x + PIPE_WIDTH < bird.x) {
       p.scored = true; score++;
       spawnParticles(bird.x, bird.y, '#00ff88', 4);
+      sfxScore();
     }
 
     const botY = p.topH + p.gap;
@@ -453,6 +641,7 @@ function update() {
       p.collected = true;
       activePowerups[p.type] = 420;
       spawnParticles(p.x, p.y, colors_map[p.type], 10);
+      sfxPowerup();
     }
     if (p.x < -30) powerups.splice(i, 1);
   }
@@ -462,12 +651,12 @@ function update() {
   if (score >= targetScore) winLevel();
 }
 
-const colors_map = { slow: '#00e5ff', shield: '#00ff88', small: '#7c4dff' };
-
 function die() {
   state = 'dead';
   screenShake = 12;
   spawnParticles(bird.x, bird.y, '#ff1744', 20);
+  sfxDeath();
+  stopMusic();
   if (score > (bestScores[level] || 0)) bestScores[level] = score;
   save();
   setTimeout(() => {
@@ -481,6 +670,8 @@ function die() {
 function winLevel() {
   if (state !== 'playing') return;
   state = 'won';
+  sfxWin();
+  stopMusic();
   if (score > (bestScores[level] || 0)) bestScores[level] = score;
   const next = level + 1;
   let unlocked = false;
@@ -499,7 +690,7 @@ function showScreen(id) {
   document.getElementById(id).classList.remove('hidden');
 }
 
-function showStart() { showScreen('startScreen'); state = 'menu'; }
+function showStart() { showScreen('startScreen'); state = 'menu'; stopMusic(); }
 
 function showLevelSelect() {
   state = 'menu';
@@ -541,6 +732,7 @@ function flap() {
   if (state === 'playing') {
     bird.vy = FLAP_IMPULSE;
     spawnParticles(bird.x - 6, bird.y + 6, '#00e5ff', 3);
+    sfxFlap();
   }
 }
 
@@ -589,6 +781,15 @@ C.addEventListener('pointerdown', e => { e.preventDefault(); flap(); });
 C.addEventListener('touchstart', e => { e.preventDefault(); flap(); }, { passive: false });
 
 load(); initParallax(); initGame(); gameLoop();
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

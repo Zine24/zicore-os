@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Storage</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--surface:rgba(10,15,30,0.85);--glass:rgba(10,15,30,0.7);--border:rgba(0,229,255,0.12);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;--orange:#ffa500;--text:#e0e6f0;--muted:#5a6a80;--mono:'SF Mono',Consolas,monospace}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+
+.topbar{position:fixed;top:0;left:0;right:0;height:48px;background:rgba(4,6,12,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;backdrop-filter:blur(20px)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.topbar-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--cyan),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.topbar-title{font-size:13px;font-weight:600;letter-spacing:1px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.topbar-back{color:var(--muted);text-decoration:none;font-size:11px;letter-spacing:1px}
+.topbar-back:hover{color:var(--cyan)}
+
+.layout{display:flex;padding-top:48px;height:calc(100vh - 48px)}
+
+/* ── Sidebar ────────────────────────────────────────── */
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h3{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--cyan)}
+.storage-bar{margin-top:10px;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
+.storage-bar .fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;transition:width .3s}
+.storage-text{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+.sidebar-nav{flex:1;padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(0,229,255,0.03)}
+.nav-item.active{color:var(--cyan);border-left-color:var(--cyan);background:rgba(0,229,255,0.05)}
+.nav-item .icon{font-size:14px;width:20px;text-align:center}
+.nav-item .count{margin-left:auto;font-size:10px;font-family:var(--mono);background:rgba(0,229,255,0.08);padding:1px 6px;border-radius:3px}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
+.upload-btn{width:100%;padding:10px;border-radius:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--cyan);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.upload-btn:hover{background:rgba(0,229,255,0.15)}
+
+/* ── Main Content ────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.15)}
+.breadcrumb{display:flex;align-items:center;gap:4px;font-size:12px;flex:1}
+.breadcrumb span{color:var(--muted);cursor:pointer;transition:color .15s}
+.breadcrumb span:hover{color:var(--cyan)}
+.breadcrumb span.current{color:var(--text);cursor:default}
+.breadcrumb .sep{color:var(--muted);opacity:0.3}
+.toolbar-actions{display:flex;gap:6px}
+.toolbar-btn{padding:6px 12px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.toolbar-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.toolbar-btn.active{background:rgba(0,229,255,0.08);border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.search-box{position:relative}
+.search-box input{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;padding:6px 12px 6px 28px;color:var(--text);font-size:12px;width:200px}
+.search-box input:focus{border-color:var(--cyan);outline:none}
+.search-box::before{content:'🔍';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px}
+
+/* ── File Grid ──────────────────────────────────────── */
+.file-area{flex:1;overflow-y:auto;padding:16px 20px}
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.file-list{display:flex;flex-direction:column;gap:2px}
+
+.file-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.file-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-1px)}
+.file-card.selected{border-color:var(--cyan);background:rgba(0,229,255,0.04)}
+.file-card .icon{font-size:36px;margin-bottom:8px;line-height:1}
+.file-card .name{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-card .meta{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+.file-card .check{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:rgba(0,0,0,0.3);display:none;align-items:center;justify-content:center;font-size:10px}
+.file-card.selected .check{display:flex;background:var(--cyan);border-color:var(--cyan);color:#000}
+
+/* ── List View ───────────────────────────────────────── */
+.file-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:6px;cursor:pointer;transition:background .15s}
+.file-row:hover{background:rgba(0,229,255,0.03)}
+.file-row.selected{background:rgba(0,229,255,0.05)}
+.file-row .icon{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.file-row .name{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-row .size{font-size:11px;color:var(--muted);font-family:var(--mono);width:80px;text-align:right}
+.file-row .date{font-size:11px;color:var(--muted);width:120px;text-align:right}
+.file-row .actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.file-row:hover .actions{opacity:1}
+.file-row .act-btn{padding:4px 8px;border-radius:4px;background:rgba(255,255,255,0.05);border:none;color:var(--muted);font-size:11px;cursor:pointer}
+.file-row .act-btn:hover{color:var(--cyan)}
+
+/* ── Context Menu ────────────────────────────────────── */
+.ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;z-index:200;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.ctx-menu.hidden{display:none}
+.ctx-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:4px;font-size:12px;color:var(--text);cursor:pointer;transition:background .1s}
+.ctx-item:hover{background:rgba(0,229,255,0.06)}
+.ctx-item.danger{color:var(--red)}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ── Empty ───────────────────────────────────────────── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted)}
+.empty .icon{font-size:48px;margin-bottom:12px;opacity:0.3}
+.empty p{font-size:13px}
+
+/* ── Modal ───────────────────────────────────────────── */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal.hidden{display:none}
+.modal-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:380px;max-width:90vw}
+.modal-card h3{font-size:14px;color:var(--cyan);margin-bottom:16px}
+.modal-card input{width:100%;padding:10px;border-radius:6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--text);font-size:13px;margin-bottom:12px}
+.modal-card input:focus{border-color:var(--cyan);outline:none}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.modal-btns button{padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.modal-btns .cancel{background:transparent;border:1px solid var(--border);color:var(--text)}
+.modal-btns .confirm{background:var(--cyan);color:#000}
+
+/* ── Upload Zone ─────────────────────────────────────── */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;color:var(--muted);cursor:pointer;transition:all .2s;margin-bottom:16px}
+.upload-zone:hover{border-color:var(--cyan);background:rgba(0,229,255,0.02)}
+.upload-zone .icon{font-size:36px;margin-bottom:8px}
+.upload-zone p{font-size:12px}
+.upload-progress{margin-top:12px;display:none}
+.upload-progress .bar{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
+.upload-progress .bar .fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .3s}
+
+/* ── Toast ───────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;animation:toastIn .3s ease}
+.toast.success{background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.3);color:var(--green)}
+.toast.error{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3);color:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-logo">
+    <div class="topbar-icon">Z</div>
+    <div class="topbar-title">ZICORE STORAGE</div>
+  </a>
+  <div class="topbar-right">
+    <a href="/" class="topbar-back">← PORTAL</a>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h3>Almacenamiento</h3>
+      <div class="storage-bar"><div class="fill" id="storageFill" style="width:0%"></div></div>
+      <div class="storage-text" id="storageText">0 / 1 GB usado</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="navigateTo('data')"><span class="icon">📁</span>Archivos<span class="count" id="fileCount">0</span></div>
+      <div class="nav-item" onclick="navigateTo('data/output')"><span class="icon">🎨</span>Generados</div>
+      <div class="nav-item" onclick="navigateTo('data/media')"><span class="icon">🎬</span>Multimedia</div>
+      <div class="nav-item" onclick="navigateTo('data/config')"><span class="icon">⚙️</span>Config</div>
+      <div class="nav-item" onclick="navigateTo('frontend')"><span class="icon">🌐</span>Frontend</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">+ Subir Archivo</button>
+      <input type="file" id="fileInput" multiple style="display:none" onchange="handleUpload(this.files)">
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="toolbar">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <div class="search-box">
+        <input type="text" placeholder="Buscar archivos..." id="searchInput" oninput="filterFiles(this.value)">
+      </div>
+      <div class="toolbar-actions">
+        <button class="toolbar-btn active" id="viewGrid" onclick="setView('grid')">⊞</button>
+        <button class="toolbar-btn" id="viewList" onclick="setView('list')">☰</button>
+        <button class="toolbar-btn" onclick="createFolder()">+ Carpeta</button>
+        <button class="toolbar-btn" onclick="refresh()">↻</button>
+      </div>
+    </div>
+    <div class="file-area" id="fileArea" oncontextmenu="showCtx(event,-1)"></div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div class="ctx-menu hidden" id="ctxMenu">
+  <div class="ctx-item" onclick="downloadFile()">📥 Descargar</div>
+  <div class="ctx-item" onclick="renameFile()">✏️ Renombrar</div>
+  <div class="ctx-item" onclick="moveFile()">📁 Mover</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="deleteFile()">🗑 Eliminar</div>
+</div>
+
+<!-- New Folder Modal -->
+<div class="modal hidden" id="folderModal">
+  <div class="modal-card">
+    <h3>Nueva Carpeta</h3>
+    <input type="text" id="folderName" placeholder="Nombre de la carpeta" onkeydown="if(event.key==='Enter')confirmFolder()">
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeFolderModal()">Cancelar</button>
+      <button class="confirm" onclick="confirmFolder()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal hidden" id="renameModal">
+  <div class="modal-card">
+    <h3>Renombrar</h3>
+    <input type="text" id="renameInput" placeholder="Nuevo nombre" onkeydown="if(event.key==='Enter')confirmRename()">
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeRenameModal()">Cancelar</button>
+      <button class="confirm" onclick="confirmRename()">Renombrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// SSO Auth
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
+function getToken(){return localStorage.getItem('zicore_sso_token')}
+function authFetch(url,opts={}){return fetch(url,{...opts,headers:{'Authorization':'Bearer '+getToken(),'Content-Type':'application/json',...(opts.headers||{})}})}
+
+let currentPath = 'data';
+let viewMode = 'grid';
+let files = [];
+let selectedIdx = -1;
+
+const FILE_ICONS = {
+  dir:'📁',html:'🌐',css:'🎨',js:'📜',py:'🐍',json:'📋',md:'📝',
+  png:'🖼',jpg:'🖼',jpeg:'🖼',gif:'🖼',svg:'🖼',webp:'🖼',
+  mp3:'🎵',wav:'🎵',ogg:'🎵',mp4:'🎬',avi:'🎬',mkv:'🎬',
+  stl:'🧊',obj:'🧊',gltf:'🧊',glb:'🧊',step:'📐',
+  gcode:'🖨',bin:'💾',zip:'📦',tar:'📦',gz:'📦',
+  txt:'📄',csv:'📊',xml:'📋',yaml:'📋',yml:'📋',toml:'📋',
+  sh:'⚙',service:'⚙',conf:'⚙',ini:'⚙',
+};
+
+function getIcon(name, type) {
+  if (type === 'dir') return '📁';
+  const ext = name.split('.').pop().toLowerCase();
+  return FILE_ICONS[ext] || '📄';
+}
+
+function formatSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function formatDate(ts) {
+  return new Date(ts * 1000).toLocaleDateString('es-MX', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+async function loadFiles(path) {
+  currentPath = path || 'data';
+  try {
+    const r = await authFetch('/api/fs/ls', {method:'POST', body:JSON.stringify({path:currentPath})});
+    const d = await r.json();
+    if (d.status === 'ok') {
+      files = d.items;
+      renderBreadcrumb();
+      renderFiles();
+      document.getElementById('fileCount').textContent = files.length;
+    } else {
+      showToast(d.error || 'Error al cargar', 'error');
+    }
+  } catch(e) { showToast('Error de conexion', 'error'); }
+}
+
+function renderBreadcrumb() {
+  const parts = currentPath.split('/');
+  let html = '<span onclick="navigateTo(\'data\')">🏠 Inicio</span>';
+  let accumulated = '';
+  parts.forEach((p, i) => {
+    if (i === 0 && p === 'data') return;
+    accumulated += (accumulated ? '/' : '') + p;
+    html += `<span class="sep">/</span><span onclick="navigateTo('data/${accumulated}')">${p}</span>`;
+  });
+  document.getElementById('breadcrumb').innerHTML = html;
+}
+
+function renderFiles(filter='') {
+  const area = document.getElementById('fileArea');
+  let filtered = files;
+  if (filter) {
+    filtered = files.filter(f => f.name.toLowerCase().includes(filter.toLowerCase()));
+  }
+  // Sort: dirs first, then by name
+  filtered.sort((a,b) => {
+    if (a.type === 'dir' && b.type !== 'dir') return -1;
+    if (a.type !== 'dir' && b.type === 'dir') return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  if (filtered.length === 0) {
+    area.innerHTML = '<div class="empty"><div class="icon">📂</div><p>Esta carpeta esta vacia</p></div>';
+    return;
+  }
+
+  if (viewMode === 'grid') {
+    area.innerHTML = `<div class="file-grid">${filtered.map((f,i) => `
+      <div class="file-card${selectedIdx===i?' selected':''}" onclick="selectFile(${i})" ondblclick="openFile(${i})" oncontextmenu="event.preventDefault();showCtx(event,${i})">
+        <div class="check">✓</div>
+        <div class="icon">${getIcon(f.name,f.type)}</div>
+        <div class="name">${f.name}</div>
+        <div class="meta">${f.type==='dir'?'Carpeta':formatSize(f.size)}</div>
+      </div>
+    `).join('')}</div>`;
+  } else {
+    area.innerHTML = `<div class="file-list">${filtered.map((f,i) => `
+      <div class="file-row${selectedIdx===i?' selected':''}" onclick="selectFile(${i})" ondblclick="openFile(${i})" oncontextmenu="event.preventDefault();showCtx(event,${i})">
+        <div class="icon">${getIcon(f.name,f.type)}</div>
+        <div class="name">${f.name}</div>
+        <div class="size">${f.type==='dir'?'-':formatSize(f.size)}</div>
+        <div class="date">${formatDate(f.modified)}</div>
+        <div class="actions">
+          <button class="act-btn" onclick="event.stopPropagation();renameFileAt(${i})">✏️</button>
+          <button class="act-btn" onclick="event.stopPropagation();deleteFileAt(${i})">🗑</button>
+        </div>
+      </div>
+    `).join('')}</div>`;
+  }
+}
+
+function selectFile(i) { selectedIdx = selectedIdx === i ? -1 : i; renderFiles(document.getElementById('searchInput').value); }
+function openFile(i) {
+  const f = files[i];
+  if (f.type === 'dir') { navigateTo(f.path); }
+  else { window.open('/' + f.path, '_blank'); }
+}
+
+function navigateTo(path) { loadFiles(path); selectedIdx = -1; document.getElementById('searchInput').value = ''; }
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById('viewGrid').classList.toggle('active', mode === 'grid');
+  document.getElementById('viewList').classList.toggle('active', mode === 'list');
+  renderFiles();
+}
+function refresh() { loadFiles(currentPath); }
+function filterFiles(q) { renderFiles(q); }
+
+// Context menu
+let ctxIdx = -1;
+function showCtx(e, i) {
+  e.preventDefault();
+  ctxIdx = i;
+  const menu = document.getElementById('ctxMenu');
+  menu.classList.remove('hidden');
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+}
+document.addEventListener('click', () => document.getElementById('ctxMenu').classList.add('hidden'));
+
+// CRUD operations
+async function deleteFileAt(i) {
+  const f = files[i];
+  if (!confirm(`Eliminar "${f.name}"?`)) return;
+  try {
+    const r = await authFetch('/api/fs/remove', {method:'POST', body:JSON.stringify({path:f.path})});
+    const d = await r.json();
+    if (d.status === 'ok') { showToast('Eliminado', 'success'); loadFiles(currentPath); }
+    else showToast(d.error, 'error');
+  } catch(e) { showToast('Error', 'error'); }
+}
+function deleteFile() { if (ctxIdx >= 0) deleteFileAt(ctxIdx); }
+
+function renameFileAt(i) {
+  const f = files[i];
+  document.getElementById('renameInput').value = f.name;
+  document.getElementById('renameModal').classList.remove('hidden');
+  document.getElementById('renameInput').focus();
+}
+function renameFile() { if (ctxIdx >= 0) renameFileAt(ctxIdx); }
+function closeRenameModal() { document.getElementById('renameModal').classList.add('hidden'); }
+async function confirmRename() {
+  const newName = document.getElementById('renameInput').value.trim();
+  if (!newName || ctxIdx < 0) return;
+  const f = files[ctxIdx];
+  const newPath = currentPath + '/' + newName;
+  try {
+    const r = await authFetch('/api/fs/rename', {method:'POST', body:JSON.stringify({from:f.path, to:newPath})});
+    const d = await r.json();
+    if (d.status === 'ok') { showToast('Renombrado', 'success'); closeRenameModal(); loadFiles(currentPath); }
+    else showToast(d.error, 'error');
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+function moveFile() {
+  if (ctxIdx < 0) return;
+  const dest = prompt('Mover a (ruta relativa):', currentPath);
+  if (!dest) return;
+  const f = files[ctxIdx];
+  const newPath = dest + '/' + f.name;
+  authFetch('/api/fs/rename', {method:'POST', body:JSON.stringify({from:f.path, to:newPath})})
+    .then(r => r.json()).then(d => {
+      if (d.status === 'ok') { showToast('Movido', 'success'); loadFiles(currentPath); }
+      else showToast(d.error, 'error');
+    });
+}
+
+function downloadFile() {
+  if (ctxIdx < 0) return;
+  const f = files[ctxIdx];
+  if (f.type === 'file') window.open('/' + f.path, '_blank');
+}
+
+function createFolder() {
+  document.getElementById('folderName').value = '';
+  document.getElementById('folderModal').classList.remove('hidden');
+  document.getElementById('folderName').focus();
+}
+function closeFolderModal() { document.getElementById('folderModal').classList.add('hidden'); }
+async function confirmFolder() {
+  const name = document.getElementById('folderName').value.trim();
+  if (!name) return;
+  try {
+    const r = await authFetch('/api/fs/mkdir', {method:'POST', body:JSON.stringify({path:currentPath + '/' + name})});
+    const d = await r.json();
+    if (d.status === 'ok') { showToast('Carpeta creada', 'success'); closeFolderModal(); loadFiles(currentPath); }
+    else showToast(d.error, 'error');
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+// Upload
+async function handleUpload(fileList) {
+  for (const file of fileList) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', currentPath + '/' + file.name);
+    try {
+      const r = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {'Authorization': 'Bearer ' + getToken()},
+        body: formData
+      });
+      const d = await r.json();
+      if (d.status === 'ok') showToast(`Subido: ${file.name}`, 'success');
+      else showToast(d.error || 'Error', 'error');
+    } catch(e) { showToast('Error de conexion', 'error'); }
+  }
+  loadFiles(currentPath);
+  document.getElementById('fileInput').value = '';
+}
+
+// Drag and drop
+const fileArea = document.getElementById('fileArea');
+fileArea.addEventListener('dragover', e => { e.preventDefault(); fileArea.style.background = 'rgba(0,229,255,0.03)'; });
+fileArea.addEventListener('dragleave', () => { fileArea.style.background = ''; });
+fileArea.addEventListener('drop', e => { e.preventDefault(); fileArea.style.background = ''; handleUpload(e.dataTransfer.files); });
+
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Init
+loadFiles('data');
+</script>
+</body>
+</html>

@@ -189,6 +189,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   height:36px;clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
 }
 #sendBtn:hover{background:rgba(0,229,255,0.12)}
+.quick-cmd{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--cyan,#00e5ff);padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.quick-cmd:hover{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
 #sendBtn:disabled{opacity:0.4;cursor:not-allowed}
 
 #genPanel{
@@ -450,7 +452,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         <button id="genBtn">GENERATE</button>
       </div>
       <div id="inputArea">
+        <div id="quickCmds" style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <button class="quick-cmd" onclick="quickCmd('write code for ')">Write Code</button>
+          <button class="quick-cmd" onclick="quickCmd('debug this code: ')">Debug</button>
+          <button class="quick-cmd" onclick="quickCmd('explain this code: ')">Explain</button>
+          <button class="quick-cmd" onclick="quickCmd('simulate ')">Simulate</button>
+          <button class="quick-cmd" onclick="quickCmd('run code: ')">Run Code</button>
+        </div>
         <textarea id="chatInput" rows="1" placeholder="Type message... (Enter to send, Shift+Enter for new line)"></textarea>
+        <button id="micBtn" title="Voice input" onclick="toggleMic()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">🎤</button>
         <button id="sendBtn">SEND</button>
       </div>
     </div>
@@ -528,6 +538,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 </div>
 
 <script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
 (function(){
   var ws=null;
   var config={providers:{},zio_engine:{},theme:'midnight'};
@@ -569,24 +588,41 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       }
     });
   }
-  function speakText(text){
-    if(!window.speechSynthesis){return;}
+  function speakText(text, lang){
+    if(!window.speechSynthesis)return;
+    window.speechSynthesis.cancel();
     var utter=new SpeechSynthesisUtterance(text);
     utter.rate=1.0;utter.pitch=1.0;
+    utter.lang=lang||'es';
     var voices=speechSynthesis.getVoices();
-    if(voices.length>0)utter.voice=voices[0];
+    var best=voices.find(function(v){return v.lang&&v.lang.startsWith(utter.lang)});
+    if(best)utter.voice=best;
     speechSynthesis.speak(utter);
   }
-  function startListening(callback){
+  var _micRecognition=null;
+  function toggleMic(){
+    if(_micRecognition){_micRecognition.stop();_micRecognition=null;return;}
     var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SpeechRecognition){alert('Speech recognition not supported in this browser');return;}
-    var recognition=new SpeechRecognition();
-    recognition.continuous=false;recognition.interimResults=false;recognition.lang='en-US';
-    recognition.onresult=function(event){
-      var text=event.results[0][0].transcript;
-      callback(text);
+    if(!SpeechRecognition){alert('Reconocimiento de voz no soportado. Usa Chrome o Edge.');return;}
+    var micBtn=document.getElementById('micBtn');
+    _micRecognition=new SpeechRecognition();
+    _micRecognition.continuous=false;_micRecognition.interimResults=true;
+    _micRecognition.lang=(typeof ZICORE_TRANSLATE!=='undefined')?ZICORE_TRANSLATE.getSourceLang():'es';
+    micBtn.textContent='🔴';micBtn.style.borderColor='var(--red)';micBtn.style.color='var(--red)';
+    _micRecognition.onresult=function(event){
+      var text='';
+      for(var i=event.resultIndex;i<event.results.length;i++)text+=event.results[i][0].transcript;
+      document.getElementById('chatInput').value=text;
     };
-    recognition.start();
+    _micRecognition.onend=function(){micBtn.textContent='🎤';micBtn.style.borderColor='';micBtn.style.color='';_micRecognition=null;};
+    _micRecognition.onerror=function(e){
+      micBtn.textContent='🎤';micBtn.style.borderColor='';micBtn.style.color='';_micRecognition=null;
+      if(e.error==='not-allowed')addMsg('error','Permiso de micrófono denegado. Activa el micrófono en la config del navegador.');
+      else if(e.error==='no-speech')addMsg('error','No se detectó voz. Intenta de nuevo.');
+      else if(e.error==='network')addMsg('error','Error de red en reconocimiento de voz.');
+      else addMsg('error','Error de voz: '+e.error);
+    };
+    _micRecognition.start();
   }
 
   function renderProviders(){
@@ -869,6 +905,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         }
       })
       .catch(function(){});
+  }
+
+  function quickCmd(prefix){
+    var inp=document.getElementById('chatInput');
+    inp.value=prefix;
+    inp.focus();
+    inp.style.height='36px';
+    inp.style.height=Math.min(inp.scrollHeight,100)+'px';
   }
 
   function sendMsg(){
@@ -1273,5 +1317,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   </div>
 </div>
 
+<script src="/js/zicore-translate.js"></script>
+<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
 </body>
 </html>

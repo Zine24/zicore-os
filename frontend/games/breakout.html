@@ -35,6 +35,14 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 #canvasWrap canvas{display:block}
 .controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
 .controls-help span{color:#00e5ff55}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -53,8 +61,16 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
   <div class="go-score" id="finalScore">SCORE: 0</div>
   <div class="go-info" id="finalInfo">LEVEL 1</div>
   <button class="btn" onclick="startGame()">RETRY</button>
-</div>
-<div id="levelComplete" class="screen">
+  <div class="social-share">
+    <div style="font-size:11px;color:#556;margin-bottom:6px">SHARE</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','Breakout',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','Breakout',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Breakout',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','Breakout',score)">Copy Link</button>
+    </div>
+  </div>
+</div> class="screen">
   <div class="lc-title">LEVEL COMPLETE</div>
   <div class="lc-score" id="lcScore">SCORE: 0</div>
   <button class="btn" onclick="nextLevel()">NEXT LEVEL</button>
@@ -65,12 +81,24 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
     <div class="level">LVL: <span id="hudLevel">1</span></div>
     <div class="lives">LIVES: <span id="hudLives">3</span></div>
     <div class="balls">BALLS: <span id="hudBalls">1</span></div>
+    <div id="muteBtn" onclick="initSound();toggleSound()" style="cursor:pointer;padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px;font-size:14px">🔊</div>
   </div>
   <div id="canvasWrap"><canvas id="game"></canvas></div>
 </div>
 <div class="controls-help"><span>MOUSE/←→</span> MOVE <span>SPACE</span> LAUNCH</div>
 
 <script>
+var soundMuted=false,audioCtx=null;
+function initSound(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+function tone(f,d,v,t,dl){if(soundMuted||!audioCtx)return;v=v||.06;t=t||'square';dl=dl||0;var n=audioCtx.currentTime+dl,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=t;o.frequency.setValueAtTime(f,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+d)}
+function toggleSound(){soundMuted=!soundMuted;var b=document.getElementById('muteBtn');if(b)b.textContent=soundMuted?'\u{1F507}':'\u{1F506}'}
+function sfxPaddle(){tone(800,.06,.05,'sine')}
+function sfxBrickHit(){tone(500,.04,.04)}
+function sfxBrickDestroy(){tone(300,.06,.05,'sawtooth');tone(600,.08,.04,'sine',.03)}
+function sfxPowerup(){tone(880,.1,.06,'sine');tone(1100,.1,.05,'sine',.08)}
+function sfxBallLost(){tone(400,.15,.06,'sawtooth');tone(250,.2,.07,'sawtooth',.12)}
+function sfxLevelClear(){tone(523,.12,.06,'sine');tone(659,.12,.06,'sine',.1);tone(784,.12,.06,'sine',.2);tone(1047,.2,.07,'sine',.3)}
+function sfxGameOver(){tone(400,.2,.06,'sawtooth');tone(300,.2,.06,'sawtooth',.15);tone(200,.3,.07,'sawtooth',.3)}
 const W=600,H=480;
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');
@@ -108,6 +136,7 @@ function resetPaddle(){
 }
 
 function startGame(){
+  initSound();
   document.getElementById('startScreen').classList.remove('active');
   document.getElementById('gameOver').classList.remove('active');
   document.getElementById('levelComplete').classList.remove('active');
@@ -155,6 +184,7 @@ function gameLoop(time){
     if(b.y-b.r<0){b.y=b.r;b.dy=Math.abs(b.dy);}
     // Bottom - lose ball
     if(b.y+b.r>H){
+      sfxBallLost();
       balls.splice(i,1);
       if(balls.length===0){
         lives--;updateHUD();
@@ -165,6 +195,7 @@ function gameLoop(time){
     }
     // Paddle collision
     if(b.dy>0&&b.y+b.r>=paddle.y&&b.y+b.r<=paddle.y+paddle.h&&b.x>=paddle.x&&b.x<=paddle.x+paddle.w){
+      sfxPaddle();
       b.dy=-Math.abs(b.dy);
       const hit=(b.x-paddle.x)/paddle.w-0.5;
       b.dx=hit*8;
@@ -182,11 +213,12 @@ function gameLoop(time){
         if(minOverlap===overlapTop||minOverlap===overlapBottom)b.dy=-b.dy;
         else b.dx=-b.dx;
         if(br.hp<99){br.hp--;if(br.hp<=0){
+          sfxBrickDestroy();
           score+=10*br.maxHp;
           spawnPowerUp(br.x+br.w/2,br.y+br.h/2);
           bricks.splice(j,1);
           if(bricks.length===0){showLevelComplete();return;}
-        }}
+        }else{sfxBrickHit();}
         break;
       }
     }
@@ -196,6 +228,7 @@ function gameLoop(time){
     const p=powerUps[i];p.y+=p.dy*dt;
     if(p.y>H){powerUps.splice(i,1);continue;}
     if(p.y+p.h>=paddle.y&&p.x>=paddle.x&&p.x<=paddle.x+paddle.w){
+      sfxPowerup();
       activatePowerUp(p.type);powerUps.splice(i,1);
     }
   }
@@ -282,6 +315,7 @@ function draw(){
 }
 
 function endGame(){
+  sfxGameOver();
   gameOver=true;
   document.getElementById('finalScore').textContent='SCORE: '+score;
   document.getElementById('finalInfo').textContent='LEVEL '+level;
@@ -290,6 +324,7 @@ function endGame(){
 }
 
 function showLevelComplete(){
+  sfxLevelClear();
   gameOver=true;
   document.getElementById('lcScore').textContent='SCORE: '+score;
   document.getElementById('levelComplete').classList.add('active');
@@ -317,6 +352,15 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'){paddle.x=Math.max(0,paddle.x-PADDLE_SPEED);e.preventDefault();}
   if(e.key==='ArrowRight'){paddle.x=Math.min(W-paddle.w,paddle.x+PADDLE_SPEED);e.preventDefault();}
 });
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

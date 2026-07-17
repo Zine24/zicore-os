@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mario Bros 3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+canvas{image-rendering:pixelated;max-width:100vw;max-height:100vh}
+.social-share{margin-top:16px;padding-top:16px;border-top:1px solid rgba(0,229,255,0.15)}
+.social-share .share-title{font-size:11px;color:#5a6a80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.social-share .share-score{font-size:28px;font-weight:900;color:#00e5ff;font-family:'Courier New',monospace;margin-bottom:12px}
+.social-share .share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.social-share .sbtn{padding:8px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;gap:6px;font-family:inherit}
+.social-share .sbtn:hover{transform:translateY(-2px);filter:brightness(1.2)}
+.sbtn-tw{background:rgba(29,161,242,0.15);color:#1da1f2;border:1px solid rgba(29,161,242,0.3)}
+.sbtn-fb{background:rgba(24,119,242,0.15);color:#1877f2;border:1px solid rgba(24,119,242,0.3)}
+.sbtn-wa{background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3)}
+.sbtn-copy{background:rgba(0,229,255,0.1);color:#00e5ff;border:1px solid rgba(0,229,255,0.2)}
+.social-share .share-msg{font-size:10px;color:#5a6a80;margin-top:8px;font-style:italic}
+#socialOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center}
+#socialOverlay .social-box{background:#0a1020;border:1px solid rgba(0,229,255,0.2);border-radius:12px;padding:30px;text-align:center;max-width:400px;width:90%}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="socialOverlay">
+<div class="social-box">
+<div class="social-share">
+<div class="share-title">Share Your Score</div>
+<div class="share-score" id="marioScore">0</div>
+<div class="share-btns">
+<button class="sbtn sbtn-tw" onclick="shareGame('twitter','Mario Bros 3',score)">X Share on X</button>
+<button class="sbtn sbtn-fb" onclick="shareGame('facebook','Mario Bros 3',score)">f Share on Facebook</button>
+<button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Mario Bros 3',score)">Share on WhatsApp</button>
+<button class="sbtn sbtn-copy" onclick="shareGame('copy','Mario Bros 3',score)">Challenge a Friend</button>
+</div>
+<div class="share-msg">Beat the record!</div>
+</div>
+<button onclick="document.getElementById('socialOverlay').style.display='none'" style="margin-top:16px;padding:8px 24px;border:1px solid #f44;background:rgba(255,68,68,0.1);color:#f44;font-size:12px;font-family:inherit;cursor:pointer;border-radius:6px;letter-spacing:2px">CLOSE</button>
+</div>
+</div>
+<script>
+var c=document.getElementById('game'),ctx=c.getContext('2d');
+var W=800,H=480;c.width=W;c.height=H;
+
+var GRAVITY=0.6,JUMP=-11,MOVE=4;
+var cam={x:0};
+var score=0,coins=0,lives=3,gameOver=false,gameWon=false;
+
+var player={x:80,y:300,w:28,h:32,vx:0,vy:0,dir:1,ground:false,frame:0,animTimer:0};
+
+var platforms=[
+  {x:0,y:440,w:6000,h:40,c:'#5a3'},
+  {x:200,y:360,w:120,h:16,c:'#a63'},
+  {x:400,y:300,w:100,h:16,c:'#a63'},
+  {x:600,y:340,w:80,h:16,c:'#a63'},
+  {x:800,y:280,w:140,h:16,c:'#a63'},
+  {x:1000,y:360,w:100,h:16,c:'#a63'},
+  {x:1200,y:300,w:120,h:16,c:'#a63'},
+  {x:1400,y:240,w:100,h:16,c:'#a63'},
+  {x:1600,y:320,w:80,h:16,c:'#a63'},
+  {x:1800,y:260,w:120,h:16,c:'#a63'},
+  {x:2000,y:360,w:150,h:16,c:'#a63'},
+  {x:2200,y:300,w:100,h:16,c:'#a63'},
+  {x:2400,y:240,w:120,h:16,c:'#a63'},
+  {x:2600,y:340,w:80,h:16,c:'#a63'},
+  {x:2800,y:280,w:140,h:16,c:'#a63'},
+  {x:3000,y:360,w:100,h:16,c:'#a63'},
+  {x:3200,y:300,w:120,h:16,c:'#a63'},
+  {x:3400,y:240,w:100,h:16,c:'#a63'},
+  {x:3600,y:320,w:150,h:16,c:'#a63'},
+  {x:3800,y:260,w:120,h:16,c:'#a63'},
+];
+
+var enemies=[
+  {x:300,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:700,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:1100,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:1500,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:1900,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:2300,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:2700,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:3100,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+  {x:3500,y:408,w:28,h:28,vx:-1,alive:true,type:'goomba'},
+];
+
+var coinItems=[
+  {x:250,y:330,w:16,h:16,got:false},
+  {x:440,y:270,w:16,h:16,got:false},
+  {x:630,y:310,w:16,h:16,got:false},
+  {x:850,y:250,w:16,h:16,got:false},
+  {x:1050,y:330,w:16,h:16,got:false},
+  {x:1250,y:270,w:16,h:16,got:false},
+  {x:1450,y:210,w:16,h:16,got:false},
+  {x:1650,y:290,w:16,h:16,got:false},
+  {x:1850,y:230,w:16,h:16,got:false},
+  {x:2050,y:330,w:16,h:16,got:false},
+  {x:2250,y:270,w:16,h:16,got:false},
+  {x:2450,y:210,w:16,h:16,got:false},
+  {x:2650,y:310,w:16,h:16,got:false},
+  {x:2850,y:250,w:16,h:16,got:false},
+  {x:3050,y:330,w:16,h:16,got:false},
+  {x:3250,y:270,w:16,h:16,got:false},
+  {x:3450,y:210,w:16,h:16,got:false},
+  {x:3650,y:290,w:16,h:16,got:false},
+  {x:3850,y:230,w:16,h:16,got:false},
+];
+
+var flag={x:3900,y:320,w:30,h:120};
+
+var keys={};
+document.addEventListener('keydown',function(e){keys[e.code]=true;e.preventDefault()});
+document.addEventListener('keyup',function(e){keys[e.code]=false});
+
+function update(){
+  if(gameOver||gameWon)return;
+  var p=player;
+  if(keys['ArrowLeft']||keys['KeyA']){p.vx=-MOVE;p.dir=-1}
+  else if(keys['ArrowRight']||keys['KeyD']){p.vx=MOVE;p.dir=1}
+  else{p.vx*=0.8}
+
+  if((keys['Space']||keys['ArrowUp']||keys['KeyW'])&&p.ground){p.vy=JUMP;p.ground=false}
+
+  p.vy+=GRAVITY;
+  p.x+=p.vx;p.y+=p.vy;
+
+  p.ground=false;
+  platforms.forEach(function(pl){
+    if(p.x+p.w>pl.x&&p.x<pl.x+pl.w&&p.y+p.h>pl.y&&p.y+p.h<pl.y+pl.h+12&&p.vy>=0){
+      p.y=pl.y-p.h;p.vy=0;p.ground=true;
+    }
+  });
+
+  if(p.y>H){lives--;if(lives<=0){gameOver=true}else{p.x=80;p.y=300;p.vx=0;p.vy=0}}
+
+  enemies.forEach(function(e){
+    if(!e.alive)return;
+    e.x+=e.vx;
+    if(e.x<cam.x-50||e.x>cam.x+W+50)return;
+    var plats=platforms.filter(function(pl){return e.x+e.w>pl.x&&e.x<pl.x+pl.w});
+    if(plats.length===0||e.x<plats[0].x+10||e.x+e.w>plats[0].x+plats[0].w-10){e.vx*=-1}
+
+    if(p.x+p.w>e.x&&p.x<e.x+e.w&&p.y+p.h>e.y&&p.y<e.y+e.h){
+      if(p.vy>0&&p.y+p.h<e.y+e.h/2+8){
+        e.alive=false;score+=100;p.vy=JUMP*0.7;
+      }else{
+        lives--;if(lives<=0){gameOver=true}else{p.x=80;p.y=300;p.vx=0;p.vy=0}
+      }
+    }
+  });
+
+  coinItems.forEach(function(co){
+    if(co.got)return;
+    if(p.x+p.w>co.x&&p.x<co.x+co.w&&p.y+p.h>co.y&&p.y<co.y+co.h){
+      co.got=true;coins++;score+=50;
+    }
+  });
+
+  if(p.x+p.w>flag.x&&p.x<flag.x+flag.w&&p.y+p.h>flag.y){gameWon=true;score+=1000}
+
+  cam.x=p.x-W/2+100;
+  if(cam.x<0)cam.x=0;
+
+  p.animTimer++;if(p.animTimer>6){p.animTimer=0;p.frame=(p.frame+1)%3}
+}
+
+function draw(){
+  ctx.fillStyle='#6b8cff';ctx.fillRect(0,0,W,H);
+
+  ctx.save();ctx.translate(-cam.x,0);
+
+  // Clouds
+  for(var i=0;i<20;i++){
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath();ctx.arc(i*300+50,60,30,0,Math.PI*2);ctx.arc(i*300+80,50,25,0,Math.PI*2);ctx.arc(i*300+110,60,28,0,Math.PI*2);ctx.fill();
+  }
+
+  // Platforms
+  platforms.forEach(function(pl){
+    if(pl.x+pl.w<cam.x-50||pl.x>cam.x+W+50)return;
+    ctx.fillStyle=pl.c;ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+    ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(pl.x,pl.y,pl.w,4);
+  });
+
+  // Coins
+  coinItems.forEach(function(co){
+    if(co.got||co.x+co.w<cam.x-50||co.x>cam.x+W+50)return;
+    ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(co.x+8,co.y+8,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(co.x+8,co.y+8,4,0,Math.PI*2);ctx.fill();
+  });
+
+  // Enemies
+  enemies.forEach(function(e){
+    if(!e.alive||e.x+e.w<cam.x-50||e.x>cam.x+W+50)return;
+    ctx.fillStyle='#a52';
+    ctx.fillRect(e.x,e.y+4,e.w,e.h-4);
+    ctx.fillStyle='#fff';
+    ctx.fillRect(e.x+6,e.y+10,6,6);ctx.fillRect(e.x+16,e.y+10,6,6);
+    ctx.fillStyle='#000';
+    ctx.fillRect(e.x+8,e.y+12,3,3);ctx.fillRect(e.x+18,e.y+12,3,3);
+  });
+
+  // Flag
+  if(flag.x+flag.w>cam.x-50&&flag.x<cam.x+W+50){
+    ctx.fillStyle='#888';ctx.fillRect(flag.x+12,flag.y,6,flag.h);
+    ctx.fillStyle='#0f0';ctx.fillRect(flag.x+18,flag.y,20,16);
+    ctx.fillStyle='#fff';ctx.font='10px sans-serif';ctx.fillText('★',flag.x+24,flag.y+12);
+  }
+
+  // Player
+  var p=player;
+  var px=p.x,py=p.y;
+  // Hat
+  ctx.fillStyle='#f00';ctx.fillRect(px+4,py,20,10);
+  ctx.fillStyle='#f44';ctx.fillRect(px+2,py+2,24,6);
+  // Face
+  ctx.fillStyle='#fca';ctx.fillRect(px+6,py+10,16,10);
+  ctx.fillStyle='#000';ctx.fillRect(px+10,py+13,3,3);ctx.fillRect(px+16,py+13,3,3);
+  // Mustache
+  ctx.fillStyle='#630';ctx.fillRect(px+8,py+17,12,3);
+  // Body
+  ctx.fillStyle='#f00';ctx.fillRect(px+6,py+20,16,8);
+  ctx.fillStyle='#00f';ctx.fillRect(px+6,py+26,16,6);
+  // Shoes
+  ctx.fillStyle='#630';
+  if(p.ground&&Math.abs(p.vx)>0.5){
+    ctx.fillRect(px+4+(p.frame===2?4:0),py+28,10,4);
+    ctx.fillRect(px+14-(p.frame===2?4:0),py+28,10,4);
+  }else{
+    ctx.fillRect(px+4,py+28,10,4);ctx.fillRect(px+14,py+28,10,4);
+  }
+
+  ctx.restore();
+
+  // HUD
+  ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,0,W,36);
+  ctx.fillStyle='#fff';ctx.font='bold 13px monospace';
+  ctx.fillText('MARIO',20,14);
+  ctx.fillStyle='#ffd700';ctx.fillText('x'+coins,80,14);
+  ctx.fillStyle='#fff';ctx.fillText('SCORE: '+score,200,14);
+  ctx.fillStyle='#f44';ctx.fillText('LIVES: '+lives,400,14);
+  ctx.fillStyle='#0f0';ctx.fillText('DIST: '+Math.floor(p.x/10)+'m',600,14);
+
+  // Game over / win
+  if(gameOver){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#f44';ctx.font='bold 48px sans-serif';ctx.textAlign='center';
+    ctx.fillText('GAME OVER',W/2,H/2-20);
+    ctx.fillStyle='#fff';ctx.font='18px sans-serif';
+    ctx.fillText('Score: '+score+' | Press R to restart',W/2,H/2+30);
+    ctx.textAlign='left';
+    document.getElementById('socialOverlay').style.display='flex';
+    document.getElementById('marioScore').textContent=score;
+  }
+  if(gameWon){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#0f0';ctx.font='bold 48px sans-serif';ctx.textAlign='center';
+    ctx.fillText('LEVEL COMPLETE!',W/2,H/2-20);
+    ctx.fillStyle='#fff';ctx.font='18px sans-serif';
+    ctx.fillText('Score: '+score+' | Press R to restart',W/2,H/2+30);
+    ctx.textAlign='left';
+    document.getElementById('socialOverlay').style.display='flex';
+    document.getElementById('marioScore').textContent=score;
+  }
+}
+
+function loop(){
+  if(keys['KeyR']){restart()}
+  update();draw();requestAnimationFrame(loop);
+}
+
+function restart(){
+  player.x=80;player.y=300;player.vx=0;player.vy=0;
+  score=0;coins=0;lives=3;gameOver=false;gameWon=false;cam.x=0;
+  enemies.forEach(function(e){e.alive=true});
+  coinItems.forEach(function(c){c.got=false});
+  document.getElementById('socialOverlay').style.display='none';
+}
+
+function shareGame(platform, gameName, score) {
+  var text = 'I scored ' + score + ' in ' + gameName + ' on ZICORE! Can you beat my record? \uD83D\uDE80';
+  var url = 'https://zcs.zicore.space/games';
+  if (platform === 'twitter') {
+    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(url), '_blank', 'width=600,height=400');
+  } else if (platform === 'facebook') {
+    window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url) + '&quote=' + encodeURIComponent(text), '_blank', 'width=600,height=400');
+  } else if (platform === 'whatsapp') {
+    window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank');
+  } else if (platform === 'copy') {
+    navigator.clipboard.writeText(text + ' ' + url).then(function() {
+      alert('Link copied! Share it with your friends!');
+    });
+  }
+}
+
+loop();
+</script>
+</body>
+</html>

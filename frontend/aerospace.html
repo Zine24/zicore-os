@@ -137,11 +137,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <span class="topbar-title">Aerospace</span>
     </a>
     <div class="topbar-nav">
-      <button class="topbar-tab active" onclick="showTab('vehicles')">Vehículos</button>
-      <button class="topbar-tab" onclick="showTab('propulsion')">Propulsión</button>
-      <button class="topbar-tab" onclick="showTab('orbital')">Órbita</button>
-      <button class="topbar-tab" onclick="showTab('engineering')">Ingeniería</button>
-      <button class="topbar-tab" onclick="showTab('missions')">Misiones</button>
+      <button class="topbar-tab active" onclick="showTab('vehicles',this)">Vehículos</button>
+      <button class="topbar-tab" onclick="showTab('propulsion',this)">Propulsión</button>
+      <button class="topbar-tab" onclick="showTab('orbital',this)">Órbita</button>
+      <button class="topbar-tab" onclick="showTab('engineering',this)">Ingeniería</button>
+      <button class="topbar-tab" onclick="showTab('missions',this)">Misiones</button>
+      <button class="topbar-tab" onclick="showTab('observatory',this)">Observatorio</button>
     </div>
     <div class="topbar-right">
       <div class="topbar-time" id="clock"></div>
@@ -339,6 +340,44 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
     </div>
 
+    <div id="tab-observatory" style="display:none">
+      <div class="section-header">
+        <div class="section-tag">006 — Observatorio Espacial</div>
+        <div class="section-title">Visores del Cosmos</div>
+        <div class="section-desc">Explora el universo con visores interactivos de cuerpos celestes, galaxias, estrellas y objetos cósmicos.</div>
+      </div>
+
+      <div id="obs-viewer" style="display:none;margin-bottom:32px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="obs-icon" style="font-size:24px"></span>
+            <div>
+              <div id="obs-title" style="font-size:16px;font-weight:600;color:var(--text)"></div>
+              <div id="obs-subtitle" style="font-size:11px;color:var(--text-dim)"></div>
+            </div>
+          </div>
+          <button onclick="closeObsViewer()" style="background:none;border:1px solid var(--border);color:var(--text-dim);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px">✕ Cerrar</button>
+        </div>
+        <div style="display:flex">
+          <div id="obs-canvas-wrap" style="flex:1;height:400px;position:relative;background:#000;display:flex;align-items:center;justify-content:center">
+            <canvas id="obsCanvas" style="width:100%;height:100%"></canvas>
+          </div>
+          <div id="obs-sidebar" style="width:280px;padding:16px;border-left:1px solid var(--border);overflow-y:auto;max-height:400px">
+            <div id="obs-facts"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:10px;letter-spacing:2px;color:var(--text-faint);margin-bottom:16px;text-transform:uppercase">Cuerpos Celestes</div>
+      <div id="obs-celestial" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:32px"></div>
+
+      <div style="font-size:10px;letter-spacing:2px;color:var(--text-faint);margin-bottom:16px;text-transform:uppercase">Objetos Cósmicos</div>
+      <div id="obs-cosmic" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:32px"></div>
+
+      <div style="font-size:10px;letter-spacing:2px;color:var(--text-faint);margin-bottom:16px;text-transform:uppercase">Instrumentos</div>
+      <div id="obs-instruments" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+    </div>
+
   </div>
 
   <!-- STATUS BAR -->
@@ -351,16 +390,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div class="status-pill">ORBITAL</div>
       <div class="status-pill">ENGINEERING</div>
       <div class="status-pill">MISSIONS</div>
+      <div class="status-pill on">OBSERVATORY</div>
     </div>
   </div>
 </div>
 
 <script>
-function showTab(name){
-  document.querySelectorAll('[id^="tab-"]').forEach(function(el){el.style.display='none'});
+function showTab(name,el){
+  document.querySelectorAll('[id^="tab-"]').forEach(function(e){e.style.display='none'});
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.topbar-tab').forEach(function(t){t.classList.remove('active')});
-  event.target.classList.add('active');
+  if(el)el.classList.add('active');
 }
 
 setInterval(function(){
@@ -370,6 +410,118 @@ setInterval(function(){
     String(n.getMinutes()).padStart(2,'0')+':'+
     String(n.getSeconds()).padStart(2,'0');
 },1000);
+
+// Observatory
+const OBS_DB=[
+  {id:'sun',cat:'celestial',name:'Sol',icon:'☀️',color:'#FDB813',subtitle:'Estrella tipo G2V — Centro del Sistema Solar',
+   facts:{'Tipo':'Enana amarilla (G2V)','Edad':'4,600 millones de años','Masa':'1.989 × 10³⁰ kg','Temperatura superficie':'5,500°C','Temperatura núcleo':'15 millones °C','Diámetro':'1,392,684 km','Composición':'73% Hidrógeno, 25% Helio','Luminosidad':'3.828 × 10²⁶ W'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.35;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx,cy,0,cx,cy,r*1.5);g.addColorStop(0,'#fff8e1');g.addColorStop(0.2,'#FDB813');g.addColorStop(0.5,'#ff8f00');g.addColorStop(0.8,'#e65100');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r*1.5,0,Math.PI*2);ctx.fill();var sg=ctx.createRadialGradient(cx,cy,r*0.8,cx,cy,r);sg.addColorStop(0,'rgba(253,184,19,0.3)');sg.addColorStop(1,'rgba(230,81,0,0.1)');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();for(var i=0;i<8;i++){var a=Math.random()*Math.PI*2,d=r*(1+Math.random()*0.4),flame=r*0.15*(0.5+Math.random()*0.5);var fg=ctx.createRadialGradient(cx+Math.cos(a)*d,cy+Math.sin(a)*d,0,cx+Math.cos(a)*d,cy+Math.sin(a)*d,flame);fg.addColorStop(0,'rgba(255,183,77,0.6)');fg.addColorStop(1,'transparent');ctx.fillStyle=fg;ctx.beginPath();ctx.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,flame,0,Math.PI*2);ctx.fill()}var tg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*2.5);tg.addColorStop(0,'rgba(255,183,77,0.1)');tg.addColorStop(1,'transparent');ctx.fillStyle=tg;ctx.beginPath();ctx.arc(cx,cy,r*2.5,0,Math.PI*2);ctx.fill()}},
+
+  {id:'mercury',cat:'celestial',name:'Mercurio',icon:'🪨',color:'#8c7e6d',subtitle:'Planeta rocoso — El más pequeño del sistema solar',
+   facts:{'Tipo':'Rocoso','Diámetro':'4,879 km','Distancia al Sol':'57.9 millones km','Período orbital':'88 días','Temperatura':'-180°C a 430°C','Atmósfer':'Prácticamente ninguna','Lunas':'0','Masa':'3.285 × 10²³ kg'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);g.addColorStop(0,'#a09080');g.addColorStop(0.5,'#8c7e6d');g.addColorStop(1,'#5a4e42');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.3)';for(var i=0;i<12;i++){var cr=r*0.08+Math.random()*r*0.12,ca=Math.random()*Math.PI*2,cd=r*0.3+Math.random()*r*0.5;ctx.beginPath();ctx.arc(cx+Math.cos(ca)*cd,cy+Math.sin(ca)*cd,cr,0,Math.PI*2);ctx.stroke()}}},
+
+  {id:'venus',cat:'celestial',name:'Venus',icon:'🌋',color:'#e8cda0',subtitle:'El planeta caliente — Rotación retrógrada',
+   facts:{'Tipo':'Rocoso (similar a Tierra)','Diámetro':'12,104 km','Temperatura':'462°C promedio','Presión':'92 atmósferas','Atmósfer':'CO₂ densa + nubes de ácido sulfúrico','Rotación':'Retrógrada (243 días)','Lunas':'0','Densidad':'5.24 g/cm³'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,'#f0dfb0');g.addColorStop(0.6,'#e8cda0');g.addColorStop(1,'#b89a60');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();for(var i=0;i<6;i++){var sy=cy-r*0.6+i*r*0.2;ctx.strokeStyle='rgba(200,180,140,0.3)';ctx.lineWidth=3+Math.random()*4;ctx.beginPath();ctx.moveTo(cx-r*0.9,sy);ctx.bezierCurveTo(cx-r*0.3,sy-10,cx+r*0.3,sy+10,cx+r*0.9,sy);ctx.stroke()}ctx.lineWidth=1}},
+
+  {id:'earth',cat:'celestial',name:'Tierra',icon:'🌍',color:'#4a90d9',subtitle:'Nuestro hogar — El planeta azul',
+   facts:{'Tipo':'Rocoso','Diámetro':'12,742 km','Gravedad':'9.81 m/s²','Atmósfer':'N₂ 78%, O₂ 21%','Agua líquida':'71% superficie','Luna':'1 natural','Edad':'4,540 millones de años','Población':'~8,000 millones'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.28;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);g.addColorStop(0,'#6db3f2');g.addColorStop(0.4,'#4a90d9');g.addColorStop(0.7,'#2d6bb5');g.addColorStop(1,'#1a3a6e');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2d8a4e';ctx.beginPath();ctx.ellipse(cx-r*0.2,cy-r*0.1,r*0.35,r*0.4,0.3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(cx+r*0.3,cy+r*0.2,r*0.2,r*0.25,-0.2,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.ellipse(cx+r*0.1,cy-r*0.4,r*0.5,r*0.15,0.2,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r+4,0,Math.PI*2);ctx.stroke()}},
+
+  {id:'moon',cat:'celestial',name:'Luna',icon:'🌙',color:'#c8c8c8',subtitle:'Satélite natural de la Tierra',
+   facts:{'Tipo':'Satélite rocoso','Diámetro':'3,474 km','Distancia Tierra':'384,400 km','Rotación sincronizada':'Siempre muestra la misma cara','Gravedad':'1.62 m/s² (16.6% Tierra)','Temperatura':'-173°C a 127°C','Agua confirmada':'En polos','Misiones Apollo':'6 (1969-1972)'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.2,cy-r*0.2,0,cx,cy,r);g.addColorStop(0,'#e8e8e8');g.addColorStop(0.6,'#c8c8c8');g.addColorStop(1,'#888');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(80,80,80,0.4)';[[cx-r*0.3,cy-r*0.2,r*0.12],[cx+r*0.1,cy+r*0.15,r*0.08],[cx-r*0.1,cy+r*0.3,r*0.1],[cx+r*0.25,cy-r*0.1,r*0.06]].forEach(function(m){ctx.beginPath();ctx.arc(m[0],m[1],m[2],0,Math.PI*2);ctx.fill()})}},
+
+  {id:'mars',cat:'celestial',name:'Marte',icon:'🔴',color:'#c1440e',subtitle:'El planeta rojo — Próximo destino humano',
+   facts:{'Tipo':'Rocoso','Diámetro':'6,779 km','Atmósfer':'CO₂ delgada (1% presión Tierra)','Oxidación hierro':'Color rojizo','Vulcanes':'Olympus Mons (21.9 km)','Valles':'Valles Marineris (4,000 km)','Lunas':'2 (Phobos, Deimos)','Agua':'Hielo confirmado en polos'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);g.addColorStop(0,'#e07040');g.addColorStop(0.5,'#c1440e');g.addColorStop(1,'#8b2500');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(200,200,200,0.4)';ctx.beginPath();ctx.ellipse(cx,cy-r*0.8,r*0.3,r*0.08,0.1,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(120,40,20,0.5)';ctx.beginPath();ctx.arc(cx+r*0.2,cy+r*0.1,r*0.15,0,Math.PI*2);ctx.fill()}},
+
+  {id:'jupiter',cat:'celestial',name:'Júpiter',icon:'🟤',color:'#c88b3a',subtitle:'El gigante gaseoso — Rey de los planetas',
+   facts:{'Tipo':'Gaseoso','Diámetro':'139,820 km (11x Tierra)','Masa':'1.898 × 10²⁷ kg (318x Tierra)','Atmósfer':'H₂ 90%, He 10%','Gran Mancha Roja':'Tormenta de 350+ años','Lunas conocidas':'95','Campo magnético':'20,000x Tierra','Rotación':'9.9 horas'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.35;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.2,0,cx,cy,r);g.addColorStop(0,'#e0b060');g.addColorStop(0.5,'#c88b3a');g.addColorStop(1,'#6b4513');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();var bands=[[cy-r*0.6,'#d4a050',4],[cy-r*0.3,'#b88030',6],[cy,'#c89040',5],[cy+r*0.3,'#a07020',6],[cy+r*0.6,'#d0a050',4]];bands.forEach(function(b){ctx.strokeStyle=b[1];ctx.lineWidth=b[2];ctx.beginPath();ctx.moveTo(cx-r*0.95,b[0]);ctx.bezierCurveTo(cx-r*0.3,b[0]-8,cx+r*0.3,b[0]+8,cx+r*0.95,b[0]);ctx.stroke()});ctx.fillStyle='#c04020';ctx.beginPath();ctx.ellipse(cx+r*0.3,cy+r*0.15,r*0.12,r*0.07,0,0,Math.PI*2);ctx.fill();ctx.lineWidth=1}},
+
+  {id:'saturn',cat:'celestial',name:'Saturno',icon:'🪐',color:'#e8d5a3',subtitle:'El señor de los anillos',
+   facts:{'Tipo':'Gaseoso','Diámetro':'116,460 km','Anillos':'Extensión de 282,000 km','Densidad':'0.687 g/cm³ (flota en agua)','Lunas':'146 confirmadas','Vientos':'1,800 km/h','Atmósfer':'H₂ 96%, He 3%','Temperatura nubes':'-178°C'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.22;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(cx,cy);ctx.rotate(0.4);var ringG=ctx.createRadialGradient(0,0,r*1.2,0,0,r*2.2);ringG.addColorStop(0,'rgba(210,190,150,0.7)');ringG.addColorStop(0.3,'rgba(180,160,120,0.5)');ringG.addColorStop(0.5,'rgba(140,120,90,0.1)');ringG.addColorStop(0.7,'rgba(180,160,120,0.4)');ringG.addColorStop(1,'rgba(140,120,90,0.2)');ctx.fillStyle=ringG;ctx.beginPath();ctx.ellipse(0,0,r*2.2,r*0.6,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(0,0,0,0.8)';ctx.beginPath();ctx.ellipse(0,0,r*1.8,r*0.45,0,0,Math.PI*2);ctx.fill();var pg=ctx.createRadialGradient(-r*0.2,-r*0.15,0,0,0,r);pg.addColorStop(0,'#f0e0b0');pg.addColorStop(0.5,'#e8d5a3');pg.addColorStop(1,'#a08050');ctx.fillStyle=pg;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.restore()}},
+
+  {id:'neptune',cat:'celestial',name:'Neptuno',icon:'🔵',color:'#3050c0',subtitle:'El gigante de hielo — Vientos más rápidos',
+   facts:{'Tipo':'Gaseoso/hielo','Diámetro':'49,528 km','Temperatura':'-214°C','Vientos':'2,100 km/h (máx registrados)','Lunas':'16 (Triton mayor)','Distancia Sol':'4,500 millones km','Atmósfer':'H₂, He, metano (color azul)','Un año':'165 años terrestres'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.2,0,cx,cy,r);g.addColorStop(0,'#5070e0');g.addColorStop(0.5,'#3050c0');g.addColorStop(1,'#1a2a70');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(100,140,240,0.3)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-r*0.9,cy-r*0.1);ctx.bezierCurveTo(cx-r*0.3,cy+5,cx+r*0.3,cy-5,cx+r*0.9,cy-r*0.1);ctx.stroke();ctx.fillStyle='rgba(80,120,220,0.4)';ctx.beginPath();ctx.ellipse(cx+r*0.2,cy+r*0.2,r*0.1,r*0.06,0.1,0,Math.PI*2);ctx.fill();ctx.lineWidth=1}},
+
+  {id:'blackhole_sgr',cat:'cosmic',name:'Sagittarius A*',icon:'🕳️',color:'#000',subtitle:'Agujero negro supermasivo — Centro de la Vía Láctea',
+   facts:{'Tipo':'Agujero negro supermasivo','Masa':'4 millones de masas solares','Diámetro evento horizon':'~24 millones km','Distancia Tierra':'26,000 años luz','Descubierto':'1974 (Reid & Brunthaler)','Galaxia':'Vía Láctea','Método detección':'Estrellas en órbita (Nobel 2020)','Primera imagen':'2022 (EHT)'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<200;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.3)+0.1)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.5,Math.random()*1.5)}var rg=ctx.createRadialGradient(cx,cy,30,cx,cy,180);rg.addColorStop(0,'transparent');rg.addColorStop(0.4,'rgba(255,100,0,0.02)');rg.addColorStop(0.6,'rgba(255,100,0,0.15)');rg.addColorStop(0.7,'rgba(255,60,0,0.4)');rg.addColorStop(0.85,'rgba(200,40,0,0.6)');rg.addColorStop(1,'transparent');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,180,0,Math.PI*2);ctx.fill();var eg=ctx.createRadialGradient(cx,cy,0,cx,cy,25);eg.addColorStop(0,'#000');eg.addColorStop(0.7,'#000');eg.addColorStop(1,'rgba(255,80,0,0.8)');ctx.fillStyle=eg;ctx.beginPath();ctx.arc(cx,cy,25,0,Math.PI*2);ctx.fill()}},
+
+  {id:'andromeda',cat:'cosmic',name:'Galaxia de Andrómeda',icon:'🌀',color:'#aabbcc',subtitle:'Galaxia espiral — Nuestra vecina galáctica',
+   facts:{'Tipo':'Espiral (SA(s)b)','Diámetro':'220,000 años luz','Estrellas':'~1 billón','Distancia Tierra':'2.537 millones años luz','Velocidad':'110 km/s hacia nosotros','Colisión':'Con Vía Láctea en ~4,500M años','Descubrimiento':'964 (Abd al-Rahman al-Sufi)','Masa':'1.5 × 10¹² masas solares'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<300;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.2)+0.05)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.2,Math.random()*1.2)}ctx.save();ctx.translate(cx,cy);ctx.rotate(0.3);for(var arm=0;arm<2;arm++){ctx.strokeStyle='rgba(150,180,220,0.15)';ctx.lineWidth=20;ctx.beginPath();for(var t=0;t<200;t++){var angle=t*0.06+arm*Math.PI,r=5+t*0.8;var x=Math.cos(angle)*r,y=Math.sin(angle)*r*0.4;if(t===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}ctx.stroke()}var cg=ctx.createRadialGradient(0,0,0,0,0,40);cg.addColorStop(0,'rgba(255,230,180,0.6)');cg.addColorStop(0.5,'rgba(200,200,255,0.2)');cg.addColorStop(1,'transparent');ctx.fillStyle=cg;ctx.beginPath();ctx.arc(0,0,40,0,Math.PI*2);ctx.fill();ctx.restore()}},
+
+  {id:'crab',cat:'cosmic',name:'Nebulosa del Cangrejo',icon:'💥',color:'#ff6040',subtitle:'Remanente de supernova — Púlsar central',
+   facts:{'Tipo':'Remanente de supernova + púlsar','Distancia Tierra':'6,500 años luz','Explosión registrada':'1054 (astrónomos chinos)','Púlsar':'30 rotaciones/segundo','Edad':'970 años','Tamaño':'11 años luz de diámetro','Emisión':'Rayos X, rayos gamma, radio','Brillo visible':'Aumenta 0.3 magnitudes en 50 años'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<150;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.15)+0.05)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.5,Math.random()*1.5)}var ng=ctx.createRadialGradient(cx,cy,0,cx,cy,120);ng.addColorStop(0,'rgba(255,100,50,0.4)');ng.addColorStop(0.3,'rgba(255,60,30,0.2)');ng.addColorStop(0.6,'rgba(200,40,80,0.1)');ng.addColorStop(1,'transparent');ctx.fillStyle=ng;ctx.beginPath();ctx.arc(cx,cy,120,0,Math.PI*2);ctx.fill();for(var j=0;j<8;j++){var a=j*Math.PI/4,ir=30,or=100;ctx.strokeStyle='rgba(255,120,60,'+(0.15+Math.random()*0.15)+')';ctx.lineWidth=2+Math.random()*3;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*ir,cy+Math.sin(a)*ir);ctx.lineTo(cx+Math.cos(a)*or,cy+Math.sin(a)*or);ctx.stroke()}var pg=ctx.createRadialGradient(cx,cy,0,cx,cy,6);pg.addColorStop(0,'#fff');pg.addColorStop(0.5,'#aaf');pg.addColorStop(1,'transparent');ctx.fillStyle=pg;ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill()}},
+
+  {id:'pillars',cat:'cosmic',name:'Pilares de la Creación',icon:'🌌',color:'#8b6040',subtitle:'Columnas de gas — Cuna de estrellas',
+   facts:{'Ubicación':'Nebulosa del Águila (M16)','Distancia Tierra':'7,000 años luz','Tamaño':'~5 años luz de altura','Descubrimiento':'1995 (Hubble)','Composición':'Hidrógeno molecular, polvo','Proceso':'Formación estelar activa','Telescopio':'Hubble, James Webb','Imagen famosa':'1995, rehocha 2014'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<100;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.2)+0.05)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.5,Math.random()*1.5)}var bg=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,h*0.4);bg.addColorStop(0,'rgba(139,96,64,0.15)');bg.addColorStop(1,'transparent');ctx.fillStyle=bg;ctx.beginPath();ctx.arc(w/2,h/2,h*0.4,0,Math.PI*2);ctx.fill();function pillar(x,y,w2,h2,color){var g=ctx.createLinearGradient(x,y+h2,x,y);g.addColorStop(0,color);g.addColorStop(0.5,color.replace('0.4','0.25'));g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(x-w2/2,y+h2);ctx.bezierCurveTo(x-w2/2,y+h2*0.6,x-w2*0.8,y+h2*0.3,x-w2*0.3,y);ctx.bezierCurveTo(x,y-h2*0.1,x+w2*0.3,y,x+w2*0.3,y);ctx.bezierCurveTo(x+w2*0.8,y+h2*0.3,x+w2/2,y+h2*0.6,x+w2/2,y+h2);ctx.fill();var sg=ctx.createRadialGradient(x,y,0,x,y,w2);sg.addColorStop(0,'rgba(255,200,100,0.15)');sg.addColorStop(1,'transparent');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(x,y,w2,0,Math.PI*2);ctx.fill()}pillar(w*0.35,h*0.15,40,h*0.55,'rgba(139,96,64,0.4)');pillar(w*0.5,h*0.2,35,h*0.5,'rgba(120,80,50,0.35)');pillar(w*0.62,h*0.25,30,h*0.45,'rgba(100,70,45,0.3)');for(var s=0;s<30;s++){var sx=Math.random()*w,sy=Math.random()*h*0.3;ctx.fillStyle='rgba(255,200,150,'+((Math.random()*0.4)+0.2)+')';ctx.beginPath();ctx.arc(sx,sy,Math.random()*2+0.5,0,Math.PI*2);ctx.fill()}}},
+
+  {id:'hubble',cat:'instruments',name:'Telescopio Hubble',icon:'🔭',color:'#4080c0',subtitle:'Telescopio espacial — 35 años en órbita',
+   facts:{'Lanzamiento':'24 abril 1990','Órbita':'547 km sobre Tierra','Espejo primario':'2.4 m diámetro','Longitudes de onda':'UV a infrarrojo cercano','Revolutiones':'~150,000+','Imágenes':'1.5 millones+','Costo':'~$16,000 millones','Estado':'Activo (planificado hasta 2030s)'}},
+
+  {id:'jwst',cat:'instruments',name:'James Webb (JWST)',icon:'🛰️',color:'#c8a020',subtitle:'Sucesor de Hubble — Espejo dorado de 6.5m',
+   facts:{'Lanzamiento':'25 diciembre 2021','Ubicación':'Punto Lagrange L2, 1.5M km','Espejo':'6.5 m (18 segmentos hexagonales)','Temperatura operación':'-233°C','Longitudes de onda':'Infrarrojo (0.6-28.5 μm)','Cobertura':'Primera luz del universo, exoplanetas','Costo':'~$10,000 millones','Países':'NASA, ESA, CSA'}},
+
+  {id:'eht',cat:'instruments',name:'Event Horizon Telescope',icon:'📡',color:'#ff4040',subtitle:'Red global — Primera imagen de agujero negro',
+   facts:{'Tipo':'Interferometría VLBI global','Telescopios':'8+ en todo el mundo','Resolución':'20 microsegundos de arco','Primera imagen':'M87* (2019)','Segunda imagen':'Sagittarius A* (2022)','Frecuencia':'230 GHz (1.3 mm)','Datos':'5 PB procesados','Colaboración':'200+ científicos'}},
+
+  {id:'lofar',cat:'instruments',name:'LOFAR',icon:'📻',color:'#80ff80',subtitle:'Matriz de radio — Ondas de radio de baja frecuencia',
+   facts:{'Tipo':'Telescopio de radio distribuido','Frecuencia':'10-240 MHz','Estaciones':'~50,000 antenas','Países':'9 países europeos','Resolución':'0.5 arcsegundos','Aplicaciones':'Púlsares, galaxias, ionosfera','Innovación':'Digital beamforming','Costo':'~€150 millones'}},
+
+  {id:'lsst',cat:'instruments',name:'Vera C. Rubin (LSST)',icon:'🌐',color:'#c0c0ff',subtitle:'Sondeo del cielo — Catastro de 10 años',
+   facts:{'Espejo':'8.4 m','Campo de visión':'3.5 grados (10 Full Moon)','Cámara':'3,200 megapíxeles','Duración':'10 años de sondeo','Frecuencia':'Noche completa','Objetivos':'DE, materia oscura, cuerpos NEO','Ubicación':'Cerro Pachón, Chile','Primer luz':'2025-2026'}}
+];
+
+function renderObsCards(){
+  var celestial=OBS_DB.filter(function(o){return o.cat==='celestial'});
+  var cosmic=OBS_DB.filter(function(o){return o.cat==='cosmic'});
+  var instruments=OBS_DB.filter(function(o){return o.cat==='instruments'});
+  document.getElementById('obs-celestial').innerHTML=celestial.map(obsCard).join('');
+  document.getElementById('obs-cosmic').innerHTML=cosmic.map(obsCard).join('');
+  document.getElementById('obs-instruments').innerHTML=instruments.map(obsCard).join('');
+}
+function obsCard(o){
+  return '<div onclick="openObs(\''+o.id+'\')" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\''+o.color+'40\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'none\'">'+
+    '<div style="font-size:28px;margin-bottom:8px">'+o.icon+'</div>'+
+    '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">'+o.name+'</div>'+
+    '<div style="font-size:10px;color:var(--text-dim);line-height:1.5">'+o.subtitle+'</div>'+
+    '</div>';
+}
+var obsAnimFrame=null;
+function openObs(id){
+  var o=OBS_DB.find(function(x){return x.id===id});if(!o)return;
+  document.getElementById('obs-viewer').style.display='block';
+  document.getElementById('obs-icon').textContent=o.icon;
+  document.getElementById('obs-title').textContent=o.name;
+  document.getElementById('obs-subtitle').textContent=o.subtitle;
+  var factsHtml='';Object.keys(o.facts||{}).forEach(function(k){factsHtml+='<div style="margin-bottom:12px"><div style="font-size:9px;letter-spacing:1px;color:var(--text-faint);text-transform:uppercase;margin-bottom:3px">'+k+'</div><div style="font-size:12px;color:var(--text)">'+o.facts[k]+'</div></div>'});
+  document.getElementById('obs-facts').innerHTML=factsHtml;
+  var cv=document.getElementById('obsCanvas');cv.width=cv.parentElement.clientWidth;cv.height=cv.parentElement.clientHeight;
+  if(obsAnimFrame)cancelAnimationFrame(obsAnimFrame);
+  if(o.render){
+    var lastFrame=0;
+    function animate(t){
+      if(t-lastFrame>50){o.render(cv);lastFrame=t}
+      obsAnimFrame=requestAnimationFrame(animate);
+    }
+    obsAnimFrame=requestAnimationFrame(animate);
+  }
+  document.getElementById('obs-viewer').scrollIntoView({behavior:'smooth'});
+}
+function closeObsViewer(){
+  document.getElementById('obs-viewer').style.display='none';
+  if(obsAnimFrame)cancelAnimationFrame(obsAnimFrame);
+}
+renderObsCards();
 </script>
 </body>
 </html>

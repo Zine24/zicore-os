@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Privacy Policy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060a12;--card:#0d1117;--border:#1a2332;--glow:#00e5ff;--purple:#7c4dff;--text:#c8d6e5;--text2:#607080}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.7}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,0.04) 0%,transparent 70%);pointer-events:none;z-index:0}
+.scanlines{position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.01) 2px,rgba(0,229,255,0.01) 4px);pointer-events:none;z-index:999}
+
+.header{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(6,10,18,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;backdrop-filter:blur(20px)}
+.header .brand{display:flex;align-items:center;gap:10px}
+.header .brand-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--glow),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#000}
+.header .brand-text{font-size:13px;font-weight:700;letter-spacing:2px;background:linear-gradient(90deg,var(--glow),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .sep{width:1px;height:16px;background:var(--border)}
+.header .page-title{font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase}
+.header .spacer{flex:1}
+.header .back{font-size:11px;color:var(--text2);text-decoration:none;padding:5px 12px;border:1px solid var(--border);border-radius:4px;transition:all .2s;cursor:pointer;background:transparent}
+.header .back:hover{border-color:var(--glow);color:var(--glow)}
+
+.content{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:80px 24px 40px}
+.content h1{font-size:24px;font-weight:800;letter-spacing:2px;background:linear-gradient(135deg,var(--glow),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.content .meta{font-size:11px;color:var(--text2);letter-spacing:1px;margin-bottom:32px}
+.content h2{font-size:16px;font-weight:700;color:var(--glow);margin:28px 0 12px;letter-spacing:1px}
+.content p{font-size:13px;color:var(--text);margin-bottom:14px;line-height:1.8}
+.content ul{margin:8px 0 14px 20px}
+.content li{font-size:13px;color:var(--text);margin-bottom:6px;line-height:1.7}
+.content li strong{color:var(--glow)}
+.content .highlight{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);border-radius:8px;padding:16px;margin:16px 0}
+.content .highlight p{margin:0;font-size:12px}
+.content .back-link{display:inline-block;margin-top:24px;font-size:12px;color:var(--glow);text-decoration:none;font-weight:600}
+.content .back-link:hover{text-decoration:underline}
+
+.footer{text-align:center;padding:24px;font-size:10px;color:#2a3040;letter-spacing:1px}
+.footer span{color:var(--glow)}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-icon">Z</div>
+    <div class="brand-text">ZICORE</div>
+  </div>
+  <div class="sep"></div>
+  <div class="page-title">Privacy Policy</div>
+  <div class="spacer"></div>
+  <a href="/login" class="back">&larr; Back to Login</a>
+</div>
+
+<div class="content">
+  <h1>Privacy Policy</h1>
+  <div class="meta">Effective Date: July 17, 2026 &mdash; Last Updated: July 17, 2026</div>
+
+  <div class="highlight">
+    <p><strong>In short:</strong> We collect only what's necessary to provide the Service. We never sell your data. Your generated content belongs to you. Your privacy is non-negotiable.</p>
+  </div>
+
+  <h2>1. Information We Collect</h2>
+  <p>We collect minimal information to operate ZICORE:</p>
+  <ul>
+    <li><strong>Account Data:</strong> Username, email address, display name, and password (stored securely with bcrypt hashing)</li>
+    <li><strong>Session Data:</strong> Authentication tokens, login timestamps, and IP addresses for security</li>
+    <li><strong>Usage Data:</strong> Service interaction patterns, feature usage, and error logs to improve the Service</li>
+    <li><strong>Generated Content:</strong> 3D models, images, audio, video, and other files you create using ZICORE tools</li>
+    <li><strong>Communication:</strong> Email messages sent and received through ZICORE Mail</li>
+  </ul>
+
+  <h2>2. How We Use Your Information</h2>
+  <ul>
+    <li><strong>To provide the Service:</strong> Authentication, content generation, email delivery, and core functionality</li>
+    <li><strong>To improve the Service:</strong> Usage patterns help us identify bugs, optimize performance, and develop new features</li>
+    <li><strong>To ensure security:</strong> Monitor for unauthorized access, fraud, and abuse</li>
+    <li><strong>To communicate:</strong> Service updates, security alerts, and account-related notifications</li>
+  </ul>
+
+  <h2>3. What We Don't Do</h2>
+  <div class="highlight">
+    <p>We <strong>never</strong>:</p>
+    <p>&bull; Sell your personal data to third parties<br>
+    &bull; Use your content for advertising or AI training without consent<br>
+    &bull; Track you across external websites<br>
+    &bull; Share your data with data brokers<br>
+    &bull; Use dark patterns to manipulate your choices</p>
+  </div>
+
+  <h2>4. Data Storage &amp; Security</h2>
+  <p>Your data is stored on our infrastructure:</p>
+  <ul>
+    <li><strong>Authentication:</strong> Passwords are hashed with bcrypt (never stored in plain text)</li>
+    <li><strong>Sessions:</strong> Tokens expire after 30 days and can be revoked at any time</li>
+    <li><strong>Encryption:</strong> Data in transit is protected via HTTPS/TLS</li>
+    <li><strong>Hosting:</strong> Infrastructure is managed by ZineMotion Foundation</li>
+    <li><strong>Backups:</strong> Regular backups ensure data durability</li>
+  </ul>
+
+  <h2>5. Your Content</h2>
+  <p>Content you create using ZICORE tools (3D models, images, audio, video) belongs to you. We do not claim ownership. You may export, modify, and distribute your creations freely.</p>
+  <p>We may store your generated content on our servers to enable access across devices and sessions. You can delete your content at any time.</p>
+
+  <h2>6. Email &amp; Communications</h2>
+  <p>ZICORE Mail processes email on your behalf. We do not read the content of your emails except where necessary for spam filtering, security, or as required by law.</p>
+  <p>Emails are stored in your mailbox and can be deleted at any time. We do not share email content with third parties.</p>
+
+  <h2>7. Cookies &amp; Local Storage</h2>
+  <p>ZICORE uses local storage (not cookies) to:</p>
+  <ul>
+    <li>Store authentication tokens for session persistence</li>
+    <li>Remember your preferences and settings</li>
+    <li>Maintain UI state across page reloads</li>
+  </ul>
+  <p>You can clear local storage at any time through your browser settings.</p>
+
+  <h2>8. Third-Party Services</h2>
+  <p>ZICORE integrates with limited third-party services:</p>
+  <ul>
+    <li><strong>OpenRouter / Ollama:</strong> For AI inference (ZIO). Prompts may be processed by these providers subject to their own privacy policies</li>
+    <li><strong>Cloudflare:</strong> For DNS, CDN, and tunneling. Subject to Cloudflare's privacy policy</li>
+    <li><strong>GitHub:</strong> For source code hosting. Subject to GitHub's privacy policy</li>
+  </ul>
+
+  <h2>9. Data Retention</h2>
+  <ul>
+    <li><strong>Account data:</strong> Retained until you delete your account</li>
+    <li><strong>Generated content:</strong> Retained until you delete it or your account</li>
+    <li><strong>Email:</strong> Retained according to your mailbox settings</li>
+    <li><strong>Logs:</strong> Automatically purged after 90 days</li>
+    <li><strong>Sessions:</strong> Expire after 30 days of inactivity</li>
+  </ul>
+
+  <h2>10. Your Rights</h2>
+  <p>You have the right to:</p>
+  <ul>
+    <li><strong>Access:</strong> Request a copy of all data we hold about you</li>
+    <li><strong>Correction:</strong> Request correction of inaccurate data</li>
+    <li><strong>Deletion:</strong> Request deletion of your account and all associated data</li>
+    <li><strong>Portability:</strong> Export your data in standard formats</li>
+    <li><strong>Objection:</strong> Object to processing of your data for specific purposes</li>
+  </ul>
+
+  <h2>11. Children's Privacy</h2>
+  <p>ZICORE is not directed at children under 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, contact us immediately.</p>
+
+  <h2>12. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy periodically. Material changes will be communicated through the Service or via email. The "Last Updated" date at the top reflects the most recent revision.</p>
+
+  <h2>13. Contact</h2>
+  <p>For privacy-related questions or to exercise your rights:</p>
+  <div class="highlight">
+    <p><strong>Email:</strong> admin@zicore.space<br>
+    <strong>Organization:</strong> ZineMotion Foundation<br>
+    <strong>Website:</strong> zicore.space</p>
+  </div>
+
+  <a href="/login" class="back-link">&larr; Return to Login</a>
+</div>
+
+<div class="footer">ZICORE System v5.0 &mdash; <span>ZineMotion Foundation</span> &mdash; zicore.space</div>
+</body>
+</html>

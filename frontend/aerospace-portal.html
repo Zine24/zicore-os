@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiAerospace — Digital Aerospace Division</title>
+<link rel="stylesheet" href="/css/zicore-ui.css">
+<style>
+.main{padding:calc(var(--topbar-h) + 24px) 24px 40px;max-width:1200px;margin:0 auto;position:relative;z-index:2}
+</style>
+</head>
+<body>
+<canvas class="zicore-stars" id="starfield"></canvas>
+<div class="zicore-grain"></div>
+<div class="zicore-scanline"></div>
+
+<div class="ztopbar" id="topbar"></div>
+
+<div class="main">
+  <div class="zicore-hero">
+    <div class="zicore-hero-icon">🚀</div>
+    <div>
+      <h1>ZiAerospace</h1>
+      <p>Division aeroespacial digital. Diseno de vehiculos, propulsion, mecanica orbital, navegacion solar, ingenieria estructural y control de misiones.</p>
+      <div class="stats">
+        <div class="stat"><span class="val">8</span> modulos</div>
+        <div class="stat"><span class="val">9</span> propulsion</div>
+        <div class="stat"><span class="val">5</span> cuerpos celestes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Design & Engineering -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🛠 Diseno e Ingenieria</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/vehicle-designer" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">🚀</div><div class="zicore-card-name">Vehicle Designer</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Diseno de vehiculos aeroespaciales con plantillas ilimitadas. Masa, dimensiones, propulsion, combustible, payload.</div>
+        <div class="zicore-tags"><span class="zicore-tag">CAD</span><span class="zicore-tag">Diseño</span><span class="zicore-tag">3D</span></div>
+      </a>
+      <a class="zicore-card" href="/engineering" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon orange">⚙</div><div class="zicore-card-name">Engineering</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Ingenieria estructural: stress, buckling, fatigue. Aerodinamica: lift, drag, Mach, heating rate.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Estructuras</span><span class="zicore-tag">CFD</span><span class="zicore-tag">FEA</span></div>
+      </a>
+      <a class="zicore-card" href="/aerospace-engineering" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon purple">🔬</div><div class="zicore-card-name">Aerospace Engineering</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Viewport 3D interactivo, Ollama AI local, TransformControls, jerarquia de objetos, materiales PBR.</div>
+        <div class="zicore-tags"><span class="zicore-tag">3D</span><span class="zicore-tag">AI</span><span class="zicore-tag">Viewport</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Propulsion & Orbital -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>⚡ Propulsion y Orbital</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/propulsion-lab" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon orange">⚡</div><div class="zicore-card-name">Propulsion Lab</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">9 sistemas: LOX/RP1, LOX/LH2, Methalox, Hypergolico, Solido, Hibrido, Ion, Hall, Nuclear.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Propulsión</span><span class="zicore-tag">Isp</span><span class="zicore-tag">Simulación</span></div>
+      </a>
+      <a class="zicore-card" href="/orbital-mechanics" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon purple">◎</div><div class="zicore-card-name">Orbital Mechanics</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Hohmann, bi-eliptico, asistencia gravitatoria, delta-v, energia orbital, velocidad de escape.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Órbita</span><span class="zicore-tag">Delta-V</span><span class="zicore-tag">Transfer</span></div>
+      </a>
+      <a class="zicore-card" href="/solar-navigation" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">🗺</div><div class="zicore-card-name">Solar Navigation</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Navegacion celeste punto-a-punto. From Starbase TX to Mare Tranquillitatis.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Navegación</span><span class="zicore-tag">Estrellas</span><span class="zicore-tag">Celeste</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Mission Control -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🎯 Control de Misiones</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/mission-control" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon green">🎯</div><div class="zicore-card-name">Mission Control</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Telemetria en tiempo real, estado de vehiculos, alertas, subsistemas, logs de mision.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Telemetría</span><span class="zicore-tag">Real-time</span></div>
+      </a>
+      <a class="zicore-card" href="/aerospace" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">📊</div><div class="zicore-card-name">Aerospace Dashboard</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Panel de control: Vehicles, Propulsion, Orbital, Engineering, Missions — 5 tabs de datos.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Dashboard</span><span class="zicore-tag">Tabs</span></div>
+      </a>
+      <a class="zicore-card" href="/environment" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon green">◉</div><div class="zicore-card-name">Environment Sim</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Gravedad, atmosfera, clima espacial, radiacion solar, viento solar, tormentas.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Física</span><span class="zicore-tag">Clima</span></div>
+      </a>
+    </div>
+  </div>
+
+  <div class="zicore-status">
+    <div class="zicore-status-item"><div class="zicore-status-dot green"></div>Server .85</div>
+    <div class="zicore-status-item"><div class="zicore-status-dot green"></div>Ollama</div>
+    <div class="zicore-status-item"><div class="zicore-status-dot cyan"></div>8 Modules</div>
+    <div class="zicore-status-item"><div class="zicore-status-dot orange"></div>CPU Only</div>
+    <div class="zicore-status-item"><div class="zicore-status-dot green"></div>SSO</div>
+  </div>
+</div>
+
+<script src="/js/zicore-topbar.js"></script>
+<script>
+ZICORE_TOPBAR.init({
+  brand: 'ZIAEROSPACE',
+  subtitle: 'AEROSPACE DIVISION',
+  tabs: [
+    {label:'Servicios', href:'/services'},
+    {label:'Aerospace', href:'/aerospace', id:'aerospace'},
+    {label:'Mission Control', href:'/mission-control'},
+  ],
+  activeTab: 'aerospace'
+});
+
+(function(){const c=document.getElementById('starfield'),x=c.getContext('2d');let s=[];function r(){c.width=innerWidth;c.height=innerHeight}r();addEventListener('resize',r);for(let i=0;i<120;i++)s.push({x:Math.random()*2e3,y:Math.random()*2e3,r:Math.random()*1+.2,a:Math.random(),d:(Math.random()-.5)*.012});function d(){x.clearRect(0,0,c.width,c.height);s.forEach(p=>{p.a+=p.d;if(p.a>1||p.a<.2)p.d*=-1;x.beginPath();x.arc(p.x%c.width,p.y%c.height,p.r,0,Math.PI*2);x.fillStyle=`rgba(180,200,240,${p.a})`;x.fill()});requestAnimationFrame(d)}d()})();
+</script>
+</body>
+</html>

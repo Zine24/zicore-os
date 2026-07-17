@@ -1,0 +1,14 @@
+name = "zicore-mail-forwarder"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables (set via wrangler secret or dashboard)
+# ZICORE_API_URL = "https://zcs.zicore.space"
+# ZICORE_API_SECRET = "zicore-mail-worker-2026"
+
+# Bindings
+[vars]
+ZICORE_API_URL = "https://zcs.zicore.space"
+
+# Secrets (set via: wrangler secret put ZICORE_API_SECRET)
+# ZICORE_API_SECRET = "zicore-mail-worker-2026"

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE API Documentation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--surface:rgba(10,15,30,0.85);--glass:rgba(10,15,30,0.7);--border:rgba(0,229,255,0.12);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;--orange:#ffa500;--text:#e0e6f0;--muted:#5a6a80;--mono:'SF Mono',Consolas,monospace}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+.topbar{position:fixed;top:0;left:0;right:0;height:48px;background:rgba(4,6,12,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;backdrop-filter:blur(20px)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.topbar-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--cyan),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.topbar-title{font-size:13px;font-weight:600;letter-spacing:1px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.topbar-back{color:var(--muted);text-decoration:none;font-size:11px;letter-spacing:1px}
+.topbar-back:hover{color:var(--cyan)}
+.topbar-search{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-size:12px;width:240px}
+.topbar-search:focus{border-color:var(--cyan);outline:none}
+
+.layout{display:flex;padding-top:48px;min-height:100vh}
+
+/* ── Sidebar ────────────────────────────────────────── */
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:48px;bottom:0;overflow-y:auto;padding:16px 0;flex-shrink:0}
+.sidebar-section{padding:4px 16px;margin-top:12px}
+.sidebar-section-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:6px}
+.sidebar-link{display:flex;align-items:center;gap:8px;padding:8px 16px;color:var(--muted);text-decoration:none;font-size:12px;transition:all .15s;cursor:pointer;border-left:2px solid transparent}
+.sidebar-link:hover{color:var(--text);background:rgba(0,229,255,0.03)}
+.sidebar-link.active{color:var(--cyan);border-left-color:var(--cyan);background:rgba(0,229,255,0.05)}
+.sidebar-link .count{margin-left:auto;font-size:10px;background:rgba(0,229,255,0.1);color:var(--cyan);padding:2px 6px;border-radius:4px;font-family:var(--mono)}
+
+/* ── Content ─────────────────────────────────────────── */
+.content{margin-left:240px;flex:1;padding:24px 32px 60px;max-width:960px}
+
+.hero{margin-bottom:32px}
+.hero h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:13px;line-height:1.6}
+.hero .stats{display:flex;gap:24px;margin-top:16px}
+.hero .stat-pill{background:rgba(0,229,255,0.06);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;font-family:var(--mono)}
+.hero .stat-pill .num{color:var(--cyan);font-weight:700}
+
+.category{margin-bottom:32px}
+.category-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.category-header h2{font-size:18px;font-weight:700}
+.category-header .badge{font-size:11px;font-family:var(--mono);background:rgba(0,229,255,0.08);color:var(--cyan);padding:3px 10px;border-radius:4px}
+.category-desc{font-size:12px;color:var(--muted);margin-bottom:12px}
+
+.endpoint{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:8px;transition:border-color .15s}
+.endpoint:hover{border-color:rgba(0,229,255,0.25)}
+.endpoint-header{display:flex;align-items:center;gap:10px;cursor:pointer}
+.method{font-size:11px;font-weight:700;font-family:var(--mono);padding:3px 8px;border-radius:4px;min-width:52px;text-align:center;text-transform:uppercase}
+.method.get{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.method.post{background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid rgba(0,229,255,0.2)}
+.method.put{background:rgba(255,165,0,0.1);color:var(--orange);border:1px solid rgba(255,165,0,0.2)}
+.method.delete{background:rgba(255,68,68,0.1);color:var(--red);border:1px solid rgba(255,68,68,0.2)}
+.method.ws{background:rgba(124,77,255,0.1);color:var(--purple);border:1px solid rgba(124,77,255,0.2)}
+.path{font-family:var(--mono);font-size:13px;color:var(--text)}
+.auth-badge{font-size:9px;padding:2px 6px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:1px}
+.auth-badge.public{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.auth-badge.auth{background:rgba(255,165,0,0.1);color:var(--orange);border:1px solid rgba(255,165,0,0.2)}
+.auth-badge.admin{background:rgba(255,68,68,0.1);color:var(--red);border:1px solid rgba(255,68,68,0.2)}
+.endpoint-desc{font-size:12px;color:var(--muted);margin-top:8px;padding-left:62px}
+.endpoint-body{display:none;margin-top:12px;padding:12px;border-radius:6px;background:rgba(0,0,0,0.3);font-family:var(--mono);font-size:11px;color:var(--muted);white-space:pre-wrap;line-height:1.6}
+.endpoint.expanded .endpoint-body{display:block}
+
+/* ── Auth Table ─────────────────────────────────────── */
+.auth-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px}
+.auth-table th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--cyan);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.auth-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.auth-table tr:hover td{background:rgba(0,229,255,0.02)}
+.auth-table code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:3px}
+
+/* ── Quick Start ────────────────────────────────────── */
+.code-block{background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.7;overflow-x:auto;margin-bottom:16px;color:#a0aec0}
+.code-block .kw{color:var(--cyan)}
+.code-block .str{color:var(--green)}
+.code-block .comment{color:var(--muted);font-style:italic}
+.code-block .method-name{color:var(--purple)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-logo">
+    <div class="topbar-icon">Z</div>
+    <div class="topbar-title">ZICORE API DOCS</div>
+  </a>
+  <input type="text" class="topbar-search" placeholder="Buscar endpoint..." id="searchInput" oninput="filterEndpoints(this.value)">
+  <div class="topbar-right">
+    <a href="/" class="topbar-back">← PORTAL</a>
+  </div>
+</div>
+
+<div class="layout">
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Inicio</div>
+    <a class="sidebar-link active" onclick="scrollToSection('overview')">Overview</a>
+    <a class="sidebar-link" onclick="scrollToSection('quickstart')">Quick Start</a>
+    <a class="sidebar-link" onclick="scrollToSection('auth')">Autenticacion</a>
+  </div>
+  <div class="sidebar-section" id="sidebarCategories"></div>
+</div>
+
+<!-- Content -->
+<div class="content">
+  <!-- Overview -->
+  <div class="hero" id="overview">
+    <h1>ZICORE System API</h1>
+    <p>REST API completa del sistema operativo de aeroespacial digital. 235+ endpoints organizados en 42 categorias.</p>
+    <div class="stats">
+      <div class="stat-pill"><span class="num">235+</span> endpoints</div>
+      <div class="stat-pill"><span class="num">42</span> categorias</div>
+      <div class="stat-pill"><span class="num">5</span> HTTP methods</div>
+      <div class="stat-pill"><span class="num">3</span> WebSockets</div>
+    </div>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="category" id="quickstart">
+    <div class="category-header">
+      <h2>Quick Start</h2>
+    </div>
+    <div class="code-block"><span class="comment"># 1. Registrar usuario</span>
+<span class="kw">curl</span> -X POST https://zcs.zicore.space/api/sso/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"email":"user@zinemotion.com.mx","password":"pass123","name":"Mi Nombre"}'</span>
+
+<span class="comment"># 2. Login y obtener token</span>
+<span class="kw">curl</span> -X POST https://zcs.zicore.space/api/sso/login \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"email":"user@zinemotion.com.mx","password":"pass123"}'</span>
+<span class="comment"># Response: {"status":"ok","token":"abc123...","user":{...}}</span>
+
+<span class="comment"># 3. Usar token en requests autenticados</span>
+<span class="kw">curl</span> https://zcs.zicore.space/api/bank/portfolio \
+  -H <span class="str">"Authorization: Bearer abc123..."</span>
+
+<span class="comment"># 4. WebSocket ZIO AI</span>
+<span class="kw">ws</span>://zcs.zicore.space/ws/zio?token=abc123...</div>
+  </div>
+
+  <!-- Auth -->
+  <div class="category" id="auth">
+    <div class="category-header">
+      <h2>Autenticacion (SSO)</h2>
+    </div>
+    <div class="category-desc">Sistema de un solo login para todo el ecosistema ZICORE. Tokens JWT con 30 dias de expiracion.</div>
+    <table class="auth-table">
+      <thead><tr><th>Nivel</th><th>Requisito</th><th>Rutas Disponibles</th></tr></thead>
+      <tbody>
+        <tr><td><span class="auth-badge public">Publico</span></td><td>Sin token</td><td>Landing page, juegos, whitepaper, registro, login, sistema, descargas</td></tr>
+        <tr><td><span class="auth-badge auth">Autenticado</span></td><td><code>Authorization: Bearer &lt;token&gt;</code></td><td>ZIO, mail, bank, materializer, settings, todos los servicios premium</td></tr>
+        <tr><td><span class="auth-badge admin">Admin</span></td><td>Token + rol admin</td><td>Gestion de usuarios, stats globales, permisos de servicios</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Endpoints by category -->
+  <div id="endpointsContainer"></div>
+</div>
+</div>
+
+<script>
+const endpoints = [
+  // SSO Auth
+  {cat:'Autenticacion (SSO)',catId:'sso',items:[
+    {m:'POST',p:'/api/sso/register',d:'Registrar nuevo usuario',auth:'public',body:'{"email":"user@zinemotion.com.mx","password":"...","name":"..."}'},
+    {m:'POST',p:'/api/sso/login',d:'Iniciar sesion, retorna token',auth:'public',body:'{"email":"...","password":"..."}'},
+    {m:'POST',p:'/api/sso/logout',d:'Cerrar sesion, invalida token',auth:'auth'},
+    {m:'GET',p:'/api/sso/me',d:'Obtener info del usuario actual',auth:'auth'},
+    {m:'POST',p:'/api/sso/change-password',d:'Cambiar contrasena',auth:'auth',body:'{"current_password":"...","new_password":"..."}'},
+    {m:'POST',p:'/api/sso/reset-password',d:'Solicitar reset de contrasena',auth:'public',body:'{"email":"..."}'},
+    {m:'POST',p:'/api/sso/confirm-reset',d:'Confirmar reset con codigo',auth:'public',body:'{"email":"...","code":"...","new_password":"..."}'},
+    {m:'GET',p:'/api/sso/plans',d:'Listar planes disponibles',auth:'public'},
+    {m:'POST',p:'/api/sso/upgrade',d:'Upgrade de plan',auth:'auth',body:'{"plan":"basic"}'},
+    {m:'GET',p:'/api/sso/limits',d:'Obtener limites del plan actual',auth:'auth'},
+    {m:'GET',p:'/api/sso/services',d:'Listar todos los servicios',auth:'auth'},
+    {m:'GET',p:'/api/sso/my-services',d:'Servicios activos del usuario',auth:'auth'},
+    {m:'POST',p:'/api/sso/activate-service',d:'Activar un servicio',auth:'auth',body:'{"service_name":"..."}'},
+    {m:'POST',p:'/api/sso/deactivate-service',d:'Desactivar un servicio',auth:'auth',body:'{"service_name":"..."}'},
+    {m:'GET',p:'/api/sso/check-access/{name}',d:'Verificar acceso a un servicio',auth:'auth'},
+    {m:'GET',p:'/api/sso/admin/users',d:'Listar todos los usuarios (admin)',auth:'admin'},
+    {m:'PUT',p:'/api/sso/admin/user/{user_id}',d:'Actualizar usuario (admin)',auth:'admin',body:'{"role":"admin","plan":"pro"}'},
+    {m:'POST',p:'/api/sso/admin/grant-service',d:'Otorgar servicio a usuario (admin)',auth:'admin',body:'{"user_id":"...","service_name":"..."}'},
+    {m:'GET',p:'/api/sso/admin/stats',d:'Estadisticas globales (admin)',auth:'admin'},
+  ]},
+  // Bank
+  {cat:'ZICORE Bank',catId:'bank',items:[
+    {m:'GET',p:'/api/bank/account',d:'Obtener o crear cuenta bancaria',auth:'auth'},
+    {m:'GET',p:'/api/bank/balance',d:'Obtener saldo ZNT',auth:'auth'},
+    {m:'GET',p:'/api/bank/transactions',d:'Historial de transacciones (?limit=50)',auth:'auth'},
+    {m:'POST',p:'/api/bank/send',d:'Enviar ZNT a otro usuario',auth:'auth',body:'{"to":"email@...","amount":10,"description":"..."}'},
+    {m:'GET',p:'/api/bank/staking',d:'Info de staking del usuario',auth:'auth'},
+    {m:'POST',p:'/api/bank/stake',d:'Stakear ZNT (15% APY)',auth:'auth',body:'{"amount":100}'},
+    {m:'GET',p:'/api/bank/portfolio',d:'Portfolio completo (balance+staked+USD)',auth:'auth'},
+  ]},
+  // Mail
+  {cat:'ZICORE Mail',catId:'mail',items:[
+    {m:'GET',p:'/api/mail/status',d:'Estado del servidor de correo'},
+    {m:'POST',p:'/api/mail/start',d:'Iniciar contenedores de mail'},
+    {m:'POST',p:'/api/mail/stop',d:'Detener contenedores de mail'},
+    {m:'POST',p:'/api/mail/restart',d:'Reiniciar contenedores de mail'},
+    {m:'GET',p:'/api/mail/users',d:'Listar usuarios de correo'},
+    {m:'POST',p:'/api/mail/users',d:'Crear usuario de correo',body:'{"email":"...","password":"...","domain":"zinemotion.com.mx"}'},
+    {m:'DELETE',p:'/api/mail/users/{email}',d:'Eliminar usuario de correo'},
+    {m:'POST',p:'/api/mail/users/role',d:'Cambiar rol de usuario',body:'{"email":"...","role":"admin"}'},
+    {m:'GET',p:'/api/mail/stats',d:'Estadisticas del servidor de correo'},
+    {m:'GET',p:'/api/mail/aliases',d:'Listar aliases de correo'},
+    {m:'POST',p:'/api/mail/send',d:'Enviar correo',body:'{"from":"...","to":"...","subject":"...","body":"..."}'},
+    {m:'GET',p:'/api/mail/inbox',d:'Leer emails del inbox'},
+    {m:'POST',p:'/api/mail/forward',d:'Reenviar email a jilo_tuk@yahoo.com.mx'},
+    {m:'GET',p:'/api/mail/logs/{service}',d:'Logs de un servicio de mail'},
+    {m:'GET',p:'/api/mail/dns',d:'Registros DNS requeridos'},
+    {m:'POST',p:'/api/mail/register',d:'Registrar cuenta de correo publica',auth:'public',body:'{"username":"hello","domain":"zinemotion.com.mx","password":"..."}'},
+    {m:'GET',p:'/api/mail/check-username',d:'Verificar disponibilidad de username',auth:'public'},
+    {m:'POST',p:'/api/mail/validate-email',d:'Validar email',auth:'public'},
+    {m:'POST',p:'/api/mail/upgrade-plan',d:'Upgrade de plan de correo'},
+    {m:'GET',p:'/api/mail/accounts',d:'Listar cuentas externas (IMAP/POP3)'},
+    {m:'POST',p:'/api/mail/accounts',d:'Agregar cuenta externa'},
+    {m:'PUT',p:'/api/mail/accounts/{id}',d:'Actualizar cuenta externa'},
+    {m:'DELETE',p:'/api/mail/accounts/{id}',d:'Eliminar cuenta externa'},
+    {m:'POST',p:'/api/mail/accounts/{id}/test',d:'Testear conexion de cuenta'},
+    {m:'POST',p:'/api/mail/accounts/{id}/sync',d:'Sincronizar cuenta manualmente'},
+    {m:'GET',p:'/api/mail/accounts/providers',d:'Proveedores soportados'},
+    {m:'GET',p:'/api/mail/accounts/presets',d:'Presets rapidos de proveedores'},
+    {m:'POST',p:'/api/mail/incoming',d:'Recibir email de Cloudflare Worker',body:'{"secret":"...","from":"...","to":"...","subject":"...","body":"..."}'},
+    {m:'GET',p:'/api/mail/incoming',d:'Listar emails recibidos recientes'},
+  ]},
+  // ZIO AI
+  {cat:'ZIO AI',catId:'zio',items:[
+    {m:'POST',p:'/api/chat',d:'Chat con ZIO (con contexto de knowledge base)',body:'{"message":"Hola","context":"aerospace"}'},
+    {m:'POST',p:'/api/tts',d:'Text-to-Speech',body:'{"text":"...","voice":"es"}'},
+    {m:'POST',p:'/api/zio/import',d:'Importar historial de chat'},
+    {m:'WS',p:'/ws/zio',d:'WebSocket principal de ZIO AI'},
+  ]},
+  // Materializer
+  {cat:'Materializer 3D',catId:'materializer',items:[
+    {m:'POST',p:'/api/materialize',d:'Materializar idea en 3D',body:'{"prompt":"cohetes espacial","engine":"trimesh"}'},
+    {m:'POST',p:'/api/materialize/audio',d:'Generar audio',body:'{"type":"ambient","params":{}}'},
+    {m:'POST',p:'/api/materialize/video',d:'Generar video',body:'{"frames":["base64..."],"fps":24}'},
+    {m:'POST',p:'/api/materialize/simulation',d:'Simulacion de fisica',body:'{"type":"gravity","params":{}}'},
+    {m:'GET',p:'/api/materialize/engines',d:'Listar motores disponibles'},
+    {m:'POST',p:'/api/materialize/engine',d:'Seleccionar motor activo',body:'{"engine":"trimesh"}'},
+    {m:'POST',p:'/api/materialize/queue',d:'Agregar tarea a la cola'},
+    {m:'GET',p:'/api/materialize/queue/status',d:'Estado de la cola de tareas'},
+    {m:'DELETE',p:'/api/materialize/queue/{task_id}',d:'Cancelar tarea'},
+    {m:'WS',p:'/ws/materializer-vr',d:'WebSocket VR stereo stream'},
+  ]},
+  // 3D Print
+  {cat:'ZICORE Print',catId:'print',items:[
+    {m:'GET',p:'/api/print/printers',d:'Listar impresoras configuradas'},
+    {m:'GET',p:'/api/print/materials',d:'Materiales disponibles'},
+    {m:'POST',p:'/api/print/connect/{printer_id}',d:'Conectar a impresora'},
+    {m:'POST',p:'/api/print/disconnect/{printer_id}',d:'Desconectar impresora'},
+    {m:'GET',p:'/api/print/status/{printer_id}',d:'Estado de una impresora'},
+    {m:'GET',p:'/api/print/all-status',d:'Estado de todas las impresoras'},
+    {m:'POST',p:'/api/print/feeder',d:'Control de feeder',body:'{"printer":"...","feeder":0,"action":"load","material":"PLA"}'},
+    {m:'POST',p:'/api/print/feeder-name',d:'Nombrar feeder custom',body:'{"printer":"...","feeder":0,"name":"PLA Blanco"}'},
+    {m:'POST',p:'/api/print/temperature',d:'Establecer temperatura',body:'{"printer":"...","hotend":200,"bed":60}'},
+    {m:'POST',p:'/api/print/gcode',d:'Enviar comando G-Code',body:'{"printer":"...","gcode":"G28"}'},
+    {m:'POST',p:'/api/print/move',d:'Mover ejes',body:'{"printer":"...","x":0,"y":0,"z":10,"speed":100}'},
+    {m:'POST',p:'/api/print/extrude',d:'Extruir/retruir',body:'{"printer":"...","amount":5,"speed":100}'},
+    {m:'POST',p:'/api/print/action',d:'Accion de impresion (start/pause/stop)',body:'{"printer":"...","action":"start"}'},
+    {m:'POST',p:'/api/print/start',d:'Iniciar impresion de archivo',body:'{"printer":"...","file":"model.gcode"}'},
+    {m:'GET',p:'/api/print/files/{printer_id}',d:'Archivos disponibles'},
+    {m:'POST',p:'/api/print/purge',d:'Purgar extrusor'},
+    {m:'GET',p:'/api/print/camera/{printer_id}',d:'URL de camara'},
+    {m:'GET',p:'/api/print/capture/{printer_id}',d:'Capturar frame de camara'},
+    {m:'GET',p:'/api/print/ports',d:'Puertos seriales disponibles'},
+    {m:'POST',p:'/api/print/flash',d:'Flashear firmware',body:'{"board":"esp32s3","port":"COM7","firmware":"firmware.bin"}'},
+    {m:'GET',p:'/api/print/boards',d:'Tipos de board soportados'},
+    {m:'POST',p:'/api/print/serial',d:'Conexion serial directa',body:'{"port":"COM7","baud":115200,"data":"G28\\n"}'},
+  ]},
+  // Video Chat
+  {cat:'Video Chat',catId:'videochat',items:[
+    {m:'GET',p:'/api/videochat/ice',d:'Servidores STUN/TURN'},
+    {m:'POST',p:'/api/videochat/room',d:'Crear sala',body:'{"name":"Mi Sala"}'},
+    {m:'GET',p:'/api/videochat/room/{room_id}',d:'Info de sala'},
+    {m:'POST',p:'/api/videochat/room/{room_id}/signal',d:'Enviar senal WebRTC',body:'{"type":"offer","sdp":"..."}'},
+    {m:'POST',p:'/api/videochat/room/{room_id}/join',d:'Unirse a sala'},
+  ]},
+  // Vision
+  {cat:'Computer Vision',catId:'vision',items:[
+    {m:'GET',p:'/api/openvision/analyze',d:'Analizar imagen (GET con URL)'},
+    {m:'POST',p:'/api/vision/analyze',d:'Analizar imagen (POST con file)'},
+    {m:'POST',p:'/api/vision/ocr',d:'OCR en imagen'},
+    {m:'POST',p:'/api/ocr',d:'OCR simplificado'},
+  ]},
+  // Knowledge
+  {cat:'Knowledge Base',catId:'knowledge',items:[
+    {m:'GET',p:'/api/knowledge/stats',d:'Estadisticas de la base de conocimiento'},
+    {m:'GET',p:'/api/knowledge/conversations',d:'Conversaciones guardadas'},
+    {m:'GET',p:'/api/knowledge/search',d:'Buscar en knowledge base'},
+    {m:'POST',p:'/api/knowledge/document',d:'Subir documento'},
+    {m:'POST',p:'/api/knowledge/document/text',d:'Agregar documento de texto',body:'{"title":"...","content":"..."}'},
+    {m:'GET',p:'/api/knowledge/documents',d:'Listar documentos'},
+    {m:'GET',p:'/api/knowledge/document/{doc_id}',d:'Obtener documento'},
+    {m:'DELETE',p:'/api/knowledge/document/{doc_id}',d:'Eliminar documento'},
+    {m:'GET',p:'/api/knowledge/context',d:'Contexto para ZIO'},
+  ]},
+  // Generation Library
+  {cat:'Generation Library',catId:'library',items:[
+    {m:'GET',p:'/api/library/list',d:'Listar generaciones'},
+    {m:'POST',p:'/api/library/add',d:'Agregar generacion'},
+    {m:'GET',p:'/api/library/get/{id}',d:'Obtener generacion'},
+    {m:'PUT',p:'/api/library/update/{id}',d:'Actualizar generacion'},
+    {m:'DELETE',p:'/api/library/delete/{id}',d:'Eliminar generacion'},
+    {m:'GET',p:'/api/library/search',d:'Buscar generaciones'},
+    {m:'GET',p:'/api/library/stats',d:'Estadisticas de la libreria'},
+    {m:'POST',p:'/api/library/folder',d:'Crear carpeta'},
+    {m:'GET',p:'/api/library/folders',d:'Listar carpetas'},
+    {m:'GET',p:'/api/library/latest',d:'Ultimas generaciones'},
+    {m:'GET',p:'/api/library/recent',d:'Generaciones recientes'},
+    {m:'POST',p:'/api/library/move/{id}',d:'Mover a carpeta'},
+    {m:'POST',p:'/api/library/tag/{id}',d:'Agregar tag'},
+    {m:'DELETE',p:'/api/library/tag/{id}/{tag}',d:'Eliminar tag'},
+  ]},
+  // OutPreview
+  {cat:'OutPreview',catId:'outpreview',items:[
+    {m:'GET',p:'/api/outpreview/current',d:'Objeto actual en preview'},
+    {m:'POST',p:'/api/outpreview/set',d:'Establecer objeto para preview'},
+    {m:'GET',p:'/api/outpreview/history',d:'Historial de previews'},
+    {m:'POST',p:'/api/outpreview/edit',d:'Editar mesh (10 operaciones)'},
+    {m:'GET',p:'/api/outpreview/analyze/{id}',d:'Analizar mesh'},
+    {m:'POST',p:'/api/outpreview/save-to-library',d:'Guardar en libreria'},
+    {m:'POST',p:'/api/outpreview/export-print/{id}',d:'Exportar para impresion'},
+    {m:'POST',p:'/api/outpreview/export-vr/{id}',d:'Exportar para VR'},
+  ]},
+  // AI 3D
+  {cat:'AI 3D Engines',catId:'ai3d',items:[
+    {m:'POST',p:'/api/ai3d/generate',d:'Generar 3D con IA'},
+    {m:'GET',p:'/api/ai3d/engines',d:'Motores de IA 3D disponibles'},
+    {m:'POST',p:'/api/ai3d/ollama-generate',d:'Generar 3D via Ollama + trimesh'},
+  ]},
+  // Mesh
+  {cat:'Mesh Generation',catId:'mesh',items:[
+    {m:'POST',p:'/api/mesh/generate',d:'Generar mesh procedural'},
+  ]},
+  // ML
+  {cat:'Machine Learning',catId:'ml',items:[
+    {m:'GET',p:'/api/ml/info',d:'Info del motor ML'},
+    {m:'POST',p:'/api/ml/train',d:'Entrenar clasificador de texto'},
+    {m:'POST',p:'/api/ml/predict',d:'Predecir clase de texto'},
+    {m:'POST',p:'/api/ml/anomaly',d:'Detectar anomalias'},
+    {m:'POST',p:'/api/ml/cluster',d:'Clustering K-Means'},
+    {m:'POST',p:'/api/ml/sentiment',d:'Analisis de sentimiento'},
+    {m:'POST',p:'/api/ml/similarity',d:'Similitud entre textos'},
+    {m:'POST',p:'/api/ml/patterns',d:'Encontrar patrones'},
+    {m:'POST',p:'/api/ml/regression',d:'Regresion lineal'},
+    {m:'POST',p:'/api/ml/vector',d:'Texto a vector'},
+  ]},
+  // Crypto
+  {cat:'Crypto Payments',catId:'crypto',items:[
+    {m:'GET',p:'/api/crypto/services',d:'Servicios y precios'},
+    {m:'POST',p:'/api/crypto/pay',d:'Crear pago crypto'},
+    {m:'GET',p:'/api/crypto/pay/{id}',d:'Detalles de pago'},
+    {m:'POST',p:'/api/crypto/pay/{id}/confirm',d:'Confirmar pago (admin)'},
+    {m:'GET',p:'/api/crypto/payments',d:'Pagos del usuario'},
+    {m:'GET',p:'/api/crypto/stats',d:'Estadisticas de pagos'},
+  ]},
+  // Video
+  {cat:'Video Editor',catId:'video',items:[
+    {m:'POST',p:'/api/video/cut',d:'Cortar clip'},
+    {m:'POST',p:'/api/video/split',d:'Dividir clip'},
+    {m:'POST',p:'/api/video/delete',d:'Eliminar clip'},
+    {m:'POST',p:'/api/video/duplicate',d:'Duplicar clip'},
+    {m:'POST',p:'/api/video/process',d:'Procesar video'},
+    {m:'POST',p:'/api/video/generate',d:'Generar video'},
+    {m:'POST',p:'/api/video/trim',d:'Recortar video'},
+    {m:'POST',p:'/api/video/concat',d:'Concatenar videos'},
+  ]},
+  // Missions
+  {cat:'Missions',catId:'missions',items:[
+    {m:'GET',p:'/api/missions',d:'Listar misiones'},
+    {m:'GET',p:'/api/missions/{id}',d:'Detalle de mision'},
+    {m:'POST',p:'/api/missions/{id}',d:'Actualizar mision'},
+    {m:'DELETE',p:'/api/missions/{id}',d:'Eliminar mision'},
+  ]},
+  // Telemetry
+  {cat:'Telemetry',catId:'telemetry',items:[
+    {m:'GET',p:'/api/telemetry',d:'Datos de telemetria en tiempo real'},
+    {m:'GET',p:'/api/telemetry/modules',d:'Estado de modulos'},
+    {m:'WS',p:'/ws/telemetry',d:'Stream de telemetria'},
+  ]},
+  // System
+  {cat:'System',catId:'system',items:[
+    {m:'GET',p:'/api/status',d:'Estado del sistema'},
+    {m:'GET',p:'/api/system/stats',d:'Stats del sistema (CPU, RAM, disco)',auth:'public'},
+    {m:'GET',p:'/api/config',d:'Configuracion actual'},
+    {m:'POST',p:'/api/config',d:'Actualizar configuracion'},
+    {m:'GET',p:'/api/themes',d:'Temas disponibles'},
+    {m:'POST',p:'/api/config/theme/{id}',d:'Cambiar tema'},
+    {m:'GET',p:'/api/downloads',d:'Contador de descargas',auth:'public'},
+    {m:'POST',p:'/api/downloads/increment',d:'Incrementar contador'},
+  ]},
+  // Config
+  {cat:'Providers & Models',catId:'providers',items:[
+    {m:'GET',p:'/api/providers',d:'Todos los providers configurados'},
+    {m:'GET',p:'/api/providers/fetch-models',d:'Auto-fetch modelos de APIs'},
+    {m:'GET',p:'/api/models',d:'Modelos del provider activo'},
+    {m:'GET',p:'/api/provider/models/{provider}',d:'Modelos de un provider'},
+    {m:'POST',p:'/api/config/provider/{provider}',d:'Configurar provider'},
+    {m:'GET',p:'/api/config/provider/{provider}',d:'Config de provider'},
+    {m:'POST',p:'/api/config/test-provider/{provider}',d:'Test de provider'},
+    {m:'POST',p:'/api/provider/chat',d:'Chat directo con provider'},
+  ]},
+  // Ollama
+  {cat:'Ollama Local',catId:'ollama',items:[
+    {m:'GET',p:'/api/ollama/status',d:'Estado de Ollama'},
+    {m:'POST',p:'/api/ollama/start',d:'Iniciar Ollama'},
+    {m:'POST',p:'/api/ollama/stop',d:'Detener Ollama'},
+    {m:'POST',p:'/api/ollama/pull',d:'Descargar modelo'},
+    {m:'GET',p:'/api/node/status',d:'Estado del nodo (.68)'},
+    {m:'GET',p:'/api/node/modelos',d:'Modelos del nodo'},
+    {m:'POST',p:'/api/node/chat',d:'Chat via nodo'},
+    {m:'POST',p:'/api/node/generate',d:'Generar via nodo'},
+  ]},
+  // Games
+  {cat:'Games',catId:'games',items:[
+    {m:'GET',p:'/api/games/catalog',d:'Catalogo de juegos',auth:'public'},
+    {m:'GET',p:'/api/games/scores',d:'Leaderboard global',auth:'public'},
+    {m:'POST',p:'/api/games/score',d:'Enviar score'},
+    {m:'POST',p:'/api/games/scores/reset',d:'Resetear scores'},
+  ]},
+  // Media
+  {cat:'Media & Content',catId:'media',items:[
+    {m:'GET',p:'/api/media/list',d:'Archivos multimedia'},
+    {m:'POST',p:'/api/media/upload',d:'Subir archivo multimedia'},
+    {m:'DELETE',p:'/api/media/delete',d:'Eliminar archivo multimedia'},
+    {m:'GET',p:'/api/content/library',d:'Libreria de contenido generado'},
+    {m:'DELETE',p:'/api/content/delete',d:'Eliminar contenido'},
+    {m:'GET',p:'/api/content/stats',d:'Estadisticas de contenido'},
+  ]},
+  // FS
+  {cat:'File System',catId:'fs',items:[
+    {m:'POST',p:'/api/fs/ls',d:'Listar archivos',body:'{"path":"/data"}'},
+    {m:'POST',p:'/api/fs/read',d:'Leer archivo',body:'{"path":"/data/config.json"}'},
+    {m:'POST',p:'/api/fs/write',d:'Escribir archivo',body:'{"path":"...","content":"..."}'},
+    {m:'POST',p:'/api/fs/mkdir',d:'Crear directorio'},
+    {m:'POST',p:'/api/fs/remove',d:'Eliminar archivo/directorio'},
+    {m:'POST',p:'/api/fs/rename',d:'Renombrar'},
+    {m:'POST',p:'/api/upload',d:'Subir archivo'},
+  ]},
+  // SSH
+  {cat:'Remote Access',catId:'ssh',items:[
+    {m:'GET',p:'/api/ssh/status',d:'Estado SSH'},
+    {m:'POST',p:'/api/ssh/start',d:'Iniciar SSH'},
+    {m:'POST',p:'/api/ssh/stop',d:'Detener SSH'},
+    {m:'POST',p:'/api/ssh/execute',d:'Ejecutar comando'},
+    {m:'GET',p:'/api/ssh/config',d:'Config SSH'},
+    {m:'GET',p:'/api/firefox/status',d:'Estado Firefox'},
+    {m:'POST',p:'/api/firefox/open',d:'Abrir URL en Firefox'},
+    {m:'POST',p:'/api/firefox/open-file',d:'Abrir archivo en Firefox'},
+    {m:'GET',p:'/api/thunderbird/status',d:'Estado Thunderbird'},
+    {m:'POST',p:'/api/thunderbird/open',d:'Abrir Thunderbird'},
+    {m:'POST',p:'/api/thunderbird/compose',d:'Redactar email en Thunderbird'},
+  ]},
+  // Simulator
+  {cat:'Simulator',catId:'sim',items:[
+    {m:'POST',p:'/api/sim/start',d:'Iniciar simulacion'},
+    {m:'POST',p:'/api/sim/stop',d:'Detener simulacion'},
+    {m:'POST',p:'/api/sim/pause',d:'Pausar simulacion'},
+    {m:'GET',p:'/api/sim/status',d:'Estado de simulacion'},
+    {m:'GET',p:'/api/sim/telemetry',d:'Telemetria de simulacion'},
+    {m:'GET',p:'/api/sim/scenarios',d:'Escenarios disponibles'},
+    {m:'GET',p:'/api/sim/vehicles',d:'Vehiculos disponibles'},
+    {m:'POST',p:'/api/sim/command',d:'Enviar comando a simulacion'},
+  ]},
+  // Traffic
+  {cat:'Traffic Stats',catId:'stats',items:[
+    {m:'GET',p:'/api/stats/overview',d:'Resumen de trafico'},
+    {m:'GET',p:'/api/stats/traffic',d:'Grafica de trafico'},
+    {m:'GET',p:'/api/stats/endpoints',d:'Stats por endpoint'},
+    {m:'GET',p:'/api/stats/ips',d:'IPs mas activas'},
+    {m:'GET',p:'/api/stats/status',d:'Status codes'},
+    {m:'POST',p:'/api/stats/cleanup',d:'Limpiar datos antiguos'},
+  ]},
+  // Data
+  {cat:'Data & Backup',catId:'data',items:[
+    {m:'GET',p:'/api/dataretention/stats',d:'Stats de retencion'},
+    {m:'GET',p:'/api/dataretention/export',d:'Exportar datos'},
+    {m:'POST',p:'/api/backup/create',d:'Crear backup'},
+    {m:'POST',p:'/api/backup/restore',d:'Restaurar backup'},
+    {m:'POST',p:'/api/diagnostics/run',d:'Ejecutar diagnosticos'},
+  ]},
+  // Agent
+  {cat:'ZIO Agent',catId:'agent',items:[
+    {m:'GET',p:'/api/agent/status',d:'Estado del agente'},
+    {m:'POST',p:'/api/agent/chat',d:'Chat con agente'},
+    {m:'GET',p:'/api/agent/sessions',d:'Sesiones activas'},
+    {m:'POST',p:'/api/agent/invoke',d:'Invocar accion del agente'},
+  ]},
+  // Proxy
+  {cat:'Proxy',catId:'proxy',items:[
+    {m:'GET',p:'/api/proxy',d:'Proxy HTTP para CORS/iframe'},
+  ]},
+];
+
+// Render
+const container = document.getElementById('endpointsContainer');
+const sidebarCats = document.getElementById('sidebarCategories');
+let catHtml = '<div class="sidebar-section-title">API Endpoints</div>';
+let contentHtml = '';
+
+endpoints.forEach(cat => {
+  const authCounts = {public:0,auth:0,admin:0,n:'none'};
+  cat.items.forEach(i => { authCounts[i.auth||'n'] = (authCounts[i.auth||'n']||0)+1; });
+
+  catHtml += `<a class="sidebar-link" onclick="scrollToSection('${cat.catId}')">${cat.cat} <span class="count">${cat.items.length}</span></a>`;
+
+  contentHtml += `<div class="category" id="${cat.catId}">
+    <div class="category-header">
+      <h2>${cat.cat}</h2>
+      <span class="badge">${cat.items.length} endpoints</span>
+    </div>`;
+
+  cat.items.forEach(ep => {
+    const method = ep.m.toLowerCase();
+    const authLabel = ep.auth === 'public' ? '<span class="auth-badge public">Public</span>' :
+                      ep.auth === 'admin' ? '<span class="auth-badge admin">Admin</span>' :
+                      ep.auth === 'auth' ? '<span class="auth-badge auth">Auth</span>' : '';
+    const bodyHtml = ep.body ? `<div class="endpoint-body">${escHtml(ep.body)}</div>` : '';
+    contentHtml += `<div class="endpoint" onclick="this.classList.toggle('expanded')">
+      <div class="endpoint-header">
+        <span class="method ${method}">${ep.m}</span>
+        <span class="path">${ep.p}</span>
+        ${authLabel}
+      </div>
+      <div class="endpoint-desc">${ep.d}</div>
+      ${bodyHtml}
+    </div>`;
+  });
+
+  contentHtml += '</div>';
+});
+
+sidebarCats.innerHTML = catHtml;
+container.innerHTML = contentHtml;
+
+function scrollToSection(id) {
+  document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  event?.target?.classList.add('active');
+}
+
+function filterEndpoints(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.endpoint').forEach(ep => {
+    const path = ep.querySelector('.path').textContent.toLowerCase();
+    const desc = ep.querySelector('.endpoint-desc').textContent.toLowerCase();
+    ep.style.display = (!q || path.includes(q) || desc.includes(q)) ? '' : 'none';
+  });
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+</script>
+</body>
+</html>

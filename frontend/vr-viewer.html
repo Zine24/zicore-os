@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE VR Viewer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--text:#c8d6e5;--text2:#667788;--border:#2a3555;--glass:rgba(4,6,12,0.92)}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+#vrCanvas{width:100vw;height:100vh;display:block;background:#000}
+.overlay{position:fixed;z-index:10;pointer-events:none}
+.overlay>*{pointer-events:auto}
+
+/* Top HUD */
+.top-hud{top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:8px 16px;background:linear-gradient(180deg,rgba(4,6,12,.9),transparent)}
+.top-hud .brand{font-size:11px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top-hud .sep{width:1px;height:16px;background:var(--border)}
+.top-hud .info{font-size:9px;color:var(--text2);letter-spacing:.5px}
+.top-hud .status{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:9px;color:var(--green)}
+.top-hud .status .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Controls Panel */
+.controls{bottom:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:8px 16px;background:linear-gradient(0deg,rgba(4,6,12,.9),transparent);flex-wrap:wrap}
+.ctrl-btn{padding:4px 10px;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--text2);cursor:pointer;font-size:9px;letter-spacing:1px;transition:all .15s;font-family:inherit}
+.ctrl-btn:hover{border-color:rgba(0,229,255,.3);color:var(--cyan);background:rgba(0,229,255,.05)}
+.ctrl-btn.active{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan)}
+.ctrl-btn.danger{border-color:rgba(255,51,51,.3);color:var(--red)}
+.ctrl-btn.danger:hover{background:rgba(255,51,51,.1)}
+.ctrl-btn.green{border-color:rgba(0,255,136,.3);color:var(--green)}
+.ctrl-btn.green:hover{background:rgba(0,255,136,.1)}
+.ctrl-sep{width:1px;height:16px;background:var(--border)}
+select.ctrl-select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:3px;font-size:9px;outline:none;font-family:inherit}
+select.ctrl-select:focus{border-color:var(--cyan)}
+.ctrl-label{font-size:8px;color:var(--text2);letter-spacing:1px}
+
+/* Stats */
+.stats-hud{bottom:50px;right:16px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.stat{font-size:9px;color:var(--text2);letter-spacing:.5px}
+.stat b{color:var(--cyan);font-weight:600}
+
+/* Scene selector overlay */
+.scene-select{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:24px;backdrop-filter:blur(20px);display:none}
+.scene-select.open{display:block}
+.scene-select h2{font-size:14px;font-weight:300;letter-spacing:4px;text-align:center;margin-bottom:16px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.scene-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.scene-card{padding:12px;border:1px solid var(--border);border-radius:4px;cursor:pointer;text-align:center;transition:all .2s}
+.scene-card:hover{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.05);transform:translateY(-2px)}
+.scene-card .ico{font-size:24px;margin-bottom:4px}
+.scene-card .name{font-size:9px;color:var(--text2);letter-spacing:1px}
+
+/* Fullscreen hint */
+.fullscreen-hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;color:var(--text2);font-size:11px;letter-spacing:2px;text-align:center;pointer-events:none;opacity:.6}
+</style>
+</head>
+<body>
+
+<canvas id="vrCanvas"></canvas>
+
+<!-- Top HUD -->
+<div class="overlay top-hud">
+  <div class="brand">ZICORE VR</div>
+  <div class="sep"></div>
+  <div class="info" id="sceneInfo">Sin sesion</div>
+  <div class="sep"></div>
+  <div class="info" id="eyeMode">MONO</div>
+  <div class="status">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">DESCONECTADO</span>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="overlay controls">
+  <span class="ctrl-label">ESCENA:</span>
+  <select class="ctrl-select" id="sceneSelect">
+    <option value="planetary_surface">Superficie Planetaria</option>
+    <option value="space_station">Estacion Espacial</option>
+    <option value="lunar_base">Base Lunar</option>
+    <option value="launch_pad">Plataforma de Lanzamiento</option>
+    <option value="cockpit">Cockpit</option>
+    <option value="landscape">Paisaje</option>
+  </select>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn green" onclick="startStream()" id="btnStart">INICIAR</button>
+  <button class="ctrl-btn danger" onclick="stopStream()" id="btnStop" disabled>DETENER</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" onclick="toggleStereo()" id="btnStereo">STEREO</button>
+  <button class="ctrl-btn" onclick="toggleFullscreen()">FULLSCREEN</button>
+  <div class="ctrl-sep"></div>
+  <span class="ctrl-label">FPS:</span>
+  <select class="ctrl-select" id="fpsSelect">
+    <option value="15">15</option>
+    <option value="24">24</option>
+    <option value="30" selected>30</option>
+    <option value="60">60</option>
+  </select>
+  <div class="ctrl-sep"></div>
+  <span class="ctrl-label">RES:</span>
+  <select class="ctrl-select" id="resSelect">
+    <option value="320x240">320x240</option>
+    <option value="480x320">480x320</option>
+    <option value="640x480" selected>640x480</option>
+    <option value="800x600">800x600</option>
+    <option value="1024x768">1024x768</option>
+  </select>
+</div>
+
+<!-- Stats -->
+<div class="overlay stats-hud">
+  <div class="stat">FRAME: <b id="statFrame">0</b></div>
+  <div class="stat">FPS: <b id="statFps">0</b></div>
+  <div class="stat">LATENCY: <b id="statLatency">0ms</b></div>
+  <div class="stat">RES: <b id="statRes">-</b></div>
+</div>
+
+<!-- Fullscreen hint -->
+<div class="fullscreen-hint" id="fsHint">Presiona F para fullscreen | WASD para mover | Mouse para mirar</div>
+
+<script>
+const canvas = document.getElementById('vrCanvas');
+const ctx = canvas.getContext('2d');
+let ws = null;
+let streaming = false;
+let stereo = false;
+let frameCount = 0;
+let lastFrameTime = 0;
+let fps = 0;
+let camera = { yaw: 0, pitch: 0, x: 0, y: 1.7, z: 0 };
+let keys = {};
+let mouseDown = false;
+let lastMouse = { x: 0, y: 0 };
+
+// Resize
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// WebSocket connection
+function startStream() {
+  if (ws) ws.close();
+
+  const scene = document.getElementById('sceneSelect').value;
+  const fpsVal = parseInt(document.getElementById('fpsSelect').value);
+  const res = document.getElementById('resSelect').value.split('x');
+  const w = parseInt(res[0]);
+  const h = parseInt(res[1]);
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host + '/ws/materializer-vr');
+
+  ws.onopen = () => {
+    setStatus('CONECTADO', true);
+    ws.send(JSON.stringify({
+      action: 'start',
+      scene: scene,
+      stereo: stereo,
+      width: w,
+      height: h,
+      fps: fpsVal,
+    }));
+    streaming = true;
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    document.getElementById('sceneInfo').textContent = scene.replace('_', ' ').toUpperCase();
+    document.getElementById('eyeMode').textContent = stereo ? 'STEREO' : 'MONO';
+    document.getElementById('statRes').textContent = w + 'x' + h;
+    document.getElementById('fsHint').style.opacity = '0';
+    frameCount = 0;
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'stereo_frame') {
+        renderStereoFrame(data);
+      } else if (data.type === 'frame') {
+        renderMonoFrame(data);
+      } else if (data.type === 'pong') {
+        // keepalive
+      } else if (data.type === 'session_started') {
+        // confirmed
+      }
+    } catch (err) {}
+  };
+
+  ws.onclose = () => {
+    setStatus('DESCONECTADO', false);
+    streaming = false;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+  };
+
+  ws.onerror = () => {
+    setStatus('ERROR', false);
+  };
+}
+
+function stopStream() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'stop' }));
+  }
+  if (ws) ws.close();
+  streaming = false;
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+}
+
+function setStatus(text, ok) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusDot').style.background = ok ? 'var(--green)' : 'var(--red)';
+  document.getElementById('statusDot').style.boxShadow = ok ? '0 0 6px var(--green)' : '0 0 6px var(--red)';
+}
+
+// Render stereo frame (side-by-side)
+function renderStereoFrame(data) {
+  const now = performance.now();
+  if (lastFrameTime > 0) {
+    fps = Math.round(1000 / (now - lastFrameTime));
+  }
+  lastFrameTime = now;
+  frameCount++;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const halfW = w / 2;
+
+  // Decode left eye
+  const leftImg = new Image();
+  leftImg.onload = () => {
+    ctx.drawImage(leftImg, 0, 0, halfW, h);
+
+    // Decode right eye
+    const rightImg = new Image();
+    rightImg.onload = () => {
+      ctx.drawImage(rightImg, halfW, 0, halfW, h);
+
+      // Draw divider
+      ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(halfW, 0);
+      ctx.lineTo(halfW, h);
+      ctx.stroke();
+
+      updateStats(data);
+    };
+    rightImg.src = 'data:image/png;base64,' + data.right;
+  };
+  leftImg.src = 'data:image/png;base64,' + data.left;
+}
+
+// Render mono frame
+function renderMonoFrame(data) {
+  const now = performance.now();
+  if (lastFrameTime > 0) {
+    fps = Math.round(1000 / (now - lastFrameTime));
+  }
+  lastFrameTime = now;
+  frameCount++;
+
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    updateStats(data);
+  };
+  img.src = 'data:image/png;base64,' + data.data;
+}
+
+function updateStats(data) {
+  document.getElementById('statFrame').textContent = data.frame || frameCount;
+  document.getElementById('statFps').textContent = fps;
+  const latency = data.timestamp ? Math.round((Date.now() / 1000 - data.timestamp) * 1000) : 0;
+  document.getElementById('statLatency').textContent = latency + 'ms';
+}
+
+// Controls
+function toggleStereo() {
+  stereo = !stereo;
+  document.getElementById('btnStereo').classList.toggle('active', stereo);
+  document.getElementById('eyeMode').textContent = stereo ? 'STEREO' : 'MONO';
+  if (streaming) {
+    stopStream();
+    setTimeout(startStream, 200);
+  }
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Keyboard controls
+document.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  if (e.key === 'Escape' && streaming) stopStream();
+});
+
+document.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// Mouse controls
+canvas.addEventListener('mousedown', (e) => {
+  mouseDown = true;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+canvas.addEventListener('mousemove', (e) => {
+  if (!mouseDown) return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  camera.yaw -= dx * 0.3;
+  camera.pitch = Math.max(-60, Math.min(60, camera.pitch - dy * 0.3));
+  lastMouse = { x: e.clientX, y: e.clientY };
+  sendCamera();
+});
+
+// Game loop for keyboard movement
+function gameLoop() {
+  if (!streaming) { requestAnimationFrame(gameLoop); return; }
+
+  const speed = 0.05;
+  let moved = false;
+
+  if (keys['w']) { camera.z -= speed; moved = true; }
+  if (keys['s']) { camera.z += speed; moved = true; }
+  if (keys['a']) { camera.x -= speed; moved = true; }
+  if (keys['d']) { camera.x += speed; moved = true; }
+  if (keys['q']) { camera.y += speed; moved = true; }
+  if (keys['e']) { camera.y -= speed; moved = true; }
+
+  // Arrow keys for yaw/pitch
+  if (keys['arrowleft']) { camera.yaw -= 1; moved = true; }
+  if (keys['arrowright']) { camera.yaw += 1; moved = true; }
+  if (keys['arrowup']) { camera.pitch = Math.min(60, camera.pitch + 1); moved = true; }
+  if (keys['arrowdown']) { camera.pitch = Math.max(-60, camera.pitch - 1); moved = true; }
+
+  if (moved) sendCamera();
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+function sendCamera() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      action: 'camera',
+      yaw: camera.yaw,
+      pitch: camera.pitch,
+      x: camera.x,
+      y: camera.y,
+      z: camera.z,
+    }));
+  }
+}
+
+// Keepalive
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'ping' }));
+  }
+}, 15000);
+
+// Show scene selector on start if not streaming
+document.getElementById('fsHint').style.opacity = '0.6';
+</script>
+</body>
+</html>

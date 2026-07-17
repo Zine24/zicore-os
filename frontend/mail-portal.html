@@ -250,7 +250,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="topbar-nav" id="topbarNav" style="display:none">
       <button class="topbar-tab active" data-view="inbox" onclick="switchView('inbox')">Inbox</button>
       <button class="topbar-tab" data-view="compose" onclick="switchView('compose')">Compose</button>
-      <button class="topbar-tab" data-view="admin" onclick="switchView('admin')">Admin</button>
+      <button class="topbar-tab" data-view="account" onclick="switchView('account')">Cuenta</button>
+      <button class="topbar-tab" data-view="admin" id="adminTab" onclick="switchView('admin')" style="display:none">Admin</button>
     </div>
     <div class="topbar-right">
       <div class="topbar-time" id="clock"></div>
@@ -349,10 +350,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         </div>
       </div>
       <div class="sidebar-divider"></div>
-      <div class="sidebar-section">
+      <div class="sidebar-section" id="adminSection" style="display:none">
         <div class="sidebar-label">Admin</div>
         <div class="sidebar-item" data-folder="admin" onclick="switchView('admin')">
-          <span class="icon">⚙</span><span>Users</span>
+          <span class="icon">⚙</span><span>Gestionar Cuentas</span>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Cuenta</div>
+        <div class="sidebar-item" data-folder="account" onclick="switchView('account')">
+          <span class="icon">🔐</span><span>Configuración</span>
         </div>
       </div>
       <div class="sidebar-footer">
@@ -440,47 +447,108 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         </div>
       </div>
 
-      <!-- ADMIN -->
+      <!-- ACCOUNT SETTINGS -->
+      <div class="mail-view" id="accountView">
+        <div class="admin-view">
+          <div class="admin-header">
+            <span class="admin-title">Configuración de Cuenta</span>
+          </div>
+          <div class="admin-grid">
+            <div class="admin-card">
+              <div class="admin-card-title">Tu Cuenta</div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-input" type="text" id="accEmail" readonly style="font-family:var(--mono);font-size:11px;opacity:0.8">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nombre</label>
+                <input class="form-input" type="text" id="accName" readonly style="font-family:var(--mono);font-size:11px;opacity:0.8">
+              </div>
+            </div>
+            <div class="admin-card">
+              <div class="admin-card-title">Cambiar Contraseña</div>
+              <div class="form-group">
+                <label class="form-label">Contraseña Actual</label>
+                <input class="form-input" type="password" id="accCurPass" placeholder="••••••••">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nueva Contraseña</label>
+                <input class="form-input" type="password" id="accNewPass" placeholder="Min. 8 caracteres">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirmar</label>
+                <input class="form-input" type="password" id="accConfirmPass" placeholder="Repetir contraseña">
+              </div>
+              <button class="btn-primary" onclick="changePassword()">Actualizar</button>
+            </div>
+            <div class="admin-card" style="grid-column:1/-1">
+              <div class="admin-card-title">Cuentas Externas (IMAP/POP3)</div>
+              <p style="font-size:11px;color:var(--text-dim);margin:0 0 12px">Configura cuentas externas de Gmail, Outlook, Yahoo, etc. para recibir correo de múltiples proveedores.</p>
+              <button class="btn-primary" onclick="window.open('/mail-accounts','_self')">Gestionar Cuentas Externas</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN (solo para admin@*) -->
       <div class="mail-view" id="adminView">
         <div class="admin-view">
           <div class="admin-header">
-            <span class="admin-title">User Management</span>
-            <button class="action-btn" onclick="loadUsers()">Refresh</button>
+            <span class="admin-title">Administración de Correo</span>
+            <button class="action-btn" onclick="loadUsers()">Refrescar</button>
           </div>
           <div class="admin-grid">
             <div class="admin-card" style="grid-column:1/-1">
-              <div class="admin-card-title">All Users</div>
-              <div id="usersTable">Loading...</div>
+              <div class="admin-card-title">Estadísticas</div>
+              <div id="statsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+                <div style="text-align:center;padding:12px;background:rgba(0,229,255,0.04);border-radius:6px"><div style="font-size:24px;font-weight:700;color:var(--cyan)" id="statTotal">—</div><div style="font-size:10px;color:var(--text-dim);margin-top:4px">Total Cuentas</div></div>
+                <div style="text-align:center;padding:12px;background:rgba(0,255,136,0.04);border-radius:6px"><div style="font-size:24px;font-weight:700;color:var(--green)" id="statActive">—</div><div style="font-size:10px;color:var(--text-dim);margin-top:4px">Activas</div></div>
+                <div style="text-align:center;padding:12px;background:rgba(124,77,255,0.04);border-radius:6px"><div style="font-size:24px;font-weight:700;color:var(--purple)" id="statDomains">—</div><div style="font-size:10px;color:var(--text-dim);margin-top:4px">Dominios</div></div>
+                <div style="text-align:center;padding:12px;background:rgba(255,170,0,0.04);border-radius:6px"><div style="font-size:24px;font-weight:700;color:#fa0" id="statAdmins">—</div><div style="font-size:10px;color:var(--text-dim);margin-top:4px">Admins</div></div>
+              </div>
+            </div>
+            <div class="admin-card" style="grid-column:1/-1">
+              <div class="admin-card-title">Todas las Cuentas</div>
+              <div id="usersTable">Cargando...</div>
             </div>
             <div class="admin-card">
-              <div class="admin-card-title">Create New User</div>
+              <div class="admin-card-title">Crear Nueva Cuenta</div>
               <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input class="form-input" type="text" id="adminNewName" placeholder="Full name">
+                <label class="form-label">Nombre</label>
+                <input class="form-input" type="text" id="adminNewName" placeholder="Nombre completo">
               </div>
               <div class="form-group">
                 <label class="form-label">Email</label>
-                <input class="form-input" type="email" id="adminNewEmail" placeholder="user@zinemotion.com.mx">
+                <input class="form-input" type="email" id="adminNewEmail" placeholder="user@zicore.space">
               </div>
               <div class="form-group">
-                <label class="form-label">Password</label>
-                <input class="form-input" type="password" id="adminNewPass" placeholder="Password">
+                <label class="form-label">Contraseña</label>
+                <input class="form-input" type="password" id="adminNewPass" placeholder="Min. 8 caracteres">
               </div>
-              <button class="btn-primary" onclick="adminCreateUser()">Create User</button>
+              <button class="btn-primary" onclick="adminCreateUser()">Crear Cuenta</button>
             </div>
             <div class="admin-card">
-              <div class="admin-card-title">Reset Password</div>
+              <div class="admin-card-title">Restablecer Contraseña</div>
               <div class="form-group">
-                <label class="form-label">Select User</label>
+                <label class="form-label">Usuario</label>
                 <select class="form-input" id="resetUserSelect">
-                  <option value="">Select user...</option>
+                  <option value="">Seleccionar...</option>
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input class="form-input" type="password" id="resetNewPass" placeholder="New password">
+                <label class="form-label">Nueva Contraseña</label>
+                <input class="form-input" type="password" id="resetNewPass" placeholder="Nueva contraseña">
               </div>
-              <button class="btn-primary" onclick="adminResetPassword()">Reset Password</button>
+              <button class="btn-primary" onclick="adminResetPassword()">Restablecer</button>
+            </div>
+            <div class="admin-card" style="grid-column:1/-1">
+              <div class="admin-card-title">Servicios</div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <button class="action-btn" onclick="adminRestartService('zicore-postfix')">Reiniciar Postfix</button>
+                <button class="action-btn" onclick="adminRestartService('zicore-dovecot')">Reiniciar Dovecot</button>
+                <button class="action-btn" onclick="adminRestartService('zicore-rspamd')">Reiniciar Rspamd</button>
+              </div>
+              <div style="margin-top:12px;font-size:11px;color:var(--text-dim)" id="serviceStatus"></div>
             </div>
           </div>
         </div>
@@ -505,6 +573,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="toast" id="toast"></div>
 
 <script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
 /* ──────────────────────────────────────────
    ZICORE MAIL PORTAL — Client Logic
    ────────────────────────────────────────── */
@@ -733,7 +810,33 @@ function enterMail() {
   startSessionTimer();
   loadInbox();
   loadMailAccounts();
-  loadUsers();
+  // Check admin status via server (SSO role or mail DB role)
+  checkAdminStatus();
+}
+
+function checkAdminStatus() {
+  var ssoToken = localStorage.getItem('zicore_sso_token');
+  var url = '/api/mail/admin-check';
+  var headers = {};
+  if (ssoToken) {
+    headers['Authorization'] = 'Bearer ' + ssoToken;
+  } else if (STATE.user) {
+    url += '?user=' + encodeURIComponent(STATE.user);
+  }
+  fetch(url, { headers: headers })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.admin) {
+        STATE.isAdmin = true;
+        $('adminSection').style.display = 'block';
+        $('adminTab').style.display = 'inline';
+        loadUsers();
+        loadMailStats();
+      } else {
+        STATE.isAdmin = false;
+      }
+    })
+    .catch(function() { STATE.isAdmin = false; });
 }
 
 /* ── NAVIGATION ── */
@@ -752,11 +855,17 @@ function switchView(name) {
     $('composeView').classList.add('active');
     var tab2 = document.querySelector('[data-view="compose"]');
     if (tab2) tab2.classList.add('active');
+  } else if (name === 'account') {
+    $('accountView').classList.add('active');
+    var tab3 = document.querySelector('[data-view="account"]');
+    if (tab3) tab3.classList.add('active');
+    loadAccountInfo();
   } else if (name === 'admin') {
     $('adminView').classList.add('active');
-    var tab3 = document.querySelector('[data-view="admin"]');
-    if (tab3) tab3.classList.add('active');
+    var tab4 = document.querySelector('[data-view="admin"]');
+    if (tab4) tab4.classList.add('active');
     loadUsers();
+    loadMailStats();
   } else if (name === 'detail') {
     $('detailView').classList.add('active');
   }
@@ -1049,10 +1158,55 @@ function saveDraft() {
   showToast('Draft saved locally', 'info');
 }
 
+/* ── ACCOUNT SETTINGS ── */
+
+function loadAccountInfo() {
+  $('accEmail').value = STATE.user || '';
+  $('accName').value = STATE.displayName || STATE.user || '';
+}
+
+function changePassword() {
+  var cur = $('accCurPass').value;
+  var np = $('accNewPass').value;
+  var conf = $('accConfirmPass').value;
+
+  if (!cur || !np || !conf) { showToast('Todos los campos son requeridos', 'error'); return; }
+  if (cur !== STATE.password) { showToast('Contraseña actual incorrecta', 'error'); return; }
+  if (np !== conf) { showToast('Las contraseñas no coinciden', 'error'); return; }
+  if (np.length < 8) { showToast('Minimo 8 caracteres', 'error'); return; }
+
+  fetch('/api/mail/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: STATE.user, password: np, name: '' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      STATE.password = np;
+      saveSession();
+      showToast('Contraseña actualizada', 'success');
+      $('accCurPass').value = '';
+      $('accNewPass').value = '';
+      $('accConfirmPass').value = '';
+    } else {
+      showToast(d.error || 'Error al actualizar', 'error');
+    }
+  })
+  .catch(function() { showToast('Error de conexión', 'error'); });
+}
+
 /* ── ADMIN ── */
 
+function _adminHeaders() {
+  var h = { 'Content-Type': 'application/json' };
+  var t = localStorage.getItem('zicore_sso_token');
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+
 function loadUsers() {
-  fetch('/api/mail/users')
+  fetch('/api/mail/users', { headers: _adminHeaders() })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       STATE.users = d.users || [];
@@ -1060,26 +1214,48 @@ function loadUsers() {
       renderResetSelect();
     })
     .catch(function() {
-      $('usersTable').innerHTML = '<div style="color:var(--text-dim);font-size:12px">Failed to load users</div>';
+      $('usersTable').innerHTML = '<div style="color:var(--text-dim);font-size:12px">Error al cargar usuarios</div>';
     });
+}
+
+function loadMailStats() {
+  fetch('/api/mail/stats', { headers: _adminHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      $('statTotal').textContent = d.total || '—';
+      $('statActive').textContent = d.active || '—';
+      $('statDomains').textContent = d.domains || '—';
+      $('statAdmins').textContent = d.admins || '—';
+    })
+    .catch(function() {});
 }
 
 function renderUsersTable() {
   var users = STATE.users;
   if (!users || users.length === 0) {
-    $('usersTable').innerHTML = '<div style="color:var(--text-dim);font-size:12px">No users found</div>';
+    $('usersTable').innerHTML = '<div style="color:var(--text-dim);font-size:12px">No hay usuarios</div>';
     return;
   }
-  var html = '<table class="user-table"><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+  var html = '<table class="user-table"><thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
   users.forEach(function(u) {
     var statusClass = u.active ? 'active' : 'inactive';
-    var statusText = u.active ? 'Active' : 'Inactive';
+    var statusText = u.active ? 'Activo' : 'Inactivo';
+    var roleHtml = '';
+    if (STATE.user !== u.email) {
+      roleHtml = '<select class="role-select" onchange="changeRole(\'' + escHtml(u.email) + '\',this.value)" style="font-size:11px;padding:2px 6px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px">' +
+        '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Usuario</option>' +
+        '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+        '</select>';
+    } else {
+      roleHtml = '<span style="font-size:11px;color:var(--cyan)">' + (u.role || 'user') + '</span>';
+    }
     html += '<tr>' +
       '<td style="font-family:var(--mono);font-size:11px">' + escHtml(u.email) + '</td>' +
-      '<td>' + escHtml(u.name || '—') + '</td>' +
-      '<td><span class="user-status ' + statusClass + '"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>' + statusText + '</span></td>' +
+      '<td style="font-size:11px">' + escHtml(u.name || '—') + '</td>' +
+      '<td>' + roleHtml + '</td>' +
+      '<td><span class="user-status ' + statusClass + '"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;margin-right:4px"></span>' + statusText + '</span></td>' +
       '<td><div class="user-actions">' +
-      '<button class="user-btn danger" onclick="adminDeleteUser(\'' + escHtml(u.email) + '\')">Delete</button>' +
+      (STATE.user !== u.email ? '<button class="user-btn danger" onclick="adminDeleteUser(\'' + escHtml(u.email) + '\')">Eliminar</button>' : '') +
       '</div></td></tr>';
   });
   html += '</tbody></table>';
@@ -1088,7 +1264,7 @@ function renderUsersTable() {
 
 function renderResetSelect() {
   var sel = $('resetUserSelect');
-  sel.innerHTML = '<option value="">Select user...</option>';
+  sel.innerHTML = '<option value="">Seleccionar...</option>';
   STATE.users.forEach(function(u) {
     if (u.active) {
       var opt = document.createElement('option');
@@ -1099,62 +1275,90 @@ function renderResetSelect() {
   });
 }
 
+function changeRole(email, role) {
+  fetch('/api/mail/users/role', {
+    method: 'POST',
+    headers: _adminHeaders(),
+    body: JSON.stringify({ email: email, role: role })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.status === 'ok') {
+      showToast('Rol actualizado: ' + email, 'success');
+      loadUsers();
+      loadMailStats();
+    } else {
+      showToast(d.error || 'Error', 'error');
+    }
+  })
+  .catch(function() { showToast('Error de conexión', 'error'); });
+}
+
 function adminCreateUser() {
   var name = $('adminNewName').value.trim();
   var email = $('adminNewEmail').value.trim();
   var pass = $('adminNewPass').value;
-
-  if (!email || !pass) { showToast('Email and password required', 'error'); return; }
-
+  if (!email || !pass) { showToast('Email y contraseña requeridos', 'error'); return; }
   fetch('/api/mail/users', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _adminHeaders(),
     body: JSON.stringify({ email: email, password: pass, name: name })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (d.status === 'ok') {
-      showToast('User created: ' + email, 'success');
+      showToast('Cuenta creada: ' + email, 'success');
       $('adminNewName').value = '';
       $('adminNewEmail').value = '';
       $('adminNewPass').value = '';
       loadUsers();
+      loadMailStats();
     } else {
-      showToast(d.error || 'Failed to create user', 'error');
+      showToast(d.error || 'Error al crear', 'error');
     }
   })
-  .catch(function() { showToast('Connection error', 'error'); });
+  .catch(function() { showToast('Error de conexión', 'error'); });
 }
 
 function adminDeleteUser(email) {
-  if (!confirm('Delete user ' + email + '?')) return;
-  fetch('/api/mail/users/' + encodeURIComponent(email), { method: 'DELETE' })
+  if (!confirm('Eliminar usuario ' + email + '?')) return;
+  fetch('/api/mail/users/' + encodeURIComponent(email), { method: 'DELETE', headers: _adminHeaders() })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      showToast('User deactivated: ' + email, 'success');
+      showToast('Usuario desactivado: ' + email, 'success');
       loadUsers();
+      loadMailStats();
     })
-    .catch(function() { showToast('Failed to delete user', 'error'); });
+    .catch(function() { showToast('Error al eliminar', 'error'); });
 }
 
 function adminResetPassword() {
   var email = $('resetUserSelect').value;
   var newPass = $('resetNewPass').value;
-  if (!email || !newPass) { showToast('Select user and enter new password', 'error'); return; }
+  if (!email || !newPass) { showToast('Selecciona usuario y contraseña', 'error'); return; }
   fetch('/api/mail/users', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _adminHeaders(),
     body: JSON.stringify({ email: email, password: newPass, name: '' })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    showToast('Password reset for ' + email, 'success');
+    showToast('Contraseña restablecida para ' + email, 'success');
     $('resetNewPass').value = '';
   })
-  .catch(function() { showToast('Failed to reset password', 'error'); });
+  .catch(function() { showToast('Error de conexión', 'error'); });
 }
 
-/* ── PASSWORD STRENGTH ── */
+function adminRestartService(service) {
+  $('serviceStatus').textContent = 'Reiniciando ' + service + '...';
+  fetch('/api/mail/restart/' + service, { method: 'POST', headers: _adminHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      $('serviceStatus').textContent = d.status || service + ' reiniciado';
+      showToast(service + ' reiniciado', 'success');
+    })
+    .catch(function() { $('serviceStatus').textContent = 'Error'; });
+}
 
 function checkRegStrength() {
   var pw = $('regPass').value;

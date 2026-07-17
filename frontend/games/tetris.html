@@ -39,6 +39,14 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 #hud .combo{color:#00e5ff}
 .controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
 .controls-help span{color:#00e5ff55}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -57,13 +65,22 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
   <div class="go-score" id="finalScore">SCORE: 0</div>
   <div class="go-level" id="finalLevel">LEVEL 1</div>
   <button class="btn" onclick="startGame()">RETRY</button>
+  <div class="social-share">
+    <div style="font-size:11px;color:#556;margin-bottom:6px">SHARE</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','Tetris',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','Tetris',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Tetris',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','Tetris',score)">Copy Link</button>
+    </div>
+  </div>
 </div>
-<div id="gameWrap">
   <div id="hud">
     <div class="score">SCORE: <span id="hudScore">0</span></div>
     <div class="level">LVL: <span id="hudLevel">1</span></div>
     <div class="lines">LINES: <span id="hudLines">0</span></div>
     <div class="combo">COMBO: <span id="hudCombo">0</span></div>
+    <div id="muteBtn" onclick="initSound();toggleSound()" style="cursor:pointer;padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px;font-size:14px">🔊</div>
   </div>
   <div id="boardWrap"><canvas id="board"></canvas></div>
   <div id="sidePanel">
@@ -74,6 +91,18 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 <div class="controls-help"><span>←→</span> MOVE <span>↑</span> ROTATE <span>SPACE</span> DROP <span>C</span> HOLD <span>P</span> PAUSE</div>
 
 <script>
+var soundMuted=false,audioCtx=null;
+function initSound(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+function tone(f,d,v,t,dl){if(soundMuted||!audioCtx)return;v=v||.06;t=t||'square';dl=dl||0;var n=audioCtx.currentTime+dl,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=t;o.frequency.setValueAtTime(f,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+d)}
+function toggleSound(){soundMuted=!soundMuted;var b=document.getElementById('muteBtn');if(b)b.textContent=soundMuted?'\u{1F507}':'\u{1F506}'}
+function sfxMove(){tone(200,.05,.04)}
+function sfxRotate(){tone(400,.03,.04)}
+function sfxLock(){tone(150,.1,.06,'triangle')}
+function sfxLineClear(){tone(400,.15,.06,'sine');tone(600,.15,.06,'sine',.1);tone(800,.15,.06,'sine',.2)}
+function sfxTetris(){tone(523,.12,.07,'sine');tone(659,.12,.07,'sine',.1);tone(784,.12,.07,'sine',.2);tone(1047,.2,.08,'sine',.3)}
+function sfxHardDrop(){tone(100,.08,.07,'sawtooth');tone(60,.15,.08,'triangle',.05)}
+function sfxGameOver(){tone(400,.2,.06,'sawtooth');tone(300,.2,.06,'sawtooth',.2);tone(200,.3,.07,'sawtooth',.4)}
+function sfxLevelUp(){tone(523,.12,.06,'sine');tone(659,.12,.06,'sine',.1);tone(784,.12,.06,'sine',.2);tone(1047,.15,.07,'sine',.3)}
 const COLS=10,ROWS=20,BLOCK=28;
 const COLORS={I:'#00e5ff',O:'#ffeb3b',T:'#7c4dff',S:'#00ff88',Z:'#ff1744',L:'#ff9100',J:'#448aff'};
 const GHOST_ALPHA=0.2;
@@ -144,6 +173,7 @@ function lockPiece(){
     board[y][x]=1;
     boardColors[y][x]=COLORS[curPiece.type];
   }
+  sfxLock();
   checkLines();
 }
 
@@ -154,11 +184,12 @@ function checkLines(){
   }
   if(clearingRows.length>0){
     combo++;
+    if(clearingRows.length>=4)sfxTetris();else sfxLineClear();
     const lineScore=[0,100,300,500,800][clearingRows.length]||800;
     score+=lineScore*level+combo*50;
     lines+=clearingRows.length;
     const newLevel=Math.floor(lines/10)+1;
-    if(newLevel>level)level=Math.min(newLevel,20);
+    if(newLevel>level){level=Math.min(newLevel,20);sfxLevelUp();}
     updateDropSpeed();
     setTimeout(()=>{clearingRows.forEach(r=>{board.splice(r,1);boardColors.splice(r,1);board.unshift(Array(COLS).fill(0));boardColors.unshift(Array(COLS).fill(null));});clearingRows=[];},200);
   }else{combo=0;}
@@ -181,6 +212,7 @@ function ghostY(){
 }
 
 function hardDrop(){
+  sfxHardDrop();
   const gy=ghostY();
   score+=(gy-curPiece.py)*2;
   curPiece.py=gy;
@@ -294,6 +326,7 @@ function gameLoop(time){
 }
 
 function endGame(){
+  sfxGameOver();
   gameOver=true;
   document.getElementById('finalScore').textContent='SCORE: '+score;
   document.getElementById('finalLevel').textContent='LEVEL '+level;
@@ -302,6 +335,7 @@ function endGame(){
 }
 
 function startGame(){
+  initSound();
   document.getElementById('startScreen').classList.remove('active');
   document.getElementById('gameOver').classList.remove('active');
   document.getElementById('gameWrap').classList.add('active');
@@ -329,22 +363,23 @@ document.addEventListener('keydown',e=>{
   if(paused||gameOver)return;
   switch(e.key){
     case'ArrowLeft':
-      if(fits(curPiece.shape,curPiece.px-1,curPiece.py))curPiece.px--;
+      if(fits(curPiece.shape,curPiece.px-1,curPiece.py)){curPiece.px--;sfxMove();}
       e.preventDefault();break;
     case'ArrowRight':
-      if(fits(curPiece.shape,curPiece.px+1,curPiece.py))curPiece.px++;
+      if(fits(curPiece.shape,curPiece.px+1,curPiece.py)){curPiece.px++;sfxMove();}
       e.preventDefault();break;
     case'ArrowDown':
-      if(fits(curPiece.shape,curPiece.px,curPiece.py+1)){curPiece.py++;score++;}
+      if(fits(curPiece.shape,curPiece.px,curPiece.py+1)){curPiece.py++;score++;sfxMove();}
       e.preventDefault();break;
     case'ArrowUp':
       let rotated=rotate(curPiece.shape,1);
-      let kick=0;
-      if(fits(rotated,curPiece.px,curPiece.py))curPiece.shape=rotated;
-      else if(fits(rotated,curPiece.px-1,curPiece.py)){curPiece.px--;curPiece.shape=rotated;}
-      else if(fits(rotated,curPiece.px+1,curPiece.py)){curPiece.px++;curPiece.shape=rotated;}
-      else if(fits(rotated,curPiece.px-2,curPiece.py)){curPiece.px-=2;curPiece.shape=rotated;}
-      else if(fits(rotated,curPiece.px+2,curPiece.py)){curPiece.px+=2;curPiece.shape=rotated;}
+      let kick=0;let didR=false;
+      if(fits(rotated,curPiece.px,curPiece.py)){curPiece.shape=rotated;didR=true;}
+      else if(fits(rotated,curPiece.px-1,curPiece.py)){curPiece.px--;curPiece.shape=rotated;didR=true;}
+      else if(fits(rotated,curPiece.px+1,curPiece.py)){curPiece.px++;curPiece.shape=rotated;didR=true;}
+      else if(fits(rotated,curPiece.px-2,curPiece.py)){curPiece.px-=2;curPiece.shape=rotated;didR=true;}
+      else if(fits(rotated,curPiece.px+2,curPiece.py)){curPiece.px+=2;curPiece.shape=rotated;didR=true;}
+      if(didR)sfxRotate();
       e.preventDefault();break;
     case' ':hardDrop();e.preventDefault();break;
     case'c':case'C':doHold();break;
@@ -375,6 +410,15 @@ document.addEventListener('touchend',e=>{
   }
   draw();
 });
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

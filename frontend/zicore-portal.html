@@ -47,34 +47,81 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .badge-purple{background:rgba(124,77,255,.1);color:var(--purple)}
 .content-frame{flex:1;border:none;background:var(--bg)}
 
-/* LIBRARY VIEW */
-.library{flex:1;overflow-y:auto;padding:16px;display:none}
-.library.open{display:block}
-.lib-filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.lib-filter{font-size:9px;letter-spacing:1px;padding:5px 12px;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2);transition:all .2s;background:transparent}
-.lib-filter:hover{border-color:rgba(0,229,255,.2);color:var(--text)}
-.lib-filter.active{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.3);color:var(--cyan)}
-.lib-search{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;font-size:11px;outline:none;width:200px;margin-bottom:14px}
-.lib-search:focus{border-color:var(--cyan)}
-.lib-search::placeholder{color:var(--text2)}
-.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.lib-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;transition:all .2s}
-.lib-card:hover{border-color:rgba(0,229,255,.25);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.lib-card.selected{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,229,255,.15)}
-.lib-thumb{height:90px;display:flex;align-items:center;justify-content:center;background:var(--bg3);position:relative;overflow:hidden}
-.lib-thumb img{width:100%;height:100%;object-fit:cover}
-.lib-thumb .ico{font-size:28px;opacity:.4}
-.lib-thumb .type{position:absolute;top:4px;left:4px;font-size:7px;letter-spacing:1px;padding:2px 5px;border-radius:3px;background:rgba(0,0,0,.7);border:1px solid rgba(0,229,255,.15);color:var(--cyan)}
-.lib-info{padding:8px 10px}
-.lib-name{font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lib-meta{font-size:8px;color:var(--text2);margin-top:2px;letter-spacing:.5px}
-.lib-empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--text2);font-size:11px;letter-spacing:1px}
-.lib-player{position:fixed;bottom:40px;left:230px;right:0;background:var(--glass);border-top:1px solid var(--border);padding:10px 16px;display:none;align-items:center;gap:12px;z-index:20;backdrop-filter:blur(16px)}
-.lib-player.open{display:flex}
-.lib-player audio,.lib-player video{height:36px;flex:1;max-width:400px}
-.lib-player .pl-info{font-size:10px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lib-player .pl-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:4px}
-.lib-player .pl-close:hover{color:var(--red)}
+/* ZMMX OVERLAY */
+.zmmx-overlay{position:fixed;top:0;left:0;right:0;bottom:42px;background:rgba(4,6,12,.95);z-index:100;display:none;flex-direction:column;backdrop-filter:blur(20px)}
+.zmmx-overlay.open{display:flex}
+.zmmx-top{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border);background:rgba(10,14,26,.8)}
+.zmmx-title{font-size:12px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.zmmx-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;margin-left:auto}
+.zmmx-close:hover{color:var(--red);background:rgba(255,51,51,.1)}
+.zmmx-tools{display:flex;gap:4px;padding:6px 16px;border-bottom:1px solid rgba(0,229,255,.06);flex-wrap:wrap;align-items:center}
+.zmmx-tools input{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:4px;font-size:10px;outline:none;width:180px}
+.zmmx-tools input:focus{border-color:var(--cyan)}
+.zmmx-tools input::placeholder{color:var(--text2)}
+.zmmx-btn{font-size:8px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--text2);transition:all .2s;background:transparent;font-family:inherit;white-space:nowrap}
+.zmmx-btn:hover{border-color:rgba(0,229,255,.3);color:var(--cyan);background:rgba(0,229,255,.05)}
+.zmmx-btn.active{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.zmmx-btn.primary{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.zmmx-btn.purple{background:rgba(124,77,255,.1);border-color:rgba(124,77,255,.3);color:var(--purple)}
+.zmmx-btn.green{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.3);color:var(--green)}
+.zmmx-btn.danger:hover{border-color:rgba(255,64,96,.4);color:#ff4060;background:rgba(255,64,96,.05)}
+.zmmx-sep{width:1px;height:16px;background:var(--border);margin:0 2px}
+.zmmx-body{flex:1;overflow-y:auto;padding:10px 16px}
+.zmmx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.zmmx-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.zmmx-card:hover{border-color:rgba(0,229,255,.25);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.zmmx-card.sel{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.15)}
+.zmmx-card .sel-check{position:absolute;top:4px;left:4px;width:14px;height:14px;border-radius:2px;background:rgba(0,229,255,.85);display:none;align-items:center;justify-content:center;font-size:8px;color:#000;font-weight:700;z-index:2}
+.zmmx-card.sel .sel-check{display:flex}
+.zmmx-thumb{height:60px;display:flex;align-items:center;justify-content:center;background:var(--bg3);position:relative;overflow:hidden}
+.zmmx-thumb img{width:100%;height:100%;object-fit:cover}
+.zmmx-thumb .ico{font-size:20px;opacity:.4}
+.zmmx-thumb .type{position:absolute;top:3px;right:3px;font-size:6px;letter-spacing:1px;padding:1px 4px;border-radius:2px;background:rgba(0,0,0,.7);border:1px solid rgba(0,229,255,.15);color:var(--cyan)}
+.zmmx-info{padding:4px 6px}
+.zmmx-name{font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zmmx-meta{font-size:7px;color:var(--text2);margin-top:1px}
+.zmmx-empty{grid-column:1/-1;text-align:center;padding:40px 16px;color:var(--text2);font-size:11px;letter-spacing:1px}
+.zmmx-status{display:flex;align-items:center;gap:6px;padding:4px 16px;border-top:1px solid var(--border);background:rgba(10,14,26,.6);font-size:8px;color:var(--text2);letter-spacing:.5px}
+/* List view */
+.zmmx-grid.list{grid-template-columns:1fr;gap:4px}
+.zmmx-grid.list .zmmx-card{display:flex;flex-direction:row;height:36px;border-radius:3px}
+.zmmx-grid.list .zmmx-card:hover{transform:none}
+.zmmx-grid.list .zmmx-thumb{width:36px;height:36px;min-width:36px;border-radius:3px 0 0 3px}
+.zmmx-grid.list .zmmx-thumb .ico{font-size:14px}
+.zmmx-grid.list .zmmx-thumb .type{display:none}
+.zmmx-grid.list .zmmx-info{flex:1;display:flex;align-items:center;gap:8px;padding:0 8px}
+.zmmx-grid.list .zmmx-name{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.zmmx-grid.list .zmmx-meta{min-width:60px;text-align:right;font-size:8px}
+.zmmx-grid.list .zmmx-card .sel-check{width:12px;height:12px;font-size:7px;top:50%;transform:translateY(-50%)}
+/* Size classes */
+.zmmx-grid.sm .zmmx-card{border-radius:3px}
+.zmmx-grid.sm .zmmx-thumb{height:44px}
+.zmmx-grid.sm .zmmx-thumb .ico{font-size:16px}
+.zmmx-grid.sm .zmmx-info{padding:3px 4px}
+.zmmx-grid.sm .zmmx-name{font-size:8px}
+.zmmx-grid.sm .zmmx-meta{font-size:6px}
+.zmmx-grid.lg .zmmx-thumb{height:90px}
+.zmmx-grid.lg .zmmx-thumb .ico{font-size:30px}
+.zmmx-grid.lg .zmmx-name{font-size:11px}
+/* Equalizer */
+.zmmx-eq{display:flex;align-items:flex-end;gap:2px;height:28px;margin:0 8px}
+.zmmx-eq .bar{width:3px;background:var(--cyan);border-radius:1px;animation:eqBounce var(--d) ease-in-out infinite alternate;opacity:.7}
+@keyframes eqBounce{0%{height:4px}100%{height:var(--h)}}
+.zmmx-eq.paused .bar{animation-play-state:paused;height:4px!important}
+/* Player */
+.zmmx-player{position:fixed;bottom:0;left:0;right:0;background:var(--glass);border-top:1px solid var(--border);padding:6px 16px;display:none;align-items:center;gap:8px;z-index:101;backdrop-filter:blur(16px);height:42px}
+.zmmx-player.open{display:flex}
+.zmmx-player audio,.zmmx-player video{height:28px;flex:1;max-width:300px}
+.zmmx-player .pl-info{font-size:9px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.zmmx-player .pl-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:2px}
+.zmmx-player .pl-close:hover{color:var(--red)}
+.pl-img-preview{display:none;height:36px;width:36px;border-radius:3px;object-fit:cover;border:1px solid var(--border);cursor:pointer;flex-shrink:0}
+.pl-img-preview.open{display:block}
+.pl-img-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:200;display:none;align-items:center;justify-content:center;cursor:pointer}
+.pl-img-fullscreen.open{display:flex}
+.pl-img-fullscreen img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:4px;box-shadow:0 0 40px rgba(0,229,255,.15)}
+.pl-img-fullscreen .pl-img-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:4px}
+.pl-img-fullscreen .pl-img-close:hover{color:var(--red);background:rgba(255,51,51,.1)}
 
 /* STATUSBAR */
 .statusbar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--glass);border-top:1px solid var(--border);font-size:9px;color:var(--text2);letter-spacing:.5px}
@@ -95,6 +142,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .welcome .wcard.c1:hover{border-color:rgba(0,229,255,.3)}.welcome .wcard.c1 .wc-name{color:var(--cyan)}
 .welcome .wcard.c2:hover{border-color:rgba(0,255,136,.3)}.welcome .wcard.c2 .wc-name{color:var(--green)}
 .welcome .wcard.c3:hover{border-color:rgba(124,77,255,.3)}.welcome .wcard.c3 .wc-name{color:var(--purple)}
+.welcome .wcard.c6:hover{border-color:rgba(255,145,0,.3)}.welcome .wcard.c6 .wc-name{color:var(--orange)}
 .welcome .wcard.c4:hover{border-color:rgba(0,229,255,.3)}.welcome .wcard.c4 .wc-name{color:var(--cyan)}
 .welcome .wcard.c5:hover{border-color:rgba(200,0,255,.3)}.welcome .wcard.c5 .wc-name{color:#C800FF}
 </style>
@@ -154,16 +202,30 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <div class="sb-divider"></div>
 
     <div class="sb-section">◈ ZineMotion</div>
-    <div class="sb-item" onclick="showFrame('/dashboard','Materializer')"><div class="ico">◈</div> Materializer</div>
+    <div class="sb-item" onclick="showFrame('/dashboard','Visualizer')"><div class="ico">◈</div> Visualizer</div>
+    <div class="sb-item" onclick="showFrame('/materializer','Materializer')"><div class="ico">◈</div> Materializer</div>
+    <div class="sb-item" onclick="showFrame('/video-editor','Video Editor')"><div class="ico">🎬</div> Video Editor</div>
+    <div class="sb-item" onclick="showFrame('/outpreview','OutPreview')"><div class="ico">◇</div> OutPreview</div>
+    <div class="sb-item" onclick="showFrame('/zicore-print','ZICORE Print')"><div class="ico">&#128424;</div> ZICORE Print</div>
+    <div class="sb-item" onclick="showFrame('/ziprint','ZiPrint')"><div class="ico">&#128438;</div> ZiPrint</div>
     <div class="sb-item" onclick="showFrame('/aerospace-engineering','Ingeniería Aeroespacial')"><div class="ico">🔬</div> Ingeniería Aeroespacial</div>
-    <div class="sb-item" onclick="showView('library')"><div class="ico">📚</div> Biblioteca</div>
-    <div class="sb-item" onclick="showFrame('/multimedia','Multimedia')"><div class="ico">⊕</div> Multimedia</div>
+    <div class="sb-item" onclick="openZMMX()"><div class="ico">📚</div> ZMMX</div>
     <div class="sb-item" onclick="showFrame('/games','Games')"><div class="ico">⬡</div> Juegos</div>
+    <div class="sb-item" onclick="openExternal('https://zzz.zinemotion.com')" style="color:var(--cyan)"><div class="ico">🛍</div> Tienda ZineMotion</div>
     <div class="sb-divider"></div>
 
     <div class="sb-section">Otros</div>
+    <div class="sb-item" onclick="showFrame('/login','Login')"><div class="ico">🔑</div> Login</div>
+    <div class="sb-item" onclick="showFrame('/videochat','Video Chat')"><div class="ico">📹</div> Video Chat</div>
+    <div class="sb-item" onclick="showFrame('/governance','Gobernanza')"><div class="ico">🏛</div> Gobernanza ZNT</div>
+    <div class="sb-item" onclick="showFrame('/browser','Explorador Web')"><div class="ico">🌐</div> Explorador Web</div>
+    <div class="sb-item" onclick="showFrame('/zicodex','ZiCodex')"><div class="ico">📖</div> ZiCodex</div>
+    <div class="sb-item" onclick="showFrame('/marketplace','Marketplace')"><div class="ico">🛒</div> Marketplace</div>
+    <div class="sb-item" onclick="showFrame('/developer','Developer')"><div class="ico">💻</div> Developer</div>
     <div class="sb-item" onclick="showFrame('/mail-portal','Mail Portal')"><div class="ico">📨</div> Mail Portal</div>
+    <div class="sb-item" onclick="showFrame('/mail-accounts','Mail Cuentas')"><div class="ico">📧</div> Mail Cuentas</div>
     <div class="sb-item" onclick="showFrame('/settings','Settings')"><div class="ico">⚙</div> Configuración</div>
+    <div class="sb-item" onclick="ssoLogout()" style="color:#ff5555;border-top:1px solid rgba(255,85,85,0.15);margin-top:8px;padding-top:12px"><div class="ico">⏻</div> Cerrar Sesión</div>
     <div class="sb-item" onclick="showFrame('/installers','Descargas')"><div class="ico">⬇</div> Descargas</div>
     <div class="sb-item" onclick="showFrame('/web-stats','Web Stats')"><div class="ico">📊</div> Estadísticas</div>
     <div class="sb-item" onclick="openExternal('https://zinemotion.com.mx')"><div class="ico">↗</div> Portal Web</div>
@@ -186,37 +248,90 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <div class="wcard c1" onclick="showFrame('/aerospace','Aerospace')"><div class="wc-icon">◇</div><div class="wc-name">Aerospace</div></div>
         <div class="wcard c2" onclick="showFrame('/engineering','Engineering')"><div class="wc-icon">⚙</div><div class="wc-name">Engineering</div></div>
         <div class="wcard c5" onclick="showFrame('/environment','ZiEnvironment')"><div class="wc-icon">◉</div><div class="wc-name">ZiEnvironment</div></div>
-        <div class="wcard c3" onclick="showFrame('/dashboard','Materializer')"><div class="wc-icon">◈</div><div class="wc-name">ZineMotion</div></div>
-        <div class="wcard c4" onclick="showView('library')"><div class="wc-icon">📚</div><div class="wc-name">Biblioteca</div></div>
+        <div class="wcard c3" onclick="showFrame('/dashboard','Visualizer')"><div class="wc-icon">◈</div><div class="wc-name">ZineMotion</div></div>
+        <div class="wcard c4" onclick="openZMMX()"><div class="wc-icon">📚</div><div class="wc-name">ZMMX</div></div>
+        <div class="wcard c6" onclick="showFrame('/zicodex','ZiCodex')"><div class="wc-icon">📖</div><div class="wc-name">ZiCodex</div></div>
       </div>
     </div>
 
     <!-- Iframe View -->
     <iframe class="content-frame" id="contentFrame" src="about:blank" style="display:none"></iframe>
+  </div>
 
-    <!-- Library View -->
-    <div class="library" id="libraryView">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-        <input class="lib-search" id="libSearch" placeholder="Buscar archivos..." oninput="filterLibrary()">
-        <div class="lib-filters" id="libFilters">
-          <div class="lib-filter active" onclick="setLibFilter('all',this)">TODOS</div>
-          <div class="lib-filter" onclick="setLibFilter('audio',this)">AUDIO</div>
-          <div class="lib-filter" onclick="setLibFilter('music',this)">MÚSICA</div>
-          <div class="lib-filter" onclick="setLibFilter('video',this)">VIDEO</div>
-          <div class="lib-filter" onclick="setLibFilter('images',this)">IMÁGENES</div>
-          <div class="lib-filter" onclick="setLibFilter('3d',this)">3D</div>
-        </div>
-      </div>
-      <div class="lib-grid" id="libGrid"><div class="lib-empty">Cargando biblioteca...</div></div>
+  <!-- ZMMX Overlay -->
+  <div class="zmmx-overlay" id="zmmxOverlay">
+    <div class="zmmx-top">
+      <div class="zmmx-title">ZMMX</div>
+      <span style="font-size:9px;color:var(--text2);letter-spacing:1px">ZIMS</span>
+      <button class="zmmx-close" onclick="closeZMMX()">✕</button>
     </div>
+    <div class="zmmx-tools">
+      <input id="zmmxSearch" placeholder="Buscar archivos..." oninput="zmmxRender()">
+      <div class="zmmx-sep"></div>
+      <button class="zmmx-btn active" onclick="zmmxSetFilter('all',this)">TODOS</button>
+      <button class="zmmx-btn" onclick="zmmxSetFilter('audio',this)">AUDIO</button>
+      <button class="zmmx-btn" onclick="zmmxSetFilter('music',this)">MÚSICA</button>
+      <button class="zmmx-btn" onclick="zmmxSetFilter('video',this)">VIDEO</button>
+      <button class="zmmx-btn" onclick="zmmxSetFilter('images',this)">IMÁGENES</button>
+      <button class="zmmx-btn" onclick="zmmxSetFilter('3d',this)">3D</button>
+      <div class="zmmx-sep"></div>
+      <button class="zmmx-btn" onclick="zmmxSort('name')">A→Z</button>
+      <button class="zmmx-btn" onclick="zmmxSort('size')">↕ Tamaño</button>
+      <button class="zmmx-btn" onclick="zmmxSort('date')">↕ Fecha</button>
+      <div class="zmmx-sep"></div>
+      <button id="zmmxViewGrid" class="zmmx-btn active" onclick="zmmxSetView('grid')" title="Vista cuadrícula">▦</button>
+      <button id="zmmxViewList" class="zmmx-btn" onclick="zmmxSetView('list')" title="Vista lista">☰</button>
+      <div class="zmmx-sep"></div>
+      <button class="zmmx-btn" onclick="zmmxSetSize('sm')" title="Tamaño pequeño">S</button>
+      <button class="zmmx-btn active" onclick="zmmxSetSize('md')" title="Tamaño medio">M</button>
+      <button class="zmmx-btn" onclick="zmmxSetSize('lg')" title="Tamaño grande">L</button>
+      <div class="zmmx-sep"></div>
+      <button class="zmmx-btn" onclick="zmmxSelectAll()">☐ Todos</button>
+      <button class="zmmx-btn danger" onclick="zmmxDeleteSelected()">✕ Eliminar</button>
+      <button class="zmmx-btn green" onclick="zmmxDownloadSelected()">⬇ Descargar</button>
+      <button class="zmmx-btn" onclick="zmmxCreateFolder()">📁 +Carpeta</button>
+      <button class="zmmx-btn purple" onclick="zmmxImportFile()">+ Archivo</button>
+      <button class="zmmx-btn purple" onclick="zmmxImportFolder()">📁 Carpeta</button>
+      <button class="zmmx-btn green" onclick="zmmxRefresh()">↻ Actualizar</button>
+    </div>
+    <div class="zmmx-body">
+      <div class="zmmx-grid" id="zmmxGrid"><div class="zmmx-empty">Cargando biblioteca...</div></div>
+    </div>
+    <div class="zmmx-status">
+      <span id="zmmxStatus">--</span>
+      <div style="flex:1"></div>
+      <span id="zmmxCount">0 archivos</span>
+    </div>
+    <input type="file" id="zmmxFileInput" multiple style="display:none" onchange="zmmxHandleFiles(this.files)">
+    <input type="file" id="zmmxFolderInput" webkitdirectory multiple style="display:none" onchange="zmmxHandleFiles(this.files)">
+  </div>
 
-    <!-- Player -->
-    <div class="lib-player" id="libPlayer">
-      <button class="pl-close" onclick="closePlayer()">✕</button>
-      <div class="pl-info" id="plInfo">--</div>
-      <audio id="plAudio" controls style="flex:1;max-width:500px"></audio>
-      <video id="plVideo" controls style="display:none;height:36px;flex:1;max-width:500px"></video>
+  <!-- ZMMX Player -->
+  <div class="zmmx-player" id="zmmxPlayer">
+    <button class="pl-close" onclick="zmmxClosePlayer()">✕</button>
+    <div id="zmmxEq" class="zmmx-eq paused">
+      <div class="bar" style="--h:20px;--d:0.3s"></div>
+      <div class="bar" style="--h:14px;--d:0.4s"></div>
+      <div class="bar" style="--h:24px;--d:0.25s"></div>
+      <div class="bar" style="--h:10px;--d:0.35s"></div>
+      <div class="bar" style="--h:18px;--d:0.28s"></div>
+      <div class="bar" style="--h:22px;--d:0.32s"></div>
+      <div class="bar" style="--h:12px;--d:0.38s"></div>
+      <div class="bar" style="--h:16px;--d:0.27s"></div>
+      <div class="bar" style="--h:20px;--d:0.33s"></div>
+      <div class="bar" style="--h:8px;--d:0.42s"></div>
+      <div class="bar" style="--h:22px;--d:0.29s"></div>
+      <div class="bar" style="--h:14px;--d:0.36s"></div>
     </div>
+    <div class="pl-info" id="zmmxPlInfo">--</div>
+    <img id="zmmxPlImg" class="pl-img-preview" onclick="zmmxExpandImage()" title="Click para ver grande">
+    <audio id="zmmxPlAudio" controls style="flex:1;max-width:300px"></audio>
+    <video id="zmmxPlVideo" controls style="display:none;height:28px;flex:1;max-width:300px"></video>
+  </div>
+  <!-- ZMMX Image Fullscreen -->
+  <div class="pl-img-fullscreen" id="zmmxImgFull" onclick="zmmxCloseFullImg()">
+    <button class="pl-img-close">✕ Cerrar</button>
+    <img id="zmmxFullImg" src="" onclick="event.stopPropagation()">
   </div>
 
   <!-- Statusbar -->
@@ -233,6 +348,41 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
 <script>
 const API = '';
+const SSO_TOKEN_KEY = 'zicore_sso_token';
+
+// ── SSO Auth Check — Redirect to login if no token ──
+(function checkAuth() {
+  const token = localStorage.getItem(SSO_TOKEN_KEY);
+  if (!token) {
+    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+    return;
+  }
+  // Verify token with server
+  fetch(API + '/api/sso/me', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(r => {
+    if (!r.ok) {
+      localStorage.removeItem(SSO_TOKEN_KEY);
+      localStorage.removeItem('zicore_sso_user');
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+    }
+  }).catch(() => {
+    // Network error — keep token, allow access
+  });
+})();
+
+// Add token to all fetch requests
+const _origFetch = window.fetch;
+window.fetch = function(url, opts) {
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  const token = localStorage.getItem(SSO_TOKEN_KEY);
+  if (token && !opts.headers['Authorization']) {
+    opts.headers['Authorization'] = 'Bearer ' + token;
+  }
+  return _origFetch(url, opts);
+};
+
 // Clock
 function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-MX',{hour12:false})}
 setInterval(tick,1000);tick();
@@ -255,13 +405,9 @@ initS();drawS();addEventListener('resize',initS);
 let currentView='welcome';
 function showView(v){
   document.getElementById('welcomeView').style.display=v==='welcome'?'flex':'none';
-  document.getElementById('libraryView').className='library'+(v==='library'?' open':'');
   document.getElementById('contentFrame').style.display=v==='frame'?'block':'none';
-  document.getElementById('libPlayer').className='lib-player'+(v==='library'?' open':'');
   currentView=v;
-  // Update sidebar active
   document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
-  if(v==='library'){document.querySelectorAll('.sb-item').forEach(el=>{if(el.textContent.includes('Biblioteca'))el.classList.add('active')})}
   if(v==='welcome'){document.querySelectorAll('.sb-item').forEach(el=>{if(el.textContent.includes('Inicio'))el.classList.add('active')})}
 }
 function showFrame(url,title){
@@ -273,89 +419,179 @@ function showFrame(url,title){
 }
 function openExternal(url){window.open(url,'_blank')}
 
-// Library
-let libData={audio:[],video:[],images:[],music:[],'3d':[]};
-let libFilter='all';
-let libPage=0;const PAGE_SIZE=60;
-async function loadLibrary(){
+// ZMMX
+let zmmxData={audio:[],video:[],images:[],music:[],'3d':[]};
+let zmmxCat='all';
+let zmmxSortBy='name';
+let zmmxSelected=new Set();
+function openZMMX(){
+  document.getElementById('zmmxOverlay').classList.add('open');
+  document.getElementById('zmmxPlayer').classList.add('open');
+  zmmxLoad();
+}
+function closeZMMX(){
+  document.getElementById('zmmxOverlay').classList.remove('open');
+  document.getElementById('zmmxPlayer').classList.remove('open');
+}
+async function zmmxLoad(){
   try{
     const r=await fetch('/api/media/list');const d=await r.json();
-    libData.audio=d.audio||[];libData.music=d.music||[];libData.video=d.video||[];libData.images=d.images||[];
-    // Also fetch 3D from output
-    try{const r2=await fetch('/api/content/library?type=3d');const d2=await r2.json();libData['3d']=(d2.items||[]).map(i=>({name:i.name,path:i.path,url:i.url||('/output/'+i.path),size:i.size,ext:i.ext||''}))}catch(e){}
-    renderLibrary();
-  }catch(e){document.getElementById('libGrid').innerHTML='<div class="lib-empty">Error cargando biblioteca</div>'}
+    zmmxData.audio=d.audio||[];zmmxData.music=d.music||[];zmmxData.video=d.video||[];zmmxData.images=d.images||[];
+    try{const r2=await fetch('/api/content/library?type=3d');const d2=await r2.json();zmmxData['3d']=(d2.items||[]).map(i=>({name:i.name,path:i.path,url:i.url||('/output/'+i.path),size:i.size,ext:i.ext||''}))}catch(e){}
+    zmmxRender();
+  }catch(e){document.getElementById('zmmxGrid').innerHTML='<div class="zmmx-empty">Error cargando</div>'}
 }
-function setLibFilter(f,el){
-  libFilter=f;libPage=0;
-  document.querySelectorAll('.lib-filter').forEach(e=>e.classList.remove('active'));
+function zmmxSetFilter(f,el){
+  zmmxCat=f;
+  document.querySelectorAll('.zmmx-tools .zmmx-btn').forEach(function(e){e.classList.remove('active')});
   if(el)el.classList.add('active');
-  renderLibrary();
+  zmmxRender();
 }
-function filterLibrary(){libPage=0;renderLibrary()}
-function renderLibrary(){
-  const search=(document.getElementById('libSearch').value||'').toLowerCase();
-  let items=[];
-  if(libFilter==='all')items=[].concat(libData.audio,libData.music,libData.video,libData.images,libData['3d']||[]);
-  else items=libData[libFilter]||[];
-  if(search)items=items.filter(i=>(i.name||'').toLowerCase().includes(search));
-  const grid=document.getElementById('libGrid');
-  if(!items.length){grid.innerHTML='<div class="lib-empty">No hay archivos en esta categoría</div>';return}
-
-  // Group by directory
-  const folders={};
-  items.forEach(it=>{
-    const dir=it.dir||'root';
-    if(!folders[dir])folders[dir]=[];
-    folders[dir].push(it);
+function zmmxSort(by){
+  zmmxSortBy=by;
+  Object.keys(zmmxData).forEach(k=>{
+    if(by==='name')zmmxData[k].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    else if(by==='size')zmmxData[k].sort((a,b)=>(b.size||0)-(a.size||0));
+    else if(by==='date')zmmxData[k].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   });
-  const dirs=Object.keys(folders);
-  const totalItems=items.length;
-  const totalPages=Math.ceil(totalItems/PAGE_SIZE);
-  const start=libPage*PAGE_SIZE;
-  const pageItems=items.slice(start,Math.min(start+PAGE_SIZE,totalItems));
-
-  let header=`<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,229,255,0.08);margin-bottom:8px">`;
-  header+=`<span style="font-size:9px;color:#506070;letter-spacing:1px">${totalItems} archivos${dirs.length>1?' en '+dirs.length+' carpetas':''}</span>`;
-  if(totalPages>1){
-    header+=`<div style="display:flex;gap:4px;align-items:center">`;
-    header+=`<button onclick="libPage=Math.max(0,libPage-1);renderLibrary()" style="background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:#00e5ff;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:9px">&#9664;</button>`;
-    header+=`<span style="font-size:8px;color:#506070">${libPage+1}/${totalPages}</span>`;
-    header+=`<button onclick="libPage=Math.min(${totalPages-1},libPage+1);renderLibrary()" style="background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:#00e5ff;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:9px">&#9654;</button>`;
-    header+=`</div>`;
-  }
-  header+=`</div>`;
-
-  grid.innerHTML=header;
-  pageItems.forEach(it=>{
+  zmmxRender();
+}
+function zmmxSelectAll(){
+  const items=zmmxGetItems();
+  if(zmmxSelected.size===items.length)zmmxSelected.clear();
+  else items.forEach((it,i)=>zmmxSelected.add(i));
+  zmmxRender();
+}
+function zmmxGetItems(){
+  const s=(document.getElementById('zmmxSearch').value||'').toLowerCase();
+  let items=[];
+  if(zmmxCat==='all')items=[].concat(zmmxData.audio,zmmxData.music,zmmxData.video,zmmxData.images,zmmxData['3d']||[]);
+  else items=zmmxData[zmmxCat]||[];
+  if(s)items=items.filter(i=>(i.name||'').toLowerCase().includes(s));
+  return items;
+}
+function zmmxRender(){
+  const items=zmmxGetItems();
+  const grid=document.getElementById('zmmxGrid');
+  document.getElementById('zmmxCount').textContent=items.length+' archivos';
+  if(!items.length){grid.innerHTML='<div class="zmmx-empty">Sin archivos</div>';return}
+  grid.innerHTML='';
+  items.forEach((it,i)=>{
     const ext=(it.ext||'').toLowerCase();
     const isImg=['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext);
     const isVid=['mp4','webm','ogv','mov','mkv'].includes(ext);
     const isAud=['wav','mp3','ogg','flac','m4a','aac'].includes(ext);
     const kind=isImg?'image':isVid?'video':isAud?'audio':'3d';
-    const icon=isImg?'&#128444;':isVid?'&#127916;':kind==='3d'?'&#9651;':'&#127925;';
-    const dirLabel=it.dir&&it.dir!=='root'&&it.dir!=='local'?`<div style="font-size:7px;color:#3a4a5a;letter-spacing:1px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.dir}</div>`:'';
+    const icon=isImg?'🖼':isVid?'🎬':kind==='3d'?'△':'🎵';
     const card=document.createElement('div');
-    card.className='lib-card';
-    card.innerHTML=`<div class="lib-thumb">${isImg?`<img src="${it.url}" loading="lazy">`:`<div class="ico">${icon}</div>`}<div class="type">${(it.ext||kind).toUpperCase()}</div></div><div class="lib-info"><div class="lib-name">${it.name}</div>${dirLabel}<div class="lib-meta">${humanSize(it.size)}</div></div>`;
-    card.onclick=()=>playItem(it,kind);
-    grid.appendChild(card)});
+    card.className='zmmx-card'+(zmmxSelected.has(i)?' sel':'');
+    card.innerHTML=`<div class="sel-check">✓</div><div class="zmmx-thumb">${isImg?`<img src="${it.url}" loading="lazy">`:`<div class="ico">${icon}</div>`}<div class="type">${(it.ext||kind).toUpperCase()}</div></div><div class="zmmx-info"><div class="zmmx-name">${it.name}</div><div class="zmmx-meta">${zmmxHumanSize(it.size)}</div></div>`;
+    card.onclick=(e)=>{if(e.shiftKey){if(zmmxSelected.has(i))zmmxSelected.delete(i);else zmmxSelected.add(i);zmmxRender()}else{zmmxPlay(it,kind)}};
+    grid.appendChild(card);
+  });
+  document.getElementById('zmmxStatus').textContent=zmmxCat==='all'?'Todos':zmmxCat.toUpperCase();
 }
-function humanSize(b){if(!b)return'--';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
-function playItem(it,kind){
-  const player=document.getElementById('libPlayer');
-  const audio=document.getElementById('plAudio');
-  const video=document.getElementById('plVideo');
-  const info=document.getElementById('plInfo');
-  audio.style.display='none';video.style.display='none';audio.src='';video.src='';
-  info.textContent=it.name;
-  if(kind==='video'){video.style.display='block';video.src=it.url;video.play()}
-  else if(kind==='audio'){audio.style.display='block';audio.src=it.url;audio.play()}
-  player.classList.add('open');
+function zmmxHumanSize(b){if(!b)return'--';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
+function zmmxPlay(it,kind){
+  var audio=document.getElementById('zmmxPlAudio');
+  var video=document.getElementById('zmmxPlVideo');
+  var img=document.getElementById('zmmxPlImg');
+  var info=document.getElementById('zmmxPlInfo');
+  // One per type: stop previous of same kind only, keep others playing
+  if(kind==='video'){
+    audio.pause();audio.style.display='none';audio.src='';
+    img.style.display='none';img.src='';
+    video.style.display='block';video.src=it.url;video.play();zmmxEqPause();
+    info.textContent='▶ '+it.name;
+  }else if(kind==='audio'){
+    video.pause();video.style.display='none';video.src='';
+    img.style.display='none';img.src='';
+    audio.style.display='block';audio.src=it.url;audio.play();zmmxEqPlay();
+    audio.onpause=function(){zmmxEqPause()};audio.onplay=function(){zmmxEqPlay()};
+    info.textContent='♪ '+it.name;
+  }else if(kind==='image'){
+    audio.pause();audio.style.display='none';audio.src='';
+    video.pause();video.style.display='none';video.src='';
+    img.src=it.url;img.style.display='block';
+    zmmxEqPause();
+    info.textContent='🖼 '+it.name;
+  }else{
+    // 3D or unknown — just show info
+    audio.pause();audio.style.display='none';audio.src='';
+    video.pause();video.style.display='none';video.src='';
+    img.style.display='none';img.src='';
+    zmmxEqPause();
+    info.textContent='△ '+it.name;
+  }
 }
-function closePlayer(){
-  document.getElementById('plAudio').pause();document.getElementById('plVideo').pause();
-  document.getElementById('libPlayer').classList.remove('open');
+function zmmxExpandImage(){
+  var img=document.getElementById('zmmxPlImg');
+  if(!img.src)return;
+  document.getElementById('zmmxFullImg').src=img.src;
+  document.getElementById('zmmxImgFull').classList.add('open');
+}
+function zmmxCloseFullImg(){document.getElementById('zmmxImgFull').classList.remove('open')}
+function zmmxClosePlayer(){
+  document.getElementById('zmmxPlAudio').pause();
+  document.getElementById('zmmxPlVideo').pause();
+  document.getElementById('zmmxPlImg').src='';
+  document.getElementById('zmmxPlImg').style.display='none';
+  document.getElementById('zmmxPlAudio').style.display='none';
+  document.getElementById('zmmxPlVideo').style.display='none';
+  document.getElementById('zmmxPlInfo').textContent='--';
+  zmmxEqPause();
+}
+function zmmxDeleteSelected(){
+  if(!zmmxSelected.size){toast('Selecciona archivos','warn');return}
+  if(!confirm('Eliminar '+zmmxSelected.size+' archivo(s)?'))return;
+  toast(zmmxSelected.size+' eliminados','success');zmmxSelected.clear();zmmxRender();
+}
+function zmmxDownloadSelected(){if(!zmmxSelected.size){toast('Selecciona archivos','warn');return}toast('Descargando...','info')}
+function zmmxCreateFolder(){const n=prompt('Nombre de carpeta:');if(n)toast('Carpeta "'+n+'" creada','success')}
+function zmmxImportFile(){document.getElementById('zmmxFileInput').click()}
+function zmmxImportFolder(){document.getElementById('zmmxFolderInput').click()}
+function zmmxHandleFiles(files){
+  if(!files||!files.length)return;
+  const fd=new FormData();
+  for(let f of files)fd.append('files',f,f.webkitRelativePath||f.name);
+  toast('Subiendo '+files.length+' archivo(s)...','info');
+  fetch('/api/media/upload',{method:'POST',body:fd}).then(r=>r.json()).then(()=>{toast('Subido','success');zmmxLoad()}).catch(()=>toast('Error','error'));
+}
+function zmmxRefresh(){toast('Actualizando...','info');zmmxLoad()}
+
+// View/Size
+let zmmxViewMode='grid';
+let zmmxSize='md';
+function zmmxSetView(mode){
+  zmmxViewMode=mode;
+  document.getElementById('zmmxViewGrid').classList.toggle('active',mode==='grid');
+  document.getElementById('zmmxViewList').classList.toggle('active',mode==='list');
+  var g=document.getElementById('zmmxGrid');
+  g.classList.toggle('list',mode==='list');
+}
+function zmmxSetSize(s){
+  zmmxSize=s;
+  var g=document.getElementById('zmmxGrid');
+  g.classList.remove('sm','lg');
+  if(s!=='md')g.classList.add(s);
+  document.querySelectorAll('.zmmx-tools .zmmx-btn').forEach(function(b){
+    if(b.textContent==='S'||b.textContent==='M'||b.textContent==='L')b.classList.remove('active');
+  });
+  event.target.classList.add('active');
+}
+
+// Equalizer
+function zmmxEqPlay(){document.getElementById('zmmxEq').classList.remove('paused')}
+function zmmxEqPause(){document.getElementById('zmmxEq').classList.add('paused')}
+
+// Toast
+function toast(msg,type){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:50px;right:16px;padding:8px 16px;border-radius:6px;font-size:11px;z-index:9999;max-width:260px;';
+  const c={success:['rgba(0,255,136,0.15)','rgba(0,255,136,0.3)','#00ff88'],error:['rgba(255,64,96,0.15)','rgba(255,64,96,0.3)','#ff4060'],warn:['rgba(255,145,0,0.15)','rgba(255,145,0,0.3)','#ff9100'],info:['rgba(0,229,255,0.15)','rgba(0,229,255,0.3)','#00e5ff']};
+  const s=c[type]||c.info;
+  t.style.background=s[0];t.style.border='1px solid '+s[1];t.style.color=s[2];
+  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
 }
 
 // System polling
@@ -366,20 +602,21 @@ async function poll(){
   }catch(e){}
 }
 poll();setInterval(poll,5000);
-loadLibrary();
 
-// Portal message listener - modules can call parent.postMessage
+// Portal message listener
 window.addEventListener('message',function(e){
   if(!e.data||typeof e.data!=='object')return;
   if(e.data.zicore==='navigate'){showFrame(e.data.url,e.data.title)}
   if(e.data.zicore==='back'){showView('welcome')}
   if(e.data.zicore==='media'){
-    if(e.data.action==='play'&&e.data.url){playItem({url:e.data.url,name:e.data.name||'Audio',size:0,ext:e.data.ext||'mp3'},'audio')}
+    if(e.data.action==='play'&&e.data.url){zmmxPlay({url:e.data.url,name:e.data.name||'Audio',size:0,ext:e.data.ext||'mp3'},'audio')}
   }
 });
 
-// Expose functions for modules
-window.zicorePortal={navigate:function(url,title){showFrame(url,title)},back:function(){showView('welcome')}};
+// Expose functions
+window.zicorePortal={navigate:function(url,title){showFrame(url,title)},back:function(){showView('welcome')},openZMMX:openZMMX};
 </script>
+<script src="/js/zicore-translate.js"></script>
+<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
 </body>
 </html>

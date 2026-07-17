@@ -63,6 +63,14 @@ canvas{border:1px solid #0a1a2a;border-radius:4px;image-rendering:pixelated;disp
 #readyOverlay{position:absolute;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;z-index:4;pointer-events:none}
 #readyOverlay .ready-text{font-size:28px;color:#ffeb3b;letter-spacing:8px;text-shadow:0 0 20px #ffeb3b80;animation:pulse .8s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -92,6 +100,7 @@ canvas{border:1px solid #0a1a2a;border-radius:4px;image-rendering:pixelated;disp
 <div><span>LIVES </span><span class="val lives-display" id="hudLives"></span></div>
 <div><span>LEVEL </span><span class="val level-val" id="hudLevel">1</span></div>
 <div><span>HI </span><span class="val hi-val" id="hudHi">0</span></div>
+<div id="muteBtn" onclick="initSound();toggleSound()" style="cursor:pointer;padding:2px 8px;background:#080e18;border:1px solid #0a1a2a;border-radius:4px;font-size:14px">🔊</div>
 </div>
 <canvas id="gameCanvas"></canvas>
 <div id="powerBar"><div id="powerBarFill"></div></div>
@@ -108,6 +117,15 @@ canvas{border:1px solid #0a1a2a;border-radius:4px;image-rendering:pixelated;disp
 <div class="detail" id="goHigh">HIGH SCORE: 0</div>
 <button class="btn" onclick="retryLevel()">RETRY</button>
 <button class="btn secondary" onclick="showScreen('levelSelect');buildLevelGrid()">MISSIONS</button>
+<div class="social-share">
+<div style="font-size:11px;color:#506878;margin-bottom:6px">SHARE</div>
+<div class="share-btns">
+<button class="sbtn sbtn-tw" onclick="shareGame('twitter','Pac-Man',score)">X / Twitter</button>
+<button class="sbtn sbtn-fb" onclick="shareGame('facebook','Pac-Man',score)">Facebook</button>
+<button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Pac-Man',score)">WhatsApp</button>
+<button class="sbtn sbtn-copy" onclick="shareGame('copy','Pac-Man',score)">Copy Link</button>
+</div>
+</div>
 </div>
 <div id="levelCompleteScreen" class="screen">
 <h1>MISSION COMPLETE</h1>
@@ -138,17 +156,21 @@ const ctx=canvas.getContext('2d');
 canvas.width=CW;canvas.height=CH;
 let audioCtx=null;
 function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+var soundMuted=false;
+function initSound(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
 function tone(freq,dur,vol,type,delay){
-if(!audioCtx)return;
+if(soundMuted||!audioCtx)return;
 vol=vol||0.06;type=type||'square';delay=delay||0;
-const t=audioCtx.currentTime+delay;
-const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+var t=audioCtx.currentTime+delay;
+var o=audioCtx.createOscillator(),g=audioCtx.createGain();
 o.type=type;o.frequency.setValueAtTime(freq,t);
 g.gain.setValueAtTime(vol,t);
 g.gain.exponentialRampToValueAtTime(0.001,t+dur);
 o.connect(g);g.connect(audioCtx.destination);
 o.start(t);o.stop(t+dur);
 }
+function toggleSound(){soundMuted=!soundMuted;var b=document.getElementById('muteBtn');if(b)b.textContent=soundMuted?'\u{1F507}':'\u{1F506}'}
+function sfxIntro(){[262,330,392,523,392,523,659].forEach(function(f,i){tone(f,.15,.07,'sine',i*.12)})}
 let wakaAlt=0;
 function sfxDot(){tone(wakaAlt?520:440,0.06,0.05);wakaAlt^=1}
 function sfxPower(){tone(200,0.35,0.08,'sine');tone(400,0.25,0.06,'sine',0.12);tone(600,0.2,0.05,'sine',0.22)}
@@ -235,7 +257,9 @@ function loadProgress(){try{var d=JSON.parse(localStorage.getItem('pacman_progre
 function saveProgress(){try{localStorage.setItem('pacman_progress_v2',JSON.stringify({hiScores:hiScores,maxUnlocked:maxUnlocked,currentLevel:currentLevel}))}catch(e){}}
 function getStars(lvl,sc){var mx=200*10+4*50+4*1000;if(sc>=mx*0.6)return 3;if(sc>=mx*0.35)return 2;return 1}
 function initLevel(lvl){
+initSound();
 currentLevel=lvl;
+sfxIntro();
 var cfg=LEVELS[lvl-1];
 maze=generateMaze(cfg.seed,cfg.loopFactor);
 dots=[];
@@ -738,6 +762,15 @@ loadProgress();
 showScreen('titleScreen');
 updateHUD();
 requestAnimationFrame(gameLoop);
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

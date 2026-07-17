@@ -134,6 +134,19 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <div class="dl-btn" id="dl-mac">Descargar .sh</div>
       <div class="size">Bash Script — ~4 KB</div>
     </div>
+    <div class="card" onclick="downloadInstaller('android')">
+      <span class="icon">📱</span>
+      <div class="name">Android</div>
+      <div class="desc">APK nativo para Android 7.0+. WebView wrapper con SSO integrado, modo VR estéreo, soporte Termux.</div>
+      <div class="cmd">
+        <span class="comment"># Instalación directa:</span><br>
+        Descargar zicore-android.apk<br>
+        Habilitar "Fuentes desconocidas"<br>
+        Instalar y abrir ZICORE
+      </div>
+      <div class="dl-btn" id="dl-android">Descargar .apk</div>
+      <div class="size">APK — ~3 MB</div>
+    </div>
   </div>
 
   <div class="reqs">
@@ -190,7 +203,8 @@ function downloadInstaller(platform){
   const urls={
     windows:'/installers/install_zicore.ps1',
     linux:'/installers/install_zicore.sh',
-    mac:'/installers/install_zicore_mac.sh'
+    mac:'/installers/install_zicore_mac.sh',
+    android:'/installers/zicore-android.apk'
   };
   
   const a=document.createElement('a');
@@ -201,7 +215,7 @@ function downloadInstaller(platform){
   document.body.removeChild(a);
   
   setTimeout(()=>{
-    btn.textContent=platform==='windows'?'Descargar .ps1':'Descargar .sh';
+    btn.textContent=platform==='windows'?'Descargar .ps1':platform==='android'?'Descargar .apk':'Descargar .sh';
     btn.classList.remove('downloading');
   },2000);
 }

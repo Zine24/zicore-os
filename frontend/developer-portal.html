@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Developer Portal</title>
+<link rel="stylesheet" href="/css/zicore-ui.css">
+<style>
+.main{padding:calc(var(--topbar-h) + 24px) 24px 40px;max-width:1200px;margin:0 auto;position:relative;z-index:2}
+</style>
+</head>
+<body>
+<canvas class="zicore-stars" id="starfield"></canvas>
+<div class="zicore-grain"></div>
+<div class="zicore-scanline"></div>
+
+<div class="ztopbar" id="topbar"></div>
+
+<div class="main">
+  <div class="zicore-hero">
+    <div class="zicore-hero-icon">💻</div>
+    <div>
+      <h1>Developer Portal</h1>
+      <p>Documentacion, API, marketplace, gobernanza, herramientas de desarrollo del ecosistema ZICORE.</p>
+      <div class="stats">
+        <div class="stat"><span class="val">235+</span> endpoints</div>
+        <div class="stat"><span class="val">42</span> categorias</div>
+        <div class="stat"><span class="val">3</span> WebSockets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API & Docs -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>📚 API y Documentacion</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/api-docs" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">📚</div><div class="zicore-card-name">API Documentation</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">235+ endpoints REST documentados en 42 categorias. Buscador, ejemplos, badges de autenticacion.</div>
+        <div class="zicore-tags"><span class="zicore-tag">API</span><span class="zicore-tag">REST</span><span class="zicore-tag">Docs</span></div>
+      </a>
+      <a class="zicore-card" href="/whitepaper" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon orange">📄</div><div class="zicore-card-name">Whitepaper</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Documento tecnico: arquitectura, modulos, pronosticos, hoja de ruta del sistema.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Architecture</span><span class="zicore-tag">Spec</span></div>
+      </a>
+      <a class="zicore-card" href="/zicodex" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon purple">📖</div><div class="zicore-card-name">ZiCodex</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Base de conocimiento espacial y tecnico. Motorines, cohetes, satelites, misiones.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Knowledge</span><span class="zicore-tag">Space</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Marketplace & Ecosystem -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🛒 Marketplace y Ecosistema</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/marketplace" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon green">🛒</div><div class="zicore-card-name">Marketplace</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Modulos, herramientas y servicios del ecosistema ZICORE.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Modules</span><span class="zicore-tag">Tools</span></div>
+      </a>
+      <a class="zicore-card" href="/ecosystem" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">🌐</div><div class="zicore-card-name">Ecosystem</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Vista completa del ecosistema Zi: divisiones, servidores, nodos, servicios.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Zi</span><span class="zicore-tag">Divisions</span></div>
+      </a>
+      <a class="zicore-card" href="/installers" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon orange">⬇</div><div class="zicore-card-name">Installers</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Descargas: APK Android, clientes, herramientas del sistema.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Download</span><span class="zicore-tag">APK</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Governance & Security -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🏛 Gobernanza y Seguridad</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/governance" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon purple">🏛</div><div class="zicore-card-name">Governance</div><span class="zicore-badge premium">premium</span></div>
+        <div class="zicore-card-desc">Gobernanza ZNT: voting, propuestas, DAO del ecosistema.</div>
+        <div class="zicore-tags"><span class="zicore-tag">ZNT</span><span class="zicore-tag">Voting</span></div>
+      </a>
+      <a class="zicore-card" href="/asset-registry" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">📋</div><div class="zicore-card-name">Asset Registry</div><span class="zicore-badge premium">premium</span></div>
+        <div class="zicore-card-desc">Registro y tracking de activos del ecosistema.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Assets</span><span class="zicore-tag">Tracking</span></div>
+      </a>
+      <a class="zicore-card" href="/zishield" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon red">🛡</div><div class="zicore-card-name">ZiShield</div><span class="zicore-badge premium">premium</span></div>
+        <div class="zicore-card-desc">Seguridad y proteccion del sistema. Firewall, audit, defensa.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Seguridad</span><span class="zicore-tag">Audit</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Tools -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🔧 Herramientas</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/developer" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon green">💻</div><div class="zicore-card-name">Developer Tools</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Herramientas de desarrollo y debug del sistema.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Dev</span><span class="zicore-tag">Debug</span></div>
+      </a>
+      <a class="zicore-card" href="/web-stats" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon orange">📊</div><div class="zicore-card-name">Web Stats</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Estadisticas de trafico: visitors, endpoints, IPs, status codes.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Traffic</span><span class="zicore-tag">Analytics</span></div>
+      </a>
+      <a class="zicore-card" href="/settings" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">⚙</div><div class="zicore-card-name">Settings</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Configuracion del sistema: Providers, ZIO, Theme, Network, Ollama.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Config</span><span class="zicore-tag">Theme</span></div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/zicore-topbar.js"></script>
+<script>
+ZICORE_TOPBAR.init({
+  brand: 'DEVELOPER',
+  subtitle: 'PORTAL',
+  tabs: [
+    {label:'Servicios', href:'/services'},
+    {label:'Developer', href:'/developer', id:'dev'},
+    {label:'API Docs', href:'/api-docs'},
+  ],
+  activeTab: 'dev'
+});
+
+(function(){const c=document.getElementById('starfield'),x=c.getContext('2d');let s=[];function r(){c.width=innerWidth;c.height=innerHeight}r();addEventListener('resize',r);for(let i=0;i<120;i++)s.push({x:Math.random()*2e3,y:Math.random()*2e3,r:Math.random()*1+.2,a:Math.random(),d:(Math.random()-.5)*.012});function d(){x.clearRect(0,0,c.width,c.height);s.forEach(p=>{p.a+=p.d;if(p.a>1||p.a<.2)p.d*=-1;x.beginPath();x.arc(p.x%c.width,p.y%c.height,p.r,0,Math.PI*2);x.fillStyle=`rgba(180,200,240,${p.a})`;x.fill()});requestAnimationFrame(d)}d()})();
+</script>
+</body>
+</html>

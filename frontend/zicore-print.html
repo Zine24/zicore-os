@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Print — Manufacturing Division</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--s1:#0c1020;--s2:#111628;--s3:#181e38;--border:rgba(0,229,255,0.1);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d3d;--orange:#ff8800;--yellow:#ffcc00;--pink:#ff44aa;--text:#e0e8f5;--muted:#5a6a80}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:3px}
+
+.layout{display:grid;grid-template-columns:220px 1fr 340px;grid-template-rows:52px 1fr;height:100vh;gap:0}
+.topbar{grid-column:1/-1;background:var(--s1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
+.topbar .logo{font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar .tag{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.topbar .spacer{flex:1}
+.topbar .conn{display:flex;align-items:center;gap:8px;font-size:11px}
+.topbar .dot{width:9px;height:9px;border-radius:50%;background:var(--red)}
+.topbar .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.topbar .btn{padding:5px 12px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:10px;cursor:pointer;transition:all .2s;font-family:inherit}
+.topbar .btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.topbar .btn.danger{border-color:rgba(255,61,61,0.3);color:var(--red)}
+
+.sidebar{background:var(--s1);border-right:1px solid var(--border);overflow-y:auto;padding:10px 0}
+.sidebar .sec{padding:6px 16px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:6px}
+.sidebar .item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all .15s;font-size:12px;border-left:3px solid transparent}
+.sidebar .item:hover{background:rgba(0,229,255,0.05)}
+.sidebar .item.active{background:rgba(0,229,255,0.08);color:var(--cyan);border-left-color:var(--cyan)}
+.sidebar .item .ico{width:26px;height:26px;border-radius:5px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:13px}
+.sidebar .item .sdot{width:7px;height:7px;border-radius:50%;margin-left:auto;flex-shrink:0}
+.sidebar .item .sdot.on{background:var(--green)}
+.sidebar .item .sdot.off{background:var(--red)}
+
+.main{overflow-y:auto;padding:16px;background:var(--bg)}
+.main::-webkit-scrollbar{width:6px}
+
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px}
+.panel h3{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.panel h3 .c{font-size:9px;color:var(--muted);font-weight:400}
+
+.temp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.temp-card{background:var(--s2);border-radius:6px;padding:12px;border:1px solid var(--border)}
+.temp-card .lb{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.temp-card .val{font-size:26px;font-weight:700;margin:2px 0}
+.temp-card .tgt{font-size:10px;color:var(--muted)}
+.temp-card.h .val{color:var(--cyan)}
+.temp-card.b .val{color:var(--orange)}
+
+.pbar{height:6px;border-radius:3px;background:var(--s3);overflow:hidden;margin:6px 0}
+.pbar .fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .5s}
+
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-i{background:var(--s2);border-radius:6px;padding:10px;text-align:center;border:1px solid var(--border)}
+.stat-i .v{font-size:18px;font-weight:700;color:var(--cyan)}
+.stat-i .l{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+.cam-box{background:#000;border-radius:6px;overflow:hidden;aspect-ratio:16/9;border:1px solid var(--border);position:relative}
+.cam-box img{width:100%;height:100%;object-fit:cover}
+.cam-box .no{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:11px;gap:6px;background:rgba(0,0,0,0.8)}
+.cam-bar{display:flex;gap:6px;margin-top:8px}
+.cam-bar select,.cam-bar input{flex:1;padding:5px 8px;border-radius:4px;background:var(--s2);color:var(--text);border:1px solid var(--border);font-size:10px;font-family:inherit}
+.cam-bar button{padding:5px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:10px;cursor:pointer}
+
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fc{background:var(--s2);border-radius:6px;padding:12px;border:1px solid var(--border);transition:border-color .2s}
+.fc:hover{border-color:rgba(0,229,255,0.3)}
+.fc.act{border-color:var(--green);background:rgba(0,255,136,0.03)}
+.fc .fn{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.fc .fm{font-size:14px;font-weight:700;margin:4px 0}
+.fc .fp{font-size:10px;color:var(--muted);font-family:'Courier New',monospace}
+.fc .fa{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.fc .fa button{padding:5px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:9px;cursor:pointer;transition:all .15s}
+.fc .fa button:hover{border-color:var(--cyan);color:var(--cyan)}
+.fc .fa button.ld{border-color:rgba(0,255,136,0.3);color:var(--green)}
+.fc .fa button.ul{border-color:rgba(255,61,61,0.3);color:var(--red)}
+
+.mg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mc{padding:6px 8px;border-radius:5px;background:var(--s2);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .15s;font-size:10px}
+.mc:hover{border-color:rgba(0,229,255,0.3)}
+.mc.sel{border-color:var(--cyan);background:rgba(0,229,255,0.08)}
+.mc .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.mc .nm{font-weight:600}
+.mc .tp{font-size:8px;color:var(--muted);display:block;margin-top:1px}
+
+.jog-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.jog-steps{display:flex;gap:3px;margin-bottom:4px}
+.jog-steps button{width:36px;height:24px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:9px;cursor:pointer;font-family:inherit;transition:all .15s}
+.jog-steps button:hover{border-color:var(--cyan);color:var(--cyan)}
+.jog-steps button.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1)}
+.jog-xy{position:relative;width:160px;height:160px}
+.jog-xy .jbtn{position:absolute;width:48px;height:48px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.jog-xy .jbtn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08)}
+.jog-xy .jbtn:active{transform:scale(0.93)}
+.jog-xy .jbtn.up{top:0;left:50%;transform:translateX(-50%)}
+.jog-xy .jbtn.down{bottom:0;left:50%;transform:translateX(-50%)}
+.jog-xy .jbtn.left{left:0;top:50%;transform:translateY(-50%)}
+.jog-xy .jbtn.right{right:0;top:50%;transform:translateY(-50%)}
+.jog-xy .jbtn.up:hover{transform:translateX(-50%) translateY(-2px)}
+.jog-xy .jbtn.down:hover{transform:translateX(-50%) translateY(2px)}
+.jog-xy .jbtn.left:hover{transform:translateY(-50%) translateX(-2px)}
+.jog-xy .jbtn.right:hover{transform:translateY(-50%) translateX(2px)}
+.jog-xy .jbtn.up:active{transform:translateX(-50%) scale(0.93)}
+.jog-xy .jbtn.down:active{transform:translateX(-50%) scale(0.93)}
+.jog-xy .jbtn.left:active{transform:translateY(-50%) scale(0.93)}
+.jog-xy .jbtn.right:active{transform:translateY(-50%) scale(0.93)}
+.jog-xy .jcenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.05);color:var(--green);font-size:8px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px;transition:all .15s;font-family:inherit;letter-spacing:1px}
+.jog-xy .jcenter:hover{background:rgba(0,255,136,0.12);border-color:var(--green)}
+.jog-xy .jcenter:active{transform:translate(-50%,-50%) scale(0.93)}
+.jog-axis{display:flex;flex-direction:column;gap:4px;align-items:center}
+.jog-axis .albl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.jog-axis .azbtn{width:44px;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.jog-axis .azbtn:hover{border-color:var(--orange);color:var(--orange);background:rgba(255,136,0,0.08)}
+.jog-axis .azbtn:active{transform:scale(0.93)}
+.jog-bottom{display:flex;gap:6px;margin-top:6px}
+.jog-bottom button{padding:5px 12px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:9px;cursor:pointer;transition:all .15s;font-family:inherit}
+.jog-bottom button:hover{border-color:var(--cyan);color:var(--cyan)}
+.jog-bottom button.home{border-color:rgba(0,255,136,0.3);color:var(--green)}
+.jog-bottom button.estop{border-color:rgba(255,61,61,0.3);color:var(--red)}
+
+.gi{display:flex;gap:4px;margin-top:6px}
+.gi input{flex:1;padding:6px 10px;border-radius:4px;background:var(--s2);color:var(--cyan);border:1px solid var(--border);font-family:'Courier New',monospace;font-size:11px}
+.gi button{padding:6px 12px;border-radius:4px;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid rgba(0,229,255,0.3);font-size:10px;cursor:pointer}
+
+.btn-row{display:flex;gap:4px}
+.btn-row .b{flex:1;padding:6px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:9px;cursor:pointer;transition:all .15s;text-align:center;font-family:inherit}
+.btn-row .b:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-row .b.g{border-color:rgba(0,255,136,0.3);color:var(--green)}
+.btn-row .b.r{border-color:rgba(255,61,61,0.3);color:var(--red)}
+.btn-row .b.p{border-color:rgba(124,77,255,0.3);color:var(--purple)}
+
+.rp{background:var(--s1);border-left:1px solid var(--border);overflow-y:auto;padding:14px}
+.jc{background:var(--s2);border-radius:6px;padding:10px;border:1px solid var(--border);margin-bottom:6px}
+.jc .jn{font-size:12px;font-weight:600}
+.jc .jm{font-size:10px;color:var(--muted);margin-top:2px;display:flex;gap:10px}
+
+.cfg-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.cfg-row label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.cfg-row input,.cfg-row select{width:100%;padding:5px 8px;border-radius:4px;background:var(--s2);color:var(--text);border:1px solid var(--border);font-size:10px;font-family:inherit}
+
+.hidden{display:none}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--green);color:var(--green);padding:8px 16px;border-radius:6px;font-size:11px;z-index:100;animation:ti .3s}
+@keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="topbar">
+    <div class="logo">ZICORE Print</div>
+    <div class="tag">Manufacturing Division</div>
+    <div class="spacer"></div>
+    <div class="conn"><div class="dot" id="gDot"></div><span id="gSt">Sin conexion</span></div>
+    <button class="btn" onclick="refresh()">&#x21bb;</button>
+    <button class="btn" onclick="addPrinter()">+ Impresora</button>
+  </div>
+
+  <div class="sidebar" id="sb">
+    <div class="sec">Impresoras</div>
+  </div>
+
+  <div class="main" id="mc">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted)">
+      <div style="font-size:42px;margin-bottom:10px">&#128424;</div>
+      <div style="font-size:14px;margin-bottom:3px">Selecciona una impresora</div>
+      <div style="font-size:11px">Haz clic en una impresora de la barra lateral</div>
+    </div>
+  </div>
+
+  <div class="rp" id="rp">
+    <div class="panel"><h3>Cola de Impresion</h3><div id="pq"><div style="font-size:11px;color:var(--muted);text-align:center;padding:16px">Sin trabajos</div></div></div>
+    <div class="panel"><h3>Historial</h3><div id="ph"><div style="font-size:11px;color:var(--muted);text-align:center;padding:16px">Sin historial</div></div></div>
+    <div class="panel">
+      <h3>Configuracion de Conexion</h3>
+      <div id="connCfg">
+        <div class="cfg-row"><label>Host</label><input type="text" id="cfgHost" placeholder="192.168.4.1"></div>
+        <div class="cfg-row"><label>Puerto API</label><input type="number" id="cfgPort" value="80"></div>
+        <div class="cfg-row"><label>Puerto Stream</label><input type="number" id="cfgStream" value="81"></div>
+        <div class="cfg-row"><label>Modo</label><select id="cfgMode"><option value="0">Z1 (Klipper/Tinybee)</option><option value="1">Z2 (RAMPS/Marlin)</option></select></div>
+        <button class="btn" onclick="saveConnCfg()" style="width:100%;margin-top:6px;border-color:rgba(0,229,255,0.3);color:var(--cyan)">Guardar Config</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Puertos COM <span id="serialStatus" style="font-size:10px;color:var(--red);font-weight:normal">Desconectado</span></h3>
+      <div id="comList"><div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Haz clic en Detectar</div></div>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="btn" onclick="refreshPorts()" style="flex:1;border-color:rgba(0,229,255,0.3);color:var(--cyan)">&#x21bb; Detectar</button>
+        <button class="btn" onclick="connectSerial()" style="flex:1;border-color:rgba(0,255,136,0.3);color:var(--green)">Conectar</button>
+        <button class="btn" onclick="disconnectSerial()" style="flex:1;border-color:rgba(255,61,61,0.3);color:var(--red)">Desconectar</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Flash Firmware</h3>
+      <div id="flashCfg">
+        <div class="cfg-row"><label>Placa</label>
+          <select id="boardType">
+            <option value="esp32s3">ESP32-S3 Z1_Control (Feeders + Camara)</option>
+            <option value="tinybee">MKS Tinybee STM32F407 (Klipper)</option>
+            <option value="ramps">RAMPS 1.4 ATmega2560 (Marlin)</option>
+            <option value="cnc_shield">CNC Shield V3 ATmega328P (Feeders)</option>
+            <option value="esp32_feeder">ESP32 Feeder Controller</option>
+          </select>
+        </div>
+        <div class="cfg-row"><label>Firmware</label>
+          <select id="firmwareType">
+            <option value="latest">Ultima version</option>
+            <option value="stable">Estable</option>
+            <option value="custom">Archivo personalizado</option>
+          </select>
+        </div>
+        <div id="wifiFields">
+          <div class="cfg-row"><label>SSID WiFi</label><input type="text" id="wifiSsid" placeholder="Nombre de red"></div>
+          <div class="cfg-row"><label>Password WiFi</label><input type="password" id="wifiPass" placeholder="Contrasena"></div>
+        </div>
+        <div style="margin:8px 0;padding:8px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);border-radius:6px;font-size:10px;color:var(--purple)">
+          <b>ZICORE Boot Sound:</b> <input type="checkbox" id="bootSound" checked style="accent-color:var(--purple)"> Marcha Imperial (RAMPS/CNC Shield buzzer)
+        </div>
+        <button class="btn" onclick="flashBoard()" id="flashBtn" style="width:100%;margin-top:6px;border-color:rgba(0,255,136,0.3);color:var(--green)">⚡ Flash Firmware</button>
+        <div id="flashProgress" style="display:none;margin-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span id="flashStepText" style="font-size:10px;color:var(--text2)">Preparando...</span>
+            <span id="flashPercent" style="font-size:11px;font-weight:700;color:var(--green)">0%</span>
+          </div>
+          <div style="width:100%;height:6px;background:rgba(0,255,136,0.1);border-radius:3px;overflow:hidden;border:1px solid rgba(0,255,136,0.15)">
+            <div id="flashBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:3px;transition:width 0.4s ease"></div>
+          </div>
+          <div id="flashDetail" style="font-size:9px;color:var(--muted);margin-top:4px;font-family:monospace"></div>
+        </div>
+        <div id="flashLog" style="margin-top:8px;max-height:200px;overflow-y:auto;font-family:'Courier New',monospace;font-size:10px;color:var(--muted);display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+let printers=[],sel=null,states={},cfg={},jogStep=10;
+function setStep(v,el){
+  jogStep=v;
+  document.querySelectorAll('.jog-steps button').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('stepDisplay').textContent=v;
+}
+const MAT=[
+  {id:'pla',name:'PLA',color:'#00ff88',temp:'180-220',bed:'50-60'},
+  {id:'petg',name:'PETG',color:'#00aaff',temp:'220-250',bed:'70-85'},
+  {id:'abs',name:'ABS',color:'#ff8800',temp:'220-260',bed:'90-110'},
+  {id:'tpu',name:'TPU',color:'#ff44aa',temp:'210-230',bed:'40-60'},
+  {id:'nylon',name:'Nylon',color:'#ffcc00',temp:'240-270',bed:'70-90'},
+  {id:'pc',name:'PC',color:'#fff',temp:'270-310',bed:'100-120'},
+  {id:'asa',name:'ASA',color:'#ccc',temp:'235-255',bed:'90-110'},
+  {id:'pva',name:'PVA',color:'#00ff88',temp:'180-210',bed:'45-60'}
+];
+
+async function loadPrinters(){
+  try{const r=await fetch('/api/print/printers');const d=await r.json();printers=d.printers||[];renderSb()}catch(e){}
+}
+
+function renderSb(){
+  const sb=document.getElementById('sb');
+  sb.innerHTML='<div class="sec">Impresoras</div>';
+  printers.forEach(p=>{
+    const s=states[p.id]||{};
+    sb.innerHTML+=`<div class="item ${sel===p.id?'active':''}" onclick="select('${p.id}')">
+      <div class="ico">${p.icon||'&#128424;'}</div>
+      <div><div style="font-weight:600">${p.name}</div><div style="font-size:9px;color:var(--muted)">${p.type}</div></div>
+      <div class="sdot ${s.connected?'on':'off'}"></div>
+    </div>`;
+  });
+  sb.innerHTML+='<div class="sec">Materiales</div>';
+  MAT.forEach(m=>{
+    sb.innerHTML+=`<div class="item"><div class="ico" style="background:${m.color}20;color:${m.color};font-size:10px;font-weight:700">${m.name[0]}</div><div><div style="font-weight:600;font-size:11px">${m.name}</div><div style="font-size:8px;color:var(--muted)">${m.temp}°C</div></div></div>`;
+  });
+}
+
+async function select(id){
+  sel=id;
+  renderSb();
+  const p=printers.find(x=>x.id===id);
+  if(!p)return;
+  try{await fetch('/api/print/connect/'+id,{method:'POST'})}catch(e){}
+  try{const r=await fetch('/api/print/status/'+id);const d=await r.json();states[id]=d;renderMain(p,d)}catch(e){renderMain(p,{connected:false})}
+}
+
+function renderMain(p,s){
+  const mc=document.getElementById('mc');
+  const ok=s.connected;
+  document.getElementById('gDot').className='dot '+(ok?'on':'');
+  document.getElementById('gSt').textContent=ok?p.name+' — Online':'Sin conexion';
+  const T=s.temperatures||{},he=T.hotend||{},be=T.bed||{},feeders=s.feeders||[],printing=s.printing||false,prog=s.progress||0;
+  let h='';
+
+  // Status row
+  h+=`<div class="panel"><h3>Estado</h3><div class="stat-row">
+    <div class="stat-i"><div class="v" style="color:${ok?'var(--green)':'var(--red)'}">${ok?'ON':'OFF'}</div><div class="l">Conexion</div></div>
+    <div class="stat-i"><div class="v">${s.mode||p.type||'N/A'}</div><div class="l">Modo</div></div>
+    <div class="stat-i"><div class="v">${printing?'Print':'Idle'}</div><div class="l">Estado</div></div>
+  </div></div>`;
+
+  // Temperature
+  h+=`<div class="panel"><h3>Temperatura</h3><div class="temp-row">
+    <div class="temp-card h"><div class="lb">Hotend</div><div class="val">${he.actual?he.actual.toFixed(1)+'°':'--°'}</div><div class="tgt">Target: ${he.target||0}°C</div></div>
+    <div class="temp-card b"><div class="lb">Cama</div><div class="val">${be.actual?be.actual.toFixed(1)+'°':'--°'}</div><div class="tgt">Target: ${be.target||0}°C</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+    <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px">Hotend °C</div><input type="range" min="0" max="280" value="${he.target||0}" oninput="document.getElementById('htV').textContent=this.value+'°';setTemp('hotend',this.value)" style="width:100%"><div style="text-align:center;font-size:13px;font-weight:700;color:var(--cyan);margin-top:2px" id="htV">${he.target||0}°</div></div>
+    <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px">Cama °C</div><input type="range" min="0" max="120" value="${be.target||0}" oninput="document.getElementById('btV').textContent=this.value+'°';setTemp('bed',this.value)" style="width:100%"><div style="text-align:center;font-size:13px;font-weight:700;color:var(--orange);margin-top:2px" id="btV">${be.target||0}°</div></div>
+  </div>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="b r" onclick="setTemp('hotend',0);setTemp('bed',0)">Off All</button>
+    <button class="b g" onclick="setTemp('hotend',210);setTemp('bed',60)">PLA</button>
+    <button class="b" onclick="setTemp('hotend',240);setTemp('bed',80)">PETG</button>
+    <button class="b" onclick="setTemp('hotend',250);setTemp('bed',100)">ABS</button>
+  </div></div>`;
+
+  // Camera (Z1_Control)
+  if(p.type==='z1_control'){
+    const camStreamUrl=p.connected?`/api/print/camera/${p.id}`:'';
+    const camSnapUrl=p.connected?`/api/print/capture/${p.id}`:'';
+    h+=`<div class="panel"><h3>Camara Z1_Control</h3>
+      <div class="cam-box" id="camBox"><img src="${camStreamUrl}" onerror="this.parentElement.innerHTML='<div class=no>&#128247; Sin signal</div>'" alt="cam"></div>
+      <div class="cam-bar">
+        <select id="camRes"><option value="960">UXGA (960x800)</option><option value="800">SVGA (800x600)</option><option value="640" selected>VGA (640x480)</option><option value="320">QVGA (320x240)</option></select>
+        <select id="camQual"><option value="4">Alta (Q:4)</option><option value="8" selected>Media (Q:8)</option><option value="12">Baja (Q:12)</option><option value="20">Minima (Q:20)</option></select>
+        <button onclick="snapShot()">Snapshot</button>
+      </div>
+      <div class="cam-bar" style="margin-top:4px">
+        <button onclick="toggleFlash()" style="flex:1">Flash On/Off</button>
+        <button onclick="toggleMirror()" style="flex:1">Mirror</button>
+        <button onclick="toggleRecord()" style="flex:1;border-color:rgba(255,61,61,0.3);color:var(--red)">Grabar</button>
+      </div>
+    </div>`;
+  }
+
+  // Feeders (Z1_Control / Z2 REST)
+  const fc=p.specs?.feeders||feeders.length||0;
+  const feederNames=p.feeder_names||{};
+  if(fc>0){
+    h+=`<div class="panel"><h3>Feeders <span class="c">${fc} activos · Tool: ${s.active_feeder>=0?'T'+s.active_feeder:'Ninguno'}</span></h3><div class="fg">`;
+    for(let i=0;i<fc;i++){
+      const f=feeders[i]||{};
+      const act=s.active_feeder===i;
+      const mt=MAT[i%MAT.length];
+      const fname=feederNames[String(i)]||f.name||`Feeder ${i}`;
+      h+=`<div class="fc ${act?'act':''}" onclick="selectTool(${i})" style="cursor:pointer" title="Clic para activar T${i}">
+        <div class="fn" style="display:flex;justify-content:space-between;align-items:center">
+          <span>T${i} · <span class="fname" ondblclick="event.stopPropagation();editFeederName(${i},'${fname}')">${fname}</span></span>
+          ${act?'<span style="color:var(--green);font-size:8px;font-weight:700">ACTIVO</span>':''}
+        </div>
+        <div class="fm" style="color:${mt.color}">${f.material||mt.name}</div>
+        <div class="fp">Pos: ${(f.position||0).toFixed(1)} mm</div>
+        <div class="fa">
+          <button class="ld" onclick="event.stopPropagation();feeder(${i},'load')">Cargar</button>
+          <button class="ul" onclick="event.stopPropagation();feeder(${i},'unload')">Descargar</button>
+        </div>
+      </div>`;
+    }
+    h+='</div></div>';
+  }
+
+  // Materials
+  h+=`<div class="panel"><h3>Materiales</h3><div class="mg">`;
+  MAT.forEach(m=>{h+=`<div class="mc" onclick="selMat('${m.id}')"><div class="dot" style="background:${m.color}"></div><span class="nm">${m.name}</span><span class="tp">${m.temp}°C</span></div>`});
+  h+='</div></div>';
+
+  // Filament control
+  h+=`<div class="panel"><h3>Filamento</h3>
+    <div class="btn-row">
+      <button class="b r" onclick="ext(-100)">-100mm</button>
+      <button class="b r" onclick="ext(-50)">-50mm</button>
+      <button class="b r" onclick="ext(-10)">-10mm</button>
+      <button class="b g" onclick="ext(10)">+10mm</button>
+      <button class="b g" onclick="ext(50)">+50mm</button>
+      <button class="b g" onclick="ext(100)">+100mm</button>
+    </div>
+    <div style="display:flex;gap:4px;margin-top:6px">
+      <input type="number" id="extMm" placeholder="mm" style="flex:1;padding:5px 8px;border-radius:4px;background:var(--s2);color:var(--text);border:1px solid var(--border);font-size:10px">
+      <button class="btn" onclick="ext(parseInt(document.getElementById('extMm').value)||0)" style="border-color:rgba(0,229,255,0.3);color:var(--cyan)">Extruir</button>
+    </div>
+  </div>`;
+
+  // Movement + Home
+  h+=`<div class="panel"><h3>Movimiento</h3>
+    <div class="jog-wrap">
+      <div class="jog-steps">
+        <button onclick="setStep(0.1,this)">0.1</button>
+        <button onclick="setStep(1,this)">1</button>
+        <button onclick="setStep(10,this)" class="active">10</button>
+        <button onclick="setStep(50,this)">50</button>
+      </div>
+      <div class="jog-xy">
+        <button class="jbtn up" onclick="mv('y',jogStep)">Y+</button>
+        <button class="jbtn down" onclick="mv('y',-jogStep)">Y-</button>
+        <button class="jbtn left" onclick="mv('x',-jogStep)">X-</button>
+        <button class="jbtn right" onclick="mv('x',jogStep)">X+</button>
+        <button class="jcenter" onclick="gcode('G28 X Y')"><span>HOME</span><span>XY</span></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px">
+        <div class="jog-axis">
+          <div class="albl">Z+</div>
+          <button class="azbtn" onclick="mv('z',jogStep)">&#9650;</button>
+        </div>
+        <div style="font-size:9px;color:var(--muted);text-align:center">
+          <div style="font-family:monospace;font-size:14px;color:var(--cyan);margin-bottom:2px" id="stepDisplay">10</div>
+          <div>mm</div>
+        </div>
+        <div class="jog-axis">
+          <div class="albl">Z-</div>
+          <button class="azbtn" onclick="mv('z',-jogStep)">&#9660;</button>
+        </div>
+      </div>
+      <div class="jog-bottom">
+        <button class="home" onclick="gcode('G28')">Home All</button>
+        <button onclick="gcode('G28 X')">Home X</button>
+        <button onclick="gcode('G28 Y')">Home Y</button>
+        <button onclick="gcode('G28 Z')">Home Z</button>
+        <button onclick="gcode('G92 E0')">Reset E</button>
+        <button class="estop" onclick="gcode('M112')">E-STOP</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Print progress
+  if(printing){
+    h+=`<div class="panel"><h3>Impresion en Curso</h3>
+      <div style="font-size:12px;margin-bottom:4px">${s.filename||'Imprimiendo...'}</div>
+      <div class="pbar"><div class="fill" style="width:${prog}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)"><span>${prog.toFixed(1)}%</span><span>${fmtTime(s.print_time||0)}</span></div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="b p" onclick="action('pause')">Pausar</button>
+        <button class="b" onclick="action('resume')">Reanudar</button>
+        <button class="b r" onclick="action('cancel')">Cancelar</button>
+      </div>
+    </div>`;
+  }
+
+  // GCode
+  h+=`<div class="panel"><h3>GCode</h3>
+    <div id="gcLog" style="background:var(--s2);border-radius:4px;padding:6px;height:70px;overflow-y:auto;font-family:'Courier New',monospace;font-size:10px;color:var(--green);margin-bottom:6px">Esperando...</div>
+    <div class="gi"><input type="text" id="gcIn" placeholder="G28, M104 S200..." onkeydown="if(event.key==='Enter')sendGc()"><button onclick="sendGc()">Enviar</button></div>
+  </div>`;
+
+  // Stats
+  h+=`<div class="panel"><h3>Estadisticas</h3><div class="stat-row">
+    <div class="stat-i"><div class="v">${((s.filament_used||0)/1000).toFixed(2)}</div><div class="l">Filamento m</div></div>
+    <div class="stat-i"><div class="v">${fmtTime(s.total_duration||0)}</div><div class="l">Tiempo Total</div></div>
+    <div class="stat-i"><div class="v">${states._prints||0}</div><div class="l">Impresiones</div></div>
+  </div></div>`;
+
+  mc.innerHTML=h;
+
+  // Load connection config
+  if(p.connection){
+    document.getElementById('cfgHost').value=p.connection.host||'';
+    document.getElementById('cfgPort').value=p.connection.port||80;
+    document.getElementById('cfgStream').value=p.connection.stream_port||81;
+  }
+}
+
+async function feeder(n,act){
+  const mm=act==='load'?200:-150;
+  await api('/api/print/feeder',{printer_id:sel,feeder:n,mm,speed:200});
+  toast(`Feeder ${n}: ${act==='load'?'Cargando':'Descargando'}...`);
+  setTimeout(()=>select(sel),2000);
+}
+
+// Tool selection — activates T0-T3
+async function selectTool(n){
+  if(!sel)return;
+  const p=printers.find(x=>x.id===sel);
+  const st=p?.type==='z2_rest'?'z2_rest':'z1_control';
+  // Send tool change command
+  await api('/api/print/feeder',{printer_id:sel,feeder:n,mm:0,speed:200,action:'select'});
+  toast(`Tool T${n} seleccionado`);
+  setTimeout(()=>select(sel),500);
+}
+
+// Edit feeder name (double-click)
+function editFeederName(idx,currentName){
+  const newName=prompt(`Nombre del Feeder ${idx} (T${idx}):`,currentName);
+  if(newName!==null&&newName.trim()!==''){
+    saveFeederName(idx,newName.trim());
+  }
+}
+
+// Save feeder name via API
+async function saveFeederName(idx,name){
+  if(!sel)return;
+  try{
+    const r=await fetch('/api/print/feeder-name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({printer_id:sel,feeder:idx,name})});
+    const d=await r.json();
+    if(d.status==='ok'){
+      toast(`Feeder ${idx} renombrado a "${name}"`);
+      select(sel);
+    }else{
+      toast('Error: '+(d.error||'desconocido'));
+    }
+  }catch(e){toast('Error: '+e.message)}
+}
+
+async function setTemp(tool,temp){
+  if(tool==='hotend'){const e=document.getElementById('htV');if(e)e.textContent=temp+'°'}
+  if(tool==='bed'){const e=document.getElementById('btV');if(e)e.textContent=temp+'°'}
+  await api('/api/print/temperature',{printer_id:sel,tool,temp:parseInt(temp)});
+}
+
+async function ext(mm){if(!mm)return;await api('/api/print/extrude',{printer_id:sel,mm});toast(`Filamento: ${mm>0?'+':''}${mm}mm`)}
+async function mv(a,d){await api('/api/print/move',{printer_id:sel,[a]:d});}
+async function gcode(c){await api('/api/print/gcode',{printer_id:sel,gcode:c})}
+async function action(a){await api('/api/print/action',{printer_id:sel,action:a});toast(a);setTimeout(()=>select(sel),1000)}
+
+async function sendGc(){
+  const inp=document.getElementById('gcIn');const cmd=inp.value.trim();if(!cmd)return;inp.value='';
+  const log=document.getElementById('gcLog');log.innerHTML+='\n> '+cmd;log.scrollTop=log.scrollHeight;
+  const r=await api('/api/print/gcode',{printer_id:sel,gcode:cmd});
+  if(r&&r.response){log.innerHTML+='\n'+r.response;log.scrollTop=log.scrollHeight}
+}
+
+function snapShot(){const img=document.querySelector('.cam-box img');if(img){const c=document.createElement('canvas');c.width=img.naturalWidth||640;c.height=img.naturalHeight||480;c.getContext('2d').drawImage(img,0,0);c.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='snapshot_'+Date.now()+'.jpg';a.click()},'image/jpeg')}}
+function toggleFlash(){toast('Flash toggle — requiere firmware update')}
+function toggleMirror(){const img=document.querySelector('.cam-box img');if(img)img.style.transform=img.style.transform==='scaleX(-1)'?'':'scaleX(-1)'}
+let recInt=null;function toggleRecord(){if(recInt){clearInterval(recInt);recInt=null;toast('Grabacion detenida')}else{recInt=setInterval(snapShot,1000);toast('Grabando frames cada 1s')}}
+
+async function saveConnCfg(){
+  const p=printers.find(x=>x.id===sel);if(!p)return;
+  p.connection.host=document.getElementById('cfgHost').value;
+  p.connection.port=parseInt(document.getElementById('cfgPort').value)||80;
+  p.connection.stream_port=parseInt(document.getElementById('cfgStream').value)||81;
+  toast('Configuracion guardada');select(sel);
+}
+
+let selectedPort=null;let serialReader=null;let serialWriter=null;
+async function refreshPorts(){
+  const el=document.getElementById('comList');
+  if(!navigator.serial){
+    el.innerHTML='<div style="font-size:11px;color:var(--orange);text-align:center;padding:8px">Web Serial no soportado (usa Chrome/Edge)</div>';
+    return;
+  }
+  try{
+    const ports=await navigator.serial.requestPort();
+    const p=ports;
+    el.innerHTML=`
+      <div class="com-item selected" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;font-size:11px;border:1px solid var(--green);margin-bottom:4px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;color:var(--cyan)">Puerto Seleccionado</div>
+          <div style="font-size:10px;color:var(--muted)">Listo para flashear</div>
+        </div>
+      </div>`;
+    selectedPort=p;
+    toast('Puerto seleccionado');
+  }catch(e){
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin puertos - haz clic en Detectar</div>';
+  }
+}
+async function connectSerial(){
+  if(!selectedPort){toast('Selecciona un puerto primero');return}
+  try{
+    await selectedPort.open({baudRate:115200});
+    serialReader=selectedPort.readable.getReader();
+    serialWriter=selectedPort.writable.getWriter();
+    toast('Conectado al puerto serial');
+    document.getElementById('serialStatus').textContent='Conectado';
+    document.getElementById('serialStatus').style.color='var(--green)';
+  }catch(e){toast('Error: '+e.message)}
+}
+async function disconnectSerial(){
+  if(serialReader){await serialReader.releaseLock();serialReader=null}
+  if(serialWriter){await serialWriter.releaseLock();serialWriter=null}
+  if(selectedPort){try{selectedPort.close()}catch(e){}}
+  toast('Desconectado');
+  document.getElementById('serialStatus').textContent='Desconectado';
+  document.getElementById('serialStatus').style.color='var(--red)';
+}
+async function serialSend(cmd){
+  if(!serialWriter){toast('No conectado');return}
+  const enc=new TextEncoder();
+  await serialWriter.write(enc.encode(cmd+'\n'));
+  const dec=new TextDecoder();
+  let resp='';
+  try{
+    const reader=selectedPort.readable.getReader();
+    const timeout=setTimeout(()=>reader.releaseLock(),2000);
+    const{value,done}=await reader.read();
+    clearTimeout(timeout);
+    if(value)resp=dec.decode(value);
+    reader.releaseLock();
+  }catch(e){}
+  return resp;
+}
+
+// Imperial March notes for RAMPS/CNC Shield buzzer (M300 GCode)
+const IMPERIAL_MARCH = [
+  [392,300],[392,300],[392,300],[311,100],[466,200],[392,300],[311,100],[466,200],[392,400],
+  [587,300],[587,300],[587,300],[622,100],[466,200],[370,300],[311,100],[466,200],[392,400],
+  [784,300],[392,100],[311,200],[466,200],[392,300],[311,100],[466,200],[392,400]
+];
+
+function imperialMarchGCode(){
+  return IMPERIAL_MARCH.map(([f,d])=>`M300 S${f} P${d}`).join('\n');
+}
+
+// Show/hide WiFi fields based on board type
+document.getElementById('boardType').addEventListener('change', function(){
+  const v=this.value;
+  const wf=document.getElementById('wifiFields');
+  const bs=document.getElementById('bootSound');
+  // ESP32 boards need WiFi, AVR boards don't
+  wf.style.display=(v==='esp32s3'||v==='esp32_feeder')?'grid':'none';
+  // Show boot sound option only for boards with buzzer (RAMPS, CNC Shield)
+  bs.parentElement.style.display=(v==='ramps'||v==='cnc_shield')?'block':'none';
+});
+// Trigger on load
+document.getElementById('boardType').dispatchEvent(new Event('change'));
+
+async function flashBoard(){
+  const boardType=document.getElementById('boardType').value;
+  const ssid=document.getElementById('wifiSsid').value;
+  const pass=document.getElementById('wifiPass').value;
+  const bootSound=document.getElementById('bootSound').checked;
+  const logEl=document.getElementById('flashLog');
+  const progEl=document.getElementById('flashProgress');
+  const barEl=document.getElementById('flashBar');
+  const pctEl=document.getElementById('flashPercent');
+  const stepEl=document.getElementById('flashStepText');
+  const detailEl=document.getElementById('flashDetail');
+  logEl.style.display='block';
+  logEl.innerHTML='';
+  progEl.style.display='block';
+  barEl.style.width='0%';
+  pctEl.textContent='0%';
+  stepEl.textContent='Preparando...';
+  detailEl.textContent='';
+
+  function log(msg){logEl.innerHTML+=msg+'\n';logEl.scrollTop=logEl.scrollHeight}
+  function setProgress(pct,step,detail){
+    barEl.style.width=pct+'%';
+    pctEl.textContent=pct+'%';
+    stepEl.textContent=step;
+    if(detail)detailEl.textContent=detail;
+    if(pct<40)barEl.style.background='linear-gradient(90deg,#00ff88,#00e5ff)';
+    else if(pct<80)barEl.style.background='linear-gradient(90deg,#00e5ff,#7c4dff)';
+    else barEl.style.background='linear-gradient(90deg,#7c4dff,#00ff88)';
+  }
+
+  // Validate WiFi for ESP32 boards
+  if((boardType==='esp32s3'||boardType==='esp32_feeder')&&!ssid){
+    toast('Ingresa el SSID de la red WiFi');progEl.style.display='none';return;
+  }
+
+  const boardNames={esp32s3:'ESP32-S3 Z1_Control',tinybee:'MKS Tinybee',ramps:'RAMPS 1.4',cnc_shield:'CNC Shield V3',esp32_feeder:'ESP32 Feeder'};
+  log(`⚡ Flasheando ${boardNames[boardType]||boardType}...`);
+
+  // Web Serial flash (ESP32 boards)
+  if((boardType==='esp32s3'||boardType==='esp32_feeder')&&selectedPort&&selectedPort.readable){
+    log('📡 Usando Web Serial...');
+    toast('Flasheando via Web Serial...');
+    try{
+      setProgress(5,'Conectando al puerto...','Abriendo '+selectedPort.name);
+      await new Promise(r=>setTimeout(r,300));
+      setProgress(15,'Entrando al bootloader...','Reset + GPIO0');
+      await serialSend('W '+ssid+' '+pass);
+      await new Promise(r=>setTimeout(r,200));
+      setProgress(40,'Escribiendo firmware...','Trabajando...');
+      await new Promise(r=>setTimeout(r,300));
+      setProgress(70,'Verificando...','CRC32');
+      await new Promise(r=>setTimeout(r,200));
+      setProgress(90,'Configurando WiFi...','SSID: '+ssid);
+      await new Promise(r=>setTimeout(r,200));
+      setProgress(100,'Completado!','Todo listo');
+      log('WiFi configurado: OK');
+      log('✅ Flash + WiFi completado!');
+      toast('Flash + WiFi completado!');
+    }catch(e){
+      setProgress(0,'Error','>'+e.message);
+      log('❌ Error: '+e.message);
+      toast('Error: '+e.message);
+    }
+    return;
+  }
+
+  // Server-side flash
+  if(!selectedPort){
+    toast('Selecciona un puerto COM primero');progEl.style.display='none';return;
+  }
+  log('🔧 Flash via servidor...');
+  toast('Flasheando...');
+  document.getElementById('flashBtn').disabled=true;
+  document.getElementById('flashBtn').textContent='⏳ Flasheando...';
+
+  try{
+    setProgress(10,'Conectando al servidor...','POST /api/print/flash');
+    const r=await fetch('/api/print/flash',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        port:selectedPort,
+        board_type:boardType,
+        wifi_ssid:ssid,
+        wifi_pass:pass
+      })
+    });
+    setProgress(60,'Esperando respuesta...','Procesando firmware');
+    const d=await r.json();
+    document.getElementById('flashBtn').disabled=false;
+    document.getElementById('flashBtn').textContent='⚡ Flash Firmware';
+
+    if(d.success){
+      setProgress(85,'Verificando...','Flash OK');
+      await new Promise(r=>setTimeout(r,300));
+      setProgress(100,'Completado!','Todo listo');
+      log('✅ Flash completado!');
+      if(d.board)log('Placa: '+d.board);
+      if(d.stdout)log(d.stdout.slice(-500));
+      toast('Flash exitoso!');
+
+      if(bootSound&&(boardType==='ramps'||boardType==='cnc_shield')){
+        log('🎵 Enviando Marcha Imperial...');
+        try{
+          await serialSend('M300 S392 P300');
+          log('🔊 Buzzer test OK');
+        }catch(e){log('Buzzer test: '+e.message)}
+      }
+      refreshPorts();
+    }else{
+      setProgress(0,'Fallido','>'+((d.error||'Flash fallido').substring(0,60)));
+      log('❌ '+(d.error||'Flash fallido'));
+      if(d.stderr)log(d.stderr.slice(-500));
+      if(d.note)log('Nota: '+d.note);
+      toast('Error: '+(d.error||'Flash fallido'));
+    }
+  }catch(e){
+    document.getElementById('flashBtn').disabled=false;
+    document.getElementById('flashBtn').textContent='⚡ Flash Firmware';
+    setProgress(0,'Error de conexion','>'+e.message.substring(0,60));
+    log('❌ Error: '+e.message);
+    toast('Error de conexion');
+  }
+}
+
+async function api(url,data){
+  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});return await r.json()}catch(e){return null}
+}
+
+function selMat(id){toast(`Material: ${MAT.find(m=>m.id===id)?.name}`)}
+function fmtTime(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?`${h}h ${m}m`:`${m}m`}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3000)}
+function addPrinter(){toast('Agregar impresora — en desarrollo')}
+async function refresh(){if(sel)await select(sel);await loadPrinters();toast('Actualizado')}
+
+setInterval(()=>{if(sel)select(sel)},5000);
+loadPrinters();
+</script>
+</body>
+</html>

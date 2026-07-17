@@ -60,6 +60,14 @@ canvas{display:block;border:1px solid rgba(0,229,255,0.15);box-shadow:0 0 30px r
 #pauseOverlay .pause-box{text-align:center}
 #pauseOverlay .pause-title{font-size:28px;color:#00e5ff;letter-spacing:4px;margin-bottom:10px}
 #pauseOverlay .pause-sub{font-size:12px;color:#5a6a7a;letter-spacing:2px}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -93,6 +101,15 @@ canvas{display:block;border:1px solid rgba(0,229,255,0.15);box-shadow:0 0 30px r
 <button id="btnRetry">RETRY</button>
 <button class="secondary" id="btnGoLevels">MISSIONS</button>
 </div>
+<div class="social-share">
+<div style="font-size:11px;color:#5a6a7a;margin-bottom:6px">SHARE</div>
+<div class="share-btns">
+<button class="sbtn sbtn-tw" onclick="shareGame('twitter','Space Invaders',gameState.score)">X / Twitter</button>
+<button class="sbtn sbtn-fb" onclick="shareGame('facebook','Space Invaders',gameState.score)">Facebook</button>
+<button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Space Invaders',gameState.score)">WhatsApp</button>
+<button class="sbtn sbtn-copy" onclick="shareGame('copy','Space Invaders',gameState.score)">Copy Link</button>
+</div>
+</div>
 </div>
 
 <div id="levelCompleteScreen" class="screen">
@@ -122,6 +139,16 @@ var ctx = canvas.getContext('2d');
 var CW = 640, CH = 560;
 canvas.width = CW; canvas.height = CH;
 
+function resizeCanvas() {
+    var maxW = window.innerWidth - 20;
+    var maxH = window.innerHeight - 20;
+    var scale = Math.min(maxW / CW, maxH / CH, 1);
+    canvas.style.width = Math.floor(CW * scale) + 'px';
+    canvas.style.height = Math.floor(CH * scale) + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
 var COLORS = {bg:'#04060c',cyan:'#00e5ff',purple:'#7c4dff',green:'#00ff88',red:'#ff1744',yellow:'#ffeb3b',orange:'#ff9100',white:'#c0d0e0'};
 
 var SAVE_KEY = 'zicore_si_v3';
@@ -136,6 +163,9 @@ var keys = {};
 var shakeAmount = 0;
 var comboCount = 0;
 var comboTimer = 0;
+var rafId = null;
+var hardModeAnnounce = {active: false, timer: 0, alpha: 0};
+var bossWarningIndicator = {active: false, side: '', timer: 0};
 
 var audioCtx = null;
 function initAudio() {
@@ -238,8 +268,69 @@ document.getElementById('btnNextLevel').onclick = function(){
 };
 document.getElementById('btnLcLevels').onclick = function(){ showScreen('levelSelect'); buildLevelGrid(); };
 
+var touchState = {active: false, startX: 0, currentX: 0, shipStartX: 0, firing: false, fireInterval: null};
+
+function handleTouchStart(e) {
+    e.preventDefault();
+    if (!gameActive || paused) return;
+    var touch = e.touches[0];
+    var rect = canvas.getBoundingClientRect();
+    var touchX = (touch.clientX - rect.left) / (rect.width / CW);
+    var touchY = (touch.clientY - rect.top) / (rect.height / CH);
+    touchState.active = true;
+    touchState.startX = touchX;
+    touchState.currentX = touchX;
+    touchState.shipStartX = gameState.ship.x;
+    if (touchY < CH * 0.7) {
+        fireTouch();
+        touchState.firing = true;
+        touchState.fireInterval = setInterval(fireTouch, 150);
+    }
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    if (!touchState.active || !gameActive || paused) return;
+    var touch = e.touches[0];
+    var rect = canvas.getBoundingClientRect();
+    touchState.currentX = (touch.clientX - rect.left) / (rect.width / CW);
+    var dx = touchState.currentX - touchState.startX;
+    gameState.ship.x = Math.max(gameState.ship.w/2, Math.min(CW - gameState.ship.w/2, touchState.shipStartX + dx));
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    touchState.active = false;
+    touchState.firing = false;
+    if (touchState.fireInterval) { clearInterval(touchState.fireInterval); touchState.fireInterval = null; }
+}
+
+function fireTouch() {
+    if (!gameActive || paused || !gameState) return;
+    if (gameState.shootCooldown <= 0) {
+        var gs = gameState;
+        var s = gs.ship;
+        sfxShoot();
+        gs.bullets.push({x: s.x, y: s.y - s.h/2 - 4});
+        if (gs.multiTimer > 0) {
+            gs.bullets.push({x: s.x - 12, y: s.y - s.h/2 + 2});
+            gs.bullets.push({x: s.x + 12, y: s.y - s.h/2 + 2});
+        }
+        var cd = gs.config.bulletCooldown;
+        if (gs.rapidTimer > 0) cd = Math.max(3, Math.floor(cd / 3));
+        gs.shootCooldown = cd;
+    }
+}
+
+canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
+canvas.addEventListener('touchend', handleTouchEnd, {passive: false});
+canvas.addEventListener('touchcancel', handleTouchEnd, {passive: false});
+
 function startLevel(lvl) {
     initAudio();
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    var prevLevel = currentLevel;
     currentLevel = lvl;
     showScreen(null);
     var cfg = getLevelConfig(lvl);
@@ -314,6 +405,11 @@ function startLevel(lvl) {
     }
 
     gameActive = true; paused = false; frame = 0; shakeAmount = 0; comboCount = 0; comboTimer = 0;
+    if (lvl === 11 && prevLevel < 11) {
+        hardModeAnnounce.active = true;
+        hardModeAnnounce.timer = 180;
+        hardModeAnnounce.alpha = 0;
+    }
     requestAnimationFrame(gameLoop);
 }
 
@@ -543,8 +639,16 @@ function drawHUD() {
     ctx.save();
     ctx.fillStyle = 'rgba(4,6,12,0.75)';
     ctx.fillRect(0, 0, CW, 38);
-    ctx.strokeStyle = 'rgba(0,229,255,0.1)';
+    var hudGrad = ctx.createLinearGradient(0, 36, 0, 38);
+    hudGrad.addColorStop(0, 'rgba(0,229,255,0.3)');
+    hudGrad.addColorStop(0.5, 'rgba(124,77,255,0.2)');
+    hudGrad.addColorStop(1, 'rgba(0,229,255,0.3)');
+    ctx.strokeStyle = hudGrad;
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, 38); ctx.lineTo(CW, 38); ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(124,77,255,0.15)';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 38); ctx.moveTo(CW, 0); ctx.lineTo(CW, 38); ctx.stroke();
 
     ctx.font = 'bold 13px Consolas,monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -552,8 +656,14 @@ function drawHUD() {
     ctx.fillStyle = COLORS.cyan;
     ctx.fillText('SCORE ' + String(gameState.score).padStart(6, '0'), 12, 19);
 
-    ctx.fillStyle = gameState.config.hard ? COLORS.red : COLORS.yellow;
-    ctx.fillText('LVL ' + currentLevel + (gameState.config.hard ? ' HARD' : ''), 160, 19);
+    var lvlColor = gameState.config.hard ? COLORS.red : COLORS.cyan;
+    ctx.fillStyle = lvlColor;
+    ctx.fillText('LVL ' + currentLevel, 160, 19);
+    if (gameState.config.hard) {
+        ctx.fillStyle = COLORS.red;
+        ctx.font = 'bold 10px Consolas,monospace';
+        ctx.fillText('HARD', 220, 19);
+    }
 
     ctx.fillStyle = COLORS.green;
     var livesStr = '';
@@ -561,8 +671,19 @@ function drawHUD() {
     ctx.fillText('LIVES ' + livesStr, 310, 19);
 
     if (comboCount > 1) {
-        ctx.fillStyle = COLORS.orange;
-        ctx.fillText('COMBO x' + comboCount, 470, 19);
+        var comboSize = Math.min(13 + comboCount * 0.8, 22);
+        ctx.font = 'bold ' + Math.floor(comboSize) + 'px Consolas,monospace';
+        var comboIntensity = Math.min(comboCount / 10, 1);
+        var r = Math.floor(255 * comboIntensity);
+        var g = Math.floor(145 * (1 - comboIntensity));
+        ctx.fillStyle = comboCount >= 10 ? COLORS.yellow : ('rgb(' + r + ',' + g + ',0)');
+        ctx.textAlign = 'left';
+        ctx.fillText('x' + comboCount, 470, 19);
+        ctx.font = 'bold 13px Consolas,monospace';
+        if (comboCount >= 5) {
+            ctx.fillStyle = 'rgba(255,145,0,' + (0.2 + Math.sin(frame * 0.15) * 0.15) + ')';
+            ctx.fillText('COMBO', 470 - 70, 19);
+        }
     }
 
     var best = progress.bestScores[currentLevel] || 0;
@@ -606,6 +727,86 @@ function drawHUD() {
     }
 
     ctx.restore();
+}
+
+function drawHardModeAnnounce() {
+    if (!hardModeAnnounce.active) return;
+    hardModeAnnounce.timer--;
+    if (hardModeAnnounce.timer <= 0) { hardModeAnnounce.active = false; return; }
+
+    var progress_pct = 1 - (hardModeAnnounce.timer / 180);
+    if (progress_pct < 0.2) hardModeAnnounce.alpha = progress_pct / 0.2;
+    else if (progress_pct > 0.8) hardModeAnnounce.alpha = (1 - progress_pct) / 0.2;
+    else hardModeAnnounce.alpha = 1;
+
+    ctx.save();
+    ctx.globalAlpha = hardModeAnnounce.alpha;
+    ctx.fillStyle = 'rgba(4,6,12,0.8)';
+    ctx.fillRect(0, CH/2 - 50, CW, 100);
+
+    var borderGrad = ctx.createLinearGradient(0, CH/2 - 50, 0, CH/2 + 50);
+    borderGrad.addColorStop(0, COLORS.red);
+    borderGrad.addColorStop(0.5, COLORS.orange);
+    borderGrad.addColorStop(1, COLORS.red);
+    ctx.strokeStyle = borderGrad;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(2, CH/2 - 48, CW - 4, 96);
+
+    ctx.font = 'bold 28px Consolas,monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.red;
+    ctx.fillText('HARD MODE', CW/2, CH/2 - 12);
+
+    ctx.font = 'bold 18px Consolas,monospace';
+    ctx.fillStyle = COLORS.orange;
+    ctx.fillText('INITIATED', CW/2, CH/2 + 18);
+
+    for (var i = 0; i < 6; i++) {
+        var sparkX = CW/2 + (Math.random() - 0.5) * 300;
+        var sparkY = CH/2 + (Math.random() - 0.5) * 60;
+        ctx.fillStyle = Math.random() > 0.5 ? COLORS.red : COLORS.orange;
+        ctx.fillRect(sparkX, sparkY, 2, 2);
+    }
+
+    ctx.restore();
+}
+
+function drawBossWarningIndicator() {
+    if (!gameState || !gameState.boss || !gameState.boss.alive || !gameState.boss.entered) return;
+    var b = gameState.boss;
+    var warningAlpha = 0;
+    var warningSide = '';
+
+    if (b.x < 30) { warningAlpha = Math.max(0, 1 - b.x / 30); warningSide = 'left'; }
+    else if (b.x > CW - 30) { warningAlpha = Math.max(0, 1 - (CW - b.x) / 30); warningSide = 'right'; }
+
+    if (warningAlpha > 0 && b.attackTimer > 30) {
+        var pulse = Math.sin(frame * 0.2) * 0.3 + 0.7;
+        ctx.save();
+        ctx.globalAlpha = warningAlpha * pulse;
+
+        var indicatorX = warningSide === 'left' ? 8 : CW - 8;
+        var grad = ctx.createLinearGradient(indicatorX - 15, 0, indicatorX + 15, 0);
+        if (warningSide === 'left') {
+            grad.addColorStop(0, 'rgba(255,23,68,0.8)');
+            grad.addColorStop(1, 'transparent');
+        } else {
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(1, 'rgba(255,23,68,0.8)');
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(warningSide === 'left' ? 0 : CW - 40, b.y - 20, 40, 40);
+
+        ctx.font = 'bold 14px Consolas,monospace';
+        ctx.textAlign = warningSide === 'left' ? 'left' : 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = COLORS.red;
+        var arrowChar = warningSide === 'left' ? '\u25C0' : '\u25B6';
+        ctx.fillText(arrowChar, warningSide === 'left' ? 4 : CW - 4, b.y);
+
+        ctx.restore();
+    }
 }
 
 function updateGame() {
@@ -854,6 +1055,7 @@ function updateGame() {
 
 function levelComplete() {
     gameActive = false;
+    if (touchState.fireInterval) { clearInterval(touchState.fireInterval); touchState.fireInterval = null; }
     sfxLevelUp();
     var gs = gameState;
     var lvlBonus = currentLevel * 50 + gs.ship.lives * 100;
@@ -888,6 +1090,7 @@ function levelComplete() {
 
 function endGame(won) {
     gameActive = false;
+    if (touchState.fireInterval) { clearInterval(touchState.fireInterval); touchState.fireInterval = null; }
     var gs = gameState;
     document.getElementById('goScore').textContent = gs.score;
     document.getElementById('goWave').textContent = currentLevel;
@@ -963,16 +1166,18 @@ function draw() {
         ctx.globalAlpha = 1;
 
         drawHUD();
+        drawBossWarningIndicator();
     }
 
     ctx.restore();
+    drawHardModeAnnounce();
 }
 
 function gameLoop() {
     frame++;
     if (gameActive && !paused) updateGame();
     draw();
-    requestAnimationFrame(gameLoop);
+    if (gameActive) rafId = requestAnimationFrame(gameLoop);
 }
 
 document.addEventListener('keydown', function(e) {
@@ -982,6 +1187,7 @@ document.addEventListener('keydown', function(e) {
         if (gameActive) {
             paused = !paused;
             if (paused) {
+                if (touchState.fireInterval) { clearInterval(touchState.fireInterval); touchState.fireInterval = null; }
                 document.getElementById('pauseOverlay').classList.add('active');
             } else {
                 document.getElementById('pauseOverlay').classList.remove('active');
@@ -1021,6 +1227,15 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('keyup', function(e) {
     keys[e.key] = false;
 });
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

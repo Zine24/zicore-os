@@ -33,6 +33,14 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 #canvasWrap canvas{display:block}
 .controls-help{position:fixed;bottom:12px;color:#334;font-size:10px;letter-spacing:1px}
 .controls-help span{color:#00e5ff55}
+.social-share{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)}
+.share-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.sbtn{padding:8px 16px;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:#00e5ff;font-size:12px;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .2s}
+.sbtn:hover{background:rgba(0,229,255,0.2);border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,0.3)}
+.sbtn-tw:hover{border-color:#1da1f2;color:#1da1f2}
+.sbtn-fb:hover{border-color:#4267B2;color:#4267B2}
+.sbtn-wa:hover{border-color:#25D366;color:#25D366}
+.sbtn-copy:hover{border-color:#ff0;color:#ff0}
 </style>
 </head>
 <body>
@@ -51,6 +59,15 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
   <div class="go-score" id="finalScore">SCORE: 0</div>
   <div class="go-info" id="finalInfo">LENGTH: 3 | LEVEL 1</div>
   <button class="btn" onclick="startGame()">RETRY</button>
+  <div class="social-share">
+    <div style="font-size:11px;color:#556;margin-bottom:6px">SHARE</div>
+    <div class="share-btns">
+      <button class="sbtn sbtn-tw" onclick="shareGame('twitter','Snake',score)">X / Twitter</button>
+      <button class="sbtn sbtn-fb" onclick="shareGame('facebook','Snake',score)">Facebook</button>
+      <button class="sbtn sbtn-wa" onclick="shareGame('whatsapp','Snake',score)">WhatsApp</button>
+      <button class="sbtn sbtn-copy" onclick="shareGame('copy','Snake',score)">Copy Link</button>
+    </div>
+  </div>
 </div>
 <div id="gameWrap">
   <div id="hud">
@@ -58,12 +75,23 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
     <div class="level">LVL: <span id="hudLevel">1</span></div>
     <div class="food">LENGTH: <span id="hudLen">3</span></div>
     <div class="power" id="powerIndicator" style="display:none">POWER: <span id="powerName"></span></div>
+    <div id="muteBtn" onclick="initSound();toggleSound()" style="cursor:pointer;padding:4px 10px;background:#080e18;border:1px solid #0e1a2a;border-radius:4px;font-size:14px">🔊</div>
   </div>
   <div id="canvasWrap"><canvas id="game"></canvas></div>
 </div>
 <div class="controls-help"><span>WASD/ARROWS</span> MOVE <span>P</span> PAUSE</div>
 
 <script>
+var soundMuted=false,audioCtx=null;
+function initSound(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+function tone(f,d,v,t,dl){if(soundMuted||!audioCtx)return;v=v||.06;t=t||'square';dl=dl||0;var n=audioCtx.currentTime+dl,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=t;o.frequency.setValueAtTime(f,n);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+d)}
+function toggleSound(){soundMuted=!soundMuted;var b=document.getElementById('muteBtn');if(b)b.textContent=soundMuted?'\u{1F507}':'\u{1F506}'}
+function sfxEat(){tone(600,.08,.06,'sine');tone(800,.06,.05,'sine',.04)}
+function sfxPowerup(){tone(800,.1,.05,'sine');tone(1000,.1,.05,'sine',.08);tone(1200,.15,.04,'sine',.16)}
+function sfxDirChange(){tone(300,.02,.03)}
+function sfxDeath(){tone(400,.15,.07,'sawtooth');tone(300,.15,.07,'sawtooth',.1);tone(200,.2,.08,'sawtooth',.2)}
+function sfxLevelUp(){tone(523,.1,.06,'sine');tone(659,.1,.06,'sine',.08);tone(784,.1,.06,'sine',.16);tone(1047,.15,.07,'sine',.24)}
+function sfxWallHit(){tone(120,.08,.06,'triangle')}
 const GRID=20,CELL=24;
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');
@@ -122,6 +150,7 @@ function addParticles(x,y,color,count=5){
 }
 
 function startGame(){
+  initSound();
   document.getElementById('startScreen').classList.remove('active');
   document.getElementById('gameOver').classList.remove('active');
   document.getElementById('gameWrap').classList.add('active');
@@ -167,7 +196,7 @@ function gameLoop(time){
     dir=nextDir;
     const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
     // Wall collision
-    if(head.x<0||head.x>=GRID||head.y<0||head.y>=GRID){endGame();return;}
+    if(head.x<0||head.x>=GRID||head.y<0||head.y>=GRID){sfxWallHit();endGame();return;}
     // Self collision
     for(const s of snake)if(s.x===head.x&&s.y===head.y){endGame();return;}
     // Obstacle collision
@@ -176,7 +205,7 @@ function gameLoop(time){
     let ate=false;
     // Food
     if(food.x===head.x&&food.y===head.y){
-      ate=true;foodEaten++;
+      ate=true;foodEaten++;sfxEat();
       let pts=10;
       if(powerType==='2x PTS')pts*=2;
       score+=pts;
@@ -184,7 +213,7 @@ function gameLoop(time){
       placeFood();
       placePowerUp();
       if(foodEaten%5===0){
-        level=Math.min(level+1,20);
+        level=Math.min(level+1,20);sfxLevelUp();
         const newObs=createObstacles(level);
         obstacles=newObs;
         updateDropSpeed();
@@ -195,6 +224,7 @@ function gameLoop(time){
       powerType=powerUp.type.name;
       powerTimer=powerUp.type.duration;
       addParticles(powerUp.x,powerUp.y,powerUp.type.color,10);
+      sfxPowerup();
       powerUp=null;
       updateDropSpeed();
     }
@@ -260,6 +290,7 @@ function draw(){
 }
 
 function endGame(){
+  sfxDeath();
   gameOver=true;
   document.getElementById('finalScore').textContent='SCORE: '+score;
   document.getElementById('finalInfo').textContent='LENGTH: '+snake.length+' | LEVEL '+level;
@@ -279,7 +310,7 @@ document.addEventListener('keydown',e=>{
   };
   const nd=map[e.key];
   if(nd){
-    if(nd.x+dir.x!==0||nd.y+dir.y!==0)nextDir=nd;
+    if(nd.x+dir.x!==0||nd.y+dir.y!==0){nextDir=nd;sfxDirChange();}
     e.preventDefault();
   }
 });
@@ -300,6 +331,15 @@ document.addEventListener('touchend',e=>{
     else if(dy<0&&dir.y!==-1)nextDir=DIR.UP;
   }
 });
+
+function shareGame(platform,gameName,score){
+  const text='I scored '+score+' in '+gameName+' on ZICORE! Can you beat my record? 🚀 https://zcs.zicore.space/games';
+  const url='https://zcs.zicore.space/games';
+  if(platform==='twitter')window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='facebook')window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
+  else if(platform==='whatsapp')window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  else if(platform==='copy'){navigator.clipboard.writeText(text).then(()=>alert('Link copiado al portapapeles!'));}
+}
 </script>
 </body>
 </html>

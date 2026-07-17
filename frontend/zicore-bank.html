@@ -3,1278 +3,510 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE Bank — Banking del Futuro Digital</title>
+<title>ZICORE Bank</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#030508;--bg2:#080c16;--bg3:#0c1220;--bg4:#101828;--bg5:#141e32;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3344;--orange:#ff8800;--yellow:#ffd600;--text:#c8d6e5;--text2:#5a6e82;--text3:#3a4a5c;--border:#141e32;--glass:rgba(8,12,22,0.92);--glow-cyan:0 0 20px rgba(0,229,255,.12);--glow-purple:0 0 20px rgba(124,77,255,.12);--glow-green:0 0 20px rgba(0,255,136,.12)}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh}
-canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
-.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.008) 2px,rgba(0,229,255,.008) 4px)}
-.hidden{display:none!important}
+:root{--bg:#04060c;--surface:rgba(10,15,30,0.85);--glass:rgba(10,15,30,0.7);--border:rgba(0,229,255,0.12);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;--orange:#ffa500;--text:#e0e6f0;--muted:#5a6a80;--mono:'SF Mono',Consolas,monospace}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-/* ===== LANDING PAGE ===== */
-.landing{position:relative;z-index:2;min-height:100vh;overflow-y:auto}
-.landing-nav{display:flex;align-items:center;gap:16px;padding:16px 40px;position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(3,5,8,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-.landing-nav .logo-svg{width:36px;height:36px;flex-shrink:0}
-.landing-nav .brand{font-size:16px;font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.landing-nav .spacer{flex:1}
-.landing-nav .nav-btn{font-size:11px;letter-spacing:1px;padding:8px 18px;border-radius:6px;cursor:pointer;border:1px solid var(--border);color:var(--text2);background:transparent;transition:all .2s;font-family:inherit}
-.landing-nav .nav-btn:hover{border-color:var(--cyan);color:var(--cyan)}
-.landing-nav .nav-btn.primary{background:linear-gradient(135deg,var(--cyan),#0090b0);color:#030508;border:none;font-weight:600}
-.landing-nav .nav-btn.primary:hover{box-shadow:0 0 24px rgba(0,229,255,.3)}
+.topbar{position:fixed;top:0;left:0;right:0;height:48px;background:rgba(4,6,12,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;backdrop-filter:blur(20px)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.topbar-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--cyan),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.topbar-title{font-size:13px;font-weight:600;letter-spacing:1px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.topbar-back{color:var(--muted);text-decoration:none;font-size:11px;letter-spacing:1px}
+.topbar-back:hover{color:var(--cyan)}
 
-/* HERO */
-.hero{padding:160px 40px 80px;text-align:center;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:50%;left:50%;width:800px;height:800px;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,229,255,.06) 0%,transparent 70%);pointer-events:none}
-.hero-badge{display:inline-block;font-size:10px;letter-spacing:3px;padding:6px 16px;border:1px solid rgba(0,229,255,.2);border-radius:20px;color:var(--cyan);margin-bottom:24px;background:rgba(0,229,255,.04)}
-.hero h1{font-size:clamp(32px,5vw,60px);font-weight:800;letter-spacing:4px;line-height:1.15;margin-bottom:16px}
-.hero h1 .grad{background:linear-gradient(135deg,var(--cyan),var(--purple),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero .subtitle{font-size:clamp(14px,2vw,18px);color:var(--text2);max-width:600px;margin:0 auto 36px;line-height:1.6}
-.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.hero-actions .btn{padding:14px 32px;border:none;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .25s;text-transform:uppercase;font-family:inherit}
-.hero-actions .btn-primary{background:linear-gradient(135deg,var(--cyan),#0090b0);color:#030508}
-.hero-actions .btn-primary:hover{box-shadow:0 0 30px rgba(0,229,255,.35);transform:translateY(-2px)}
-.hero-actions .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
-.hero-actions .btn-outline:hover{border-color:var(--cyan);color:var(--cyan)}
+.main{padding:70px 24px 40px;max-width:1200px;margin:0 auto}
 
-/* FEATURES */
-.features{padding:60px 40px;max-width:1200px;margin:0 auto}
-.features h2{text-align:center;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:40px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
-.feature-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;transition:all .3s;position:relative;overflow:hidden}
-.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s}
-.feature-card:hover{border-color:rgba(0,229,255,.2);transform:translateY(-3px);box-shadow:var(--glow-cyan)}
-.feature-card:hover::before{opacity:1}
-.feature-card .fc-icon{font-size:28px;margin-bottom:14px}
-.feature-card .fc-title{font-size:14px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:var(--text)}
-.feature-card .fc-desc{font-size:12px;color:var(--text2);line-height:1.7}
+/* ── Portfolio Hero ────────────────────────────────── */
+.portfolio{background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:32px;margin-bottom:24px;backdrop-filter:blur(12px);position:relative;overflow:hidden}
+.portfolio::before{content:'';position:absolute;top:-50%;right:-10%;width:300px;height:300px;background:radial-gradient(circle,rgba(0,229,255,0.06),transparent);pointer-events:none}
+.portfolio-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.portfolio-balance{font-size:48px;font-weight:700;font-family:var(--mono);color:var(--cyan);line-height:1}
+.portfolio-usd{font-size:16px;color:var(--green);margin-top:4px;font-family:var(--mono)}
+.portfolio-stats{display:flex;gap:32px;margin-top:24px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.stat-value{font-size:20px;font-weight:600;font-family:var(--mono);margin-top:2px}
+.stat-value.green{color:var(--green)}
+.stat-value.purple{color:var(--purple)}
 
-/* TIERS */
-.tiers{padding:60px 40px;max-width:1200px;margin:0 auto}
-.tiers h2{text-align:center;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:12px;background:linear-gradient(135deg,var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.tiers .sub{text-align:center;font-size:13px;color:var(--text2);margin-bottom:40px}
-.tiers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-.tier-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px 24px;transition:all .3s;position:relative;display:flex;flex-direction:column}
-.tier-card.featured{border-color:rgba(124,77,255,.3);box-shadow:var(--glow-purple)}
-.tier-card.featured::after{content:'POPULAR';position:absolute;top:12px;right:12px;font-size:8px;letter-spacing:2px;padding:3px 8px;border-radius:4px;background:rgba(124,77,255,.15);color:var(--purple);font-weight:700}
-.tier-card .tc-name{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text2);margin-bottom:8px;font-weight:600}
-.tier-card .tc-price{font-size:32px;font-weight:800;color:var(--text);margin-bottom:4px;font-family:'Cascadia Code',Consolas,monospace}
-.tier-card .tc-price .period{font-size:12px;color:var(--text2);font-weight:400}
-.tier-card .tc-price.free{color:var(--green)}
-.tier-card .tc-desc{font-size:11px;color:var(--text2);margin-bottom:18px;line-height:1.5}
-.tier-card .tc-features{list-style:none;flex:1;margin-bottom:20px}
-.tier-card .tc-features li{font-size:11px;color:var(--text);padding:6px 0;display:flex;align-items:flex-start;gap:8px;line-height:1.4}
-.tier-card .tc-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
-.tier-card .tc-btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;text-transform:uppercase;font-family:inherit}
-.tier-card .tc-btn.primary{background:linear-gradient(135deg,var(--cyan),#0090b0);color:#030508}
-.tier-card .tc-btn.primary:hover{box-shadow:0 0 24px rgba(0,229,255,.3)}
-.tier-card .tc-btn.purple{background:linear-gradient(135deg,var(--purple),#5030c0);color:#fff}
-.tier-card .tc-btn.purple:hover{box-shadow:0 0 24px rgba(124,77,255,.3)}
-.tier-card .tc-btn.green{background:linear-gradient(135deg,var(--green),#00b060);color:#030508}
-.tier-card .tc-btn.green:hover{box-shadow:0 0 24px rgba(0,255,136,.3)}
-.tier-card .tc-btn.gold{background:linear-gradient(135deg,#ffd600,#ff8800);color:#030508}
-.tier-card .tc-btn.gold:hover{box-shadow:0 0 24px rgba(255,214,0,.3)}
-.tier-card .tc-btn:disabled{opacity:.5;cursor:default}
+/* ── Grid Layout ────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
 
-/* AUTH FORMS */
-.auth-section{padding:60px 40px;max-width:480px;margin:0 auto}
-.auth-section h2{text-align:center;font-size:20px;font-weight:700;letter-spacing:3px;margin-bottom:30px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.auth-tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--bg3);border-radius:8px;padding:3px}
-.auth-tab{flex:1;text-align:center;padding:10px;font-size:11px;letter-spacing:1px;cursor:pointer;border-radius:6px;color:var(--text2);transition:all .2s;font-weight:600}
-.auth-tab.active{background:rgba(0,229,255,.1);color:var(--cyan)}
-.auth-form{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px}
-.auth-form .form-group{margin-bottom:14px}
-.auth-form .form-group label{display:block;font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px}
-.auth-form .form-group input,.auth-form .form-group select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:8px;font-size:13px;outline:none;transition:border-color .2s;font-family:inherit}
-.auth-form .form-group input:focus{border-color:var(--cyan)}
-.auth-form .form-group input::placeholder{color:var(--text3)}
-.auth-form .btn{width:100%;padding:13px;border:none;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;margin-top:8px;font-family:inherit}
-.auth-form .btn-primary{background:linear-gradient(135deg,var(--cyan),#0090b0);color:#030508}
-.auth-form .btn-primary:hover{box-shadow:0 0 24px rgba(0,229,255,.3)}
-.auth-form .error{font-size:11px;color:var(--red);margin-top:8px;display:none}
-.auth-form .tier-select{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
-.auth-form .tier-option{padding:10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;font-size:11px}
-.auth-form .tier-option:hover{border-color:rgba(0,229,255,.3)}
-.auth-form .tier-option.selected{border-color:var(--cyan);background:rgba(0,229,255,.06)}
-.auth-form .tier-option .to-name{font-weight:700;letter-spacing:1px;margin-bottom:2px}
-.auth-form .tier-option .to-price{color:var(--text2);font-size:10px}
+/* ── Cards ─────────────────────────────────────────── */
+.card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:24px;backdrop-filter:blur(12px)}
+.card h3{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--cyan);margin-bottom:16px;display:flex;align-items:center;gap:8px}
 
-.landing-footer{text-align:center;padding:40px;border-top:1px solid var(--border);color:var(--text3);font-size:10px;letter-spacing:1px}
+/* ── Send Form ─────────────────────────────────────── */
+.form-group{margin-bottom:14px}
+.form-group label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px}
+.form-group input,.form-group textarea{width:100%;padding:12px 14px;border-radius:8px;background:rgba(0,0,0,0.3);color:var(--text);border:1px solid var(--border);font-size:13px;transition:border-color .2s}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--cyan);outline:none}
+.form-group input::placeholder{color:var(--muted)}
 
-/* ===== DASHBOARD APP ===== */
-.app{position:relative;z-index:2;display:grid;grid-template-columns:240px 1fr;grid-template-rows:52px 1fr;height:100vh;width:100vw}
-.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--glass);border-bottom:1px solid var(--border);backdrop-filter:blur(24px);z-index:10}
-.topbar .logo{width:32px;height:32px;flex-shrink:0}
-.topbar .brand{font-size:14px;font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar .sep{width:1px;height:20px;background:var(--border)}
-.topbar .nav-links{display:flex;gap:4px}
-.topbar .nav-link{font-size:10px;letter-spacing:1px;padding:5px 12px;border-radius:4px;cursor:pointer;color:var(--text2);transition:all .2s;border:1px solid transparent}
-.topbar .nav-link:hover{color:var(--text);background:rgba(0,229,255,.04)}
-.topbar .nav-link.active{color:var(--cyan);background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.15)}
-.topbar .spacer{flex:1}
-.topbar .tier-badge{font-size:8px;padding:4px 10px;border-radius:4px;letter-spacing:1px;font-weight:700;text-transform:uppercase}
-.topbar .tier-badge.explorer{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.15)}
-.topbar .tier-badge.trader{background:rgba(0,229,255,.08);color:var(--cyan);border:1px solid rgba(0,229,255,.15)}
-.topbar .tier-badge.vault{background:rgba(124,77,255,.08);color:var(--purple);border:1px solid rgba(124,77,255,.15)}
-.topbar .tier-badge.ultimate{background:rgba(255,214,0,.08);color:var(--yellow);border:1px solid rgba(255,214,0,.15)}
-.topbar .wallet-info{display:flex;align-items:center;gap:10px}
-.topbar .wallet-label{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase}
-.topbar .wallet-balance{font-size:16px;font-weight:700;color:var(--green);font-family:'Cascadia Code',Consolas,monospace}
-.topbar .wallet-balance .currency{font-size:10px;color:var(--text2);font-weight:400;margin-left:4px}
-.topbar .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.topbar .logout-btn{font-size:10px;padding:5px 12px;border-radius:4px;cursor:pointer;color:var(--text2);border:1px solid var(--border);background:transparent;transition:all .2s;font-family:inherit;letter-spacing:1px}
-.topbar .logout-btn:hover{border-color:var(--red);color:var(--red)}
+.btn{padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:none}
+.btn-primary{background:var(--cyan);color:#000}
+.btn-primary:hover{box-shadow:0 0 20px rgba(0,229,255,0.3)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed}
+.btn-stake{background:rgba(124,77,255,0.15);color:var(--purple);border:1px solid rgba(124,77,255,0.3)}
+.btn-stake:hover{background:rgba(124,77,255,0.25)}
+.btn-stake:disabled{opacity:0.4;cursor:not-allowed}
+.btn-row{display:flex;gap:8px;margin-top:16px}
 
-/* SIDEBAR */
-.sidebar{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px);padding-bottom:12px}
-.sidebar::-webkit-scrollbar{width:3px}
-.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.sb-header{padding:16px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);margin-bottom:4px}
-.sb-header .hex{font-size:20px;color:var(--cyan);animation:spin 8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.sb-header .title{font-size:11px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sb-header .subtitle{font-size:7px;letter-spacing:2px;color:var(--text3);margin-top:1px}
-.sb-section{padding:10px 16px 4px;font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;font-weight:600;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;transition:color .2s}
-.sb-section:hover{color:var(--text)}
-.sb-section .arrow{font-size:7px;color:var(--text3);transition:transform .2s}
-.sb-group{overflow:hidden;transition:max-height .3s ease}
-.sb-group.collapsed{max-height:0!important}
-.sb-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;font-size:12px;color:var(--text2)}
-.sb-item:hover{background:rgba(0,229,255,.04);color:var(--text)}
-.sb-item.active{background:rgba(0,229,255,.06);color:var(--cyan);border-left-color:var(--cyan)}
-.sb-item .ico{width:18px;text-align:center;font-size:13px;flex-shrink:0}
-.sb-item .lock{margin-left:auto;font-size:9px;color:var(--text3)}
-.sb-divider{height:1px;background:var(--border);margin:6px 16px}
-.sb-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
-.sb-footer .version{font-size:8px;color:var(--text3);letter-spacing:1px}
-.sb-footer .status{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:9px;color:var(--green)}
-.sb-footer .status .dot{width:4px;height:4px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)}
+/* ── Staking ──────────────────────────────────────── */
+.staking-info{display:flex;flex-direction:column;gap:12px}
+.staking-row{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:8px;background:rgba(0,0,0,0.2)}
+.staking-row .label{font-size:12px;color:var(--muted)}
+.staking-row .value{font-size:14px;font-family:var(--mono);font-weight:600}
+.staking-row .value.green{color:var(--green)}
+.staking-row .value.purple{color:var(--purple)}
+.staking-badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(124,77,255,0.15);color:var(--purple);border:1px solid rgba(124,77,255,0.3)}
+.apy-display{font-size:24px;font-weight:700;color:var(--green);font-family:var(--mono);margin:12px 0}
 
-/* CONTENT */
-.content{display:flex;flex-direction:column;overflow:hidden}
-.content-scroll{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
-.content-scroll::-webkit-scrollbar{width:4px}
-.content-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.page-header{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.page-title{font-size:18px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.page-subtitle{font-size:10px;color:var(--text2);letter-spacing:1px}
-.page-spacer{flex:1}
-.page-badge{font-size:8px;padding:3px 10px;border-radius:4px;letter-spacing:1px;font-weight:600}
-.badge-green{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.15)}
-.badge-cyan{background:rgba(0,229,255,.08);color:var(--cyan);border:1px solid rgba(0,229,255,.15)}
-.badge-purple{background:rgba(124,77,255,.08);color:var(--purple);border:1px solid rgba(124,77,255,.15)}
-.badge-red{background:rgba(255,52,68,.08);color:var(--red);border:1px solid rgba(255,52,68,.15)}
-.badge-gold{background:rgba(255,214,0,.08);color:var(--yellow);border:1px solid rgba(255,214,0,.15)}
+/* ── Transactions ─────────────────────────────────── */
+.tx-list{display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto}
+.tx-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;background:rgba(0,0,0,0.15);transition:background .15s}
+.tx-item:hover{background:rgba(0,0,0,0.25)}
+.tx-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tx-icon.sent{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.2)}
+.tx-icon.received{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2)}
+.tx-icon.stake{background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2)}
+.tx-info{flex:1;min-width:0}
+.tx-type{font-size:12px;font-weight:600}
+.tx-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-amount{font-size:13px;font-family:var(--mono);font-weight:600;flex-shrink:0}
+.tx-amount.negative{color:var(--red)}
+.tx-amount.positive{color:var(--green)}
+.tx-date{font-size:10px;color:var(--muted);text-align:right;flex-shrink:0}
 
-/* CARDS */
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;transition:all .25s;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .25s}
-.card:hover{border-color:rgba(0,229,255,.2);transform:translateY(-1px);box-shadow:var(--glow-cyan)}
-.card:hover::before{opacity:1}
-.card .card-label{font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:8px}
-.card .card-value{font-size:22px;font-weight:700;color:var(--text);font-family:'Cascadia Code',Consolas,monospace;line-height:1.2}
-.card .card-value .unit{font-size:11px;color:var(--text2);font-weight:400;margin-left:2px}
-.card .card-change{font-size:10px;margin-top:6px;display:flex;align-items:center;gap:4px}
-.card .card-change.up{color:var(--green)}
-.card .card-change.down{color:var(--red)}
-.card .card-icon{position:absolute;top:14px;right:16px;font-size:22px;opacity:.15}
+/* ── Deposit Addresses ─────────────────────────────── */
+.deposit-address{display:flex;align-items:center;gap:8px;padding:10px;border-radius:6px;background:rgba(0,0,0,0.2);margin-bottom:6px}
+.deposit-address .crypto{font-size:12px;font-weight:700;width:40px;flex-shrink:0}
+.deposit-address .addr{font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.deposit-address .copy-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;flex-shrink:0}
+.deposit-address .copy-btn:hover{border-color:var(--cyan);color:var(--cyan)}
 
-/* PANELS */
-.panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.panel-header{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
-.panel-header .ph-icon{font-size:14px;opacity:.5}
-.panel-header .ph-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text)}
-.panel-header .ph-spacer{flex:1}
-.panel-header .ph-badge{font-size:8px;padding:2px 8px;border-radius:3px;background:rgba(0,229,255,.08);color:var(--cyan);letter-spacing:1px}
-.panel-body{padding:18px}
+/* ── Empty State ──────────────────────────────────── */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .icon{font-size:36px;margin-bottom:12px;opacity:0.5}
+.empty p{font-size:13px}
 
-/* TABLES */
-.tx-table{width:100%;border-collapse:collapse}
-.tx-table th{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);font-weight:600}
-.tx-table td{font-size:11px;padding:10px 12px;border-bottom:1px solid rgba(20,30,50,.5);color:var(--text)}
-.tx-table tr:hover td{background:rgba(0,229,255,.02)}
-.tx-table .mono{font-family:'Cascadia Code',Consolas,monospace;font-size:10px}
-.tx-table .positive{color:var(--green)}
-.tx-table .negative{color:var(--red)}
-.tx-table .hash{color:var(--text2);font-family:'Cascadia Code',Consolas,monospace;font-size:9px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+/* ── Toast ────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;animation:toastIn .3s ease}
+.toast.success{background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.3);color:var(--green)}
+.toast.error{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3);color:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-/* FORMS */
-.form-row{display:flex;gap:12px;margin-bottom:12px}
-.form-group{display:flex;flex-direction:column;gap:4px;flex:1}
-.form-group label{font-size:9px;letter-spacing:1px;color:var(--text2);text-transform:uppercase}
-.form-group input,.form-group select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:6px;font-size:12px;outline:none;transition:border-color .2s;font-family:inherit}
-.form-group input:focus,.form-group select:focus{border-color:var(--cyan)}
-.form-group input::placeholder{color:var(--text3)}
-.btn{padding:10px 20px;border:none;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all .2s;text-transform:uppercase;font-family:inherit}
-.btn-primary{background:linear-gradient(135deg,var(--cyan),#0090b0);color:#030508}
-.btn-primary:hover{box-shadow:0 0 20px rgba(0,229,255,.25);transform:translateY(-1px)}
-.btn-green{background:linear-gradient(135deg,var(--green),#00b060);color:#030508}
-.btn-green:hover{box-shadow:0 0 20px rgba(0,255,136,.25);transform:translateY(-1px)}
-.btn-purple{background:linear-gradient(135deg,var(--purple),#5030c0);color:#fff}
-.btn-purple:hover{box-shadow:0 0 20px rgba(124,77,255,.25);transform:translateY(-1px)}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
-.btn-outline:hover{border-color:var(--cyan);color:var(--cyan)}
-.btn-red{background:linear-gradient(135deg,var(--red),#cc2233);color:#fff}
-.btn-red:hover{box-shadow:0 0 20px rgba(255,52,68,.25)}
-.btn-gold{background:linear-gradient(135deg,var(--yellow),var(--orange));color:#030508}
-.btn-gold:hover{box-shadow:0 0 20px rgba(255,214,0,.25)}
-.btn-group{display:flex;gap:8px;margin-top:8px}
+/* ── Tabs ──────────────────────────────────────────── */
+.tabs{display:flex;gap:4px;margin-bottom:20px}
+.tab{padding:10px 20px;border-radius:8px;background:rgba(255,255,255,0.03);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text);background:rgba(255,255,255,0.06)}
+.tab.active{color:var(--cyan);background:rgba(0,229,255,0.06);border-color:rgba(0,229,255,0.15)}
+.tab-content{display:none}
+.tab-content.active{display:block}
 
-.chart-container{position:relative;width:100%;background:var(--bg3);border-radius:8px;overflow:hidden}
-.chart-container canvas{width:100%!important;display:block}
+/* ── Chart ─────────────────────────────────────────── */
+.mini-chart{height:60px;display:flex;align-items:flex-end;gap:2px;margin-top:12px}
+.mini-chart .bar{flex:1;background:rgba(0,229,255,0.2);border-radius:2px 2px 0 0;transition:height .3s}
+.mini-chart .bar:last-child{background:var(--cyan)}
 
-.order-book{display:grid;grid-template-columns:1fr 1fr;gap:1px}
-.ob-side{padding:10px 14px}
-.ob-side h4{font-size:9px;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase}
-.ob-side h4.ask{color:var(--red)}
-.ob-side h4.bid{color:var(--green)}
-.ob-row{display:flex;justify-content:space-between;font-size:10px;font-family:'Cascadia Code',Consolas,monospace;padding:3px 0;opacity:.8}
-.ob-row .price{font-weight:600}
-.ob-row .amount{color:var(--text2)}
-.ob-row.ask .price{color:var(--red)}
-.ob-row.bid .price{color:var(--green)}
-.ob-spread{text-align:center;padding:8px;font-size:9px;color:var(--text2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);letter-spacing:1px}
-
-.staking-info{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-.stake-stat{background:var(--bg3);border-radius:8px;padding:14px;text-align:center}
-.stake-stat .label{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:4px}
-.stake-stat .value{font-size:18px;font-weight:700;font-family:'Cascadia Code',Consolas,monospace}
-
-.mining-plan{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;transition:all .2s;cursor:pointer}
-.mining-plan:hover{border-color:rgba(0,229,255,.2);transform:translateY(-1px)}
-.mining-plan .mp-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
-.mining-plan .mp-hashrate{font-size:10px;color:var(--cyan);letter-spacing:1px}
-.mining-plan .mp-price{font-size:14px;font-weight:700;color:var(--text);font-family:'Cascadia Code',Consolas,monospace}
-.mining-plan .mp-period{font-size:9px;color:var(--text2);margin-top:2px}
-
-.tabs{display:flex;gap:2px;margin-bottom:14px}
-.tab{font-size:10px;letter-spacing:1px;padding:7px 14px;border-radius:4px;cursor:pointer;color:var(--text2);transition:all .2s;border:1px solid transparent}
-.tab:hover{color:var(--text)}
-.tab.active{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.15);color:var(--cyan)}
-.section-hidden{display:none}
-
-.ztn-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-.ztn-field{background:var(--bg3);border-radius:6px;padding:12px 14px}
-.ztn-field .zf-label{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:4px}
-.ztn-field .zf-value{font-size:12px;color:var(--text);font-weight:500}
-
-.portfolio-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid rgba(20,30,50,.5)}
-.portfolio-row:last-child{border-bottom:none}
-.pr-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.pr-name{font-size:12px;font-weight:500;flex:1}
-.pr-amount{font-size:11px;color:var(--text2);font-family:'Cascadia Code',Consolas,monospace;text-align:right;min-width:80px}
-.pr-value{font-size:12px;font-weight:600;font-family:'Cascadia Code',Consolas,monospace;text-align:right;min-width:100px}
-.pr-pct{font-size:10px;color:var(--text2);text-align:right;min-width:50px}
-
-/* LOCKED FEATURE OVERLAY */
-.feature-locked{position:relative}
-.feature-locked::after{content:'🔒 Upgrade Required';position:absolute;inset:0;background:rgba(3,5,8,.88);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2);letter-spacing:2px;border-radius:inherit;z-index:5;backdrop-filter:blur(4px)}
-
-/* UPGRADE PROMPT */
-.upgrade-prompt{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;margin-top:8px}
-.upgrade-prompt .up-title{font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)}
-.upgrade-prompt .up-desc{font-size:11px;color:var(--text2);margin-bottom:12px}
-
-@media(max-width:768px){
-  .app{grid-template-columns:1fr}
-  .sidebar{display:none}
-  .cards-grid{grid-template-columns:1fr 1fr}
-  .features-grid{grid-template-columns:1fr}
-  .tiers-grid{grid-template-columns:1fr}
-  .hero{padding:120px 20px 60px}
-  .features,.tiers,.auth-section{padding:40px 20px}
-  .landing-nav{padding:12px 16px}
-}
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
 </style>
 </head>
 <body>
-<canvas id="starfield"></canvas>
-<div class="grain"></div>
-<div class="scanline"></div>
 
-<!-- ==================== LANDING PAGE ==================== -->
-<div id="landingPage" class="landing">
-  <nav class="landing-nav">
-    <svg class="logo-svg" viewBox="0 0 40 46" width="36" height="36"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg1)" stroke-width="1.5"/><defs><linearGradient id="hg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="20" y="26" text-anchor="middle" fill="url(#hg1)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
-    <div class="brand">ZICORE BANK</div>
-    <div class="spacer"></div>
-    <button class="nav-btn" onclick="scrollToSection('featuresSection')">Features</button>
-    <button class="nav-btn" onclick="scrollToSection('tiersSection')">Planes</button>
-    <button class="nav-btn" onclick="scrollToSection('authSection')">Login</button>
-    <button class="nav-btn primary" onclick="scrollToSection('authSection')">Registrarse</button>
-  </nav>
-
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-badge">◈ ZICORE ECOSYSTEM</div>
-    <h1><span class="grad">ZICORE BANK</span><br>Banking del Futuro Digital</h1>
-    <p class="subtitle">Banca digital de clase mundial. Activo nativo ZTN, staking rentable, custodia institucional y exchange descentralizado — todo en una plataforma segura y profesional.</p>
-    <div class="hero-actions">
-      <button class="btn btn-primary" onclick="scrollToSection('authSection')">Crear Cuenta Gratis</button>
-      <button class="btn btn-outline" onclick="scrollToSection('tiersSection')">Ver Planes</button>
-    </div>
+<div class="topbar">
+  <a href="/" class="topbar-logo">
+    <div class="topbar-icon">Z</div>
+    <div class="topbar-title">ZICORE BANK</div>
+  </a>
+  <div class="topbar-right">
+    <a href="/" class="topbar-back">← PORTAL</a>
   </div>
-
-  <!-- FEATURES -->
-  <div class="features" id="featuresSection">
-    <h2>◈ CARACTERÍSTICAS</h2>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="fc-icon">🔐</div>
-        <div class="fc-title">Seguridad Militar</div>
-        <div class="fc-desc">Encriptación AES-256, cold storage, autenticación 2FA y firma múltiple. Tus activos están protegidos con estándares de nivel institucional.</div>
-      </div>
-      <div class="feature-card">
-        <div class="fc-icon">⚡</div>
-        <div class="fc-title">Velocidad Instantánea</div>
-        <div class="fc-desc">Transacciones confirmadas en segundos. Liquidación en tiempo real sin demoras ni intermediarios. Trading de alta frecuencia disponible.</div>
-      </div>
-      <div class="feature-card">
-        <div class="fc-icon">🛡️</div>
-        <div class="fc-title">Privacidad Total</div>
-        <div class="fc-desc">Zero-knowledge proofs y transacciones privadas. Sin KYC obligatorio para niveles básicos. Tus datos financieros son solo tuyos.</div>
-      </div>
-      <div class="feature-card">
-        <div class="fc-icon">🪙</div>
-        <div class="fc-title">ZTN Zitón Token</div>
-        <div class="fc-desc">Token nativo del ecosistema ZICORE. 100M supply fijo, utility real: pagos, staking, gobernanza, servicios empresariales y minería.</div>
-      </div>
-      <div class="feature-card">
-        <div class="fc-icon">🏢</div>
-        <div class="fc-title">Enterprise Grade</div>
-        <div class="fc-desc">Custodia institucional, multisig avanzado, facturación en ZTN, reportes fiscales y API REST para integración empresarial completa.</div>
-      </div>
-      <div class="feature-card">
-        <div class="fc-icon">💎</div>
-        <div class="fc-title">Staking Rentable</div>
-        <div class="fc-desc">Gana entre 5% y 15% APY según tu tier. Staking flexible con recompensas diarias. Calculator integrado para proyectar rendimientos.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TIERS -->
-  <div class="tiers" id="tiersSection">
-    <h2>◈ MEMBRESÍAS</h2>
-    <p class="sub">Elige el plan perfecto para tus necesidades financieras</p>
-    <div class="tiers-grid">
-      <div class="tier-card">
-        <div class="tc-name">Explorer</div>
-        <div class="tc-price free">Gratis</div>
-        <div class="tc-desc">Ideal para comenzar en el ecosistema ZICORE.</div>
-        <ul class="tc-features">
-          <li>Ver mercado en tiempo real</li>
-          <li>Portfolio básico</li>
-          <li>3 transacciones/día</li>
-          <li>Staking básico (0% APY)</li>
-          <li>Soporte comunitario</li>
-        </ul>
-        <button class="tc-btn green" onclick="selectTier('explorer')">Plan Actual</button>
-      </div>
-      <div class="tier-card featured">
-        <div class="tc-name">Trader</div>
-        <div class="tc-price">$49<span class="period">/mes</span></div>
-        <div class="tc-desc">Para traders activos que buscan rendimiento.</div>
-        <ul class="tc-features">
-          <li>Transacciones ilimitadas</li>
-          <li>Gráficos avanzados</li>
-          <li>5% APY en staking</li>
-          <li>Historial completo</li>
-          <li>Trading ZTN pairs</li>
-          <li>Soporte prioritario</li>
-        </ul>
-        <button class="tc-btn primary" onclick="selectTier('trader')">Upgrade a Trader</button>
-      </div>
-      <div class="tier-card">
-        <div class="tc-name">Vault</div>
-        <div class="tc-price">$199<span class="period">/mes</span></div>
-        <div class="tc-desc">Para profesionales y empresas.</div>
-        <ul class="tc-features">
-          <li>Todo de Trader</li>
-          <li>Multisig wallets</li>
-          <li>API completa</li>
-          <li>Seguro de activos</li>
-          <li>10% APY en staking</li>
-          <li>Custodia avanzada</li>
-          <li>Reportes fiscales</li>
-        </ul>
-        <button class="tc-btn purple" onclick="selectTier('vault')">Upgrade a Vault</button>
-      </div>
-      <div class="tier-card">
-        <div class="tc-name">Ultimate</div>
-        <div class="tc-price">$499<span class="period">/mes</span></div>
-        <div class="tc-desc">Máximo nivel. Acceso sin límites.</div>
-        <ul class="tc-features">
-          <li>Todo de Vault</li>
-          <li>Gerente dedicado</li>
-          <li>Contratos custom</li>
-          <li>15% APY en staking</li>
-          <li>Acceso anticipado</li>
-          <li>Prioridad total</li>
-          <li>Cloud Mining incluido</li>
-          <li>White-glove service</li>
-        </ul>
-        <button class="tc-btn gold" onclick="selectTier('ultimate')">Upgrade Ultimate</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- AUTH -->
-  <div class="auth-section" id="authSection">
-    <h2>◈ ACCESO</h2>
-    <div class="auth-tabs">
-      <div class="auth-tab active" onclick="switchAuthTab('login',this)">Iniciar Sesión</div>
-      <div class="auth-tab" onclick="switchAuthTab('register',this)">Registrarse</div>
-    </div>
-    <div class="auth-form" id="loginForm">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="loginEmail" placeholder="tu@email.com">
-      </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="loginPass" placeholder="••••••••">
-      </div>
-      <div class="error" id="loginError"></div>
-      <button class="btn btn-primary" onclick="doLogin()">Iniciar Sesión</button>
-    </div>
-    <div class="auth-form hidden" id="registerForm">
-      <div class="form-group">
-        <label>Nombre completo</label>
-        <input type="text" id="regName" placeholder="Tu nombre">
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="regEmail" placeholder="tu@email.com">
-      </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="regPass" placeholder="Mínimo 8 caracteres">
-      </div>
-      <div class="form-group">
-        <label>Seleccionar Plan</label>
-        <div class="tier-select">
-          <div class="tier-option selected" data-tier="explorer" onclick="selectRegTier(this)">
-            <div class="to-name">Explorer</div><div class="to-price">Gratis</div>
-          </div>
-          <div class="tier-option" data-tier="trader" onclick="selectRegTier(this)">
-            <div class="to-name">Trader</div><div class="to-price">$49/mes</div>
-          </div>
-          <div class="tier-option" data-tier="vault" onclick="selectRegTier(this)">
-            <div class="to-name">Vault</div><div class="to-price">$199/mes</div>
-          </div>
-          <div class="tier-option" data-tier="ultimate" onclick="selectRegTier(this)">
-            <div class="to-name">Ultimate</div><div class="to-price">$499/mes</div>
-          </div>
-        </div>
-      </div>
-      <div class="error" id="regError"></div>
-      <button class="btn btn-primary" onclick="doRegister()">Crear Cuenta</button>
-    </div>
-  </div>
-
-  <div class="landing-footer">ZICORE BANK v2.0 — Banking del Futuro Digital © 2026 ZiCore Systems</div>
 </div>
 
-<!-- ==================== DASHBOARD APP ==================== -->
-<div id="dashboardApp" class="app hidden">
-  <div class="topbar">
-    <div class="logo">
-      <svg viewBox="0 0 40 46" width="32" height="32"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg2)" stroke-width="1.5"/><defs><linearGradient id="hg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="20" y="26" text-anchor="middle" fill="url(#hg2)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
-    </div>
-    <div class="brand">ZICORE BANK</div>
-    <div class="sep"></div>
-    <div class="nav-links">
-      <div class="nav-link active" onclick="showSection('dashboard')">Dashboard</div>
-      <div class="nav-link" onclick="showSection('exchange')">Exchange</div>
-      <div class="nav-link" onclick="showSection('staking')">Staking</div>
-      <div class="nav-link" onclick="showSection('mining')">Minería</div>
-    </div>
-    <div class="spacer"></div>
-    <span class="tier-badge" id="topTierBadge">EXPLORER</span>
-    <div class="wallet-info">
-      <div style="text-align:right">
-        <div class="wallet-label">Balance</div>
-        <div class="wallet-balance">$<span id="topBalance">12,847.53</span><span class="currency">USD</span></div>
+<div class="main">
+  <!-- Portfolio Hero -->
+  <div class="portfolio" id="portfolioSection">
+    <div class="portfolio-label">Portfolio Total</div>
+    <div class="portfolio-balance" id="totalBalance">--- ZNT</div>
+    <div class="portfolio-usd" id="totalUsd">≈ $0.00 USD</div>
+    <div class="portfolio-stats">
+      <div class="stat">
+        <span class="stat-label">Disponible</span>
+        <span class="stat-value green" id="availableBalance">0 ZNT</span>
       </div>
-      <div class="dot"></div>
+      <div class="stat">
+        <span class="stat-label">Staked</span>
+        <span class="stat-value purple" id="stakedBalance">0 ZNT</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Precio ZNT</span>
+        <span class="stat-value" id="zntPrice">$0.00</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">APY</span>
+        <span class="stat-value green" id="apyValue">15%</span>
+      </div>
     </div>
-    <div class="sep"></div>
-    <button class="logout-btn" onclick="doLogout()">SALIR</button>
   </div>
 
-  <nav class="sidebar">
-    <div class="sb-header">
-      <div class="hex">◈</div>
-      <div>
-        <div class="title">ZICORE BANK</div>
-        <div class="subtitle">Zitón Digital Assets</div>
-      </div>
-    </div>
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('send',this)">Enviar</div>
+    <div class="tab" onclick="switchTab('stake',this)">Staking</div>
+    <div class="tab" onclick="switchTab('deposit',this)">Depositar</div>
+    <div class="tab" onclick="switchTab('history',this)">Historial</div>
+  </div>
 
-    <div class="sb-section" onclick="toggleGroup(this)">▼ Mi Cuenta <span class="arrow open">▼</span></div>
-    <div class="sb-group" data-group="micuenta">
-      <div class="sb-item active" onclick="showSection('dashboard')"><div class="ico">📊</div>Resumen de cuenta</div>
-      <div class="sb-item" onclick="showSection('transactions')"><div class="ico">📋</div>Historial de transacciones</div>
-      <div class="sb-item" onclick="showSection('security')"><div class="ico">🔒</div>Configuración de seguridad</div>
-      <div class="sb-item" onclick="showSection('kyc')"><div class="ico">🪪</div>KYC / Verificación</div>
-    </div>
-    <div class="sb-divider"></div>
-
-    <div class="sb-section" onclick="toggleGroup(this)">▼ ZTN Zitón <span class="arrow open">▼</span></div>
-    <div class="sb-group" data-group="ztn">
-      <div class="sb-item" onclick="showSection('ztn-price')"><div class="ico">📈</div>Precio y gráfico</div>
-      <div class="sb-item" onclick="showSection('ztn-trade')"><div class="ico">💱</div>Comprar / Vender ZTN</div>
-      <div class="sb-item" onclick="showSection('staking')"><div class="ico">💎</div>Staking</div>
-      <div class="sb-item" onclick="showSection('ztn-history')"><div class="ico">📋</div>Historial ZTN</div>
-    </div>
-    <div class="sb-divider"></div>
-
-    <div class="sb-section" onclick="toggleGroup(this)">▼ Portafolio <span class="arrow open">▼</span></div>
-    <div class="sb-group" data-group="portfolio">
-      <div class="sb-item" onclick="showSection('portfolio')"><div class="ico">💰</div>Activos digitales</div>
-      <div class="sb-item" onclick="showSection('portfolio-chart')"><div class="ico">🥧</div>Gráfico de distribución</div>
-      <div class="sb-item" onclick="showSection('portfolio-performance')"><div class="ico">📈</div>Rendimiento total</div>
-    </div>
-    <div class="sb-divider"></div>
-
-    <div class="sb-section" onclick="toggleGroup(this)">▼ Empresarial <span class="arrow open">▼</span></div>
-    <div class="sb-group" data-group="enterprise">
-      <div class="sb-item" onclick="showSection('enterprise-custody')"><div class="ico">🔐</div>Custodia<span class="lock" data-req="vault">🔒</span></div>
-      <div class="sb-item" onclick="showSection('enterprise-multisig')"><div class="ico">🔑</div>Multisig<span class="lock" data-req="vault">🔒</span></div>
-      <div class="sb-item" onclick="showSection('enterprise-billing')"><div class="ico">📄</div>Facturación<span class="lock" data-req="vault">🔒</span></div>
-      <div class="sb-item" onclick="showSection('enterprise-api')"><div class="ico">⚙</div>API Integración<span class="lock" data-req="vault">🔒</span></div>
-    </div>
-    <div class="sb-divider"></div>
-
-    <div class="sb-section" onclick="toggleGroup(this)">▼ Exchange <span class="arrow open">▼</span></div>
-    <div class="sb-group" data-group="exchange">
-      <div class="sb-item" onclick="showSection('exchange')"><div class="ico">🔄</div>Trading ZTN/BTC</div>
-      <div class="sb-item" onclick="showSection('exchange-usdt')"><div class="ico">₮</div>ZTN/USDT</div>
-      <div class="sb-item" onclick="showSection('orderbook')"><div class="ico">📖</div>Order Book</div>
-    </div>
-    <div class="sb-divider"></div>
-
-    <div class="sb-section" onclick="toggleGroup(this)">▼ Minería <span class="arrow open">▼</span></div>
-    <div class="sb-group" data-group="mining">
-      <div class="sb-item" onclick="showSection('mining')"><div class="ico">⛏</div>Cloud Mining<span class="lock" data-req="ultimate">🔒</span></div>
-      <div class="sb-item" onclick="showSection('mining-plans')"><div class="ico">📦</div>Planes de Minería<span class="lock" data-req="ultimate">🔒</span></div>
-    </div>
-    <div class="sb-divider"></div>
-
-    <div class="sb-item" onclick="window.location.href='/'"><div class="ico">↗</div>ZICORE Portal</div>
-
-    <div class="sb-footer">
-      <div class="version">ZICORE BANK v2.0</div>
-      <div class="status"><div class="dot"></div>Network: Online</div>
-    </div>
-  </nav>
-
-  <div class="content">
-    <div class="content-scroll" id="contentScroll">
-
-      <!-- DASHBOARD -->
-      <div id="section-dashboard" class="section-view">
-        <div class="page-header">
-          <div><div class="page-title">Resumen de Cuenta</div><div class="page-subtitle">Panel principal — ZICORE Bank</div></div>
-          <div class="page-spacer"></div>
-          <div class="page-badge badge-green">ACTIVA</div>
-          <div class="page-badge badge-cyan" id="dashTierBadge">EXPLORER</div>
+  <!-- Send Tab -->
+  <div class="tab-content active" id="tab-send">
+    <div class="grid">
+      <div class="card">
+        <h3>📤 Enviar ZNT</h3>
+        <div class="form-group">
+          <label>Destinatario (email)</label>
+          <input type="email" id="sendTo" placeholder="usuario@zinemotion.com.mx">
         </div>
-        <div class="cards-grid">
-          <div class="card"><div class="card-icon">💰</div><div class="card-label">Balance Total</div><div class="card-value">$12,847<span class="unit">.53 USD</span></div><div class="card-change up">▲ +3.24% (24h)</div></div>
-          <div class="card"><div class="card-icon">🪙</div><div class="card-label">ZTN Holdings</div><div class="card-value">4,250<span class="unit"> ZTN</span></div><div class="card-change up">▲ $3.02 each</div></div>
-          <div class="card"><div class="card-icon">📊</div><div class="card-label">24h Change</div><div class="card-value" style="color:var(--green)">+3.24<span class="unit">%</span></div><div class="card-change up">▲ +$401.20</div></div>
-          <div class="card"><div class="card-icon">💎</div><div class="card-label">Staking Rewards</div><div class="card-value">+$128<span class="unit">.40</span></div><div class="card-change up" id="dashApyLabel">▲ 0% APY</div></div>
+        <div class="form-group">
+          <label>Cantidad (ZNT)</label>
+          <input type="number" id="sendAmount" placeholder="0.00" step="0.01" min="0">
         </div>
-        <div class="panel" style="margin-top:4px">
-          <div class="panel-header"><div class="ph-icon">📈</div><div class="ph-title">ZTN Price Chart — 24h</div><div class="ph-spacer"></div><div class="ph-badge">$3.02</div></div>
-          <div class="panel-body"><div class="chart-container"><canvas id="priceChart" height="200"></canvas></div></div>
+        <div class="form-group">
+          <label>Concepto (opcional)</label>
+          <input type="text" id="sendDesc" placeholder="Pago, regalo, servicio...">
         </div>
-        <div class="panel" style="margin-top:4px">
-          <div class="panel-header"><div class="ph-icon">📋</div><div class="ph-title">Transacciones Recientes</div><div class="ph-spacer"></div><div class="ph-badge">ÚLTIMAS 10</div></div>
-          <div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Estado</th><th>Hash</th></tr></thead><tbody id="recentTxs"></tbody></table></div>
-        </div>
-        <div class="panel" style="margin-top:4px">
-          <div class="panel-header"><div class="ph-icon">🪙</div><div class="ph-title">ZTN — Zitón Token</div><div class="ph-spacer"></div><div class="ph-badge badge-purple">UTILITY TOKEN</div></div>
-          <div class="panel-body">
-            <div class="ztn-info">
-              <div class="ztn-field"><div class="zf-label">Nombre</div><div class="zf-value">Zitón</div></div>
-              <div class="ztn-field"><div class="zf-label">Símbolo</div><div class="zf-value">ZTN</div></div>
-              <div class="ztn-field"><div class="zf-label">Supply Total</div><div class="zf-value">100,000,000 ZTN</div></div>
-              <div class="ztn-field"><div class="zf-label">Blockchain</div><div class="zf-value">Custom Sidechain</div></div>
-              <div class="ztn-field"><div class="zf-label">Precio Actual</div><div class="zf-value" style="color:var(--green)">$3.02 USD</div></div>
-              <div class="ztn-field"><div class="zf-label">Market Cap</div><div class="zf-value">$302M USD</div></div>
-              <div class="ztn-field"><div class="zf-label">Circulating</div><div class="zf-value">42,500,000 ZTN</div></div>
-              <div class="ztn-field"><div class="zf-label">Propósito</div><div class="zf-value">Utility — ZICORE Ecosystem</div></div>
-            </div>
-            <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">
-              <div class="page-badge badge-cyan">Pagos</div>
-              <div class="page-badge badge-purple">Staking</div>
-              <div class="page-badge badge-green">Gobernanza</div>
-              <div class="page-badge badge-cyan">Servicios</div>
-            </div>
+        <div id="sendPreview" style="display:none;padding:12px;border-radius:8px;background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.1);margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
+            <span>Monto</span><span id="previewAmount" style="color:var(--cyan);font-family:var(--mono)">0 ZNT</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px">
+            <span>Equivalente</span><span id="previewUsd" style="font-family:var(--mono)">$0.00</span>
           </div>
         </div>
+        <button class="btn btn-primary" id="sendBtn" onclick="sendZNT()" disabled>Enviar ZNT</button>
       </div>
-
-      <!-- TRANSACTIONS -->
-      <div id="section-transactions" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Historial de Transacciones</div><div class="page-subtitle">Todas las transacciones de tu cuenta</div></div><div class="page-spacer"></div><div class="page-badge badge-cyan">187 TX</div></div>
-        <div class="tabs">
-          <div class="tab active" onclick="filterTx('all',this)">Todas</div>
-          <div class="tab" onclick="filterTx('receive',this)">Recibidas</div>
-          <div class="tab" onclick="filterTx('send',this)">Enviadas</div>
-          <div class="tab" onclick="filterTx('swap',this)">Swaps</div>
-          <div class="tab" onclick="filterTx('staking',this)">Staking</div>
+      <div class="card">
+        <h3>📊 Resumen Rápido</h3>
+        <div class="staking-row">
+          <span class="label">Tu saldo</span>
+          <span class="value green" id="quickBalance">0 ZNT</span>
         </div>
-        <div class="panel"><div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>De / A</th><th>Monto</th><th>Fee</th><th>Estado</th><th>Hash</th></tr></thead><tbody id="allTxs"></tbody></table></div></div>
-      </div>
-
-      <!-- SECURITY -->
-      <div id="section-security" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Configuración de Seguridad</div><div class="page-subtitle">Protege tu cuenta y activos digitales</div></div><div class="page-spacer"></div><div class="page-badge badge-green">SEGURA</div></div>
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-header"><div class="ph-icon">🔑</div><div class="ph-title">Autenticación de Dos Factores (2FA)</div></div>
-          <div class="panel-body"><div style="display:flex;align-items:center;gap:16px"><div style="flex:1"><div style="font-size:12px;color:var(--text);margin-bottom:4px">Google Authenticator</div><div style="font-size:10px;color:var(--green)">Activado — Última verificación: hace 2 min</div></div><button class="btn btn-outline">Configurar</button></div></div>
+        <div class="staking-row">
+          <span class="label">Disponible para enviar</span>
+          <span class="value" id="quickAvailable">0 ZNT</span>
         </div>
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-header"><div class="ph-icon">🔐</div><div class="ph-title">Cambio de Contraseña</div></div>
-          <div class="panel-body">
-            <div class="form-row"><div class="form-group"><label>Contraseña actual</label><input type="password" placeholder="••••••••"></div></div>
-            <div class="form-row"><div class="form-group"><label>Nueva contraseña</label><input type="password" placeholder="Mínimo 12 caracteres"></div><div class="form-group"><label>Confirmar</label><input type="password" placeholder="Repetir contraseña"></div></div>
-            <div class="btn-group"><button class="btn btn-primary">Actualizar Contraseña</button></div>
-          </div>
+        <div class="staking-row">
+          <span class="label">Tasa de cambio</span>
+          <span class="value">1 ZNT = $2.47</span>
         </div>
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-header"><div class="ph-icon">📋</div><div class="ph-title">Sesiones Activas</div></div>
-          <div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Dispositivo</th><th>IP</th><th>Última actividad</th><th>Acción</th></tr></thead><tbody><tr><td>Chrome — Windows 11</td><td class="mono">192.168.1.42</td><td>Ahora mismo</td><td><span style="color:var(--green)">Actual</span></td></tr><tr><td>Firefox — Ubuntu</td><td class="mono">192.168.1.85</td><td>Hace 2 horas</td><td><span class="btn btn-red" style="padding:3px 8px;font-size:9px">Cerrar</span></td></tr></tbody></table></div>
-        </div>
+        <div class="mini-chart" id="priceChart"></div>
       </div>
+    </div>
+  </div>
 
-      <!-- KYC -->
-      <div id="section-kyc" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">KYC / Verificación</div><div class="page-subtitle">Verifica tu identidad para desbloquear funciones</div></div></div>
-        <div class="panel">
-          <div class="panel-header"><div class="ph-icon">🪪</div><div class="ph-title">Estado de Verificación</div></div>
-          <div class="panel-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div style="background:var(--bg3);border-radius:8px;padding:16px"><div style="font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px">Nivel 1 — Email</div><div style="font-size:12px;color:var(--green);font-weight:600">✓ Verificado</div></div>
-              <div style="background:var(--bg3);border-radius:8px;padding:16px"><div style="font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px">Nivel 2 — Identidad</div><div style="font-size:12px;color:var(--yellow);font-weight:600"> Pendiente</div></div>
-              <div style="background:var(--bg3);border-radius:8px;padding:16px"><div style="font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px">Nivel 3 — Domicilio</div><div style="font-size:12px;color:var(--text2);font-weight:600">○ No iniciado</div></div>
-              <div style="background:var(--bg3);border-radius:8px;padding:16px"><div style="font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px">Nivel 4 — Empresa</div><div style="font-size:12px;color:var(--text2);font-weight:600">○ No iniciado</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ZTN PRICE -->
-      <div id="section-ztn-price" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">ZTN — Precio y Gráfico</div><div class="page-subtitle">Zitón Token — Monitoreo en tiempo real</div></div><div class="page-spacer"></div><div class="page-badge badge-green">LIVE</div></div>
-        <div class="cards-grid" style="margin-bottom:12px">
-          <div class="card"><div class="card-label">Precio Actual</div><div class="card-value" style="color:var(--green)">$3.02</div><div class="card-change up">▲ +2.1% (1h)</div></div>
-          <div class="card"><div class="card-label">24h Alto</div><div class="card-value">$3.18</div></div>
-          <div class="card"><div class="card-label">24h Bajo</div><div class="card-value">$2.89</div></div>
-          <div class="card"><div class="card-label">24h Volumen</div><div class="card-value">8.2M<span class="unit"> ZTN</span></div></div>
-        </div>
-        <div class="panel"><div class="panel-header"><div class="ph-icon">📈</div><div class="ph-title">Gráfico de Precio — 7 Días</div></div><div class="panel-body"><div class="chart-container"><canvas id="ztnPriceChart" height="240"></canvas></div></div></div>
-      </div>
-
-      <!-- ZTN TRADE -->
-      <div id="section-ztn-trade" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Comprar / Vender ZTN</div><div class="page-subtitle">Intercambia Zitón tokens</div></div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="panel">
-            <div class="panel-header" style="background:rgba(0,255,136,.04)"><div class="ph-icon">📈</div><div class="ph-title" style="color:var(--green)">Comprar ZTN</div></div>
-            <div class="panel-body">
-              <div class="form-row"><div class="form-group"><label>Monto USD</label><input type="number" placeholder="0.00" id="buyAmount"></div></div>
-              <div style="font-size:10px;color:var(--text2);margin-bottom:12px">≈ <span id="buyZtn">0.00</span> ZTN @ $3.02</div>
-              <div class="form-row"><div class="form-group"><label>Método de pago</label><select><option>Saldo en cuenta</option><option>Transferencia bancaria</option><option>Tarjeta de crédito</option></select></div></div>
-              <div class="btn-group"><button class="btn btn-green" onclick="alert('Compra procesada')">Comprar ZTN</button></div>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-header" style="background:rgba(255,52,68,.04)"><div class="ph-icon">📉</div><div class="ph-title" style="color:var(--red)">Vender ZTN</div></div>
-            <div class="panel-body">
-              <div class="form-row"><div class="form-group"><label>Cantidad ZTN</label><input type="number" placeholder="0.00" id="sellAmount"></div></div>
-              <div style="font-size:10px;color:var(--text2);margin-bottom:12px">≈ $<span id="sellUsd">0.00</span> USD @ $3.02</div>
-              <div class="form-row"><div class="form-group"><label>Retirar a</label><select><option>Saldo en cuenta</option><option>Cuenta bancaria</option><option>Wallet externa</option></select></div></div>
-              <div class="btn-group"><button class="btn btn-red" onclick="alert('Venta procesada')">Vender ZTN</button></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ZTN HISTORY -->
-      <div id="section-ztn-history" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Historial de Transacciones ZTN</div><div class="page-subtitle">Movimientos de tu token Zitón</div></div></div>
-        <div class="panel"><div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Fecha</th><th>Operación</th><th>Cantidad</th><th>Precio</th><th>Total USD</th><th>Hash</th></tr></thead><tbody id="ztnHistoryTxs"></tbody></table></div></div>
-      </div>
-
-      <!-- PORTFOLIO -->
-      <div id="section-portfolio" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Activos Digitales</div><div class="page-subtitle">Tu portafolio de criptomonedas</div></div><div class="page-spacer"></div><div class="page-badge badge-green">$12,847.53</div></div>
-        <div class="panel"><div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Activo</th><th>Cantidad</th><th>Precio</th><th>Valor</th><th>24h</th><th>% Portafolio</th></tr></thead><tbody><tr><td><span style="color:var(--cyan);font-weight:600">🪙 ZTN</span></td><td class="mono">4,250.00</td><td class="mono">$3.02</td><td class="mono" style="font-weight:600">$12,835.00</td><td class="mono positive">+3.24%</td><td class="mono">99.9%</td></tr><tr><td><span style="color:var(--orange);font-weight:600">₿ BTC</span></td><td class="mono">0.0000</td><td class="mono">$67,420.00</td><td class="mono">$0.00</td><td class="mono positive">+1.12%</td><td class="mono">0.0%</td></tr><tr><td><span style="color:var(--purple);font-weight:600">⟠ ETH</span></td><td class="mono">0.0000</td><td class="mono">$3,580.00</td><td class="mono">$0.00</td><td class="mono negative">-0.45%</td><td class="mono">0.0%</td></tr><tr><td><span style="color:var(--green);font-weight:600">₮ USDT</span></td><td class="mono">12.53</td><td class="mono">$1.00</td><td class="mono">$12.53</td><td class="mono" style="color:var(--text2)">0.00%</td><td class="mono">0.1%</td></tr></tbody></table></div></div>
-      </div>
-
-      <!-- PORTFOLIO CHART -->
-      <div id="section-portfolio-chart" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Distribución del Portafolio</div><div class="page-subtitle">Asignación de activos digitales</div></div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="panel"><div class="panel-header"><div class="ph-icon">🥧</div><div class="ph-title">Distribución</div></div><div class="panel-body"><div class="chart-container"><canvas id="portfolioPie" height="260"></canvas></div></div></div>
-          <div class="panel"><div class="panel-header"><div class="ph-icon">📋</div><div class="ph-title">Detalle</div></div><div class="panel-body">
-            <div class="portfolio-row"><div class="pr-dot" style="background:var(--cyan)"></div><div class="pr-name">ZTN — Zitón</div><div class="pr-amount">4,250.00</div><div class="pr-value">$12,835.00</div><div class="pr-pct">99.9%</div></div>
-            <div class="portfolio-row"><div class="pr-dot" style="background:var(--orange)"></div><div class="pr-name">Bitcoin</div><div class="pr-amount">0.0000</div><div class="pr-value">$0.00</div><div class="pr-pct">0.0%</div></div>
-            <div class="portfolio-row"><div class="pr-dot" style="background:var(--purple)"></div><div class="pr-name">Ethereum</div><div class="pr-amount">0.0000</div><div class="pr-value">$0.00</div><div class="pr-pct">0.0%</div></div>
-            <div class="portfolio-row"><div class="pr-dot" style="background:var(--green)"></div><div class="pr-name">Tether</div><div class="pr-amount">12.53</div><div class="pr-value">$12.53</div><div class="pr-pct">0.1%</div></div>
-          </div></div>
-        </div>
-      </div>
-
-      <!-- PORTFOLIO PERFORMANCE -->
-      <div id="section-portfolio-performance" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Rendimiento Total</div><div class="page-subtitle">Historial de rendimiento del portafolio</div></div></div>
-        <div class="cards-grid" style="margin-bottom:12px">
-          <div class="card"><div class="card-label">Ganancia Total</div><div class="card-value" style="color:var(--green)">+$2,847</div><div class="card-change up">▲ +28.5% desde inicio</div></div>
-          <div class="card"><div class="card-label">Mejor Día</div><div class="card-value" style="color:var(--green)">+$412</div><div class="card-change" style="color:var(--text2)">14 Jul 2026</div></div>
-          <div class="card"><div class="card-label">Promedio Diario</div><div class="card-value">+$94.90</div></div>
-        </div>
-        <div class="panel"><div class="panel-header"><div class="ph-icon">📈</div><div class="ph-title">Rendimiento — 30 Días</div></div><div class="panel-body"><div class="chart-container"><canvas id="performanceChart" height="220"></canvas></div></div></div>
-      </div>
-
-      <!-- ENTERPRISE CUSTODY -->
-      <div id="section-enterprise-custody" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Custodia de Activos Digitales</div><div class="page-subtitle">Almacenamiento seguro con cold storage y encriptación</div></div></div>
-        <div id="custodyContent"></div>
-      </div>
-
-      <!-- ENTERPRISE MULTISIG -->
-      <div id="section-enterprise-multisig" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Multisig Wallets</div><div class="page-subtitle">Firma múltiple para transacciones seguras</div></div></div>
-        <div id="multisigContent"></div>
-      </div>
-
-      <!-- ENTERPRISE BILLING -->
-      <div id="section-enterprise-billing" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Facturación Empresarial con ZTN</div><div class="page-subtitle">Emisión y gestión de facturas en Zitón tokens</div></div></div>
-        <div id="billingContent"></div>
-      </div>
-
-      <!-- ENTERPRISE API -->
-      <div id="section-enterprise-api" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">API para Integración</div><div class="page-subtitle">Endpoints REST para integración empresarial</div></div></div>
-        <div id="apiContent"></div>
-      </div>
-
-      <!-- EXCHANGE -->
-      <div id="section-exchange" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Exchange — ZTN/BTC</div><div class="page-subtitle">Trading de Zitón contra Bitcoin</div></div><div class="page-spacer"></div><div class="page-badge badge-cyan">TRADING</div></div>
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
-          <div class="panel"><div class="panel-header"><div class="ph-icon">📈</div><div class="ph-title">Gráfico ZTN/BTC</div></div><div class="panel-body"><div class="chart-container"><canvas id="exchangeChart" height="300"></canvas></div></div></div>
-          <div>
-            <div class="panel" style="margin-bottom:12px">
-              <div class="panel-header"><div class="ph-icon">📖</div><div class="ph-title">Order Book</div></div>
-              <div class="panel-body" style="padding:0">
-                <div class="order-book">
-                  <div class="ob-side">
-                    <h4 class="ask">Vender (Ask)</h4>
-                    <div class="ob-row ask"><span class="price">0.00004520</span><span class="amount">1,200 ZTN</span></div>
-                    <div class="ob-row ask"><span class="price">0.00004515</span><span class="amount">800 ZTN</span></div>
-                    <div class="ob-row ask"><span class="price">0.00004510</span><span class="amount">2,400 ZTN</span></div>
-                    <div class="ob-row ask"><span class="price">0.00004505</span><span class="amount">600 ZTN</span></div>
-                    <div class="ob-row ask"><span class="price">0.00004500</span><span class="amount">3,100 ZTN</span></div>
-                  </div>
-                  <div class="ob-side">
-                    <h4 class="bid">Comprar (Bid)</h4>
-                    <div class="ob-row bid"><span class="price">0.00004498</span><span class="amount">950 ZTN</span></div>
-                    <div class="ob-row bid"><span class="price">0.00004493</span><span class="amount">1,500 ZTN</span></div>
-                    <div class="ob-row bid"><span class="price">0.00004488</span><span class="amount">700 ZTN</span></div>
-                    <div class="ob-row bid"><span class="price">0.00004483</span><span class="amount">2,100 ZTN</span></div>
-                    <div class="ob-row bid"><span class="price">0.00004478</span><span class="amount">1,800 ZTN</span></div>
-                  </div>
-                </div>
-                <div class="ob-spread">Spread: 0.00000002 BTC (0.04%)</div>
-              </div>
-            </div>
-            <div class="panel">
-              <div class="panel-header"><div class="ph-icon">💱</div><div class="ph-title">Órdenes</div></div>
-              <div class="panel-body">
-                <div class="tabs" style="margin-bottom:10px"><div class="tab active">Comprar</div><div class="tab">Vender</div></div>
-                <div class="form-group" style="margin-bottom:8px"><label>Precio</label><input type="number" placeholder="0.00004500" value="0.00004500"></div>
-                <div class="form-group" style="margin-bottom:8px"><label>Cantidad (ZTN)</label><input type="number" placeholder="0.00" value="500"></div>
-                <div style="font-size:10px;color:var(--text2);margin-bottom:10px">Total: 0.02250000 BTC ≈ $1,510.00</div>
-                <button class="btn btn-green" style="width:100%">Comprar ZTN</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- EXCHANGE USDT -->
-      <div id="section-exchange-usdt" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Exchange — ZTN/USDT</div><div class="page-subtitle">Trading de Zitón contra Tether</div></div></div>
-        <div class="cards-grid" style="margin-bottom:12px">
-          <div class="card"><div class="card-label">Par</div><div class="card-value">ZTN/USDT</div></div>
-          <div class="card"><div class="card-label">Precio</div><div class="card-value">$3.02</div></div>
-          <div class="card"><div class="card-label">24h Volumen</div><div class="card-value">8.2M<span class="unit"> ZTN</span></div></div>
-        </div>
-        <div class="panel"><div class="panel-header"><div class="ph-icon">💱</div><div class="ph-title">Órdenes ZTN/USDT</div></div><div class="panel-body"><div class="form-row"><div class="form-group"><label>Cantidad ZTN</label><input type="number" placeholder="0.00"></div><div class="form-group"><label>Precio USDT</label><input type="number" placeholder="3.02" value="3.02"></div></div><div style="font-size:10px;color:var(--text2);margin-bottom:10px">Total: 0.00 USDT</div><div class="btn-group"><button class="btn btn-green">Comprar ZTN</button><button class="btn btn-red">Vender ZTN</button></div></div></div>
-      </div>
-
-      <!-- ORDER BOOK -->
-      <div id="section-orderbook" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Order Book</div><div class="page-subtitle">Libro de órdenes en tiempo real — ZTN/USDT</div></div></div>
-        <div class="panel"><div class="panel-header"><div class="ph-icon">📖</div><div class="ph-title">Order Book Completo</div></div><div class="panel-body" style="padding:0"><div class="order-book"><div class="ob-side"><h4 class="ask">Vender (Ask)</h4><div class="ob-row ask"><span class="price">$3.08</span><span class="amount">5,200 ZTN</span></div><div class="ob-row ask"><span class="price">$3.07</span><span class="amount">3,100 ZTN</span></div><div class="ob-row ask"><span class="price">$3.06</span><span class="amount">8,400 ZTN</span></div><div class="ob-row ask"><span class="price">$3.05</span><span class="amount">2,700 ZTN</span></div><div class="ob-row ask"><span class="price">$3.04</span><span class="amount">6,100 ZTN</span></div><div class="ob-row ask"><span class="price">$3.03</span><span class="amount">4,300 ZTN</span></div><div class="ob-row ask"><span class="price">$3.02</span><span class="amount">9,800 ZTN</span></div></div><div class="ob-side"><h4 class="bid">Comprar (Bid)</h4><div class="ob-row bid"><span class="price">$3.01</span><span class="amount">7,500 ZTN</span></div><div class="ob-row bid"><span class="price">$3.00</span><span class="amount">12,200 ZTN</span></div><div class="ob-row bid"><span class="price">$2.99</span><span class="amount">4,800 ZTN</span></div><div class="ob-row bid"><span class="price">$2.98</span><span class="amount">6,300 ZTN</span></div><div class="ob-row bid"><span class="price">$2.97</span><span class="amount">3,900 ZTN</span></div><div class="ob-row bid"><span class="price">$2.96</span><span class="amount">8,100 ZTN</span></div><div class="ob-row bid"><span class="price">$2.95</span><span class="amount">5,600 ZTN</span></div></div></div><div class="ob-spread">Spread: $0.01 (0.33%) — Mejor Ask: $3.02 — Mejor Bid: $3.01</div></div></div>
-      </div>
-
-      <!-- STAKING -->
-      <div id="section-staking" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Staking — ZTN</div><div class="page-subtitle">Gana recompensas manteniendo tus tokens</div></div><div class="page-spacer"></div><div class="page-badge badge-green" id="stakingApyBadge">0% APY</div></div>
+  <!-- Stake Tab -->
+  <div class="tab-content" id="tab-stake">
+    <div class="grid">
+      <div class="card">
+        <h3>🔒 Staking ZNT</h3>
+        <div class="apy-display">15% APY</div>
         <div class="staking-info">
-          <div class="stake-stat"><div class="label">En Staking</div><div class="value" style="color:var(--cyan)">2,000<span style="font-size:11px;color:var(--text2)"> ZTN</span></div></div>
-          <div class="stake-stat"><div class="label">Recompensas</div><div class="value" style="color:var(--green)">+$128.40</div></div>
-          <div class="stake-stat"><div class="label">APY</div><div class="value" style="color:var(--purple)" id="stakingApyValue">0%</div></div>
-        </div>
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-header"><div class="ph-icon">💎</div><div class="ph-title">Calcular Staking</div></div>
-          <div class="panel-body">
-            <div class="form-row">
-              <div class="form-group"><label>Cantidad ZTN</label><input type="number" placeholder="0.00" id="stakeInput" oninput="calcStake()"></div>
-              <div class="form-group"><label>Período</label><select id="stakePeriod" onchange="calcStake()"><option value="30">30 días</option><option value="90">90 días</option><option value="180">180 días</option><option value="365" selected>365 días</option></select></div>
-            </div>
-            <div style="background:var(--bg3);border-radius:8px;padding:14px;margin-top:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-              <div><div style="font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase">Recompensa Est.</div><div style="font-size:16px;font-weight:700;color:var(--green);font-family:monospace;margin-top:4px" id="stakeReward">0.00 ZTN</div></div>
-              <div><div style="font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase">Valor USD</div><div style="font-size:16px;font-weight:700;color:var(--cyan);font-family:monospace;margin-top:4px" id="stakeUsd">$0.00</div></div>
-              <div><div style="font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase">Total al Vencimiento</div><div style="font-size:16px;font-weight:700;color:var(--text);font-family:monospace;margin-top:4px" id="stakeTotal">0.00 ZTN</div></div>
-            </div>
-            <div class="btn-group" style="margin-top:12px"><button class="btn btn-purple" onclick="alert('Staking activado')">Activar Staking</button></div>
+          <div class="staking-row">
+            <span class="label">Disponible para stake</span>
+            <span class="value" id="stakeAvailable">0 ZNT</span>
+          </div>
+          <div class="staking-row">
+            <span class="label">Ya stakeado</span>
+            <span class="value purple" id="stakedAmount">0 ZNT</span>
+          </div>
+          <div class="staking-row">
+            <span class="label">Ganancia estimada (anual)</span>
+            <span class="value green" id="estimatedEarnings">0 ZNT</span>
           </div>
         </div>
-        <div class="panel">
-          <div class="panel-header"><div class="ph-icon">📋</div><div class="ph-title">Posiciones Activas</div></div>
-          <div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Inicio</th><th>Cantidad</th><th>APY</th><th>Recompensas</th><th>Vencimiento</th><th>Estado</th></tr></thead><tbody><tr><td>01 Jun 2026</td><td class="mono">1,200 ZTN</td><td class="mono" style="color:var(--purple)" id="stakePosApy1">0%</td><td class="mono positive">+$76.80</td><td>01 Jun 2027</td><td><span style="color:var(--green)">● Activo</span></td></tr><tr><td>15 Jun 2026</td><td class="mono">800 ZTN</td><td class="mono" style="color:var(--purple)" id="stakePosApy2">0%</td><td class="mono positive">+$51.60</td><td>15 Jun 2027</td><td><span style="color:var(--green)">● Activo</span></td></tr></tbody></table></div>
+        <div class="form-group" style="margin-top:16px">
+          <label>Cantidad a stakear</label>
+          <input type="number" id="stakeAmount" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-stake" id="stakeBtn" onclick="stakeZNT()" disabled>Stake ZNT</button>
+          <button class="btn btn-stake" onclick="stakeAll()" style="opacity:0.7">Stake Todo</button>
         </div>
       </div>
-
-      <!-- MINING -->
-      <div id="section-mining" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Cloud Mining</div><div class="page-subtitle">Minería en la nube — ZTN</div></div><div class="page-spacer"></div><div class="page-badge badge-gold">ULTIMATE</div></div>
-        <div id="miningContent"></div>
+      <div class="card">
+        <h3>📈 Staking History</h3>
+        <div id="stakingList">
+          <div class="empty"><div class="icon">🔒</div><p>Sin posiciones de staking</p></div>
+        </div>
       </div>
+    </div>
+  </div>
 
-      <!-- MINING PLANS -->
-      <div id="section-mining-plans" class="section-view section-hidden">
-        <div class="page-header"><div><div class="page-title">Planes de Minería</div><div class="page-subtitle">Elige tu plan de cloud mining</div></div></div>
-        <div id="miningPlansContent"></div>
+  <!-- Deposit Tab -->
+  <div class="tab-content" id="tab-deposit">
+    <div class="grid">
+      <div class="card">
+        <h3>📥 Direcciones de Depósito</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Envía tokens a estas direcciones para recargar tu cuenta ZICORE Bank.</p>
+        <div class="deposit-address">
+          <span class="crypto" style="color:#f7931a">BTC</span>
+          <span class="addr">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</span>
+          <button class="copy-btn" onclick="copyAddr(this,'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh')">Copiar</button>
+        </div>
+        <div class="deposit-address">
+          <span class="crypto" style="color:#627eea">ETH</span>
+          <span class="addr">0x742d35Cc6634C0532925a3b844Bc9e7595f2bD3e</span>
+          <button class="copy-btn" onclick="copyAddr(this,'0x742d35Cc6634C0532925a3b844Bc9e7595f2bD3e')">Copiar</button>
+        </div>
+        <div class="deposit-address">
+          <span class="crypto" style="color:var(--cyan)">ZNT</span>
+          <span class="addr">ZTNCORE1qyf5n7m8x9p2w3e4r5t6y7u8i9o0p</span>
+          <button class="copy-btn" onclick="copyAddr(this,'ZTNCORE1qyf5n7m8x9p2w3e4r5t6y7u8i9o0p')">Copiar</button>
+        </div>
+        <div style="margin-top:16px;padding:12px;border-radius:8px;background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);font-size:11px;color:var(--orange)">
+          ⚠️ Los depósitos se acreditan manualmente. Envía una captura de pantalla a <strong>admin@zinemotion.com.mx</strong> para confirmar.
+        </div>
       </div>
+      <div class="card">
+        <h3>💡 Cómo funciona</h3>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">1</div>
+            <div><div style="font-size:13px;font-weight:600">Selecciona una dirección</div><div style="font-size:11px;color:var(--muted)">Copia la dirección de la criptomoneda que deseas enviar</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">2</div>
+            <div><div style="font-size:13px;font-weight:600">Envía desde tu wallet</div><div style="font-size:11px;color:var(--muted)">Transfiere los fondos desde tu billetera personal</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">3</div>
+            <div><div style="font-size:13px;font-weight:600">Acreditación</div><div style="font-size:11px;color:var(--muted)">Tu saldo se actualiza en 1-24 horas tras confirmación</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <!-- History Tab -->
+  <div class="tab-content" id="tab-history">
+    <div class="card" style="grid-column:1/-1">
+      <h3>📋 Historial de Transacciones</h3>
+      <div class="tx-list" id="txList">
+        <div class="empty"><div class="icon">📋</div><p>Sin transacciones aún</p></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// ============ CONSTANTS ============
-const TIER_LEVELS = { explorer: 0, trader: 1, vault: 2, ultimate: 3 };
-const TIER_APY = { explorer: 0, trader: 5, vault: 10, ultimate: 15 };
-const TIER_PRICES = { explorer: 'Gratis', trader: '$49/mes', vault: '$199/mes', ultimate: '$499/mes' };
-const TIER_CLASSES = { explorer: 'explorer', trader: 'trader', vault: 'vault', ultimate: 'ultimate' };
-const ZTN_PRICE = 3.02;
-
-// ============ STATE ============
-let currentUser = null;
-let selectedRegTier = 'explorer';
-
-// ============ STARFIELD ============
-const cv = document.getElementById('starfield'), cx = cv.getContext('2d');
-let st = [];
-function initS() {
-  cv.width = innerWidth; cv.height = innerHeight; st = [];
-  for (let i = 0; i < 90; i++) st.push({ x: Math.random() * cv.width, y: Math.random() * cv.height, r: Math.random() * 1.4 + 0.2, a: Math.random(), d: Math.random() * 0.015 - 0.007 });
-}
-function drawS() {
-  cx.clearRect(0, 0, cv.width, cv.height);
-  st.forEach(s => { s.a += s.d; if (s.a > 1 || s.a < 0.12) s.d *= -1; cx.beginPath(); cx.arc(s.x, s.y, s.r, 0, Math.PI * 2); cx.fillStyle = `rgba(180,210,240,${s.a})`; cx.fill(); });
-  requestAnimationFrame(drawS);
-}
-initS(); drawS(); addEventListener('resize', initS);
-
-// ============ SESSION ============
-function saveSession(user) { localStorage.setItem('zicore_bank_user', JSON.stringify(user)); }
-function loadSession() { try { return JSON.parse(localStorage.getItem('zicore_bank_user')); } catch(e) { return null; } }
-function clearSession() { localStorage.removeItem('zicore_bank_user'); }
-
-// ============ AUTH ============
-function switchAuthTab(tab, el) {
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
-  document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
-}
-
-function selectRegTier(el) {
-  document.querySelectorAll('.tier-option').forEach(t => t.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedRegTier = el.dataset.tier;
-}
-
-function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  const err = document.getElementById('loginError');
-  if (!email || !pass) { err.textContent = 'Completa todos los campos'; err.style.display = 'block'; return; }
-  const existing = loadSession();
-  if (existing && existing.email === email) { currentUser = existing; }
-  else { currentUser = { name: email.split('@')[0], email: email, tier: 'explorer', joinDate: new Date().toISOString().split('T')[0] }; }
-  saveSession(currentUser);
-  showDashboard();
-}
-
-function doRegister() {
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const pass = document.getElementById('regPass').value;
-  const err = document.getElementById('regError');
-  if (!name || !email || !pass) { err.textContent = 'Completa todos los campos'; err.style.display = 'block'; return; }
-  if (pass.length < 8) { err.textContent = 'Mínimo 8 caracteres'; err.style.display = 'block'; return; }
-  currentUser = { name: name, email: email, tier: selectedRegTier, joinDate: new Date().toISOString().split('T')[0] };
-  saveSession(currentUser);
-  showDashboard();
-}
-
-function doLogout() {
-  clearSession();
-  currentUser = null;
-  document.getElementById('dashboardApp').classList.add('hidden');
-  document.getElementById('landingPage').classList.remove('hidden');
-  document.getElementById('landingPage').style.minHeight = '100vh';
-}
-
-function selectTier(tier) {
-  if (currentUser) {
-    currentUser.tier = tier;
-    saveSession(currentUser);
-    updateTierUI();
-  } else {
-    scrollToSection('authSection');
-  }
-}
-
-// ============ SCROLL ============
-function scrollToSection(id) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
-}
-
-// ============ DASHBOARD ============
-function showDashboard() {
-  document.getElementById('landingPage').classList.add('hidden');
-  document.getElementById('dashboardApp').classList.remove('hidden');
-  updateTierUI();
-  showSection('dashboard');
-}
-
-function updateTierUI() {
-  if (!currentUser) return;
-  const tier = currentUser.tier;
-  const cls = TIER_CLASSES[tier] || 'explorer';
-  const apy = TIER_APY[tier] || 0;
-
-  // Topbar badge
-  const badge = document.getElementById('topTierBadge');
-  badge.textContent = tier.toUpperCase();
-  badge.className = 'tier-badge ' + cls;
-
-  // Dashboard badge
-  const dashBadge = document.getElementById('dashTierBadge');
-  dashBadge.textContent = tier.toUpperCase();
-  dashBadge.className = 'page-badge badge-' + (tier === 'ultimate' ? 'gold' : tier === 'vault' ? 'purple' : tier === 'trader' ? 'cyan' : 'green');
-
-  // APY labels
-  document.getElementById('dashApyLabel').textContent = '▲ ' + apy + '% APY';
-  document.getElementById('stakingApyBadge').textContent = apy + '% APY';
-  document.getElementById('stakingApyValue').textContent = apy + '%';
-  document.getElementById('stakePosApy1').textContent = apy + '%';
-  document.getElementById('stakePosApy2').textContent = apy + '%';
-
-  // Sidebar lock icons
-  document.querySelectorAll('.sb-item .lock').forEach(lock => {
-    const req = lock.dataset.req;
-    const reqLevel = TIER_LEVELS[req] || 0;
-    const userLevel = TIER_LEVELS[tier] || 0;
-    lock.style.display = userLevel >= reqLevel ? 'none' : 'inline';
-  });
-
-  // Enterprise / Mining locked content
-  renderEnterpriseContent(tier);
-  renderMiningContent(tier);
-}
-
-function renderEnterpriseContent(tier) {
-  const userLevel = TIER_LEVELS[tier] || 0;
-  const vaultLevel = TIER_LEVELS['vault'];
-  const locked = userLevel < vaultLevel;
-
-  const custodyEl = document.getElementById('custodyContent');
-  const multisigEl = document.getElementById('multisigContent');
-  const billingEl = document.getElementById('billingContent');
-  const apiEl = document.getElementById('apiContent');
-
-  if (locked) {
-    const html = '<div class="upgrade-prompt"><div class="up-title">🔒 Requiere tier Vault o superior</div><div class="up-desc">Actualiza tu membresía para acceder a servicios empresariales</div><button class="btn btn-purple" onclick="selectTier(\'vault\')">Upgrade a Vault — $199/mes</button></div>';
-    custodyEl.innerHTML = html;
-    multisigEl.innerHTML = html;
-    billingEl.innerHTML = html;
-    apiEl.innerHTML = html;
-    return;
-  }
-
-  custodyEl.innerHTML = '<div class="cards-grid"><div class="card"><div class="card-label">Cold Storage</div><div class="card-value" style="color:var(--green)">Activo</div><div class="card-change" style="color:var(--text2)">AES-256 • Offline</div></div><div class="card"><div class="card-label">Hot Wallet</div><div class="card-value">$24,500</div><div class="card-change" style="color:var(--text2)">Para operaciones diarias</div></div><div class="card"><div class="card-label">Última auditoría</div><div class="card-value">Hoy</div><div class="card-change up">✓ Verificado</div></div></div>';
-
-  multisigEl.innerHTML = '<div class="panel"><div class="panel-header"><div class="ph-icon">🔑</div><div class="ph-title">Wallets Configuradas</div></div><div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Nombre</th><th>Tipo</th><th>Firmantes</th><th>Balance</th><th>Estado</th></tr></thead><tbody><tr><td>Tesorería Principal</td><td class="mono">2-of-3</td><td class="mono">3</td><td class="mono">$1,200,000</td><td><span style="color:var(--green)">●</span> Activa</td></tr><tr><td>Operaciones Diarias</td><td class="mono">1-of-2</td><td class="mono">2</td><td class="mono">$24,500</td><td><span style="color:var(--green)">●</span> Activa</td></tr><tr><td>Reserva Cold</td><td class="mono">3-of-5</td><td class="mono">5</td><td class="mono">$1,175,500</td><td><span style="color:var(--green)">●</span> Activa</td></tr></tbody></table></div></div>';
-
-  billingEl.innerHTML = '<div class="panel"><div class="panel-header"><div class="ph-icon">📄</div><div class="ph-title">Últimas Facturas</div></div><div class="panel-body" style="padding:0"><table class="tx-table"><thead><tr><th>Factura</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Fecha</th></tr></thead><tbody><tr><td class="mono">INV-2026-0187</td><td>ZiAerospace Corp</td><td class="mono">15,000 ZTN</td><td><span style="color:var(--green)">Pagada</span></td><td>12 Jul 2026</td></tr><tr><td class="mono">INV-2026-0186</td><td>ZiDefense LLC</td><td class="mono">8,500 ZTN</td><td><span style="color:var(--yellow)">Pendiente</span></td><td>10 Jul 2026</td></tr><tr><td class="mono">INV-2026-0185</td><td>ZiLab Research</td><td class="mono">22,000 ZTN</td><td><span style="color:var(--green)">Pagada</span></td><td>08 Jul 2026</td></tr></tbody></table></div></div>';
-
-  apiEl.innerHTML = '<div class="panel"><div class="panel-header"><div class="ph-icon">⚙</div><div class="ph-title">API Endpoints</div></div><div class="panel-body"><div style="font-family:\'Cascadia Code\',Consolas,monospace;font-size:11px;line-height:2;color:var(--text)"><div><span style="color:var(--green)">GET</span> <span style="color:var(--cyan)">/api/bank/balance</span> — Consultar saldo</div><div><span style="color:var(--green)">GET</span> <span style="color:var(--cyan)">/api/bank/transactions</span> — Historial</div><div><span style="color:var(--orange)">POST</span> <span style="color:var(--cyan)">/api/bank/send</span> — Enviar ZTN</div><div><span style="color:var(--green)">GET</span> <span style="color:var(--cyan)">/api/bank/portfolio</span> — Portafolio</div><div><span style="color:var(--green)">GET</span> <span style="color:var(--cyan)">/api/bank/staking</span> — Info staking</div><div><span style="color:var(--orange)">POST</span> <span style="color:var(--cyan)">/api/bank/stake</span> — Staking ZTN</div><div><span style="color:var(--green)">GET</span> <span style="color:var(--cyan)">/api/bank/enterprise/invoices</span> — Facturas</div><div><span style="color:var(--orange)">POST</span> <span style="color:var(--cyan)">/api/bank/enterprise/invoice</span> — Crear factura</div></div><div style="margin-top:16px"><button class="btn btn-primary">Generar API Key</button></div></div></div>';
-}
-
-function renderMiningContent(tier) {
-  const userLevel = TIER_LEVELS[tier] || 0;
-  const ultimateLevel = TIER_LEVELS['ultimate'];
-  const locked = userLevel < ultimateLevel;
-
-  const miningEl = document.getElementById('miningContent');
-  const plansEl = document.getElementById('miningPlansContent');
-
-  if (locked) {
-    const html = '<div class="upgrade-prompt"><div class="up-title">🔒 Requiere tier Ultimate</div><div class="up-desc">Cloud Mining es exclusivo para miembros Ultimate. Actualiza para acceder.</div><button class="btn btn-gold" onclick="selectTier(\'ultimate\')">Upgrade Ultimate — $499/mes</button></div>';
-    miningEl.innerHTML = html;
-    plansEl.innerHTML = html;
-    return;
-  }
-
-  miningEl.innerHTML = '<div class="cards-grid" style="margin-bottom:12px"><div class="card"><div class="card-label">Hash Rate Actual</div><div class="card-value">42.5<span class="unit"> TH/s</span></div><div class="card-change up">▲ Plan: Professional</div></div><div class="card"><div class="card-label">Ganancias Diarias</div><div class="card-value" style="color:var(--green)">18.4<span class="unit"> ZTN</span></div><div class="card-change" style="color:var(--text2)">≈ $55.57 USD</div></div><div class="card"><div class="card-label">Ganancias Totales</div><div class="card-value">1,284<span class="unit"> ZTN</span></div><div class="card-change up">▲ $3,877.68</div></div><div class="card"><div class="card-label">Días Restantes</div><div class="card-value">247<span class="unit"> días</span></div></div></div><div class="panel"><div class="panel-header"><div class="ph-icon">📈</div><div class="ph-title">Ganancias — 30 Días</div></div><div class="panel-body"><div class="chart-container"><canvas id="miningChart" height="200"></canvas></div></div></div>';
-
-  plansEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px"><div class="mining-plan" style="border-left:3px solid var(--text2)"><div><div class="mp-name">Starter</div><div class="mp-hashrate">10 TH/s • 30 días</div></div><div style="text-align:right"><div class="mp-price">$99</div><div class="mp-period">~4.3 ZTN/mes</div></div></div><div class="mining-plan" style="border-left:3px solid var(--cyan)"><div><div class="mp-name">⚡ Intermediate</div><div class="mp-hashrate">25 TH/s • 90 días</div></div><div style="text-align:right"><div class="mp-price">$249</div><div class="mp-period">~10.8 ZTN/mes</div></div></div><div class="mining-plan" style="border-left:3px solid var(--purple)"><div><div class="mp-name">💎 Professional</div><div class="mp-hashrate">50 TH/s • 365 días</div></div><div style="text-align:right"><div class="mp-price">$599</div><div class="mp-period">~21.5 ZTN/mes</div></div></div><div class="mining-plan" style="border-left:3px solid var(--green)"><div><div class="mp-name">🏢 Enterprise</div><div class="mp-hashrate">100+ TH/s • Personalizado</div></div><div style="text-align:right"><div class="mp-price">Custom</div><div class="mp-period">Contactar ventas</div></div></div></div>';
-}
-
-// ============ SIDEBAR TOGGLE ============
-function toggleGroup(el) {
-  const arrow = el.querySelector('.arrow');
-  const group = el.nextElementSibling;
-  if (!group || !group.classList.contains('sb-group')) return;
-  group.classList.toggle('collapsed');
-  arrow.textContent = group.classList.contains('collapsed') ? '▶' : '▼';
-}
-
-// ============ SECTION NAVIGATION ============
-function showSection(id) {
-  document.querySelectorAll('.section-view').forEach(s => s.classList.add('section-hidden'));
-  const sec = document.getElementById('section-' + id);
-  if (sec) sec.classList.remove('section-hidden');
-  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.sb-item').forEach(el => {
-    if (el.getAttribute('onclick') && el.getAttribute('onclick').includes("'" + id + "'")) el.classList.add('active');
-  });
-  document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-link').forEach(el => {
-    const txt = el.textContent.toLowerCase();
-    if (id === 'dashboard' && txt === 'dashboard') el.classList.add('active');
-    if (id.startsWith('exchange') && txt === 'exchange') el.classList.add('active');
-    if (id === 'staking' && txt === 'staking') el.classList.add('active');
-    if (id.startsWith('mining') && txt === 'minería') el.classList.add('active');
-  });
-  setTimeout(() => {
-    if (id === 'dashboard') renderPriceChart('priceChart');
-    if (id === 'ztn-price') renderPriceChart('ztnPriceChart');
-    if (id === 'portfolio-chart') renderPieChart();
-    if (id === 'portfolio-performance') renderPerformanceChart();
-    if (id === 'exchange') renderExchangeChart();
-    if (id === 'mining') renderMiningChart();
-  }, 50);
-}
-
-// ============ DATA ============
-function genPriceData(n, base, volatility) {
-  const d = []; let p = base;
-  for (let i = 0; i < n; i++) { p += ((Math.random() - 0.48) * volatility); p = Math.max(base * 0.85, Math.min(base * 1.2, p)); d.push(p); }
-  return d;
-}
-
-const txData = [
-  { date: '14 Jul 12:42', type: 'receive', label: 'Recibido', to: 'wallet_main', amount: '+500.00 ZTN', amtClass: 'positive', fee: '0.00', status: 'Confirmado', hash: '0x7a3f...8e2d' },
-  { date: '14 Jul 10:15', type: 'send', label: 'Enviado', to: '0xb4c2...91f0', amount: '-120.00 ZTN', amtClass: 'negative', fee: '0.001 ZTN', status: 'Confirmado', hash: '0x9e1b...4c7a' },
-  { date: '13 Jul 22:30', type: 'swap', label: 'Swap', to: 'Exchange', amount: '+0.0042 BTC', amtClass: 'positive', fee: '0.0001 BTC', status: 'Confirmado', hash: '0x2d8f...6a1e' },
-  { date: '13 Jul 18:00', type: 'staking', label: 'Staking', to: 'Staking Pool', amount: '-800.00 ZTN', amtClass: '', fee: '0.00', status: 'Locked', hash: '0x5c4a...3b9d' },
-  { date: '13 Jul 14:22', type: 'receive', label: 'Recibido', to: 'ZiAerospace', amount: '+2,000.00 ZTN', amtClass: 'positive', fee: '0.00', status: 'Confirmado', hash: '0x1f7e...8d4c' },
-  { date: '12 Jul 09:45', type: 'send', label: 'Enviado', to: '0xd3a1...72e8', amount: '-350.00 ZTN', amtClass: 'negative', fee: '0.001 ZTN', status: 'Confirmado', hash: '0x8b2c...5f1a' },
-  { date: '12 Jul 06:10', type: 'receive', label: 'Recibido', to: 'Mining Pool', amount: '+18.40 ZTN', amtClass: 'positive', fee: '0.00', status: 'Confirmado', hash: '0x3e9d...7c6b' },
-  { date: '11 Jul 20:55', type: 'swap', label: 'Swap', to: 'Exchange', amount: '-200.00 ZTN', amtClass: 'negative', fee: '0.001 ZTN', status: 'Confirmado', hash: '0x6a1f...2e8d' },
-  { date: '11 Jul 15:30', type: 'send', label: 'Enviado', to: '0xf8b2...4a1c', amount: '-50.00 ZTN', amtClass: 'negative', fee: '0.001 ZTN', status: 'Confirmado', hash: '0x4d7b...9f3e' },
-  { date: '11 Jul 08:00', type: 'receive', label: 'Recibido', to: 'Mining Pool', amount: '+18.40 ZTN', amtClass: 'positive', fee: '0.00', status: 'Confirmado', hash: '0x7c3a...1b5d' },
-];
-const allTxs = txData.concat([
-  { date: '10 Jul 22:15', type: 'receive', label: 'Recibido', to: 'ZiLab', amount: '+5,000.00 ZTN', amtClass: 'positive', fee: '0.00', status: 'Confirmado', hash: '0xa1e8...3c7f' },
-  { date: '10 Jul 14:30', type: 'send', label: 'Enviado', to: '0xc5d9...82a4', amount: '-1,200.00 ZTN', amtClass: 'negative', fee: '0.001 ZTN', status: 'Confirmado', hash: '0xb4f2...6e1d' },
-  { date: '09 Jul 18:45', type: 'swap', label: 'Swap', to: 'Exchange', amount: '+0.02 BTC', amtClass: 'positive', fee: '0.0001 BTC', status: 'Confirmado', hash: '0xd7c3...5a8b' },
-  { date: '09 Jul 10:00', type: 'staking', label: 'Staking', to: 'Staking Pool', amount: '-1,200.00 ZTN', amtClass: '', fee: '0.00', status: 'Locked', hash: '0xe2a1...9c4d' },
-  { date: '08 Jul 08:00', type: 'receive', label: 'Recibido', to: 'Mining Pool', amount: '+18.40 ZTN', amtClass: 'positive', fee: '0.00', status: 'Confirmado', hash: '0xf5b8...2d7e' },
-]);
-const ztnHistory = txData.map(t => ({ date: t.date, op: t.label === 'Recibido' ? 'Compra' : t.label === 'Enviado' ? 'Venta' : t.label === 'Swap' ? 'Swap' : 'Staking', amount: t.amount, price: '$3.02', total: t.amtClass === 'positive' ? '+$1,510.00' : '-$362.40', hash: t.hash }));
-
-function renderTxs(containerId, data) {
-  const el = document.getElementById(containerId); if (!el) return;
-  el.innerHTML = data.map(t => `<tr><td>${t.date}</td><td>${t.label || t.type}</td><td>${t.to || ''}</td><td class="${t.amtClass || ''}" style="font-weight:600">${t.amount}</td><td class="mono">${t.fee}</td><td>${t.status || ''}</td><td><span class="hash">${t.hash}</span></td></tr>`).join('');
-}
-
-function renderZtnHistory() {
-  const el = document.getElementById('ztnHistoryTxs'); if (!el) return;
-  el.innerHTML = ztnHistory.map(t => `<tr><td>${t.date}</td><td>${t.op}</td><td class="mono">${t.amount}</td><td class="mono">${t.price}</td><td class="mono ${t.amtClass}">${t.total}</td><td><span class="hash">${t.hash}</span></td></tr>`).join('');
-}
-
-function filterTx(type, el) {
-  document.querySelectorAll('#section-transactions .tab').forEach(e => e.classList.remove('active'));
-  if (el) el.classList.add('active');
-  const filtered = type === 'all' ? allTxs : allTxs.filter(t => t.type === type);
-  renderTxs('allTxs', filtered);
-}
-
-// ============ CHARTS ============
-function renderPriceChart(canvasId) {
-  const c = document.getElementById(canvasId); if (!c) return;
-  const ctx = c.getContext('2d');
-  const W = c.parentElement.clientWidth;
-  c.width = W * 2; c.height = 400; c.style.height = '200px';
-  ctx.scale(2, 2);
-  const w = W, h = 200;
-  const data = genPriceData(60, 3.02, 0.03);
-  const mn = Math.min(...data), mx = Math.max(...data);
-  const pad = { t: 20, r: 10, b: 30, l: 50 };
-  const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
-  ctx.strokeStyle = 'rgba(20,30,50,.6)'; ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) { const y = pad.t + ch * (i / 4); ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.fillStyle = '#3a4a5c'; ctx.font = '9px monospace'; ctx.textAlign = 'right'; ctx.fillText('$' + (mx - (mx - mn) * (i / 4)).toFixed(2), pad.l - 6, y + 3); }
-  const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b); grad.addColorStop(0, 'rgba(0,229,255,.15)'); grad.addColorStop(1, 'rgba(0,229,255,0)');
-  ctx.beginPath(); data.forEach((v, i) => { const x = pad.l + (i / (data.length - 1)) * cw; const y = pad.t + (1 - (v - mn) / (mx - mn)) * ch; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-  ctx.beginPath(); data.forEach((v, i) => { const x = pad.l + (i / (data.length - 1)) * cw; const y = pad.t + (1 - (v - mn) / (mx - mn)) * ch; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 1.5; ctx.stroke();
-  const lastX = pad.l + cw, lastY = pad.t + (1 - (data[data.length - 1] - mn) / (mx - mn)) * ch;
-  ctx.beginPath(); ctx.arc(lastX, lastY, 3, 0, Math.PI * 2); ctx.fillStyle = '#00e5ff'; ctx.fill();
-  ctx.beginPath(); ctx.arc(lastX, lastY, 6, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,229,255,.2)'; ctx.fill();
-}
-
-function renderPieChart() {
-  const c = document.getElementById('portfolioPie'); if (!c) return;
-  const ctx = c.getContext('2d');
-  const W = c.parentElement.clientWidth;
-  c.width = W * 2; c.height = 520; c.style.height = '260px';
-  ctx.scale(2, 2);
-  const cxC = W / 2, cy = 130, r = 90;
-  const data = [{ pct: 99.9, color: '#00e5ff', label: 'ZTN' }, { pct: 0.1, color: '#00ff88', label: 'USDT' }];
-  let angle = -Math.PI / 2;
-  data.forEach(d => {
-    const slice = (d.pct / 100) * Math.PI * 2;
-    ctx.beginPath(); ctx.moveTo(cxC, cy); ctx.arc(cxC, cy, r, angle, angle + slice); ctx.closePath();
-    ctx.fillStyle = d.color; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#030508'; ctx.lineWidth = 2; ctx.stroke();
-    if (d.pct > 1) { const mid = angle + slice / 2; const lx = cxC + Math.cos(mid) * (r * 0.65); const ly = cy + Math.sin(mid) * (r * 0.65); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.label, lx, ly); ctx.fillStyle = '#030508'; ctx.font = '9px monospace'; ctx.fillText(d.pct + '%', lx, ly + 12); }
-    angle += slice;
-  });
-  ctx.beginPath(); ctx.arc(cxC, cy, 45, 0, Math.PI * 2); ctx.fillStyle = '#080c16'; ctx.fill();
-  ctx.fillStyle = '#c8d6e5'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.fillText('$12,847', cxC, cy - 2);
-  ctx.fillStyle = '#5a6e82'; ctx.font = '9px sans-serif'; ctx.fillText('Total', cxC, cy + 12);
-}
-
-function renderPerformanceChart() {
-  const c = document.getElementById('performanceChart'); if (!c) return;
-  const ctx = c.getContext('2d');
-  const W = c.parentElement.clientWidth;
-  c.width = W * 2; c.height = 440; c.style.height = '220px';
-  ctx.scale(2, 2);
-  const w = W, h = 220;
-  const data = genPriceData(30, 10000, 200);
-  const mn = Math.min(...data), mx = Math.max(...data);
-  const pad = { t: 20, r: 10, b: 30, l: 60 };
-  const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
-  ctx.strokeStyle = 'rgba(20,30,50,.6)'; ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) { const y = pad.t + ch * (i / 4); ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.fillStyle = '#3a4a5c'; ctx.font = '9px monospace'; ctx.textAlign = 'right'; ctx.fillText('$' + Math.round(mx - (mx - mn) * (i / 4)).toLocaleString(), pad.l - 6, y + 3); }
-  const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b); grad.addColorStop(0, 'rgba(0,255,136,.15)'); grad.addColorStop(1, 'rgba(0,255,136,0)');
-  ctx.beginPath(); data.forEach((v, i) => { const x = pad.l + (i / (data.length - 1)) * cw; const y = pad.t + (1 - (v - mn) / (mx - mn)) * ch; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-  ctx.beginPath(); data.forEach((v, i) => { const x = pad.l + (i / (data.length - 1)) * cw; const y = pad.t + (1 - (v - mn) / (mx - mn)) * ch; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1.5; ctx.stroke();
-}
-
-function renderExchangeChart() {
-  const c = document.getElementById('exchangeChart'); if (!c) return;
-  const ctx = c.getContext('2d');
-  const W = c.parentElement.clientWidth;
-  c.width = W * 2; c.height = 600; c.style.height = '300px';
-  ctx.scale(2, 2);
-  const w = W, h = 300;
-  const data = genPriceData(80, 0.000045, 0.0000005);
-  const mn = Math.min(...data), mx = Math.max(...data);
-  const pad = { t: 20, r: 10, b: 30, l: 70 };
-  const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
-  ctx.strokeStyle = 'rgba(20,30,50,.6)'; ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 5; i++) { const y = pad.t + ch * (i / 5); ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.fillStyle = '#3a4a5c'; ctx.font = '9px monospace'; ctx.textAlign = 'right'; ctx.fillText((mx - (mx - mn) * (i / 5)).toFixed(8), pad.l - 6, y + 3); }
-  const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b); grad.addColorStop(0, 'rgba(124,77,255,.15)'); grad.addColorStop(1, 'rgba(124,77,255,0)');
-  ctx.beginPath(); data.forEach((v, i) => { const x = pad.l + (i / (data.length - 1)) * cw; const y = pad.t + (1 - (v - mn) / (mx - mn)) * ch; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-  ctx.beginPath(); data.forEach((v, i) => { const x = pad.l + (i / (data.length - 1)) * cw; const y = pad.t + (1 - (v - mn) / (mx - mn)) * ch; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.strokeStyle = '#7c4dff'; ctx.lineWidth = 1.5; ctx.stroke();
-}
-
-function renderMiningChart() {
-  const c = document.getElementById('miningChart'); if (!c) return;
-  const ctx = c.getContext('2d');
-  const W = c.parentElement.clientWidth;
-  c.width = W * 2; c.height = 400; c.style.height = '200px';
-  ctx.scale(2, 2);
-  const w = W, h = 200;
-  const data = []; for (let i = 0; i < 30; i++) data.push(15 + Math.random() * 8);
-  const mn = Math.min(...data), mx = Math.max(...data);
-  const pad = { t: 20, r: 10, b: 30, l: 50 };
-  const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
-  const barW = cw / data.length * 0.7;
-  ctx.strokeStyle = 'rgba(20,30,50,.6)'; ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) { const y = pad.t + ch * (i / 4); ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.fillStyle = '#3a4a5c'; ctx.font = '9px monospace'; ctx.textAlign = 'right'; ctx.fillText((mx - (mx - mn) * (i / 4)).toFixed(1), pad.l - 6, y + 3); }
-  data.forEach((v, i) => {
-    const x = pad.l + (i / data.length) * cw + (cw / data.length - barW) / 2;
-    const bh = ((v - mn) / (mx - mn)) * ch;
-    const y = pad.t + ch - bh;
-    const grad = ctx.createLinearGradient(0, y, 0, pad.t + ch); grad.addColorStop(0, '#00e5ff'); grad.addColorStop(1, 'rgba(0,229,255,.2)');
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.roundRect(x, y, barW, bh, 2); ctx.fill();
-  });
-}
-
-// ============ STAKING CALCULATOR ============
-function calcStake() {
-  const amt = parseFloat(document.getElementById('stakeInput').value) || 0;
-  const days = parseInt(document.getElementById('stakePeriod').value) || 365;
-  const tier = currentUser ? currentUser.tier : 'explorer';
-  const apy = (TIER_APY[tier] || 0) / 100;
-  const reward = amt * apy * (days / 365);
-  document.getElementById('stakeReward').textContent = reward.toFixed(2) + ' ZTN';
-  document.getElementById('stakeUsd').textContent = '$' + (reward * ZTN_PRICE).toFixed(2);
-  document.getElementById('stakeTotal').textContent = (amt + reward).toFixed(2) + ' ZTN';
-}
-
-// ============ TRADE CALCULATORS ============
-document.getElementById('buyAmount').addEventListener('input', function () {
-  document.getElementById('buyZtn').textContent = (parseFloat(this.value || 0) / ZTN_PRICE).toFixed(2);
-});
-document.getElementById('sellAmount').addEventListener('input', function () {
-  document.getElementById('sellUsd').textContent = (parseFloat(this.value || 0) * ZTN_PRICE).toFixed(2);
-});
-
-// ============ INIT ============
-(function init() {
-  const session = loadSession();
-  if (session) {
-    currentUser = session;
-    showDashboard();
-  }
-  renderTxs('recentTxs', txData.slice(0, 10));
-  renderTxs('allTxs', allTxs);
-  renderZtnHistory();
+// SSO Auth
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
 })();
+
+function getToken(){return localStorage.getItem('zicore_sso_token')}
+function authFetch(url,opts={}){return fetch(url,{...opts,headers:{'Authorization':'Bearer '+getToken(),'Content-Type':'application/json',...(opts.headers||{})}})}
+
+// Tab switching
+function switchTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='history')loadTransactions();
+  if(tab==='stake')loadStaking();
+}
+
+// Load portfolio
+async function loadPortfolio(){
+  try{
+    const r=await authFetch('/api/bank/portfolio');
+    const d=await r.json();
+    if(d.status==='ok'){
+      const p=d.portfolio;
+      document.getElementById('totalBalance').textContent=p.znt_total.toFixed(2)+' ZNT';
+      document.getElementById('totalUsd').textContent='≈ $'+p.usd_value.toFixed(2)+' USD';
+      document.getElementById('availableBalance').textContent=p.znt_balance.toFixed(2)+' ZNT';
+      document.getElementById('stakedBalance').textContent=p.znt_staked.toFixed(2)+' ZNT';
+      document.getElementById('zntPrice').textContent='$'+p.znt_price.toFixed(2);
+      document.getElementById('apyValue').textContent=p.apy+'%';
+      document.getElementById('quickBalance').textContent=p.znt_balance.toFixed(2)+' ZNT';
+      document.getElementById('quickAvailable').textContent=p.znt_balance.toFixed(2)+' ZNT';
+      document.getElementById('stakeAvailable').textContent=p.znt_balance.toFixed(2)+' ZNT';
+      document.getElementById('stakedAmount').textContent=p.znt_staked.toFixed(2)+' ZNT';
+      document.getElementById('estimatedEarnings').textContent=(p.znt_staked*p.apy/100).toFixed(2)+' ZNT';
+    }
+  }catch(e){console.warn('Portfolio load error:',e)}
+}
+
+// Load transactions
+async function loadTransactions(){
+  try{
+    const r=await authFetch('/api/bank/transactions?limit=50');
+    const d=await r.json();
+    if(d.status==='ok'){
+      const list=document.getElementById('txList');
+      if(d.transactions.length===0){
+        list.innerHTML='<div class="empty"><div class="icon">📋</div><p>Sin transacciones aún</p></div>';
+        return;
+      }
+      list.innerHTML=d.transactions.map(tx=>{
+        const isSent=tx.from_user&&tx.from_user.startsWith('user_');
+        const type=tx.tx_type||'transfer';
+        const icon=type==='stake'?'🔒':isSent?'📤':'📥';
+        const cls=type==='stake'?'stake':isSent?'sent':'received';
+        const amt=type==='stake'?-tx.amount:isSent?-tx.amount:tx.amount;
+        const sign=amt<0?'-':'+';
+        const date=new Date(tx.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+        return `<div class="tx-item">
+          <div class="tx-icon ${cls}">${icon}</div>
+          <div class="tx-info">
+            <div class="tx-type">${type==='stake'?'Staking':isSent?'Enviado':'Recibido'}</div>
+            <div class="tx-desc">${tx.description||tx.from_user||''}</div>
+          </div>
+          <div class="tx-amount ${amt<0?'negative':'positive'}">${sign}${Math.abs(amt).toFixed(2)} ZNT</div>
+          <div class="tx-date">${date}</div>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){console.warn('Tx load error:',e)}
+}
+
+// Load staking
+async function loadStaking(){
+  try{
+    const r=await authFetch('/api/bank/staking');
+    const d=await r.json();
+    if(d.status==='ok'){
+      const list=document.getElementById('stakingList');
+      if(d.staking.length===0){
+        list.innerHTML='<div class="empty"><div class="icon">🔒</div><p>Sin posiciones de staking</p></div>';
+        return;
+      }
+      list.innerHTML=d.staking.map(s=>{
+        const date=new Date(s.started_at).toLocaleDateString('es-MX');
+        return `<div class="tx-item">
+          <div class="tx-icon stake">🔒</div>
+          <div class="tx-info">
+            <div class="tx-type">${s.amount.toFixed(2)} ZNT</div>
+            <div class="tx-desc">${s.apy}% APY · Desde ${date}</div>
+          </div>
+          <div class="staking-badge">Activo</div>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){console.warn('Staking load error:',e)}
+}
+
+// Send ZNT
+const sendAmountEl=document.getElementById('sendAmount');
+const sendToEl=document.getElementById('sendTo');
+sendAmountEl.addEventListener('input',updateSendPreview);
+sendToEl.addEventListener('input',updateSendPreview);
+
+function updateSendPreview(){
+  const amt=parseFloat(sendAmountEl.value)||0;
+  const to=sendToEl.value.trim();
+  document.getElementById('sendBtn').disabled=amt<=0||!to;
+  document.getElementById('sendPreview').style.display=amt>0?'block':'none';
+  document.getElementById('previewAmount').textContent=amt.toFixed(2)+' ZNT';
+  document.getElementById('previewUsd').textContent='$'+(amt*2.47).toFixed(2);
+}
+
+async function sendZNT(){
+  const to=sendToEl.value.trim();
+  const amount=parseFloat(sendAmountEl.value);
+  if(!to||amount<=0)return;
+  if(!confirm(`Enviar ${amount.toFixed(2)} ZNT a ${to}?`))return;
+  try{
+    const r=await authFetch('/api/bank/send',{method:'POST',body:JSON.stringify({to,amount,description:document.getElementById('sendDesc').value})});
+    const d=await r.json();
+    if(d.status==='ok'){
+      showToast(d.message,'success');
+      sendAmountEl.value='';
+      sendToEl.value='';
+      document.getElementById('sendDesc').value='';
+      document.getElementById('sendPreview').style.display='none';
+      loadPortfolio();
+      loadTransactions();
+    }else{
+      showToast(d.error||'Error al enviar','error');
+    }
+  }catch(e){showToast('Error de conexión','error')}
+}
+
+// Stake ZNT
+document.getElementById('stakeAmount').addEventListener('input',function(){
+  document.getElementById('stakeBtn').disabled=parseFloat(this.value)<=0;
+});
+
+function stakeAll(){
+  const avail=parseFloat(document.getElementById('stakeAvailable').textContent)||0;
+  document.getElementById('stakeAmount').value=avail.toFixed(2);
+  document.getElementById('stakeBtn').disabled=avail<=0;
+}
+
+async function stakeZNT(){
+  const amount=parseFloat(document.getElementById('stakeAmount').value);
+  if(amount<=0)return;
+  if(!confirm(`Stakear ${amount.toFixed(2)} ZNT al 15% APY?`))return;
+  try{
+    const r=await authFetch('/api/bank/stake',{method:'POST',body:JSON.stringify({amount})});
+    const d=await r.json();
+    if(d.status==='ok'){
+      showToast(d.message,'success');
+      document.getElementById('stakeAmount').value='';
+      loadPortfolio();
+      loadStaking();
+    }else{
+      showToast(d.error||'Error al stakear','error');
+    }
+  }catch(e){showToast('Error de conexión','error')}
+}
+
+// Copy address
+function copyAddr(btn,addr){
+  navigator.clipboard.writeText(addr).then(()=>{
+    btn.textContent='Copiado!';
+    setTimeout(()=>btn.textContent='Copiar',1500);
+  });
+}
+
+// Toast
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+// Mini chart
+function renderChart(){
+  const c=document.getElementById('priceChart');
+  const bars=30;
+  let html='';
+  for(let i=0;i<bars;i++){
+    const h=20+Math.random()*40;
+    html+=`<div class="bar" style="height:${h}%"></div>`;
+  }
+  c.innerHTML=html;
+}
+
+// Init
+loadPortfolio();
+renderChart();
 </script>
 </body>
 </html>

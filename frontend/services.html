@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Services</title>
+<link rel="stylesheet" href="/css/zicore-ui.css">
+<style>
+.main{padding:calc(var(--topbar-h) + 24px) 24px 40px;max-width:1200px;margin:0 auto;position:relative;z-index:2}
+.quick-nav{display:flex;gap:6px;margin-bottom:28px;flex-wrap:wrap;justify-content:center}
+.quick-btn{padding:7px 14px;border-radius:var(--radius);background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);color:var(--text-muted);font-size:10px;font-weight:600;
+  cursor:pointer;transition:all .2s;text-decoration:none;letter-spacing:0.5px}
+.quick-btn:hover{border-color:var(--border-active);color:var(--cyan);background:rgba(0,229,255,0.04)}
+.search-box{position:relative;margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto}
+.search-box input{width:100%;padding:10px 14px 10px 36px;border-radius:var(--radius);
+  background:rgba(0,0,0,0.25);border:1px solid var(--border);color:var(--text);font-size:12px}
+.search-box input:focus{border-color:var(--cyan);outline:none}
+.search-box::before{content:'⌕';position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<canvas class="zicore-stars" id="starfield"></canvas>
+<div class="zicore-grain"></div>
+<div class="zicore-scanline"></div>
+
+<div class="ztopbar" id="topbar"></div>
+
+<div class="main">
+  <div class="zicore-hero">
+    <div class="zicore-hero-icon">⬡</div>
+    <div>
+      <h1>Servicios ZICORE</h1>
+      <p>Ecosistema completo de servicios aerospaciales digitales. Un login, todas las divisiones, acceso por saldo ZNT.</p>
+      <div class="stats">
+        <div class="stat"><span class="val" id="totalSvc">0</span> servicios</div>
+        <div class="stat"><span class="val">5</span> divisiones</div>
+        <div class="stat"><span class="val">SSO</span> unificado</div>
+        <div class="stat"><span class="val">ZNT</span> acceso</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-box">
+    <input type="text" placeholder="Buscar servicio..." id="searchInput" oninput="filterServices(this.value)">
+  </div>
+
+  <div class="quick-nav" id="quickNav"></div>
+  <div id="portals"></div>
+</div>
+
+<script src="/js/zicore-topbar.js"></script>
+<script>
+ZICORE_TOPBAR.init({
+  brand: 'ZICORE',
+  subtitle: 'SERVICIOS',
+  tabs: [
+    {label:'Inicio', href:'/'},
+    {label:'Servicios', href:'/services', id:'services'},
+  ],
+  activeTab: 'services'
+});
+
+const SERVICES = [
+  {div:'ZiAerospace',divIcon:'🚀',divDesc:'Vehiculos, misiones, infraestructura aeroespacial',items:[
+    {name:'Vehicle Designer',icon:'🚀',color:'cyan',path:'/vehicle-designer',desc:'Diseno de vehiculos aeroespaciales con plantillas ilimitadas',tags:['CAD','Diseño','3D'],badge:'free'},
+    {name:'Propulsion Lab',icon:'⚡',color:'orange',path:'/propulsion-lab',desc:'Laboratorio de propulsion: quimica, electrica, nuclear, fusion',tags:['Propulsión','Física'],badge:'free'},
+    {name:'Orbital Mechanics',icon:'◎',color:'purple',path:'/orbital-mechanics',desc:'Mechanica orbital: Hohmann, bi-eliptico, asistencia gravitatoria',tags:['Órbita','Delta-V'],badge:'free'},
+    {name:'Mission Control',icon:'🎯',color:'green',path:'/mission-control',desc:'Centro de control de misiones con telemetria en tiempo real',tags:['Telemetría','Real-time'],badge:'free'},
+    {name:'Solar Navigation',icon:'🗺',color:'cyan',path:'/solar-navigation',desc:'Navegacion celeste y solar punto-a-punto',tags:['Navegación','Estrellas'],badge:'free'},
+    {name:'Engineering',icon:'⚙',color:'orange',path:'/engineering',desc:'Ingenieria estructural, aerodinamica, analisis de esfuerzos',tags:['Estructuras','CFD'],badge:'free'},
+    {name:'Aerospace Engineering',icon:'🔬',color:'purple',path:'/aerospace-engineering',desc:'Ingenieria aeroespacial avanzada con viewport 3D y Ollama AI',tags:['3D','AI'],badge:'free'},
+    {name:'Aerospace Dashboard',icon:'📊',color:'cyan',path:'/aerospace',desc:'Panel de control aeroespacial: 5 tabs de datos',tags:['Dashboard','Datos'],badge:'free'},
+  ]},
+  {div:'ZiEnvironment',divIcon:'◉',divDesc:'Simulacion ambiental, clima espacial, terreno',items:[
+    {name:'Environment Sim',icon:'◉',color:'green',path:'/environment',desc:'Simulacion de gravedad, atmosfera, clima espacial',tags:['Física','Clima'],badge:'free'},
+    {name:'ZIO Copilot',icon:'🤖',color:'purple',path:'/zio',desc:'Asistente AI contextual: piloto, ingeniero, cientifico',tags:['AI','Chat'],badge:'free'},
+  ]},
+  {div:'ZineMotion',divIcon:'◈',divDesc:'Creatividad, multimedia, generacion 3D, entretenimiento',items:[
+    {name:'Visualizer',icon:'◈',color:'cyan',path:'/dashboard',desc:'Visualizador 3D de objetos y escenas',tags:['3D','Preview'],badge:'free'},
+    {name:'Materializer',icon:'✨',color:'purple',path:'/materializer',desc:'Motor de generacion 3D procedimental (14+ tipos)',tags:['3D','STL'],badge:'free'},
+    {name:'Video Editor',icon:'🎬',color:'red',path:'/video-editor',desc:'Editor de video estilo Avid Media Composer',tags:['Video','NLE'],badge:'free'},
+    {name:'OutPreview',icon:'◇',color:'cyan',path:'/outpreview',desc:'Editor de meshes, preview y exportacion',tags:['Mesh','Export'],badge:'free'},
+    {name:'ZICORE Print',icon:'🖨',color:'green',path:'/zicore-print',desc:'Manufactura: 7 impresoras, feeders, flash firmware',tags:['Impresión','3D'],badge:'free'},
+    {name:'ZiPrint',icon:'🖨',color:'orange',path:'/ziprint',desc:'Cola de impresion y monitoreo',tags:['Cola','Monitor'],badge:'free'},
+    {name:'Multimedia',icon:'🎬',color:'purple',path:'/multimedia',desc:'Biblioteca de audio, video, imagenes',tags:['Audio','Video'],badge:'free'},
+    {name:'Games Center',icon:'🎮',color:'green',path:'/games',desc:'17 juegos HTML5 con leaderboard',tags:['Juegos','HTML5'],badge:'free'},
+    {name:'Video Chat',icon:'📹',color:'cyan',path:'/videochat',desc:'Video chat peer-to-peer con WebRTC',tags:['WebRTC','P2P'],badge:'free'},
+    {name:'Tienda ZineMotion',icon:'🛍',color:'cyan',path:'https://zzz.zinemotion.com',desc:'TechWear, ZiCapsules, frames 3D y productos del ecosistema',tags:['Tienda','Productos'],badge:'shop'},
+  ]},
+  {div:'ZICORE Services',divIcon:'⬡',divDesc:'Servicios centrales: correo, banco, almacenamiento',items:[
+    {name:'ZICORE Mail',icon:'📨',color:'cyan',path:'/mail-portal',desc:'Webmail completo: inbox, compose, admin, multi-dominio',tags:['Email','IMAP'],badge:'free'},
+    {name:'ZICORE Bank',icon:'🏦',color:'green',path:'/zicore-bank',desc:'Banca ZNT: portfolio, send, stake 15% APY',tags:['ZNT','Staking'],badge:'free'},
+    {name:'Cloud Storage',icon:'☁',color:'purple',path:'/storage',desc:'Almacenamiento de archivos con drag & drop',tags:['Files','Cloud'],badge:'free'},
+    {name:'Browser',icon:'🌐',color:'orange',path:'/browser',desc:'Explorador web integrado con proxy CORS',tags:['Web','Proxy'],badge:'free'},
+    {name:'ZiShield',icon:'🛡',color:'red',path:'/zishield',desc:'Seguridad y proteccion del sistema',tags:['Seguridad','Audit'],badge:'premium'},
+    {name:'Settings',icon:'⚙',color:'cyan',path:'/settings',desc:'Configuracion del sistema (11 tabs)',tags:['Config','Theme'],badge:'free'},
+  ]},
+  {div:'Developer & Docs',divIcon:'💻',divDesc:'Documentacion, API, marketplace, gobernanza',items:[
+    {name:'API Documentation',icon:'📚',color:'cyan',path:'/api-docs',desc:'235+ endpoints documentados en 42 categorias',tags:['API','REST'],badge:'free'},
+    {name:'ZiCodex',icon:'📖',color:'purple',path:'/zicodex',desc:'Base de conocimiento espacial y tecnico',tags:['Knowledge','Docs'],badge:'free'},
+    {name:'Marketplace',icon:'🛒',color:'green',path:'/marketplace',desc:'Modulos, herramientas y servicios del ecosistema',tags:['Modules','Buy'],badge:'free'},
+    {name:'Whitepaper',icon:'📄',color:'orange',path:'/whitepaper',desc:'Documento tecnico y arquitectura del sistema',tags:['Architecture','Spec'],badge:'free'},
+    {name:'Governance',icon:'🏛',color:'purple',path:'/governance',desc:'Gobernanza ZNT, voting, propuestas',tags:['ZNT','Voting'],badge:'premium'},
+    {name:'Asset Registry',icon:'📋',color:'cyan',path:'/asset-registry',desc:'Registro y tracking de activos del ecosistema',tags:['Assets','Registry'],badge:'premium'},
+    {name:'Developer Tools',icon:'💻',color:'green',path:'/developer',desc:'Herramientas de desarrollo y debug',tags:['Dev','Tools'],badge:'free'},
+    {name:'Web Stats',icon:'📊',color:'orange',path:'/web-stats',desc:'Estadisticas de trafico del sistema',tags:['Traffic','Analytics'],badge:'free'},
+    {name:'Installers',icon:'⬇',color:'cyan',path:'/installers',desc:'Descargas: APK Android, clientes, herramientas',tags:['Download','APK'],badge:'free'},
+  ]},
+];
+
+const portals = document.getElementById('portals');
+const quickNav = document.getElementById('quickNav');
+let total = 0;
+
+SERVICES.forEach(s => {
+  quickNav.innerHTML += `<a class="quick-btn" onclick="scrollTo('${s.div}')">${s.divIcon} ${s.div}</a>`;
+});
+
+SERVICES.forEach(div => {
+  total += div.items.length;
+  let html = `<div class="zicore-section" id="div-${div.div}">
+    <div class="zicore-section-header">
+      <span style="font-size:20px">${div.divIcon}</span>
+      <h2>${div.div}</h2>
+      <span class="line"></span>
+      <span class="count">${div.items.length}</span>
+    </div>
+    <div class="zicore-grid zicore-grid-3">`;
+  div.items.forEach(svc => {
+    html += `<a class="zicore-card" href="${svc.path}" style="text-decoration:none;color:var(--text)">
+      <div class="zicore-card-top">
+        <div class="zicore-card-icon ${svc.color}">${svc.icon}</div>
+        <div class="zicore-card-name">${svc.name}</div>
+        <span class="zicore-badge ${svc.badge}">${svc.badge}</span>
+      </div>
+      <div class="zicore-card-desc">${svc.desc}</div>
+      <div class="zicore-tags">${svc.tags.map(t => `<span class="zicore-tag">${t}</span>`).join('')}</div>
+    </a>`;
+  });
+  html += '</div></div>';
+  portals.innerHTML += html;
+});
+
+document.getElementById('totalSvc').textContent = total;
+
+function scrollTo(id) { document.getElementById('div-' + id)?.scrollIntoView({behavior:'smooth',block:'start'}); }
+function filterServices(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.zicore-card').forEach(c => {
+    const text = c.textContent.toLowerCase();
+    c.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+}
+
+// Starfield
+(function(){const c=document.getElementById('starfield'),x=c.getContext('2d');let s=[];function r(){c.width=innerWidth;c.height=innerHeight}r();addEventListener('resize',r);for(let i=0;i<120;i++)s.push({x:Math.random()*2e3,y:Math.random()*2e3,r:Math.random()*1+.2,a:Math.random(),d:(Math.random()-.5)*.012});function d(){x.clearRect(0,0,c.width,c.height);s.forEach(p=>{p.a+=p.d;if(p.a>1||p.a<.2)p.d*=-1;x.beginPath();x.arc(p.x%c.width,p.y%c.height,p.r,0,Math.PI*2);x.fillStyle=`rgba(180,200,240,${p.a})`;x.fill()});requestAnimationFrame(d)}d()})();
+</script>
+<script src="/js/zicore-topbar.js"></script>
+<script>ZICORE_TOPBAR.init({brand:'ZICORE',tabs:[{label:'Servicios',href:'/services',id:'services'},{label:'Aerospace',href:'/aerospace-portal'},{label:'ZineMotion',href:'/zine-motion'},{label:'Developer',href:'/developer-portal'}],activeTab:'services'})</script>
+<script src="/js/zicore-translate.js"></script>
+<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
+</body>
+</html>

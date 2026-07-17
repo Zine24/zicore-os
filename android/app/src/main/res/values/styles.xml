@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="zicore_bg">#060a12</color>
+    <color name="zicore_cyan">#00e5ff</color>
+    <color name="zicore_purple">#7c4dff</color>
+    <color name="zicore_green">#00ff88</color>
+    <color name="zicore_text">#e0e0e0</color>
+    <color name="zicore_text2">#607080</color>
+    <color name="zicore_border">#1a2332</color>
+    <color name="zicore_card">#0d1117</color>
+    <color name="zicore_surface">#16213e</color>
+
+    <style name="Theme.ZICORE" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/zicore_bg</item>
+        <item name="android:statusBarColor">@color/zicore_bg</item>
+        <item name="android:navigationBarColor">@color/zicore_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">@color/zicore_cyan</item>
+        <item name="colorPrimaryDark">@color/zicore_bg</item>
+        <item name="colorAccent">@color/zicore_purple</item>
+    </style>
+
+    <style name="ZICOREDialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:background">@color/zicore_card</item>
+        <item name="android:textColor">@color/zicore_text</item>
+        <item name="android:textColorPrimary">@color/zicore_text</item>
+        <item name="colorAccent">@color/zicore_cyan</item>
+    </style>
+</resources>

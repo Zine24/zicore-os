@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE OS — RedGen Energy Systems</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--bg2:#0f1525;--bg3:#141c30;--bg4:#1a2540;--bg5:#1e2d50;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;
+  --text:#c8d6e5;--text2:#7a8a9a;--border:#1a2540;
+  --glass:rgba(10,14,23,0.92);--glass2:rgba(10,14,23,0.65);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.01) 2px,rgba(0,229,255,.01) 4px)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 8px rgba(0,229,255,.15)}50%{box-shadow:0 0 20px rgba(0,229,255,.3)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes energyFlow{0%{stroke-dashoffset:20}100%{stroke-dashoffset:0}}
+@keyframes rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ===== LANDING ===== */
+.landing{position:relative;z-index:2;display:flex;flex-direction:column;min-height:100vh;overflow-y:auto}
+.landing::-webkit-scrollbar{width:4px}
+.landing::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.hero{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 20px;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;
+  background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);font-size:11px;color:var(--cyan);
+  letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:24px}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.hero-title{font-size:clamp(36px,6vw,72px);font-weight:800;letter-spacing:6px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple),var(--green));-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;margin-bottom:12px;line-height:1.1}
+.hero-sub{font-size:clamp(14px,2vw,20px);color:var(--text2);letter-spacing:3px;margin-bottom:40px}
+.hero-tagline{font-size:clamp(18px,3vw,32px);font-weight:300;color:var(--text);
+  margin-bottom:48px;letter-spacing:1px;max-width:600px}
+.hero-tagline em{color:var(--cyan);font-style:normal;font-weight:600}
+
+.stats-row{display:flex;gap:32px;margin-bottom:48px;flex-wrap:wrap;justify-content:center}
+.stat-item{text-align:center}
+.stat-value{font-size:28px;font-weight:700;font-family:'JetBrains Mono','Consolas',monospace;
+  background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;
+  max-width:1000px;width:100%;margin-bottom:48px}
+.feature-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:24px 16px;
+  text-align:center;backdrop-filter:blur(12px);transition:all .3s;cursor:default}
+.feature-card:hover{border-color:rgba(0,229,255,.3);box-shadow:0 0 20px rgba(0,229,255,.1);transform:translateY(-4px)}
+.feature-icon{font-size:32px;margin-bottom:12px;display:block}
+.feature-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;letter-spacing:1px}
+.feature-desc{font-size:10px;color:var(--text2);line-height:1.5}
+
+.auth-box{display:flex;gap:12px;margin-top:8px}
+.auth-btn{padding:10px 28px;border-radius:6px;font-size:12px;font-weight:600;letter-spacing:2px;
+  text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .2s;font-family:inherit}
+.auth-btn.primary{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,77,255,.12));
+  border-color:rgba(0,229,255,.4);color:var(--cyan)}
+.auth-btn.primary:hover{background:linear-gradient(135deg,rgba(0,229,255,.25),rgba(124,77,255,.2));
+  box-shadow:0 0 20px rgba(0,229,255,.2)}
+.auth-btn.secondary{background:rgba(255,255,255,.03);border-color:var(--border);color:var(--text2)}
+.auth-btn.secondary:hover{border-color:var(--purple);color:var(--purple)}
+
+.auth-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:1000;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center}
+.auth-modal.show{display:flex}
+.auth-form{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;
+  width:100%;max-width:380px;animation:slideIn .3s}
+.auth-form h2{font-size:18px;font-weight:700;color:var(--cyan);letter-spacing:2px;margin-bottom:4px}
+.auth-form p{font-size:11px;color:var(--text2);margin-bottom:20px}
+.auth-field{margin-bottom:14px}
+.auth-field label{display:block;font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.auth-field input{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--text);
+  padding:10px 12px;border-radius:6px;font-size:13px;font-family:inherit;transition:border-color .2s}
+.auth-field input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.15)}
+.auth-submit{width:100%;padding:10px;border:none;border-radius:6px;background:linear-gradient(135deg,var(--cyan),var(--purple));
+  color:#000;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;
+  font-family:inherit;margin-top:6px;transition:all .2s}
+.auth-submit:hover{box-shadow:0 0 20px rgba(0,229,255,.3)}
+.auth-switch{font-size:11px;color:var(--text2);text-align:center;margin-top:14px}
+.auth-switch a{color:var(--cyan);cursor:pointer;text-decoration:none}
+.auth-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text2);
+  font-size:20px;cursor:pointer}
+
+/* ===== DASHBOARD ===== */
+.dashboard{position:relative;z-index:2;display:grid;grid-template-rows:52px 1fr 30px;height:100vh;width:100vw;overflow:hidden;display:none}
+
+.topbar{display:flex;align-items:center;gap:16px;padding:0 20px;
+  background:var(--glass);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);z-index:10}
+.topbar .logo{font-size:14px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--orange),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.topbar .sep{width:1px;height:22px;background:var(--border)}
+.topbar .spacer{flex:1}
+.topbar .nav-pills{display:flex;gap:4px}
+.topbar .nav-pill{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:var(--text2);
+  padding:5px 12px;border-radius:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;transition:all .15s;font-family:inherit}
+.topbar .nav-pill:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+.topbar .nav-pill.active{color:var(--cyan);border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.06)}
+
+.energy-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:4px;
+  background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2)}
+.energy-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+.energy-pill span{font-size:10px;font-weight:600;color:var(--green);letter-spacing:1px}
+.energy-pill.warn{background:rgba(255,136,0,.06);border-color:rgba(255,136,0,.2)}
+.energy-pill.warn .dot{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+.energy-pill.warn span{color:var(--orange)}
+.energy-pill.crit{background:rgba(255,51,51,.06);border-color:rgba(255,51,51,.2)}
+.energy-pill.crit .dot{background:var(--red);box-shadow:0 0 6px var(--red)}
+.energy-pill.crit span{color:var(--red)}
+
+.user-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;
+  background:rgba(124,77,255,.06);border:1px solid rgba(124,77,255,.2)}
+.user-pill .avatar{width:22px;height:22px;border-radius:50%;background:var(--purple);display:flex;
+  align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.user-pill span{font-size:11px;color:var(--text)}
+.logout-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:5px 10px;
+  border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;letter-spacing:1px;
+  text-transform:uppercase;transition:all .15s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+.main-area{display:flex;overflow:hidden}
+.sidebar{width:240px;background:var(--glass);border-right:1px solid var(--border);
+  backdrop-filter:blur(12px);overflow-y:auto;flex-shrink:0;transition:width .2s}
+.sidebar.collapsed{width:42px}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sidebar-toggle{display:flex;align-items:center;justify-content:center;width:100%;height:32px;
+  border:none;background:rgba(0,0,0,.2);color:var(--text2);cursor:pointer;font-size:12px;
+  border-bottom:1px solid var(--border);transition:color .15s}
+.sidebar-toggle:hover{color:var(--cyan)}
+.sidebar.collapsed .sidebar-label{display:none}
+.sidebar.collapsed .side-section h3{font-size:0;padding:0;margin:0;height:0;border:none}
+.sidebar.collapsed .side-item span{display:none}
+.sidebar.collapsed .side-item{justify-content:center;padding:8px 0}
+
+.side-section{border-bottom:1px solid rgba(255,255,255,.04)}
+.side-section h3{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);
+  padding:10px 12px 6px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+.side-section h3 .arrow{font-size:8px;transition:transform .15s}
+.side-section h3 .arrow.open{transform:rotate(0deg)}
+.side-section h3 .arrow.closed{transform:rotate(-90deg)}
+.side-items{overflow:hidden;transition:max-height .25s}
+.side-items.collapsed{max-height:0!important}
+.side-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;
+  font-size:11px;color:var(--text2);transition:all .15s;border-left:2px solid transparent}
+.side-item:hover{color:var(--text);background:rgba(0,229,255,.04)}
+.side-item.active{color:var(--cyan);background:rgba(0,229,255,.06);border-left-color:var(--cyan)}
+.side-item .icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+
+.content{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.content-section{display:none}
+.content-section.active{display:flex;flex-direction:column;gap:16px;animation:fadeIn .3s}
+
+.section-header{display:flex;align-items:center;gap:12px}
+.section-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--cyan);border-left:3px solid var(--cyan);padding-left:10px}
+.section-badge{font-size:9px;padding:3px 8px;border-radius:3px;font-weight:700;letter-spacing:1px;
+  background:rgba(0,229,255,.08);color:var(--cyan);border:1px solid rgba(0,229,255,.15)}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.stat-card{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:16px;
+  backdrop-filter:blur(12px);transition:all .3s;position:relative;overflow:hidden}
+.stat-card:hover{border-color:rgba(0,229,255,.25);box-shadow:0 0 16px rgba(0,229,255,.1)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s}
+.stat-card:hover::before{opacity:1}
+.stat-card .label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.stat-card .value{font-size:24px;font-weight:700;font-family:'JetBrains Mono','Consolas',monospace;margin-bottom:4px}
+.stat-card .value.cyan{color:var(--cyan)}
+.stat-card .value.green{color:var(--green)}
+.stat-card .value.purple{color:var(--purple)}
+.stat-card .value.orange{color:var(--orange)}
+.stat-card .sub{font-size:10px;color:var(--text2)}
+.stat-card .trend{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;margin-top:4px}
+.stat-card .trend.up{color:var(--green)}
+.stat-card .trend.down{color:var(--red)}
+
+.flow-canvas-wrap{background:var(--glass);border:1px solid var(--border);border-radius:8px;
+  padding:16px;backdrop-filter:blur(12px);min-height:300px}
+.flow-canvas-wrap canvas{width:100%;height:280px;border-radius:6px}
+
+.source-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.source-card{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:16px;
+  backdrop-filter:blur(12px);transition:all .3s}
+.source-card:hover{border-color:rgba(0,229,255,.2)}
+.source-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.source-name{font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+.source-name .icon{font-size:16px}
+.source-status{font-size:9px;padding:3px 8px;border-radius:3px;font-weight:700;letter-spacing:1px}
+.source-status.active{background:rgba(0,255,136,.1);color:var(--green)}
+.source-status.backup{background:rgba(255,136,0,.1);color:var(--orange)}
+.source-status.experimental{background:rgba(124,77,255,.1);color:var(--purple)}
+.source-status.offline{background:rgba(255,51,51,.1);color:var(--red)}
+.source-status.testing{background:rgba(0,229,255,.1);color:var(--cyan)}
+.source-stats{display:flex;gap:12px;margin-bottom:10px}
+.source-stat{flex:1;text-align:center}
+.source-stat .val{font-size:14px;font-weight:700;font-family:'JetBrains Mono','Consolas',monospace}
+.source-stat .lbl{font-size:8px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.progress-bar{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.progress-fill.cyan{background:linear-gradient(90deg,var(--cyan),var(--green))}
+.progress-fill.green{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.progress-fill.purple{background:linear-gradient(90deg,var(--purple),var(--cyan))}
+.progress-fill.orange{background:linear-gradient(90deg,var(--orange),var(--yellow))}
+.progress-fill.red{background:linear-gradient(90deg,var(--red),var(--orange))}
+
+.chart-wrap{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:16px;backdrop-filter:blur(12px)}
+.chart-wrap canvas{width:100%;height:200px;border-radius:6px}
+.chart-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:10px}
+
+.alert-list{display:flex;flex-direction:column;gap:6px}
+.alert-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;
+  border:1px solid;animation:slideIn .3s}
+.alert-item.info{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.15)}
+.alert-item.warn{background:rgba(255,136,0,.04);border-color:rgba(255,136,0,.15)}
+.alert-item.crit{background:rgba(255,51,51,.04);border-color:rgba(255,51,51,.15)}
+.alert-item.ok{background:rgba(0,255,136,.04);border-color:rgba(0,255,136,.15)}
+.alert-icon{font-size:14px;flex-shrink:0}
+.alert-text{flex:1;font-size:11px;color:var(--text)}
+.alert-time{font-size:9px;color:var(--text2);white-space:nowrap;font-family:'JetBrains Mono','Consolas',monospace}
+
+/* Simulator */
+.sim-panel{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:20px;
+  backdrop-filter:blur(12px);max-width:700px}
+.sim-row{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.sim-row label{font-size:11px;color:var(--text2);min-width:120px;letter-spacing:.5px}
+.sim-row input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:var(--border);
+  border-radius:2px;outline:none}
+.sim-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--cyan);cursor:pointer;box-shadow:0 0 8px rgba(0,229,255,.3)}
+.sim-row .sim-val{font-family:'JetBrains Mono','Consolas',monospace;font-size:13px;font-weight:600;
+  color:var(--cyan);min-width:60px;text-align:right}
+.sim-output{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:16px}
+.sim-output h4{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:12px}
+.sim-result{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.sim-result:last-child{border-bottom:none}
+.sim-result .rlabel{font-size:11px;color:var(--text2)}
+.sim-result .rval{font-size:12px;font-weight:600;font-family:'JetBrains Mono','Consolas',monospace}
+.sim-result .rval.cyan{color:var(--cyan)}
+.sim-result .rval.green{color:var(--green)}
+.sim-result .rval.orange{color:var(--orange)}
+.sim-result .rval.purple{color:var(--purple)}
+.sim-mix{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.sim-mix-chip{padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.5px}
+
+/* Statusbar */
+.statusbar{display:flex;align-items:center;padding:0 16px;gap:10px;
+  background:var(--glass);border-top:1px solid var(--border);font-size:10px;color:var(--text2)}
+.statusbar .label{color:var(--cyan);letter-spacing:2px;font-weight:600;text-transform:uppercase}
+.statusbar .pills{display:flex;gap:6px;margin-left:auto}
+.statusbar .pill{padding:3px 8px;border-radius:3px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);letter-spacing:1px}
+.statusbar .pill.active{color:var(--cyan);border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.05)}
+.statusbar .pill.warn{color:var(--orange);border-color:rgba(255,136,0,.3);background:rgba(255,136,0,.05)}
+
+/* Config Table */
+.config-table{width:100%;border-collapse:collapse;font-size:11px}
+.config-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);
+  color:var(--text2);font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.config-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
+.config-table tr:hover td{background:rgba(0,229,255,.02)}
+
+/* Two columns */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+@media(max-width:768px){.sidebar{display:none}.content{padding:12px}.stats-grid{grid-template-columns:1fr 1fr}.feature-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.stats-grid{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="grain"></div>
+<div class="scanline"></div>
+
+<!-- ===== LANDING ===== -->
+<div class="landing" id="landing">
+  <div class="hero">
+    <div class="hero-badge"><span class="dot"></span> SISTEMA ACTIVO</div>
+    <h1 class="hero-title">REDGEN</h1>
+    <p class="hero-sub">Sistemas Energeticos</p>
+    <p class="hero-tagline">Energia para el <em>futuro de la humanidad</em></p>
+
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-value">12</div><div class="stat-label">Sistemas</div></div>
+      <div class="stat-item"><div class="stat-value">847 kW</div><div class="stat-label">Capacidad Total</div></div>
+      <div class="stat-item"><div class="stat-value">99.9%</div><div class="stat-label">Uptime</div></div>
+      <div class="stat-item"><div class="stat-value">6</div><div class="stat-label">Fuentes</div></div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="feature-icon">&#9788;</span>
+        <div class="feature-name">Solar</div>
+        <div class="feature-desc">Paneles fotonicos de alta eficiencia</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9762;</span>
+        <div class="feature-name">Nuclear</div>
+        <div class="feature-desc">Reactores de fisicion compactos</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9883;</span>
+        <div class="feature-name">RTG</div>
+        <div class="feature-desc">Generadores termoelectricos</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9889;</span>
+        <div class="feature-name">Fusion</div>
+        <div class="feature-desc">Prototipo de fusión nuclear</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#9889;</span>
+        <div class="feature-name">Bateria</div>
+        <div class="feature-desc">Almacenamiento de alta densidad</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#8767;</span>
+        <div class="feature-name">Wireless</div>
+        <div class="feature-desc">Transmision inalambrica de potencia</div>
+      </div>
+    </div>
+
+    <div class="auth-box">
+      <button class="auth-btn primary" onclick="openAuth('login')">Iniciar Sesion</button>
+      <button class="auth-btn secondary" onclick="openAuth('register')">Registrarse</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="auth-modal" id="authModal">
+  <div class="auth-form" style="position:relative">
+    <button class="auth-close" onclick="closeAuth()">&#10005;</button>
+    <h2 id="authTitle">Iniciar Sesion</h2>
+    <p id="authSub">Accede al sistema de energia</p>
+    <div class="auth-field" id="authNameField" style="display:none">
+      <label>Nombre</label>
+      <input type="text" id="authName" placeholder="Tu nombre">
+    </div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="correo@dominio.com">
+    </div>
+    <div class="auth-field">
+      <label>Contrasena</label>
+      <input type="password" id="authPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+    </div>
+    <button class="auth-submit" id="authSubmit" onclick="doAuth()">Entrar</button>
+    <div class="auth-switch" id="authSwitch">No tienes cuenta? <a onclick="toggleAuth()">Registrate</a></div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <div class="logo">REDGEN</div>
+    <div class="sep"></div>
+    <div class="nav-pills">
+      <button class="nav-pill active" onclick="showDashSection('energy')">Energia</button>
+      <button class="nav-pill" onclick="showDashSection('sources')">Fuentes</button>
+      <button class="nav-pill" onclick="showDashSection('sim')">Simulador</button>
+      <button class="nav-pill" onclick="showDashSection('infra')">Infraestructura</button>
+      <button class="nav-pill" onclick="showDashSection('alerts')">Alertas</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="energy-pill" id="energyPill">
+      <span class="dot"></span>
+      <span id="energyPillText">NOMINAL</span>
+    </div>
+    <div class="user-pill">
+      <div class="avatar" id="userAvatar">U</div>
+      <span id="userName">Usuario</span>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+
+  <div class="main-area">
+    <div class="sidebar" id="sidebar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><span id="sidebarArrow">&#9660;</span></button>
+
+      <div class="side-section">
+        <h3 onclick="toggleSection(this)"><span class="arrow open">&#9660;</span> <span class="sidebar-label">Monitoreo</span></h3>
+        <div class="side-items">
+          <div class="side-item active" onclick="selectSide(this,'energy')"><span class="icon">&#9881;</span> <span class="sidebar-label">Estado del sistema</span></div>
+          <div class="side-item" onclick="selectSide(this,'energy')"><span class="icon">&#9889;</span> <span class="sidebar-label">Consumo en tiempo real</span></div>
+          <div class="side-item" onclick="selectSide(this,'energy')"><span class="icon">&#9776;</span> <span class="sidebar-label">Historial de energia</span></div>
+          <div class="side-item" onclick="selectSide(this,'alerts')"><span class="icon">&#9888;</span> <span class="sidebar-label">Alertas</span></div>
+        </div>
+      </div>
+
+      <div class="side-section">
+        <h3 onclick="toggleSection(this)"><span class="arrow open">&#9660;</span> <span class="sidebar-label">Fuentes</span></h3>
+        <div class="side-items">
+          <div class="side-item" onclick="selectSide(this,'sources')"><span class="icon">&#9788;</span> <span class="sidebar-label">Solar Panels</span></div>
+          <div class="side-item" onclick="selectSide(this,'sources')"><span class="icon">&#9762;</span> <span class="sidebar-label">Nuclear Reactor</span></div>
+          <div class="side-item" onclick="selectSide(this,'sources')"><span class="icon">&#9883;</span> <span class="sidebar-label">RTG Generator</span></div>
+          <div class="side-item" onclick="selectSide(this,'sources')"><span class="icon">&#9889;</span> <span class="sidebar-label">Battery Bank</span></div>
+          <div class="side-item" onclick="selectSide(this,'sources')"><span class="icon">&#9883;</span> <span class="sidebar-label">Fusion Prototype</span></div>
+        </div>
+      </div>
+
+      <div class="side-section">
+        <h3 onclick="toggleSection(this)"><span class="arrow open">&#9660;</span> <span class="sidebar-label">Simulacion</span></h3>
+        <div class="side-items">
+          <div class="side-item" onclick="selectSide(this,'sim')"><span class="icon">&#9881;</span> <span class="sidebar-label">Simulador de consumo</span></div>
+          <div class="side-item" onclick="selectSide(this,'sim')"><span class="icon">&#8644;</span> <span class="sidebar-label">Optimizacion de carga</span></div>
+          <div class="side-item" onclick="selectSide(this,'sim')"><span class="icon">&#9729;</span> <span class="sidebar-label">Prediccion de demanda</span></div>
+          <div class="side-item" onclick="selectSide(this,'sim')"><span class="icon">&#9878;</span> <span class="sidebar-label">Escenarios What-if</span></div>
+        </div>
+      </div>
+
+      <div class="side-section">
+        <h3 onclick="toggleSection(this)"><span class="arrow open">&#9660;</span> <span class="sidebar-label">Infraestructura</span></h3>
+        <div class="side-items">
+          <div class="side-item" onclick="selectSide(this,'infra')"><span class="icon">&#9729;</span> <span class="sidebar-label">Red electrica</span></div>
+          <div class="side-item" onclick="selectSide(this,'infra')"><span class="icon">&#8644;</span> <span class="sidebar-label">Distribucion</span></div>
+          <div class="side-item" onclick="selectSide(this,'infra')"><span class="icon">&#9881;</span> <span class="sidebar-label">Transformadores</span></div>
+          <div class="side-item" onclick="selectSide(this,'infra')"><span class="icon">&#9889;</span> <span class="sidebar-label">Backup Systems</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="contentArea">
+
+      <!-- ENERGY DASHBOARD -->
+      <div class="content-section active" id="sec-energy">
+        <div class="section-header">
+          <div class="section-title">Panel de Energia</div>
+          <div class="section-badge">EN TIEMPO REAL</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">Generacion Actual</div>
+            <div class="value cyan" id="statGen">620.5 kW</div>
+            <div class="sub">de 847 kW capacidad</div>
+            <div class="trend up">&#9650; +2.3% ultima hora</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Consumo</div>
+            <div class="value orange" id="statCons">487.2 kW</div>
+            <div class="sub">57.5% de capacidad</div>
+            <div class="trend down">&#9660; -1.1% vs promedio</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Eficiencia</div>
+            <div class="value green" id="statEff">94.7%</div>
+            <div class="sub">Sistema nominal</div>
+            <div class="trend up">&#9650; +0.8% este ciclo</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Almacenamiento</div>
+            <div class="value purple" id="statBatt">1740 kWh</div>
+            <div class="sub">Battery Bank Sigma</div>
+            <div class="trend up">&#9650; 87% carga</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="flow-canvas-wrap">
+            <div class="chart-title">Flujo de Energia</div>
+            <canvas id="flowCanvas"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-title">Consumo - Ultimas 24h</div>
+            <canvas id="consumptionChart"></canvas>
+          </div>
+        </div>
+
+        <div class="source-grid" id="sourceCards"></div>
+      </div>
+
+      <!-- SOURCES -->
+      <div class="content-section" id="sec-sources">
+        <div class="section-header">
+          <div class="section-title">Fuentes de Energia</div>
+          <div class="section-badge">6 SISTEMAS</div>
+        </div>
+        <div class="source-grid" id="sourceDetailGrid"></div>
+        <div class="chart-wrap" style="max-width:100%">
+          <div class="chart-title">Configuracion de Sistemas</div>
+          <table class="config-table">
+            <thead><tr><th>Sistema</th><th>Tipo</th><th>Capacidad</th><th>Estado</th><th>Uptime</th><th>Eficiencia</th></tr></thead>
+            <tbody id="configTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SIMULATOR -->
+      <div class="content-section" id="sec-sim">
+        <div class="section-header">
+          <div class="section-title">Simulador de Energia</div>
+          <div class="section-badge">INTERACTIVO</div>
+        </div>
+        <div class="sim-panel">
+          <div class="sim-row">
+            <label>Modulos activos</label>
+            <input type="range" id="simModules" min="1" max="50" value="12" oninput="updateSim()">
+            <div class="sim-val" id="simModulesVal">12</div>
+          </div>
+          <div class="sim-row">
+            <label>Carga computacional (%)</label>
+            <input type="range" id="simLoad" min="0" max="100" value="65" oninput="updateSim()">
+            <div class="sim-val" id="simLoadVal">65%</div>
+          </div>
+          <div class="sim-row">
+            <label>Duracion mision (dias)</label>
+            <input type="range" id="simDuration" min="1" max="365" value="30" oninput="updateSim()">
+            <div class="sim-val" id="simDurationVal">30d</div>
+          </div>
+          <div class="sim-row">
+            <label>Margen seguridad (%)</label>
+            <input type="range" id="simMargin" min="10" max="50" value="20" oninput="updateSim()">
+            <div class="sim-val" id="simMarginVal">20%</div>
+          </div>
+          <div class="sim-output" id="simOutput">
+            <h4>Resultados</h4>
+            <div class="sim-result"><span class="rlabel">Energia requerida</span><span class="rval cyan" id="simRequired">156.0 kW</span></div>
+            <div class="sim-result"><span class="rlabel">Energia total necesaria</span><span class="rval orange" id="simTotal">112,320 kWh</span></div>
+            <div class="sim-result"><span class="rlabel">Fuente recomendada</span><span class="rval green" id="simSource">Solar + Nuclear</span></div>
+            <div class="sim-result"><span class="rlabel">Costo estimado</span><span class="rval purple" id="simCost">$2.4M</span></div>
+            <div class="sim-result"><span class="rlabel">Autonomia</span><span class="rval cyan" id="simAuto">13.3 dias</span></div>
+            <div class="sim-mix" id="simMix"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INFRASTRUCTURE -->
+      <div class="content-section" id="sec-infra">
+        <div class="section-header">
+          <div class="section-title">Infraestructura</div>
+          <div class="section-badge">RED ELECTRICA</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">Red Principal</div>
+            <div class="value green">ONLINE</div>
+            <div class="sub">480V / 60Hz trifasico</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Distribucion</div>
+            <div class="value cyan">12 Buses</div>
+            <div class="sub">8 activos, 4 reserve</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Transformadores</div>
+            <div class="value purple">6 Unidades</div>
+            <div class="sub">480V→120V / 480V→24V</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Backup Systems</div>
+            <div class="value orange">3 Redundantes</div>
+            <div class="sub">UPS + RTG + Generator</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title">Mapa de Distribucion</div>
+          <canvas id="infraCanvas" style="width:100%;height:300px"></canvas>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="content-section" id="sec-alerts">
+        <div class="section-header">
+          <div class="section-title">Alertas del Sistema</div>
+          <div class="section-badge" id="alertCount">5 ACTIVAS</div>
+        </div>
+        <div class="alert-list" id="alertList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span class="label">REDGEN</span>
+    <span>|</span>
+    <span id="statusTime">00:00:00</span>
+    <div class="pills">
+      <div class="pill active">SOLAR</div>
+      <div class="pill active">NUCLEAR</div>
+      <div class="pill active">RTG</div>
+      <div class="pill active">BATTERY</div>
+      <div class="pill">FUSION</div>
+      <div class="pill warn">WIRELESS</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const LS_KEY='redgen_session';
+let currentUser=null;
+let authMode='login';
+let activeSection='energy';
+let sidebarCollapsed=false;
+
+// ===== STARFIELD =====
+const sf=document.getElementById('starfield');
+const sctx=sf.getContext('2d');
+let stars=[];
+function initStars(){
+  sf.width=window.innerWidth;sf.height=window.innerHeight;
+  stars=[];
+  for(let i=0;i<200;i++) stars.push({x:Math.random()*sf.width,y:Math.random()*sf.height,r:Math.random()*1.5+.3,s:Math.random()*.5+.1,o:Math.random()});
+}
+function drawStars(){
+  sctx.clearRect(0,0,sf.width,sf.height);
+  const t=Date.now()*.001;
+  for(let s of stars){
+    sctx.beginPath();sctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    sctx.fillStyle=`rgba(200,220,255,${.3+Math.sin(t*s.s+s.o*6)*.3})`;
+    sctx.fill();
+  }
+  requestAnimationFrame(drawStars);
+}
+initStars();drawStars();
+window.addEventListener('resize',initStars);
+
+// ===== AUTH =====
+function openAuth(mode){
+  authMode=mode;
+  document.getElementById('authTitle').textContent=mode==='login'?'Iniciar Sesion':'Crear Cuenta';
+  document.getElementById('authSub').textContent=mode==='login'?'Accede al sistema de energia':'Unete al sistema RedGen';
+  document.getElementById('authNameField').style.display=mode==='register'?'block':'none';
+  document.getElementById('authSubmit').textContent=mode==='login'?'Entrar':'Crear Cuenta';
+  document.getElementById('authSwitch').innerHTML=mode==='login'?'No tienes cuenta? <a onclick="toggleAuth()">Registrate</a>':'Ya tienes cuenta? <a onclick="toggleAuth()">Inicia sesion</a>';
+  document.getElementById('authModal').classList.add('show');
+}
+function closeAuth(){document.getElementById('authModal').classList.remove('show')}
+window.toggleAuth=function(){closeAuth();openAuth(authMode==='login'?'register':'login')};
+window.openAuth=openAuth;
+window.closeAuth=closeAuth;
+
+function doAuth(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value.trim();
+  if(!email||!pass){return}
+  const name=authMode==='register'?(document.getElementById('authName').value.trim()||'Operador'):email.split('@')[0];
+  currentUser={name,email,ts:Date.now()};
+  localStorage.setItem(LS_KEY,JSON.stringify(currentUser));
+  closeAuth();
+  showDashboard();
+}
+window.doAuth=doAuth;
+
+function logout(){
+  currentUser=null;
+  localStorage.removeItem(LS_KEY);
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('landing').style.display='flex';
+}
+window.logout=logout;
+
+// ===== SESSION =====
+function checkSession(){
+  try{
+    const d=JSON.parse(localStorage.getItem(LS_KEY));
+    if(d&&d.email){currentUser=d;showDashboard()}
+  }catch(e){}
+}
+function showDashboard(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('dashboard').style.display='grid';
+  document.getElementById('userName').textContent=currentUser.name;
+  document.getElementById('userAvatar').textContent=currentUser.name.charAt(0).toUpperCase();
+  initDashboard();
+}
+window.showDashboard=showDashboard;
+
+// ===== SIDEBAR =====
+window.toggleSidebar=function(){
+  sidebarCollapsed=!sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed',sidebarCollapsed);
+  document.getElementById('sidebarArrow').innerHTML=sidebarCollapsed?'&#9654;':'&#9660;';
+};
+window.toggleSection=function(h3){
+  const items=h3.nextElementSibling;
+  const arrow=h3.querySelector('.arrow');
+  const collapsed=items.classList.toggle('collapsed');
+  arrow.className='arrow '+(collapsed?'closed':'open');
+};
+window.selectSide=function(el,sec){
+  document.querySelectorAll('.side-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  showDashSection(sec);
+};
+window.showDashSection=function(sec){
+  activeSection=sec;
+  document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+sec).classList.add('active');
+  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-pill').forEach(p=>{
+    if(p.textContent.toLowerCase().includes(sec.substring(0,4)))p.classList.add('active');
+  });
+};
+
+// ===== DATA =====
+const sources=[
+  {id:'solar',name:'Solar Array Alpha',icon:'\u2600',type:'solar',capacity:120,output:98.5,status:'Active',uptime:'99.97%',efficiency:'82.1%',pct:82,color:'cyan',fill:'cyan'},
+  {id:'nuclear',name:'Nuclear Reactor ZR-1',icon:'\u2622',type:'nuclear',capacity:500,output:420,status:'Active',uptime:'99.99%',efficiency:'84.0%',pct:84,color:'orange',fill:'orange'},
+  {id:'rtg',name:'RTG Pack Delta',icon:'\u269B',type:'rtg',capacity:0.5,output:0.48,status:'Backup',uptime:'100%',efficiency:'96.0%',pct:96,color:'green',fill:'green'},
+  {id:'battery',name:'Battery Bank Sigma',icon:'\u26A1',type:'battery',capacity:2000,output:1740,status:'87% Charged',uptime:'100%',efficiency:'94.7%',pct:87,color:'purple',fill:'purple'},
+  {id:'fusion',name:'Fusion Prototype',icon:'\u269B',type:'fusion',capacity:0,output:0,status:'Experimental',uptime:'—',efficiency:'—',pct:0,color:'purple',fill:'purple'},
+  {id:'wireless',name:'Wireless Power TX',icon:'\u223F',type:'wireless',capacity:50,output:42.5,status:'Testing',uptime:'98.2%',efficiency:'85.0%',pct:85,color:'cyan',fill:'cyan'}
+];
+
+const alerts=[
+  {type:'info',icon:'\u2139',text:'Fusion Prototype: ciclo de prueba #47 iniciado',time:'14:32:10'},
+  {type:'warn',icon:'\u26A0',text:'Wireless TX: eficiencia por debajo del umbral (85%)',time:'14:28:45'},
+  {type:'ok',icon:'\u2714',text:'Solar Array Alpha: limpieza automatica completada',time:'14:15:22'},
+  {type:'info',icon:'\u2139',text:'Battery Bank Sigma: carga en progreso (87%)',time:'14:10:00'},
+  {type:'crit',icon:'\u26D4',text:'Transformador T-03: temperatura elevada (78\u00b0C)',time:'13:58:33'},
+  {type:'warn',icon:'\u26A0',text:'Nuclear ZR-1: mantenimiento programado en 72h',time:'13:45:12'},
+  {type:'ok',icon:'\u2714',text:'UPS-B1: test de bateria completado sin errores',time:'13:30:00'},
+  {type:'info',icon:'\u2139',text:'Red principal: carga estable en 480V trifasico',time:'13:15:44'}
+];
+
+// ===== RENDER =====
+function renderSourceCards(containerId,detail){
+  const c=document.getElementById(containerId);
+  c.innerHTML=sources.map(s=>`
+    <div class="source-card">
+      <div class="source-header">
+        <div class="source-name"><span class="icon">${s.icon}</span> ${s.name}</div>
+        <div class="source-status ${s.status==='Active'?'active':s.status==='Backup'?'backup':s.status==='Experimental'?'experimental':s.status==='Testing'?'testing':'offline'}">${s.status}</div>
+      </div>
+      <div class="source-stats">
+        <div class="source-stat"><div class="val" style="color:var(--${s.color})">${s.output} kW</div><div class="lbl">Output</div></div>
+        <div class="source-stat"><div class="val" style="color:var(--text)">${s.capacity} kW</div><div class="lbl">Capacidad</div></div>
+        <div class="source-stat"><div class="val" style="color:var(--text2)">${s.efficiency}</div><div class="lbl">Eficiencia</div></div>
+      </div>
+      ${s.capacity>0?`<div class="progress-bar"><div class="progress-fill ${s.fill}" style="width:${s.pct}%"></div></div>`:''}
+    </div>
+  `).join('');
+}
+
+function renderAlerts(){
+  const c=document.getElementById('alertList');
+  c.innerHTML=alerts.map(a=>`
+    <div class="alert-item ${a.type}">
+      <span class="alert-icon">${a.icon}</span>
+      <span class="alert-text">${a.text}</span>
+      <span class="alert-time">${a.time}</span>
+    </div>
+  `).join('');
+  document.getElementById('alertCount').textContent=alerts.length+' ACTIVAS';
+}
+
+function renderConfigTable(){
+  const tb=document.getElementById('configTableBody');
+  tb.innerHTML=sources.map(s=>`
+    <tr>
+      <td style="color:var(--text);font-weight:600">${s.icon} ${s.name}</td>
+      <td>${s.type.charAt(0).toUpperCase()+s.type.slice(1)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">${s.capacity} kW</td>
+      <td><span class="source-status ${s.status==='Active'?'active':s.status==='Backup'?'backup':s.status==='Experimental'?'experimental':s.status==='Testing'?'testing':'offline'}">${s.status}</span></td>
+      <td>${s.uptime}</td>
+      <td>${s.efficiency}</td>
+    </tr>
+  `).join('');
+}
+
+// ===== FLOW CANVAS =====
+let flowAnim;
+function drawFlow(){
+  const cv=document.getElementById('flowCanvas');
+  if(!cv||!cv.offsetParent)return;
+  const ctx=cv.getContext('2d');
+  cv.width=cv.offsetWidth*2;cv.height=cv.offsetHeight*2;
+  ctx.scale(2,2);
+  const W=cv.offsetWidth,H=cv.offsetHeight;
+  const t=Date.now()*.001;
+
+  ctx.fillStyle='rgba(10,14,23,1)';
+  ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(0,229,255,.04)';
+  ctx.lineWidth=.5;
+  for(let x=0;x<W;x+=30){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+
+  const nodes=[
+    {x:W*.15,y:H*.25,label:'SOLAR',val:'98.5 kW',color:'#00e5ff',r:28},
+    {x:W*.15,y:H*.7,label:'NUCLEAR',val:'420 kW',color:'#ff8800',r:28},
+    {x:W*.45,y:H*.2,label:'RTG',val:'0.48 kW',color:'#00ff88',r:20},
+    {x:W*.45,y:H*.7,label:'BATTERY',val:'1740 kWh',color:'#7c4dff',r:28},
+    {x:W*.72,y:H*.45,label:'DISTRIBUCION',val:'487 kW',color:'#00e5ff',r:32},
+    {x:W*.45,y:H*.45,label:'FUSION',val:'0 kW',color:'#7c4dff',r:20},
+    {x:W*.88,y:H*.2,label:'CARGA A',val:'180 kW',color:'#ff8800',r:22},
+    {x:W*.88,y:H*.45,label:'CARGA B',val:'152 kW',color:'#ff8800',r:22},
+    {x:W*.88,y:H*.7,label:'CARGA C',val:'155 kW',color:'#ff8800',r:22}
+  ];
+
+  const links=[
+    {from:0,to:4,color:'#00e5ff'},
+    {from:1,to:4,color:'#ff8800'},
+    {from:2,to:4,color:'#00ff88'},
+    {from:3,to:4,color:'#7c4dff'},
+    {from:4,to:6,color:'#ff8800'},
+    {from:4,to:7,color:'#ff8800'},
+    {from:4,to:8,color:'#ff8800'}
+  ];
+
+  // Draw links with animated dashes
+  for(const l of links){
+    const a=nodes[l.from],b=nodes[l.to];
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=l.color+'55';
+    ctx.lineWidth=2;
+    ctx.stroke();
+    // Animated particles
+    const count=3;
+    for(let i=0;i<count;i++){
+      const p=((t*.3+i/count)%1);
+      const px=a.x+(b.x-a.x)*p;
+      const py=a.y+(b.y-a.y)*p;
+      ctx.beginPath();
+      ctx.arc(px,py,3,0,Math.PI*2);
+      ctx.fillStyle=l.color;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px,py,6,0,Math.PI*2);
+      ctx.fillStyle=l.color+'33';
+      ctx.fill();
+    }
+  }
+
+  // Draw nodes
+  for(const n of nodes){
+    // Glow
+    const grad=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r+15);
+    grad.addColorStop(0,n.color+'22');
+    grad.addColorStop(1,n.color+'00');
+    ctx.fillStyle=grad;
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r+15,0,Math.PI*2);ctx.fill();
+
+    // Circle
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(10,14,23,.9)';
+    ctx.fill();
+    ctx.strokeStyle=n.color;
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+
+    // Pulse ring
+    const pulse=Math.sin(t*2)*.3+.7;
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r+4+Math.sin(t*2)*4,0,Math.PI*2);
+    ctx.strokeStyle=n.color+(Math.floor(pulse*40).toString(16).padStart(2,'0'));
+    ctx.lineWidth=1;ctx.stroke();
+
+    // Label
+    ctx.fillStyle='#fff';
+    ctx.font='bold 9px system-ui';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.label,n.x,n.y-5);
+
+    ctx.fillStyle=n.color;
+    ctx.font='9px monospace';
+    ctx.fillText(n.val,n.x,n.y+7);
+  }
+
+  flowAnim=requestAnimationFrame(drawFlow);
+}
+
+// ===== CONSUMPTION CHART =====
+function drawConsumptionChart(){
+  const cv=document.getElementById('consumptionChart');
+  if(!cv||!cv.offsetParent)return;
+  const ctx=cv.getContext('2d');
+  cv.width=cv.offsetWidth*2;cv.height=cv.offsetHeight*2;
+  ctx.scale(2,2);
+  const W=cv.offsetWidth,H=cv.offsetHeight;
+  const pad={t:20,r:10,b:30,l:40};
+  const gW=W-pad.l-pad.r,gH=H-pad.t-pad.b;
+
+  ctx.fillStyle='rgba(10,14,23,1)';
+  ctx.fillRect(0,0,W,H);
+
+  // Generate data
+  const data=[];
+  for(let i=0;i<24;i++){
+    data.push(350+Math.sin(i*.3)*80+Math.random()*60);
+  }
+  const max=Math.max(...data)*1.1;
+  const min=Math.min(...data)*0.9;
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.04)';
+  ctx.lineWidth=.5;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+gH*(i/4);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.2)';
+    ctx.font='9px monospace';ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText(Math.round(max-(max-min)*(i/4))+'',pad.l-5,y);
+  }
+  for(let i=0;i<24;i+=4){
+    const x=pad.l+gW*(i/23);
+    ctx.fillStyle='rgba(255,255,255,.2)';
+    ctx.font='9px monospace';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText(i+'h',x,H-pad.b+8);
+  }
+
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(pad.l,pad.t+gH);
+  for(let i=0;i<data.length;i++){
+    const x=pad.l+gW*(i/(data.length-1));
+    const y=pad.t+gH*(1-(data[i]-min)/(max-min));
+    if(i===0)ctx.lineTo(x,y);else{
+      const px=pad.l+gW*((i-1)/(data.length-1));
+      const py=pad.t+gH*(1-(data[i-1]-min)/(max-min));
+      const cx=(px+x)/2;
+      ctx.bezierCurveTo(cx,py,cx,y,x,y);
+    }
+  }
+  ctx.lineTo(W-pad.r,pad.t+gH);
+  ctx.closePath();
+  const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+gH);
+  grad.addColorStop(0,'rgba(0,229,255,.15)');
+  grad.addColorStop(1,'rgba(0,229,255,.01)');
+  ctx.fillStyle=grad;ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  for(let i=0;i<data.length;i++){
+    const x=pad.l+gW*(i/(data.length-1));
+    const y=pad.t+gH*(1-(data[i]-min)/(max-min));
+    if(i===0)ctx.moveTo(x,y);else{
+      const px=pad.l+gW*((i-1)/(data.length-1));
+      const py=pad.t+gH*(1-(data[i-1]-min)/(max-min));
+      const cx=(px+x)/2;
+      ctx.bezierCurveTo(cx,py,cx,y,x,y);
+    }
+  }
+  ctx.strokeStyle='#00e5ff';ctx.lineWidth=2;ctx.stroke();
+
+  // Dots
+  for(let i=0;i<data.length;i+=3){
+    const x=pad.l+gW*(i/(data.length-1));
+    const y=pad.t+gH*(1-(data[i]-min)/(max-min));
+    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+    ctx.fillStyle='#00e5ff';ctx.fill();
+  }
+}
+
+// ===== INFRA CANVAS =====
+function drawInfra(){
+  const cv=document.getElementById('infraCanvas');
+  if(!cv||!cv.offsetParent)return;
+  const ctx=cv.getContext('2d');
+  cv.width=cv.offsetWidth*2;cv.height=cv.offsetHeight*2;
+  ctx.scale(2,2);
+  const W=cv.offsetWidth,H=cv.offsetHeight;
+  const t=Date.now()*.001;
+
+  ctx.fillStyle='rgba(10,14,23,1)';ctx.fillRect(0,0,W,H);
+
+  const buses=[
+    {x:W*.1,y:H*.2,label:'BUS-1',load:78,color:'#00e5ff'},
+    {x:W*.1,y:H*.4,label:'BUS-2',load:65,color:'#00e5ff'},
+    {x:W*.1,y:H*.6,label:'BUS-3',load:42,color:'#00ff88'},
+    {x:W*.1,y:H*.8,label:'BUS-4',load:91,color:'#ff8800'}
+  ];
+
+  const xformers=[
+    {x:W*.4,y:H*.2,label:'T-01\n480V→120V',load:72,color:'#7c4dff'},
+    {x:W*.4,y:H*.4,label:'T-02\n480V→24V',load:55,color:'#7c4dff'},
+    {x:W*.4,y:H*.6,label:'T-03\n480V→120V',load:88,color:'#ff8800'},
+    {x:W*.4,y:H*.8,label:'T-04\n480V→48V',load:34,color:'#00ff88'}
+  ];
+
+  const loads=[
+    {x:W*.72,y:H*.15,label:'HABITACION',load:45},
+    {x:W*.72,y:H*.35,label:'LABORATORIO',load:72},
+    {x:W*.72,y:H*.55,label:'COMPUTO',load:89},
+    {x:W*.72,y:H*.75,label:'Life Support',load:95},
+    {x:W*.88,y:H*.25,label:'COMMS',load:30},
+    {x:W*.88,y:H*.55,label:'SENSORES',load:22},
+    {x:W*.88,y:H*.75,label:'RESERVA',load:5}
+  ];
+
+  // Source bus
+  ctx.fillStyle='rgba(0,229,255,.08)';
+  ctx.strokeStyle='#00e5ff';
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(W*.02,H*.1,W*.06,H*.75,6);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#00e5ff';ctx.font='bold 9px system-ui';ctx.textAlign='center';
+  ctx.fillText('480V',W*.05,H*.08);
+
+  // Source line
+  ctx.beginPath();ctx.moveTo(W*.08,H*.475);ctx.lineTo(W*.1,H*.475);
+  ctx.strokeStyle='#00e5ff55';ctx.lineWidth=3;ctx.stroke();
+
+  // Buses
+  for(const b of buses){
+    ctx.fillStyle=b.load>80?'rgba(255,136,0,.08)':'rgba(0,229,255,.06)';
+    ctx.strokeStyle=b.load>80?'#ff8800':'#00e5ff';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(b.x-20,b.y-15,40,30,4);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(b.label,b.x,b.y-3);
+    ctx.fillStyle=b.load>80?'#ff8800':'#00e5ff';
+    ctx.font='8px monospace';ctx.fillText(b.load+'%',b.x,b.y+7);
+  }
+
+  // Transformers
+  for(const xf of xformers){
+    ctx.fillStyle=xf.load>80?'rgba(255,136,0,.08)':'rgba(124,77,255,.06)';
+    ctx.strokeStyle=xf.load>80?'#ff8800':'#7c4dff';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(xf.x-24,xf.y-18,48,36,4);ctx.fill();ctx.stroke();
+    const lines=xf.label.split('\n');
+    ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(lines[0],xf.x,xf.y-4);
+    ctx.fillStyle='#7c4dff';ctx.font='7px monospace';
+    ctx.fillText(lines[1]||'',xf.x,xf.y+6);
+    ctx.fillStyle=xf.load>80?'#ff8800':'#00ff88';ctx.font='8px monospace';
+    ctx.fillText(xf.load+'%',xf.x,xf.y+15);
+  }
+
+  // Loads
+  for(const l of loads){
+    const c=l.load>80?'#ff8800':l.load>50?'#00e5ff':'#00ff88';
+    ctx.fillStyle=c+'11';ctx.strokeStyle=c+'55';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(l.x-24,l.y-12,48,24,3);ctx.fill();ctx.stroke();
+    ctx.fillStyle=c;ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(l.label,l.x,l.y-2);
+    ctx.fillStyle='#fff';ctx.font='7px monospace';ctx.fillText(l.load+'%',l.x,l.y+7);
+  }
+
+  // Connections with animated flow
+  const conns=[
+    {x1:W*.2,y1:H*.2,x2:W*.38,y2:H*.2},{x1:W*.2,y1:H*.4,x2:W*.38,y2:H*.4},
+    {x1:W*.2,y1:H*.6,x2:W*.38,y2:H*.6},{x1:W*.2,y1:H*.8,x2:W*.38,y2:H*.8},
+    {x1:W*.42,y1:H*.2,x2:W*.7,y2:H*.15},{x1:W*.42,y1:H*.2,x2:W*.7,y2:H*.35},
+    {x1:W*.42,y1:H*.4,x2:W*.7,y2:H*.55},{x1:W*.42,y1:H*.6,x2:W*.7,y2:H*.75},
+    {x1:W*.42,y1:H*.8,x2:W*.86,y2:H*.25},{x1:W*.42,y1:H*.8,x2:W*.86,y2:H*.55}
+  ];
+  for(const cn of conns){
+    ctx.beginPath();ctx.moveTo(cn.x1,cn.y1);ctx.lineTo(cn.x2,cn.y2);
+    ctx.strokeStyle='rgba(0,229,255,.12)';ctx.lineWidth=1;ctx.stroke();
+    // Particles
+    for(let i=0;i<2;i++){
+      const p=((t*.2+i*.5)%1);
+      const px=cn.x1+(cn.x2-cn.x1)*p;
+      const py=cn.y1+(cn.y2-cn.y1)*p;
+      ctx.beginPath();ctx.arc(px,py,2,0,Math.PI*2);
+      ctx.fillStyle='#00e5ff';ctx.fill();
+    }
+  }
+
+  requestAnimationFrame(drawInfra);
+}
+
+// ===== SIMULATOR =====
+window.updateSim=function(){
+  const modules=+document.getElementById('simModules').value;
+  const load=+document.getElementById('simLoad').value;
+  const days=+document.getElementById('simDuration').value;
+  const margin=+document.getElementById('simMargin').value;
+
+  document.getElementById('simModulesVal').textContent=modules;
+  document.getElementById('simLoadVal').textContent=load+'%';
+  document.getElementById('simDurationVal').textContent=days+'d';
+  document.getElementById('simMarginVal').textContent=margin+'%';
+
+  const basePerModule=12.5;
+  const required=modules*basePerModule*(load/100)*(1+margin/100);
+  const totalKwh=required*days*24;
+  const cost=(required*0.4+totalKwh*0.00008).toFixed(1);
+  const batteryOnly=totalKwh/2000;
+  const solarKw=required*0.4;
+  const nuclearKw=required*0.5;
+
+  document.getElementById('simRequired').textContent=required.toFixed(1)+' kW';
+  document.getElementById('simTotal').textContent=totalKwh.toLocaleString()+' kWh';
+  document.getElementById('simAuto').textContent=(2000*0.87*1000/required/24).toFixed(1)+' dias (solo bateria)';
+
+  let srcLabel='';
+  if(required<=120)srcLabel='Solar Only';
+  else if(required<=500)srcLabel='Solar + Nuclear';
+  else if(required<=620)srcLabel='Solar + Nuclear + Battery';
+  else srcLabel='Todos los sistemas';
+  document.getElementById('simSource').textContent=srcLabel;
+  document.getElementById('simCost').textContent='$'+cost+'M';
+
+  const mix=document.getElementById('simMix');
+  const chips=[];
+  if(solarKw>0&&solarKw<=120)chips.push({label:'Solar '+solarKw.toFixed(0)+'kW',color:'var(--cyan)'});
+  if(nuclearKw>0)chips.push({label:'Nuclear '+nuclearKw.toFixed(0)+'kW',color:'var(--orange)'});
+  if(required>500)chips.push({label:'Battery Backup',color:'var(--purple)'});
+  if(required>600)chips.push({label:'RTG Reserve',color:'var(--green)'});
+  mix.innerHTML=chips.map(c=>`<span class="sim-mix-chip" style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}44">${c.label}</span>`).join('');
+};
+
+// ===== STATUSBAR CLOCK =====
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  const el=document.getElementById('statusTime');
+  if(el)el.textContent=h+':'+m+':'+s;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ===== REAL-TIME UPDATES =====
+function updateLiveStats(){
+  if(!currentUser)return;
+  const gen=620+Math.random()*10-5;
+  const cons=487+Math.random()*8-4;
+  const eff=94.5+Math.random()*0.6-0.3;
+  const batt=1740+Math.random()*10-5;
+
+  const ge=document.getElementById('statGen');
+  const ce=document.getElementById('statCons');
+  const ee=document.getElementById('statEff');
+  const be=document.getElementById('statBatt');
+  if(ge)ge.textContent=gen.toFixed(1)+' kW';
+  if(ce)ce.textContent=cons.toFixed(1)+' kW';
+  if(ee)ee.textContent=eff.toFixed(1)+'%';
+  if(be)be.textContent=Math.round(batt)+' kWh';
+
+  const pill=document.getElementById('energyPill');
+  const ptxt=document.getElementById('energyPillText');
+  if(gen>600){pill.className='energy-pill';ptxt.textContent='NOMINAL'}
+  else if(gen>500){pill.className='energy-pill warn';ptxt.textContent='REDUCED'}
+  else{pill.className='energy-pill crit';ptxt.textContent='CRITICAL'}
+}
+setInterval(updateLiveStats,3000);
+
+// ===== INIT DASHBOARD =====
+function initDashboard(){
+  renderSourceCards('sourceCards');
+  renderSourceCards('sourceDetailGrid',true);
+  renderAlerts();
+  renderConfigTable();
+  updateSim();
+
+  // Cancel previous animations
+  if(flowAnim)cancelAnimationFrame(flowAnim);
+
+  // Start canvases
+  setTimeout(()=>{
+    drawFlow();
+    drawConsumptionChart();
+    drawInfra();
+  },100);
+}
+
+// ===== START =====
+checkSession();
+})();
+</script>
+</body>
+</html>

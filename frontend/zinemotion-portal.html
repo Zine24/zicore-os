@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZineMotion — Creative Division</title>
+<link rel="stylesheet" href="/css/zicore-ui.css">
+<style>
+.main{padding:calc(var(--topbar-h) + 24px) 24px 40px;max-width:1200px;margin:0 auto;position:relative;z-index:2}
+</style>
+</head>
+<body>
+<canvas class="zicore-stars" id="starfield"></canvas>
+<div class="zicore-grain"></div>
+<div class="zicore-scanline"></div>
+
+<div class="ztopbar" id="topbar"></div>
+
+<div class="main">
+  <div class="zicore-hero">
+    <div class="zicore-hero-icon">◈</div>
+    <div>
+      <h1>ZineMotion</h1>
+      <p>Division creativa. Generacion 3D, edicion de video, multimedia, impresion 3D, juegos y entretenimiento.</p>
+      <div class="stats">
+        <div class="stat"><span class="val">9</span> modulos</div>
+        <div class="stat"><span class="val">14+</span> generators</div>
+        <div class="stat"><span class="val">17</span> juegos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D & Materializer -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🧊 Generacion 3D</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/dashboard" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">◈</div><div class="zicore-card-name">Visualizer</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Visualizador 3D de objetos y escenas con Three.js.</div>
+        <div class="zicore-tags"><span class="zicore-tag">3D</span><span class="zicore-tag">Preview</span></div>
+      </a>
+      <a class="zicore-card" href="/materializer" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon purple">✨</div><div class="zicore-card-name">Materializer</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Motor de generacion 3D procedimental: Cube, Sphere, Rocket, Terrain, Gear, Star, 14+ tipos.</div>
+        <div class="zicore-tags"><span class="zicore-tag">3D</span><span class="zicore-tag">STL</span><span class="zicore-tag">Procedural</span></div>
+      </a>
+      <a class="zicore-card" href="/outpreview" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">◇</div><div class="zicore-card-name">OutPreview</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Editor de meshes: smooth, decimate, fill holes,Boolean, export STL/OBJ/GLB/VR.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Mesh</span><span class="zicore-tag">Editor</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Video & Multimedia -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🎬 Video y Multimedia</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/video-editor" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon red">🎬</div><div class="zicore-card-name">Video Editor</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Editor de video estilo Avid Media Composer. Multi-track timeline, cut, split, transitions.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Video</span><span class="zicore-tag">NLE</span></div>
+      </a>
+      <a class="zicore-card" href="/multimedia" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon purple">🎬</div><div class="zicore-card-name">Multimedia</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Biblioteca de audio, video, imagenes generadas y subidas.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Audio</span><span class="zicore-tag">Video</span></div>
+      </a>
+      <a class="zicore-card" href="/videochat" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">📹</div><div class="zicore-card-name">Video Chat</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Video chat peer-to-peer con WebRTC, salas, contactos, chat de texto.</div>
+        <div class="zicore-tags"><span class="zicore-tag">WebRTC</span><span class="zicore-tag">P2P</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Print & Manufacturing -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🖨 Impresion 3D</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/zicore-print" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon green">🖨</div><div class="zicore-card-name">ZICORE Print</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Manufactura: 7 impresoras, feeders personalizados, flash firmware, camaras.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Impresión</span><span class="zicore-tag">Firmware</span></div>
+      </a>
+      <a class="zicore-card" href="/ziprint" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon orange">🖨</div><div class="zicore-card-name">ZiPrint</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">Cola de impresion y monitoreo en tiempo real.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Cola</span><span class="zicore-tag">Monitor</span></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Games -->
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🎮 Juegos</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="/games" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon green">🎮</div><div class="zicore-card-name">Games Center</div><span class="zicore-badge free">free</span></div>
+        <div class="zicore-card-desc">17 juegos HTML5: Asteroids, Flappy Bird, Space Invaders, Chess, Tetris, Snake y mas. Leaderboard global.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Juegos</span><span class="zicore-tag">HTML5</span><span class="zicore-tag">Leaderboard</span></div>
+      </a>
+    </div>
+  </div>
+
+  <div class="zicore-section">
+    <div class="zicore-section-header"><h2>🛍 Tienda</h2><span class="line"></span></div>
+    <div class="zicore-grid zicore-grid-3">
+      <a class="zicore-card" href="https://zzz.zinemotion.com" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text)">
+        <div class="zicore-card-top"><div class="zicore-card-icon cyan">🛍</div><div class="zicore-card-name">Tienda ZineMotion</div><span class="zicore-badge free">shop</span></div>
+        <div class="zicore-card-desc">TechWear, ZiCapsules, frames 3D y productos del ecosistema ZineMotion. Envios a todo Mexico.</div>
+        <div class="zicore-tags"><span class="zicore-tag">Tienda</span><span class="zicore-tag">Productos</span><span class="zicore-tag">TechWear</span></div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/zicore-topbar.js"></script>
+<script>
+ZICORE_TOPBAR.init({
+  brand: 'ZINEMOTION',
+  subtitle: 'CREATIVE DIVISION',
+  tabs: [
+    {label:'Servicios', href:'/services'},
+    {label:'ZineMotion', href:'/zine-motion', id:'zinemotion'},
+    {label:'Tienda', href:'https://zzz.zinemotion.com'},
+    {label:'Games', href:'/games'},
+  ],
+  activeTab: 'zinemotion'
+});
+
+(function(){const c=document.getElementById('starfield'),x=c.getContext('2d');let s=[];function r(){c.width=innerWidth;c.height=innerHeight}r();addEventListener('resize',r);for(let i=0;i<120;i++)s.push({x:Math.random()*2e3,y:Math.random()*2e3,r:Math.random()*1+.2,a:Math.random(),d:(Math.random()-.5)*.012});function d(){x.clearRect(0,0,c.width,c.height);s.forEach(p=>{p.a+=p.d;if(p.a>1||p.a<.2)p.d*=-1;x.beginPath();x.arc(p.x%c.width,p.y%c.height,p.r,0,Math.PI*2);x.fillStyle=`rgba(180,200,240,${p.a})`;x.fill()});requestAnimationFrame(d)}d()})();
+</script>
+</body>
+</html>
