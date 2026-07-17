@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -130,7 +130,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="topbar">
   <a href="/" class="topbar-logo">
     <div class="topbar-icon">Z</div>
-    <div class="topbar-title">ZICORE STORAGE</div>
+    <div class="topbar-title" data-i18n="topbar.title">ZICORE STORAGE</div>
   </a>
   <div class="topbar-right">
     <a href="/" class="topbar-back">← PORTAL</a>
@@ -140,19 +140,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="layout">
   <div class="sidebar">
     <div class="sidebar-header">
-      <h3>Almacenamiento</h3>
+      <h3 data-i18n="sidebar.storage">Almacenamiento</h3>
       <div class="storage-bar"><div class="fill" id="storageFill" style="width:0%"></div></div>
       <div class="storage-text" id="storageText">0 / 1 GB usado</div>
     </div>
     <div class="sidebar-nav">
-      <div class="nav-item active" onclick="navigateTo('data')"><span class="icon">📁</span>Archivos<span class="count" id="fileCount">0</span></div>
-      <div class="nav-item" onclick="navigateTo('data/output')"><span class="icon">🎨</span>Generados</div>
-      <div class="nav-item" onclick="navigateTo('data/media')"><span class="icon">🎬</span>Multimedia</div>
-      <div class="nav-item" onclick="navigateTo('data/config')"><span class="icon">⚙️</span>Config</div>
-      <div class="nav-item" onclick="navigateTo('frontend')"><span class="icon">🌐</span>Frontend</div>
+      <div class="nav-item active" onclick="navigateTo('data')"><span class="icon">📁</span><span data-i18n="nav.files">Archivos</span><span class="count" id="fileCount">0</span></div>
+      <div class="nav-item" onclick="navigateTo('data/output')"><span class="icon">🎨</span><span data-i18n="nav.generated">Generados</span></div>
+      <div class="nav-item" onclick="navigateTo('data/media')"><span class="icon">🎬</span><span data-i18n="nav.multimedia">Multimedia</span></div>
+      <div class="nav-item" onclick="navigateTo('data/config')"><span class="icon">⚙️</span><span data-i18n="nav.config">Config</span></div>
+      <div class="nav-item" onclick="navigateTo('frontend')"><span class="icon">🌐</span><span data-i18n="nav.frontend">Frontend</span></div>
     </div>
     <div class="sidebar-footer">
-      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">+ Subir Archivo</button>
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()" data-i18n="sidebar.upload">+ Subir Archivo</button>
       <input type="file" id="fileInput" multiple style="display:none" onchange="handleUpload(this.files)">
     </div>
   </div>
@@ -176,11 +176,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 <!-- Context Menu -->
 <div class="ctx-menu hidden" id="ctxMenu">
-  <div class="ctx-item" onclick="downloadFile()">📥 Descargar</div>
-  <div class="ctx-item" onclick="renameFile()">✏️ Renombrar</div>
-  <div class="ctx-item" onclick="moveFile()">📁 Mover</div>
+  <div class="ctx-item" onclick="downloadFile()">📥 <span data-i18n="ctx.download">Descargar</span></div>
+  <div class="ctx-item" onclick="renameFile()">✏️ <span data-i18n="ctx.rename">Renombrar</span></div>
+  <div class="ctx-item" onclick="moveFile()">📁 <span data-i18n="ctx.move">Mover</span></div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item danger" onclick="deleteFile()">🗑 Eliminar</div>
+  <div class="ctx-item danger" onclick="deleteFile()">🗑 <span data-i18n="ctx.delete">Eliminar</span></div>
 </div>
 
 <!-- New Folder Modal -->
@@ -461,5 +461,7 @@ function showToast(msg, type='success') {
 // Init
 loadFiles('data');
 </script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>

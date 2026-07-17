@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -134,5 +134,7 @@ ZICORE_TOPBAR.init({
 
 (function(){const c=document.getElementById('starfield'),x=c.getContext('2d');let s=[];function r(){c.width=innerWidth;c.height=innerHeight}r();addEventListener('resize',r);for(let i=0;i<120;i++)s.push({x:Math.random()*2e3,y:Math.random()*2e3,r:Math.random()*1+.2,a:Math.random(),d:(Math.random()-.5)*.012});function d(){x.clearRect(0,0,c.width,c.height);s.forEach(p=>{p.a+=p.d;if(p.a>1||p.a<.2)p.d*=-1;x.beginPath();x.arc(p.x%c.width,p.y%c.height,p.r,0,Math.PI*2);x.fillStyle=`rgba(180,200,240,${p.a})`;x.fill()});requestAnimationFrame(d)}d()})();
 </script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>

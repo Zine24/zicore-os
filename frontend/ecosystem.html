@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -300,7 +300,7 @@ a:hover{text-decoration:underline}
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div id="landing-page">
   <div class="hero">
-    <div class="hero-badge">Aerospace Digital Operating System</div>
+    <div class="hero-badge" data-i18n="hero.badge">Aerospace Digital Operating System</div>
     <div class="hex-logo">
       <svg viewBox="0 0 120 120">
         <polygon points="60,5 110,30 110,90 60,115 10,90 10,30" fill="none" stroke="rgba(0,229,255,0.25)" stroke-width="1.5"/>
@@ -309,25 +309,25 @@ a:hover{text-decoration:underline}
       </svg>
       <div class="hex-core">Z</div>
     </div>
-    <h1>ZICORE ECOSYSTEM</h1>
-    <div class="tagline">El Sistema Operativo de la Innovación</div>
-    <div class="tagline2">Plataforma unificada de inteligencia artificial, aeroespacial, finanzas y ciencia</div>
+    <h1 data-i18n="hero.title">ZICORE ECOSYSTEM</h1>
+    <div class="tagline" data-i18n="hero.tagline">El Sistema Operativo de la Innovación</div>
+    <div class="tagline2" data-i18n="hero.description">Plataforma unificada de inteligencia artificial, aeroespacial, finanzas y ciencia</div>
     <div class="cta-row">
-      <button class="btn btn-primary" onclick="showModal('login')">Acceder al Portal</button>
-      <button class="btn btn-outline" onclick="openWhitepaper()">Leer Whitepaper</button>
+      <button class="btn btn-primary" onclick="showModal('login')" data-i18n="hero.cta.login">Acceder al Portal</button>
+      <button class="btn btn-outline" onclick="openWhitepaper()" data-i18n="hero.cta.whitepaper">Leer Whitepaper</button>
     </div>
   </div>
 
   <div class="stats-bar">
-    <div class="stat-item"><div class="stat-num">14</div><div class="stat-label">Módulos</div></div>
-    <div class="stat-item"><div class="stat-num">847</div><div class="stat-label">Archivos</div></div>
-    <div class="stat-item"><div class="stat-num">120K+</div><div class="stat-label">Líneas de Código</div></div>
-    <div class="stat-item"><div class="stat-num">99.9%</div><div class="stat-label">Uptime</div></div>
+    <div class="stat-item"><div class="stat-num">14</div><div class="stat-label" data-i18n="stats.modules">Módulos</div></div>
+    <div class="stat-item"><div class="stat-num">847</div><div class="stat-label" data-i18n="stats.files">Archivos</div></div>
+    <div class="stat-item"><div class="stat-num">120K+</div><div class="stat-label" data-i18n="stats.lines">Líneas de Código</div></div>
+    <div class="stat-item"><div class="stat-num">99.9%</div><div class="stat-label" data-i18n="stats.uptime">Uptime</div></div>
   </div>
 
   <div class="modules-section">
-    <h2>Módulos del Ecosistema</h2>
-    <p class="subtitle">Infraestructura modular para la innovación tecnológica</p>
+    <h2 data-i18n="modules.title">Módulos del Ecosistema</h2>
+    <p class="subtitle" data-i18n="modules.subtitle">Infraestructura modular para la innovación tecnológica</p>
     <div class="module-grid" id="landing-modules"></div>
   </div>
 
@@ -677,7 +677,7 @@ a:hover{text-decoration:underline}
 // ═══════════════════════════════════════════════════════════════
 const MODULES = [
   {id:'zio',name:'ZiCore AI',desc:'Asistente de inteligencia artificial',icon:'🤖',color:'#00e5ff',status:'active',link:'zio.html'},
-  {id:'bank',name:'ZiCore Bank',desc:'Infraestructura financiera digital',icon:'🏦',color:'#7c4dff',status:'active',link:'#'},
+  {id:'bank',name:'ZiVault',desc:'Universal Asset Vault - digital financial infrastructure',icon:'🏦',color:'#7c4dff',status:'active',link:'#'},
   {id:'codex',name:'ZiCodex',desc:'Repositorio de conocimiento científico',icon:'📚',color:'#00ff88',status:'active',link:'#'},
   {id:'space',name:'ZiCore.Space',desc:'División aeroespacial',icon:'🚀',color:'#00e5ff',status:'active',link:'aerospace.html'},
   {id:'market',name:'Marketplace',desc:'Productos, APIs y servicios digitales',icon:'🛒',color:'#ff9f43',status:'beta',link:'#'},
@@ -688,7 +688,7 @@ const MODULES = [
 
 const ACTIVITIES = [
   {text:'<strong>ZiCore AI</strong> procesó 2,847 llamadas API',time:'Hace 12 min',color:'var(--cyan)'},
-  {text:'<strong>ZiCore Bank</strong> — transacción ZNT registrada',time:'Hace 34 min',color:'var(--purple)'},
+  {text:'<strong>ZiVault</strong> — ZNT transaction registered',time:'Hace 34 min',color:'var(--purple)'},
   {text:'<strong>ZiCore.Space</strong> — telemetría de misión actualizada',time:'Hace 1 hora',color:'var(--green)'},
   {text:'<strong>OBSIDIANA</strong> — simulación orbital completada',time:'Hace 2 horas',color:'var(--red)'},
   {text:'<strong>Marketplace</strong> — nuevo API listing publicado',time:'Hace 3 horas',color:'var(--orange)'},
@@ -988,5 +988,7 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('active')});
 });
 </script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>

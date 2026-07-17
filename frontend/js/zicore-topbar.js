@@ -72,7 +72,7 @@ const ZICORE_TOPBAR = {
         '<div class="ztopbar-spacer"></div>' +
         (this.user ?
           '<div class="ztopbar-user">' +
-            '<div class="ztopbar-znt" title="ZICORE Bank">' +
+            '<div class="ztopbar-znt" title="ZiVault - Universal Asset Vault">' +
               '<span class="ztopbar-znt-icon">&#9889;</span>' +
               '<span class="ztopbar-znt-amt">' + znt + ' ZNT</span>' +
             '</div>' +
@@ -82,24 +82,24 @@ const ZICORE_TOPBAR = {
               '<div class="ztopbar-dd-header">' +
                 '<div class="ztopbar-dd-name">' + userName + '</div>' +
                 '<div class="ztopbar-dd-email">' + userEmail + '</div>' +
-                '<div class="ztopbar-dd-balance">Saldo: <span>' + znt + ' ZNT</span></div>' +
+                '<div class="ztopbar-dd-balance"><span data-i18n="topbar.balance">Saldo</span>: <span>' + znt + ' ZNT</span></div>' +
               '</div>' +
               '<div class="ztopbar-dd-sep"></div>' +
-              '<a class="ztopbar-dd-item" href="/zicore-bank"><span>&#127974;</span>ZICORE Bank</a>' +
-              '<a class="ztopbar-dd-item" href="/mail"><span>&#9993;</span>Mail</a>' +
-              '<a class="ztopbar-dd-item" href="/storage"><span>&#9729;</span>Storage</a>' +
-              '<a class="ztopbar-dd-item" href="/settings"><span>&#9881;</span>Configuracion</a>' +
+              '<a class="ztopbar-dd-item" href="/zivault"><span>&#127974;</span><span data-i18n="topbar.vault">ZiVault</span></a>' +
+              '<a class="ztopbar-dd-item" href="/mail"><span>&#9993;</span><span data-i18n="topbar.mail">Mail</span></a>' +
+              '<a class="ztopbar-dd-item" href="/storage"><span>&#9729;</span><span data-i18n="topbar.storage">Storage</span></a>' +
+              '<a class="ztopbar-dd-item" href="/settings"><span>&#9881;</span><span data-i18n="topbar.settings">Configuracion</span></a>' +
               '<div class="ztopbar-dd-sep"></div>' +
-              '<a class="ztopbar-dd-item" href="/services"><span>&#128203;</span>Servicios</a>' +
+              '<a class="ztopbar-dd-item" href="/services"><span>&#128203;</span><span data-i18n="topbar.services">Servicios</span></a>' +
               '<a class="ztopbar-dd-item" href="/api-docs"><span>&#128218;</span>API Docs</a>' +
               '<div class="ztopbar-dd-sep"></div>' +
-              '<div class="ztopbar-dd-item danger" onclick="ZICORE_TOPBAR.logout()"><span>&#9211;</span>Cerrar Sesion</div>' +
+              '<div class="ztopbar-dd-item danger" onclick="ZICORE_TOPBAR.logout()"><span>&#9211;</span><span data-i18n="topbar.logout">Cerrar Sesion</span></div>' +
             '</div>' +
           '</div>'
         :
           '<div class="ztopbar-user">' +
             '<div class="ztopbar-clock" id="zicoreClock">--:--:--</div>' +
-            '<a href="/login" class="ztopbar-login">Iniciar Sesion</a>' +
+            '<a href="/login" class="ztopbar-login"><span data-i18n="topbar.login">Iniciar Sesion</span></a>' +
           '</div>'
         ) +
       '</div>';

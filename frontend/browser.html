@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -248,5 +248,7 @@ function clearHistory(){historyData=[];localStorage.removeItem('zicoreBH');rende
 document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='l'){e.preventDefault();document.getElementById('urlInput').focus();document.getElementById('urlInput').select()}if(e.ctrlKey&&e.key==='t'){e.preventDefault();newTab()}if(e.ctrlKey&&e.key==='w'){e.preventDefault();closeTab(activeTab)}if(e.ctrlKey&&e.key==='r'){e.preventDefault();refreshPage()}});
 renderHistory();showHome();updateNav();
 </script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>

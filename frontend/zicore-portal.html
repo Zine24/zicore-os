@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -165,7 +165,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <div style="font-size:7px;color:var(--text2);letter-spacing:3px;margin-top:1px">CREANDO EL TIEMPO</div>
     </div>
     <div class="sep"></div>
-    <div class="tagline">Digital Aerospace Operating System</div>
+    <div class="tagline" data-i18n="topbar.tagline">Digital Aerospace Operating System</div>
     <div class="spacer"></div>
     <div style="text-align:right;margin-right:8px">
       <div style="font-size:7px;color:var(--text2);letter-spacing:1px">DESCARGAS</div>
@@ -177,11 +177,11 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="sb-section">Divisiones</div>
-    <div class="sb-item active" onclick="showView('welcome')"><div class="ico">◈</div>Inicio</div>
+    <div class="sb-section" data-i18n="sidebar.divisions">Divisiones</div>
+    <div class="sb-item active" onclick="showView('welcome')"><div class="ico">◈</div><span data-i18n="sidebar.home">Inicio</span></div>
     <div class="sb-divider"></div>
 
-    <div class="sb-section">◇ Aerospace</div>
+    <div class="sb-section" data-i18n="sidebar.aerospace">◇ Aerospace</div>
     <div class="sb-item" onclick="showFrame('/vehicle-designer','Vehicle Designer')"><div class="ico">🚀</div> Vehicle Designer</div>
     <div class="sb-item" onclick="showFrame('/propulsion-lab','Propulsion Lab')"><div class="ico">⚡</div> Propulsion Lab</div>
     <div class="sb-item" onclick="showFrame('/orbital-mechanics','Orbital Mechanics')"><div class="ico">◎</div> Orbital Mechanics</div>
@@ -192,16 +192,16 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <div class="sb-item" onclick="showFrame('/aerospace','Aerospace')"><div class="ico">📊</div> Aerospace Dashboard</div>
     <div class="sb-divider"></div>
 
-    <div class="sb-section">◇ Crypto</div>
-    <div class="sb-item" onclick="showFrame('/zicore-bank','ZICORE Bank')"><div class="ico">🏦</div> ZICORE Bank</div>
+    <div class="sb-section" data-i18n="sidebar.crypto">◇ Crypto</div>
+    <div class="sb-item" onclick="showFrame('/zivault','ZiVault')"><div class="ico">🏦</div> ZiVault</div>
     <div class="sb-divider"></div>
 
-    <div class="sb-section">◉ ZiEnvironment</div>
+    <div class="sb-section" data-i18n="sidebar.environment">◉ ZiEnvironment</div>
     <div class="sb-item" onclick="showFrame('/environment','ZiEnvironment')"><div class="ico">◉</div> Kernel (21 nodos)</div>
     <div class="sb-item" onclick="showFrame('/zio','ZIO AI')"><div class="ico">◎</div> ZIO Copilot</div>
     <div class="sb-divider"></div>
 
-    <div class="sb-section">◈ ZineMotion</div>
+    <div class="sb-section" data-i18n="sidebar.zinemotion">◈ ZineMotion</div>
     <div class="sb-item" onclick="showFrame('/dashboard','Visualizer')"><div class="ico">◈</div> Visualizer</div>
     <div class="sb-item" onclick="showFrame('/materializer','Materializer')"><div class="ico">◈</div> Materializer</div>
     <div class="sb-item" onclick="showFrame('/video-editor','Video Editor')"><div class="ico">🎬</div> Video Editor</div>
@@ -214,7 +214,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <div class="sb-item" onclick="openExternal('https://zzz.zinemotion.com')" style="color:var(--cyan)"><div class="ico">🛍</div> Tienda ZineMotion</div>
     <div class="sb-divider"></div>
 
-    <div class="sb-section">Otros</div>
+    <div class="sb-section" data-i18n="sidebar.others">Otros</div>
     <div class="sb-item" onclick="showFrame('/login','Login')"><div class="ico">🔑</div> Login</div>
     <div class="sb-item" onclick="showFrame('/videochat','Video Chat')"><div class="ico">📹</div> Video Chat</div>
     <div class="sb-item" onclick="showFrame('/governance','Gobernanza')"><div class="ico">🏛</div> Gobernanza ZNT</div>
@@ -242,8 +242,8 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <!-- Welcome View -->
     <div class="welcome" id="welcomeView">
       <div class="hex">◈</div>
-      <h2>ZICORE OS</h2>
-      <p>Digital Aerospace Operating System. Un portal integral que conecta aerospace, ingeniería, creatividad y sistema distribuido.</p>
+      <h2 data-i18n="welcome.title">ZICORE OS</h2>
+      <p data-i18n="welcome.subtitle">Digital Aerospace Operating System. Un portal integral que conecta aerospace, ingeniería, creatividad y sistema distribuido.</p>
       <div class="cards">
         <div class="wcard c1" onclick="showFrame('/aerospace','Aerospace')"><div class="wc-icon">◇</div><div class="wc-name">Aerospace</div></div>
         <div class="wcard c2" onclick="showFrame('/engineering','Engineering')"><div class="wc-icon">⚙</div><div class="wc-name">Engineering</div></div>
@@ -337,7 +337,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   <!-- Statusbar -->
   <div class="statusbar">
     <div style="width:4px;height:4px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)"></div>
-    <span>SYS: NOMINAL</span>
+    <span data-i18n="status.system">SYS: NOMINAL</span>
     <div class="spacer"></div>
     <span id="sbInfo">--</span>
     <div class="spacer"></div>
@@ -616,7 +616,7 @@ window.addEventListener('message',function(e){
 // Expose functions
 window.zicorePortal={navigate:function(url,title){showFrame(url,title)},back:function(){showView('welcome')},openZMMX:openZMMX};
 </script>
-<script src="/js/zicore-translate.js"></script>
-<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>

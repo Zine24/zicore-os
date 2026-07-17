@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -171,32 +171,32 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
 
 <div class="hero">
   <div class="znt-logo">ZNT</div>
-  <h1>ZICORE Governance</h1>
-  <p>Sistema de gobernanza descentralizado. Los holders de ZNT votan propuestas, delegan poder, y controlan el tesoro del ecosistema ZICORE.</p>
-  <div class="tagline">Decentralized Autonomous Governance</div>
+  <h1 data-i18n="hero.title">ZICORE Governance</h1>
+  <p data-i18n="hero.subtitle">Sistema de gobernanza descentralizado. Los holders de ZNT votan propuestas, delegan poder, y controlan el tesoro del ecosistema ZICORE.</p>
+  <div class="tagline" data-i18n="hero.tagline">Decentralized Autonomous Governance</div>
 </div>
 
 <div class="stats-row">
-  <div class="stat-card sc-cyan"><div class="sv">1,000,000,000</div><div class="sl">Supply Total ZNT</div></div>
-  <div class="stat-card sc-purple"><div class="sv">47,382</div><div class="sl">Votantes</div><div class="si">+312 esta semana</div></div>
-  <div class="stat-card sc-green"><div class="sv">156</div><div class="sl">Propuestas</div><div class="si">12 activas</div></div>
-  <div class="stat-card sc-orange"><div class="sv">156M</div><div class="sl">Tesoro ZNT</div><div class="si">15.6% del supply</div></div>
-  <div class="stat-card sc-yellow"><div class="sv">68%</div><div class="sl">Quorum Promedio</div><div class="si">Meta: 51%</div></div>
+  <div class="stat-card sc-cyan"><div class="sv">1,000,000,000</div><div class="sl" data-i18n="stats.supply">Supply Total ZNT</div></div>
+  <div class="stat-card sc-purple"><div class="sv">47,382</div><div class="sl" data-i18n="stats.voters">Votantes</div><div class="si">+312 esta semana</div></div>
+  <div class="stat-card sc-green"><div class="sv">156</div><div class="sl" data-i18n="stats.proposals">Propuestas</div><div class="si">12 activas</div></div>
+  <div class="stat-card sc-orange"><div class="sv">156M</div><div class="sl" data-i18n="stats.treasury">Tesoro ZNT</div><div class="si">15.6% del supply</div></div>
+  <div class="stat-card sc-yellow"><div class="sv">68%</div><div class="sl" data-i18n="stats.quorum">Quorum Promedio</div><div class="si">Meta: 51%</div></div>
 </div>
 
 <div class="nav">
-  <button class="nav-btn active" onclick="showSection('proposals',this)">Propuestas</button>
-  <button class="nav-btn" onclick="showSection('treasury',this)">Tesorería</button>
-  <button class="nav-btn" onclick="showSection('delegates',this)">Delegados</button>
-  <button class="nav-btn" onclick="showSection('create',this)">Crear Propuesta</button>
-  <button class="nav-btn" onclick="showSection('history',this)">Historial</button>
+  <button class="nav-btn active" onclick="showSection('proposals',this)" data-i18n="nav.proposals">Propuestas</button>
+  <button class="nav-btn" onclick="showSection('treasury',this)" data-i18n="nav.treasury">Tesorería</button>
+  <button class="nav-btn" onclick="showSection('delegates',this)" data-i18n="nav.delegates">Delegados</button>
+  <button class="nav-btn" onclick="showSection('create',this)" data-i18n="nav.create">Crear Propuesta</button>
+  <button class="nav-btn" onclick="showSection('history',this)" data-i18n="nav.history">Historial</button>
 </div>
 
 <div class="main">
 
 <!-- PROPOSALS -->
 <div id="proposals">
-  <div class="section-title">Propuestas <span class="accent">Activas</span> <span class="badge">12 activas</span></div>
+  <div class="section-title" data-i18n="proposals.title">Propuestas <span class="accent">Activas</span> <span class="badge">12 activas</span></div>
   <div class="filter-bar">
     <button class="fbtn active" onclick="filterProposals('all',this)">Todas</button>
     <button class="fbtn" onclick="filterProposals('treasury',this)">Tesorería</button>
@@ -212,7 +212,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
       <span class="p-cat treasury">Tesorería</span>
       <span class="p-status active">Activa</span>
     </div>
-    <div class="p-body">Habilitar staking con APY del 15% para holders de ZNT con al menos 10,000 ZNT en los niveles Vault y Ultimate del ZICORE Bank. El staking generará rendimiento pasivo y reducirá la circulación libre, fortaleciendo el valor del token.</div>
+    <div class="p-body">Habilitar staking con APY del 15% para holders de ZNT con al menos 10,000 ZNT en los niveles Vault y Ultimate del ZiVault. El staking generará rendimiento pasivo y reducirá la circulación libre, fortaleciendo el valor del token.</div>
     <div class="p-meta">
       <span>&#128197; 15 Jul 2026</span><span>&#128100; @zinemotion</span><span>&#128498; 3,847 votantes</span><span>&#9878; Quorum: 62% / 51%</span><span>&#128176; 500,000 ZNT stake req.</span>
     </div>
@@ -359,7 +359,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
 
 <!-- TREASURY -->
 <div id="treasury" class="hidden">
-  <div class="section-title">Tesorería <span class="accent">ZICORE</span></div>
+  <div class="section-title" data-i18n="treasury.title">Tesorería <span class="accent">ZICORE</span></div>
   <div class="treasury-section">
     <div class="t-card">
       <h3>Resumen del Tesoro</h3>
@@ -379,7 +379,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
           <div class="afooter"><span>Mensual</span><span>45% del ingreso</span></div>
         </div>
         <div class="alloc-row">
-          <div class="aheader"><span class="aname">ZICORE Bank (spread bancario)</span><span class="aamount">8.7M ZNT</span></div>
+          <div class="aheader"><span class="aname">ZiVault (spread bancario)</span><span class="aamount">8.7M ZNT</span></div>
           <div class="alloc-bar"><div class="abf" style="width:32%"></div></div>
           <div class="afooter"><span>Mensual</span><span>32% del ingreso</span></div>
         </div>
@@ -426,7 +426,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
 
 <!-- DELEGATES -->
 <div id="delegates" class="hidden">
-  <div class="section-title">Delegados <span class="accent">Activos</span> <span class="badge">5 delegados</span></div>
+  <div class="section-title" data-i18n="delegates.title">Delegados <span class="accent">Activos</span> <span class="badge">5 delegados</span></div>
   <div class="delegate-grid">
     <div class="d-card">
       <div class="d-rank">#1</div>
@@ -473,7 +473,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
 
 <!-- CREATE PROPOSAL -->
 <div id="create" class="hidden">
-  <div class="section-title">Crear <span class="accent">Propuesta</span></div>
+  <div class="section-title" data-i18n="create.title">Crear <span class="accent">Propuesta</span></div>
   <div class="create-card create-section">
     <div class="form-row"><label>Título de la propuesta</label><input type="text" id="propTitle" placeholder="Ej: Financiar desarrollo de propulsión iónica..."></div>
     <div class="form-row"><label>Descripción detallada</label><textarea id="propDesc" placeholder="Describe el objetivo, alcance, presupuesto, y criterios de éxito..."></textarea></div>
@@ -491,7 +491,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
 
 <!-- HISTORY -->
 <div id="history" class="hidden">
-  <div class="section-title">Historial de <span class="accent">Propuestas</span></div>
+  <div class="section-title" data-i18n="history.title">Historial de <span class="accent">Propuestas</span></div>
   <div class="history-card">
     <div class="h-icon rejected">&#10007;</div>
     <div class="h-info"><div class="h-title">Aumentar supply máximo de ZNT a 2B</div><div class="h-meta">ZIP-004 &middot; 5 Jul 2026 &middot; 8,921 votantes &middot; @inflation-hawk</div></div>
@@ -509,7 +509,7 @@ body{background:radial-gradient(ellipse at 20% 50%,rgba(0,229,255,0.03) 0%,trans
   </div>
   <div class="history-card">
     <div class="h-icon rejected">&#10007;</div>
-    <div class="h-info"><div class="h-title">Eliminar tier Explorer del ZICORE Bank</div><div class="h-meta">ZIP-008 &middot; 20 Jun 2026 &middot; 4,102 votantes &middot; @bank-dev</div></div>
+    <div class="h-info"><div class="h-title">Eliminar tier Explorer del ZiVault</div><div class="h-meta">ZIP-008 &middot; 20 Jun 2026 &middot; 4,102 votantes &middot; @bank-dev</div></div>
     <div class="h-result"><div class="h-pct rejected">32%</div><div class="h-votes">Rechazada</div></div>
   </div>
   <div class="history-card">
@@ -565,5 +565,7 @@ function toast(msg){
 
 showSection('proposals');
 </script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>

@@ -191,15 +191,33 @@ const endpoints = [
     {m:'POST',p:'/api/sso/admin/grant-service',d:'Otorgar servicio a usuario (admin)',auth:'admin',body:'{"user_id":"...","service_name":"..."}'},
     {m:'GET',p:'/api/sso/admin/stats',d:'Estadisticas globales (admin)',auth:'admin'},
   ]},
-  // Bank
-  {cat:'ZICORE Bank',catId:'bank',items:[
-    {m:'GET',p:'/api/bank/account',d:'Obtener o crear cuenta bancaria',auth:'auth'},
-    {m:'GET',p:'/api/bank/balance',d:'Obtener saldo ZNT',auth:'auth'},
-    {m:'GET',p:'/api/bank/transactions',d:'Historial de transacciones (?limit=50)',auth:'auth'},
-    {m:'POST',p:'/api/bank/send',d:'Enviar ZNT a otro usuario',auth:'auth',body:'{"to":"email@...","amount":10,"description":"..."}'},
-    {m:'GET',p:'/api/bank/staking',d:'Info de staking del usuario',auth:'auth'},
-    {m:'POST',p:'/api/bank/stake',d:'Stakear ZNT (15% APY)',auth:'auth',body:'{"amount":100}'},
-    {m:'GET',p:'/api/bank/portfolio',d:'Portfolio completo (balance+staked+USD)',auth:'auth'},
+  // Bank (legacy)
+  {cat:'ZICORE Bank (Legacy)',catId:'bank',items:[
+    {m:'GET',p:'/api/bank/account',d:'Get or create bank account',auth:'auth'},
+    {m:'GET',p:'/api/bank/balance',d:'Get ZNT balance',auth:'auth'},
+    {m:'GET',p:'/api/bank/transactions',d:'Transaction history (?limit=50)',auth:'auth'},
+    {m:'POST',p:'/api/bank/send',d:'Send ZNT to another user',auth:'auth',body:'{"to":"email@...","amount":10,"description":"..."}'},
+    {m:'GET',p:'/api/bank/staking',d:'User staking info',auth:'auth'},
+    {m:'POST',p:'/api/bank/stake',d:'Stake ZNT (15% APY)',auth:'auth',body:'{"amount":100}'},
+    {m:'GET',p:'/api/bank/portfolio',d:'Full portfolio (balance+staked+USD)',auth:'auth'},
+  ]},
+  // ZiVault
+  {cat:'ZiVault',catId:'vault',items:[
+    {m:'GET',p:'/api/vault/dashboard',d:'Dashboard summary (assets, value, files, activity)',auth:'auth'},
+    {m:'GET',p:'/api/vault/currencies',d:'List supported currencies',auth:'public'},
+    {m:'GET',p:'/api/vault/assets',d:'List user assets (?asset_type=)',auth:'auth'},
+    {m:'POST',p:'/api/vault/assets',d:'Register new asset',auth:'auth',body:'{"name":"...","asset_type":"crypto","value":1000,"currency":"ZNT"}'},
+    {m:'DELETE',p:'/api/vault/assets/{id}',d:'Delete an asset',auth:'auth'},
+    {m:'GET',p:'/api/vault/portfolios',d:'List user portfolios',auth:'auth'},
+    {m:'POST',p:'/api/vault/portfolios',d:'Create portfolio',auth:'auth',body:'{"name":"...","portfolio_type":"personal"}'},
+    {m:'GET',p:'/api/vault/transactions',d:'List transactions (?asset_id=&limit=50)',auth:'auth'},
+    {m:'POST',p:'/api/vault/transactions',d:'Record transaction',auth:'auth',body:'{"asset_id":"...","tx_type":"purchase","amount":100}'},
+    {m:'GET',p:'/api/vault/files',d:'List vault files (encrypted storage)',auth:'auth'},
+    {m:'POST',p:'/api/vault/files',d:'Register uploaded file in vault',auth:'auth',body:'{"filename":"...","file_type":"pdf","size":1024}'},
+    {m:'GET',p:'/api/vault/audit',d:'Audit log (?limit=100)',auth:'auth'},
+    {m:'GET',p:'/api/vault/report',d:'Generate report (?report_type=portfolio|tax|asset|org)',auth:'auth'},
+    {m:'GET',p:'/api/vault/organizations',d:'List user organizations',auth:'auth'},
+    {m:'POST',p:'/api/vault/organizations',d:'Create organization',auth:'auth',body:'{"name":"...","org_type":"business"}'},
   ]},
   // Mail
   {cat:'ZICORE Mail',catId:'mail',items:[

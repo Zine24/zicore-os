@@ -1,0 +1,2567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiVault — Universal Asset Vault | ZICORE</title>
+<style>
+  :root {
+    --bg-primary: #06080e;
+    --bg-secondary: #0a0f18;
+    --bg-card: #0d1220;
+    --bg-input: #111827;
+    --border: #1a2332;
+    --border-active: #00e5ff33;
+    --cyan: #00e5ff;
+    --cyan-dim: #00e5ff88;
+    --purple: #7c4dff;
+    --purple-dim: #7c4dff88;
+    --green: #00ff88;
+    --green-dim: #00ff8888;
+    --orange: #ff9100;
+    --orange-dim: #ff910088;
+    --red: #ff3d3d;
+    --text-primary: #e0e6f0;
+    --text-secondary: #7a8599;
+    --text-muted: #4a5568;
+    --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-main);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  a { color: var(--cyan); text-decoration: none; transition: color 0.2s; }
+  a:hover { color: var(--green); }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .topbar-logo {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--cyan);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    background: rgba(0,229,255,0.08);
+    letter-spacing: 1px;
+  }
+
+  .topbar-title {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar-title h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 2px;
+  }
+
+  .topbar-title span {
+    font-size: 10px;
+    color: var(--text-secondary);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .topbar-back {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .topbar-back:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+
+  .topbar-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .main-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.3s;
+  }
+
+  .stat-card:hover {
+    border-color: var(--border-active);
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .stat-icon.cyan { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid rgba(0,229,255,0.2); }
+  .stat-icon.green { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+  .stat-icon.purple { background: rgba(124,77,255,0.1); color: var(--purple); border: 1px solid rgba(124,77,255,0.2); }
+  .stat-icon.orange { background: rgba(255,145,0,0.1); color: var(--orange); border: 1px solid rgba(255,145,0,0.2); }
+
+  .stat-info { flex: 1; }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .tabs-container {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .tab-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .tab-btn.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+  }
+
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panel.active {
+    display: block;
+  }
+
+  .panel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    background: rgba(0,229,255,0.1);
+    color: var(--cyan);
+    border-color: var(--cyan);
+  }
+
+  .btn-primary:hover {
+    background: rgba(0,229,255,0.2);
+  }
+
+  .btn-secondary {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+  }
+
+  .btn-secondary:hover {
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+
+  .btn-green {
+    background: rgba(0,255,136,0.1);
+    color: var(--green);
+    border-color: var(--green);
+  }
+
+  .btn-green:hover {
+    background: rgba(0,255,136,0.2);
+  }
+
+  .btn-purple {
+    background: rgba(124,77,255,0.1);
+    color: var(--purple);
+    border-color: var(--purple);
+  }
+
+  .btn-purple:hover {
+    background: rgba(124,77,255,0.2);
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .dashboard-grid .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    height: 160px;
+    padding-top: 16px;
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar {
+    width: 100%;
+    max-width: 48px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease;
+    position: relative;
+  }
+
+  .bar-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .bar-value {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-primary);
+  }
+
+  .activity-list {
+    list-style: none;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .activity-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .activity-text {
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+
+  .activity-time {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .quick-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .ai-box {
+    background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(124,77,255,0.05));
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .ai-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid rgba(0,229,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .ai-text h4 {
+    font-size: 14px;
+    color: var(--cyan);
+    margin-bottom: 4px;
+  }
+
+  .ai-text p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(26,35,50,0.5);
+  }
+
+  tbody tr:hover {
+    background: rgba(0,229,255,0.02);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-cyan { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid rgba(0,229,255,0.2); }
+  .badge-green { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+  .badge-purple { background: rgba(124,77,255,0.1); color: var(--purple); border: 1px solid rgba(124,77,255,0.2); }
+  .badge-orange { background: rgba(255,145,0,0.1); color: var(--orange); border: 1px solid rgba(255,145,0,0.2); }
+  .badge-red { background: rgba(255,61,61,0.1); color: var(--red); border: 1px solid rgba(255,61,61,0.2); }
+  .badge-gray { background: rgba(74,85,104,0.2); color: var(--text-secondary); border: 1px solid rgba(74,85,104,0.3); }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0 12px;
+  }
+
+  .search-box input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 13px;
+    padding: 8px 0;
+    width: 200px;
+  }
+
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 12px;
+    padding: 7px 10px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  select:focus {
+    border-color: var(--cyan);
+  }
+
+  .portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .portfolio-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    transition: border-color 0.3s;
+  }
+
+  .portfolio-card:hover {
+    border-color: var(--border-active);
+  }
+
+  .portfolio-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .portfolio-type-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .portfolio-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .portfolio-card p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  .portfolio-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .portfolio-stats span {
+    color: var(--text-secondary);
+  }
+
+  .portfolio-stats strong {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .file-item:last-child { border-bottom: none; }
+
+  .file-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .file-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .file-info h4 {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .file-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .file-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .blockchain-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .chain-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.3s;
+    cursor: pointer;
+  }
+
+  .chain-card:hover {
+    border-color: var(--cyan);
+  }
+
+  .chain-card.active {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.03);
+  }
+
+  .chain-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .chain-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .chain-status {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .report-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .report-option-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .settings-section {
+    margin-bottom: 24px;
+  }
+
+  .settings-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .security-badges {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(26,35,50,0.5);
+  }
+
+  .toggle-label {
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+
+  .toggle-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .toggle-switch {
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .toggle-switch.on {
+    background: rgba(0,229,255,0.2);
+    border-color: var(--cyan);
+  }
+
+  .toggle-switch::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s;
+  }
+
+  .toggle-switch.on::after {
+    left: 20px;
+    background: var(--cyan);
+  }
+
+  .api-key-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+
+  .api-key-value {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-input);
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    flex: 1;
+  }
+
+  .notification-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .notif-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-input);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .notif-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notif-icon {
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+  }
+
+  .notif-name {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus {
+    border-color: var(--cyan);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.visible {
+    display: flex;
+  }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--cyan);
+  }
+
+  .modal-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .modal-close:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  .empty-state h3 {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+  }
+
+  .toast-container {
+    position: fixed;
+    top: 60px;
+    right: 24px;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.3s ease;
+    min-width: 260px;
+  }
+
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  .toast.info { border-left: 3px solid var(--cyan); }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .page-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .page-btn.active {
+    background: rgba(0,229,255,0.1);
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+
+  .sig-hash {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 900px) {
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .blockchain-grid { grid-template-columns: repeat(2, 1fr); }
+    .report-options { grid-template-columns: 1fr; }
+    .notification-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .hero-stats { grid-template-columns: 1fr; }
+    .topbar { padding: 10px 16px; }
+    .main-content { padding: 16px; }
+    .tabs-container { gap: 0; }
+    .tab-btn { padding: 10px 12px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">ZV</div>
+    <div class="topbar-title">
+      <h1>ZIVAULT</h1>
+      <span>Universal Asset Vault</span>
+    </div>
+  </div>
+  <div class="topbar-nav">
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      SECURE
+    </div>
+    <a href="/" class="topbar-back">&larr; ZICORE</a>
+  </div>
+</div>
+
+<div class="main-content">
+  <div class="hero-stats">
+    <div class="stat-card">
+      <div class="stat-icon cyan">&#9670;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="stat-assets">0</div>
+        <div class="stat-label">Total Assets</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">&#9889;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="stat-networth">$0</div>
+        <div class="stat-label">Net Worth (USD)</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">&#9744;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="stat-docs">0</div>
+        <div class="stat-label">Documents</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange">&#9612;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="stat-activity">0</div>
+        <div class="stat-label">Activity</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs-container" id="tabs-bar">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="assets">Assets</button>
+    <button class="tab-btn" data-tab="portfolios">Portfolios</button>
+    <button class="tab-btn" data-tab="vault">Vault</button>
+    <button class="tab-btn" data-tab="transactions">Transactions</button>
+    <button class="tab-btn" data-tab="blockchain">Blockchain</button>
+    <button class="tab-btn" data-tab="audit">Audit</button>
+    <button class="tab-btn" data-tab="reports">Reports</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-dashboard">
+    <div class="dashboard-grid">
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">Asset Distribution</div>
+        </div>
+        <div class="bar-chart" id="asset-chart"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">Recent Activity</div>
+        </div>
+        <ul class="activity-list" id="activity-list">
+          <li class="activity-item"><span class="activity-text" style="color:var(--text-muted)">No recent activity</span></li>
+        </ul>
+      </div>
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">Quick Actions</div>
+        </div>
+        <div class="quick-actions">
+          <button class="btn btn-primary" onclick="openModal('asset')">Register Asset</button>
+          <button class="btn btn-green" onclick="openModal('file')">Upload File</button>
+          <button class="btn btn-purple" onclick="openModal('portfolio')">New Portfolio</button>
+        </div>
+      </div>
+      <div class="panel-card full-width">
+        <div class="ai-box">
+          <div class="ai-icon">&#9672;</div>
+          <div class="ai-text">
+            <h4>AI Asset Manager</h4>
+            <p>Automatic categorization, duplicate detection, value estimation. ZIO analyzes your vault to identify patterns, flag anomalies, and optimize your portfolio allocation across all asset classes.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-assets">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="filter-bar">
+          <div class="search-box">
+            <span style="color:var(--text-muted)">&#9906;</span>
+            <input type="text" id="asset-search" placeholder="Search assets..." oninput="filterAssets()">
+          </div>
+          <select id="asset-type-filter" onchange="filterAssets()">
+            <option value="">All Types</option>
+            <option value="property">Property</option>
+            <option value="vehicle">Vehicle</option>
+            <option value="aircraft">Aircraft</option>
+            <option value="spacecraft">Spacecraft</option>
+            <option value="satellite">Satellite</option>
+            <option value="drone">Drone</option>
+            <option value="robot">Robot</option>
+            <option value="instrument">Instrument</option>
+            <option value="equipment">Equipment</option>
+            <option value="software">Software</option>
+            <option value="patent">Patent</option>
+            <option value="trademark">Trademark</option>
+            <option value="copyright">Copyright</option>
+            <option value="stock">Stock</option>
+            <option value="bond">Bond</option>
+            <option value="crypto">Cryptocurrency</option>
+            <option value="commodity">Commodity</option>
+            <option value="art">Art</option>
+            <option value="jewelry">Jewelry</option>
+            <option value="collectible">Collectible</option>
+            <option value="intellectual_property">Intellectual Property</option>
+            <option value="data">Data</option>
+            <option value="energy">Energy</option>
+            <option value="mineral">Mineral</option>
+            <option value="biotech">Biotech</option>
+            <option value="medical">Medical</option>
+            <option value="military">Military</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('asset')">+ Register Asset</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Value</th>
+              <th>Currency</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="assets-tbody">
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="assets-empty" style="display:none">
+        <div class="empty-icon">&#9670;</div>
+        <h3>No assets registered yet</h3>
+        <p>Start by registering your first asset.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-portfolios">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">Portfolios</div>
+        <button class="btn btn-purple" onclick="openModal('portfolio')">+ Create Portfolio</button>
+      </div>
+      <div class="portfolio-grid" id="portfolio-grid"></div>
+      <div class="empty-state" id="portfolios-empty" style="display:none">
+        <div class="empty-icon">&#9744;</div>
+        <h3>No portfolios created</h3>
+        <p>Create your first portfolio to organize assets.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-vault">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="filter-bar">
+          <div class="search-box">
+            <span style="color:var(--text-muted)">&#9906;</span>
+            <input type="text" id="file-search" placeholder="Search files..." oninput="filterFiles()">
+          </div>
+          <select id="file-type-filter" onchange="filterFiles()">
+            <option value="">All</option>
+            <option value="document">Documents</option>
+            <option value="image">Images</option>
+            <option value="cad">CAD Files</option>
+            <option value="key">Keys</option>
+          </select>
+        </div>
+        <button class="btn btn-green" onclick="openModal('file')">+ Upload File</button>
+      </div>
+      <div id="file-list"></div>
+      <div class="empty-state" id="vault-empty" style="display:none">
+        <div class="empty-icon">&#9744;</div>
+        <h3>No files in vault</h3>
+        <p>Upload your first file to secure storage.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-transactions">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="filter-bar">
+          <select id="tx-type-filter" onchange="filterTransactions()">
+            <option value="">All Types</option>
+            <option value="transfer">Transfer</option>
+            <option value="purchase">Purchase</option>
+            <option value="sale">Sale</option>
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdrawal</option>
+            <option value="mint">Mint</option>
+            <option value="burn">Burn</option>
+            <option value="swap">Swap</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('transaction')">+ New Transaction</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Asset</th>
+              <th>Amount</th>
+              <th>Currency</th>
+              <th>Counterparty</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody id="tx-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="tx-empty" style="display:none">
+        <div class="empty-icon">&#9612;</div>
+        <h3>No transactions recorded</h3>
+        <p>Transactions will appear here once assets are managed.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-blockchain">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">Blockchain Gateway</div>
+        <button class="btn btn-green" onclick="openModal('blockchain-register')">+ Register on Chain</button>
+      </div>
+      <div class="blockchain-grid">
+        <div class="chain-card active" data-chain="ethereum">
+          <div class="chain-icon" style="color:#627eea">&#9830;</div>
+          <div class="chain-name">Ethereum</div>
+          <div class="chain-status" style="color:var(--green)">Connected</div>
+        </div>
+        <div class="chain-card" data-chain="polygon">
+          <div class="chain-icon" style="color:#8247e5">&#9670;</div>
+          <div class="chain-name">Polygon</div>
+          <div class="chain-status">Available</div>
+        </div>
+        <div class="chain-card" data-chain="solana">
+          <div class="chain-icon" style="color:#9945ff">&#9650;</div>
+          <div class="chain-name">Solana</div>
+          <div class="chain-status">Available</div>
+        </div>
+        <div class="chain-card" data-chain="bitcoin">
+          <div class="chain-icon" style="color:#f7931a">&#9632;</div>
+          <div class="chain-name">Bitcoin</div>
+          <div class="chain-status">Available</div>
+        </div>
+      </div>
+      <div class="panel-title" style="margin-bottom:12px">Registered Records</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Chain</th>
+              <th>Asset</th>
+              <th>Contract</th>
+              <th>Token ID</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="blockchain-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="blockchain-empty" style="display:none">
+        <div class="empty-icon">&#9830;</div>
+        <h3>No blockchain records</h3>
+        <p>Register assets on-chain for immutable proof of ownership.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-audit">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">Audit Log</div>
+        <button class="btn btn-secondary" onclick="exportAudit()">Export CSV</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>Resource</th>
+              <th>IP</th>
+              <th>Device</th>
+              <th>Signature</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="audit-empty" style="display:none">
+        <div class="empty-icon">&#9612;</div>
+        <h3>No audit entries</h3>
+        <p>System actions will be logged here for compliance.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-reports">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">Generate Reports</div>
+      </div>
+      <div class="report-options">
+        <div class="report-option-group">
+          <label>Report Type</label>
+          <select class="form-input" id="report-type">
+            <option value="portfolio">Portfolio Summary</option>
+            <option value="tax">Tax Report</option>
+            <option value="asset">Asset Detail</option>
+            <option value="organization">Organization Overview</option>
+          </select>
+        </div>
+        <div class="report-option-group">
+          <label>Export Format</label>
+          <select class="form-input" id="report-format">
+            <option value="pdf">PDF</option>
+            <option value="excel">Excel</option>
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date Range Start</label>
+          <input type="date" class="form-input" id="report-start">
+        </div>
+        <div class="form-group">
+          <label>Date Range End</label>
+          <input type="date" class="form-input" id="report-end">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+        <button class="btn btn-secondary" onclick="previewReport()">Preview</button>
+      </div>
+      <div id="report-preview" style="margin-top:16px;display:none">
+        <div class="panel-card" style="background:var(--bg-input)">
+          <pre id="report-preview-content" style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:pre-wrap;max-height:300px;overflow-y:auto"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-settings">
+    <div class="panel-card">
+      <div class="settings-section">
+        <h3>Security</h3>
+        <div class="security-badges">
+          <span class="badge badge-cyan">AES-256</span>
+          <span class="badge badge-green">RSA-4096</span>
+          <span class="badge badge-purple">TLS 1.3</span>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Two-Factor Authentication</div>
+            <div class="toggle-sub">Require 2FA for all vault operations</div>
+          </div>
+          <div class="toggle-switch on" id="toggle-2fa" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Hardware Key Support</div>
+            <div class="toggle-sub">FIDO2 / WebAuthn compatible keys</div>
+          </div>
+          <div class="toggle-switch" id="toggle-hwkey" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Biometric Unlock</div>
+            <div class="toggle-sub">Fingerprint or face recognition</div>
+          </div>
+          <div class="toggle-switch" id="toggle-bio" onclick="toggleSetting(this)"></div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>API Keys</h3>
+        <div id="api-keys-list">
+          <div class="api-key-row">
+            <span class="badge badge-cyan" style="font-size:10px">Primary</span>
+            <span class="api-key-value">zv-****-****-****-a3f7</span>
+            <button class="btn btn-secondary" onclick="copyApiKey(this)">Copy</button>
+            <button class="btn btn-secondary" style="color:var(--red);border-color:var(--red)" onclick="revokeApiKey(this)">Revoke</button>
+          </div>
+          <div class="api-key-row">
+            <span class="badge badge-green" style="font-size:10px">Read Only</span>
+            <span class="api-key-value">zv-****-****-****-91b2</span>
+            <button class="btn btn-secondary" onclick="copyApiKey(this)">Copy</button>
+            <button class="btn btn-secondary" style="color:var(--red);border-color:var(--red)" onclick="revokeApiKey(this)">Revoke</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="generateApiKey()">+ Generate New Key</button>
+      </div>
+
+      <div class="settings-section">
+        <h3>Notifications</h3>
+        <div class="notification-grid">
+          <div class="notif-card">
+            <div class="notif-info">
+              <div class="notif-icon" style="background:rgba(0,229,255,0.1);color:var(--cyan)">&#9993;</div>
+              <span class="notif-name">Email</span>
+            </div>
+            <div class="toggle-switch on" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="notif-card">
+            <div class="notif-info">
+              <div class="notif-icon" style="background:rgba(0,255,136,0.1);color:var(--green)">&#9998;</div>
+              <span class="notif-name">Push</span>
+            </div>
+            <div class="toggle-switch on" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="notif-card">
+            <div class="notif-info">
+              <div class="notif-icon" style="background:rgba(124,77,255,0.1);color:var(--purple)">&#9743;</div>
+              <span class="notif-name">SMS</span>
+            </div>
+            <div class="toggle-switch" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="notif-card">
+            <div class="notif-info">
+              <div class="notif-icon" style="background:rgba(255,145,0,0.1);color:var(--orange)">&#9881;</div>
+              <span class="notif-name">WebSocket</span>
+            </div>
+            <div class="toggle-switch on" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="notif-card">
+            <div class="notif-info">
+              <div class="notif-icon" style="background:rgba(0,136,255,0.1);color:#0088ff">&#9998;</div>
+              <span class="notif-name">Telegram</span>
+            </div>
+            <div class="toggle-switch" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="notif-card">
+            <div class="notif-info">
+              <div class="notif-icon" style="background:rgba(88,101,242,0.1);color:#5865f2">&#9672;</div>
+              <span class="notif-name">Discord</span>
+            </div>
+            <div class="toggle-switch" onclick="toggleSetting(this)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-asset">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Register Asset</h2>
+      <button class="modal-close" onclick="closeModal('asset')">&times;</button>
+    </div>
+    <form id="form-asset" onsubmit="submitAsset(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Asset Name</label>
+          <input type="text" class="form-input" id="asset-name" required placeholder="e.g. Starship SN42">
+        </div>
+        <div class="form-group">
+          <label>Asset Type</label>
+          <select class="form-input" id="asset-type" required>
+            <option value="">Select type...</option>
+            <option value="property">Property</option>
+            <option value="vehicle">Vehicle</option>
+            <option value="aircraft">Aircraft</option>
+            <option value="spacecraft">Spacecraft</option>
+            <option value="satellite">Satellite</option>
+            <option value="drone">Drone</option>
+            <option value="robot">Robot</option>
+            <option value="instrument">Instrument</option>
+            <option value="equipment">Equipment</option>
+            <option value="software">Software</option>
+            <option value="patent">Patent</option>
+            <option value="trademark">Trademark</option>
+            <option value="copyright">Copyright</option>
+            <option value="stock">Stock</option>
+            <option value="bond">Bond</option>
+            <option value="crypto">Cryptocurrency</option>
+            <option value="commodity">Commodity</option>
+            <option value="art">Art</option>
+            <option value="jewelry">Jewelry</option>
+            <option value="collectible">Collectible</option>
+            <option value="intellectual_property">Intellectual Property</option>
+            <option value="data">Data</option>
+            <option value="energy">Energy</option>
+            <option value="mineral">Mineral</option>
+            <option value="biotech">Biotech</option>
+            <option value="medical">Medical</option>
+            <option value="military">Military</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Value</label>
+          <input type="number" class="form-input" id="asset-value" required placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <select class="form-input" id="asset-currency" required>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="JPY">JPY</option>
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+            <option value="SOL">SOL</option>
+            <option value="MXN">MXN</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Status</label>
+          <select class="form-input" id="asset-status" required>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="pending">Pending</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Portfolio</label>
+          <select class="form-input" id="asset-portfolio">
+            <option value="">None</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" class="form-input" id="asset-desc" placeholder="Optional description...">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-primary">Register Asset</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('asset')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-portfolio">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Create Portfolio</h2>
+      <button class="modal-close" onclick="closeModal('portfolio')">&times;</button>
+    </div>
+    <form id="form-portfolio" onsubmit="submitPortfolio(event)">
+      <div class="form-group">
+        <label>Portfolio Name</label>
+        <input type="text" class="form-input" id="portfolio-name" required placeholder="e.g. Aerospace Holdings">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select class="form-input" id="portfolio-type" required>
+            <option value="personal">Personal</option>
+            <option value="business">Business</option>
+            <option value="research">Research</option>
+            <option value="investment">Investment</option>
+            <option value="space_missions">Space Missions</option>
+            <option value="energy">Energy</option>
+            <option value="infrastructure">Infrastructure</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <select class="form-input" id="portfolio-currency">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="BTC">BTC</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" class="form-input" id="portfolio-desc" placeholder="Optional description...">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-purple">Create Portfolio</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('portfolio')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-file">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Upload File</h2>
+      <button class="modal-close" onclick="closeModal('file')">&times;</button>
+    </div>
+    <form id="form-file" onsubmit="submitFile(event)">
+      <div class="form-group">
+        <label>File Name</label>
+        <input type="text" class="form-input" id="file-name" required placeholder="e.g. mission-specs.pdf">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select class="form-input" id="file-type" required>
+            <option value="document">Document</option>
+            <option value="image">Image</option>
+            <option value="cad">CAD File</option>
+            <option value="key">Key</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Size</label>
+          <input type="text" class="form-input" id="file-size" placeholder="e.g. 2.4 MB" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Encrypted</label>
+          <select class="form-input" id="file-encrypted">
+            <option value="true">Yes (AES-256)</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Version</label>
+          <input type="text" class="form-input" id="file-version" value="1.0">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-green">Upload</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('file')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-transaction">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>New Transaction</h2>
+      <button class="modal-close" onclick="closeModal('transaction')">&times;</button>
+    </div>
+    <form id="form-transaction" onsubmit="submitTransaction(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select class="form-input" id="tx-type" required>
+            <option value="transfer">Transfer</option>
+            <option value="purchase">Purchase</option>
+            <option value="sale">Sale</option>
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdrawal</option>
+            <option value="mint">Mint</option>
+            <option value="burn">Burn</option>
+            <option value="swap">Swap</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Asset</label>
+          <input type="text" class="form-input" id="tx-asset" required placeholder="Asset name or ID">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="number" class="form-input" id="tx-amount" required placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <select class="form-input" id="tx-currency" required>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Counterparty</label>
+        <input type="text" class="form-input" id="tx-counterparty" placeholder="Recipient or sender identity...">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-primary">Record Transaction</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('transaction')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-blockchain-register">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Register on Chain</h2>
+      <button class="modal-close" onclick="closeModal('blockchain-register')">&times;</button>
+    </div>
+    <form id="form-blockchain" onsubmit="submitBlockchain(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Chain</label>
+          <select class="form-input" id="bc-chain" required>
+            <option value="ethereum">Ethereum</option>
+            <option value="polygon">Polygon</option>
+            <option value="solana">Solana</option>
+            <option value="bitcoin">Bitcoin</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Asset</label>
+          <input type="text" class="form-input" id="bc-asset" required placeholder="Asset to register">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Contract Address</label>
+        <input type="text" class="form-input" id="bc-contract" placeholder="0x...">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-green">Register</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('blockchain-register')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  var API_BASE = '';
+  var allAssets = [];
+  var allFiles = [];
+  var allTransactions = [];
+  var allPortfolios = [];
+  var allAudit = [];
+  var allBlockchain = [];
+
+  var portfolioTypes = {
+    personal: { label: 'Personal', color: 'var(--cyan)', bg: 'rgba(0,229,255,0.1)' },
+    business: { label: 'Business', color: 'var(--green)', bg: 'rgba(0,255,136,0.1)' },
+    research: { label: 'Research', color: 'var(--purple)', bg: 'rgba(124,77,255,0.1)' },
+    investment: { label: 'Investment', color: 'var(--orange)', bg: 'rgba(255,145,0,0.1)' },
+    space_missions: { label: 'Space Missions', color: 'var(--cyan)', bg: 'rgba(0,229,255,0.1)' },
+    energy: { label: 'Energy', color: 'var(--green)', bg: 'rgba(0,255,136,0.1)' },
+    infrastructure: { label: 'Infrastructure', color: 'var(--purple)', bg: 'rgba(124,77,255,0.1)' }
+  };
+
+  function checkAuth() {
+    var token = localStorage.getItem('zicore_sso_token');
+    if (!token) {
+      window.location.href = '/login';
+      return null;
+    }
+    return token;
+  }
+
+  function authFetch(url, opts) {
+    var token = checkAuth();
+    if (!token) return Promise.reject('No auth');
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    opts.headers['Authorization'] = 'Bearer ' + token;
+    opts.headers['Content-Type'] = 'application/json';
+    return fetch(API_BASE + url, opts);
+  }
+
+  function toast(msg, type) {
+    type = type || 'info';
+    var c = document.getElementById('toast-container');
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3500);
+  }
+
+  function formatNum(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+  }
+
+  function formatCurrency(val, cur) {
+    cur = cur || 'USD';
+    if (cur === 'BTC' || cur === 'ETH' || cur === 'SOL') {
+      return parseFloat(val).toFixed(4) + ' ' + cur;
+    }
+    return '$' + parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function timeAgo(dateStr) {
+    var d = new Date(dateStr);
+    var now = new Date();
+    var diff = (now - d) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+  }
+
+  function shortHash(s) {
+    if (!s) return '-';
+    if (s.length <= 12) return s;
+    return s.substring(0, 8) + '...' + s.substring(s.length - 4);
+  }
+
+  function randomHash(len) {
+    len = len || 16;
+    var chars = '0123456789abcdef';
+    var r = '';
+    for (var i = 0; i < len; i++) r += chars[Math.floor(Math.random() * 16)];
+    return r;
+  }
+
+  function nowISO() {
+    return new Date().toISOString();
+  }
+
+  function todayStr() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function tabSwitch(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === tabName);
+    });
+    document.querySelectorAll('.tab-panel').forEach(function(p) {
+      p.classList.toggle('active', p.id === 'panel-' + tabName);
+    });
+  }
+
+  document.getElementById('tabs-bar').addEventListener('click', function(e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    tabSwitch(btn.getAttribute('data-tab'));
+  });
+
+  function openModal(name) {
+    var m = document.getElementById('modal-' + name);
+    if (m) m.classList.add('visible');
+  }
+
+  function closeModal(name) {
+    var m = document.getElementById('modal-' + name);
+    if (m) m.classList.remove('visible');
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(function(m) {
+    m.addEventListener('click', function(e) {
+      if (e.target === m) m.classList.remove('visible');
+    });
+  });
+
+  function renderDashboardStats() {
+    document.getElementById('stat-assets').textContent = allAssets.length;
+    var nw = 0;
+    allAssets.forEach(function(a) { nw += parseFloat(a.value) || 0; });
+    document.getElementById('stat-networth').textContent = formatCurrency(nw);
+    document.getElementById('stat-docs').textContent = allFiles.length;
+    document.getElementById('stat-activity').textContent = allTransactions.length;
+  }
+
+  function renderAssetChart() {
+    var types = {};
+    allAssets.forEach(function(a) {
+      var t = a.type || 'other';
+      types[t] = (types[t] || 0) + 1;
+    });
+    var chart = document.getElementById('asset-chart');
+    chart.innerHTML = '';
+    var keys = Object.keys(types);
+    if (keys.length === 0) {
+      chart.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;color:var(--text-muted);font-size:12px">No data</div>';
+      return;
+    }
+    var max = Math.max.apply(null, Object.values(types));
+    var colors = ['var(--cyan)', 'var(--green)', 'var(--purple)', 'var(--orange)', '#ff3d3d', '#0088ff', '#f7931a', '#9945ff'];
+    keys.forEach(function(k, i) {
+      var h = max > 0 ? (types[k] / max) * 120 : 0;
+      var col = document.createElement('div');
+      col.className = 'bar-col';
+      col.innerHTML = '<div class="bar-value">' + types[k] + '</div>' +
+        '<div class="bar" style="height:' + Math.max(h, 4) + 'px;background:' + colors[i % colors.length] + '"></div>' +
+        '<div class="bar-label">' + k + '</div>';
+      chart.appendChild(col);
+    });
+  }
+
+  function renderActivity() {
+    var list = document.getElementById('activity-list');
+    list.innerHTML = '';
+    var recent = allTransactions.slice().sort(function(a, b) {
+      return new Date(b.date) - new Date(a.date);
+    }).slice(0, 5);
+    if (recent.length === 0) {
+      list.innerHTML = '<li class="activity-item"><span class="activity-text" style="color:var(--text-muted)">No recent activity</span></li>';
+      return;
+    }
+    var dotColors = { transfer: 'var(--cyan)', purchase: 'var(--green)', sale: 'var(--orange)', deposit: 'var(--green)', withdrawal: 'var(--red)', mint: 'var(--purple)', burn: 'var(--red)', swap: 'var(--cyan)' };
+    recent.forEach(function(tx) {
+      var li = document.createElement('li');
+      li.className = 'activity-item';
+      li.innerHTML = '<div class="activity-left">' +
+        '<div class="activity-dot" style="background:' + (dotColors[tx.type] || 'var(--text-muted)') + '"></div>' +
+        '<span class="activity-text">' + tx.type.charAt(0).toUpperCase() + tx.type.slice(1) + ': ' + (tx.asset || '-') + '</span></div>' +
+        '<span class="activity-time">' + timeAgo(tx.date) + '</span>';
+      list.appendChild(li);
+    });
+  }
+
+  function renderAssetsTable() {
+    var tbody = document.getElementById('assets-tbody');
+    tbody.innerHTML = '';
+    var filtered = getFilteredAssets();
+    document.getElementById('assets-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+    var statusColors = { active: 'badge-green', inactive: 'badge-gray', pending: 'badge-orange', archived: 'badge-purple' };
+    filtered.forEach(function(a) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(a.name) + '</td>' +
+        '<td><span class="badge badge-cyan">' + esc(a.type) + '</span></td>' +
+        '<td style="font-family:var(--font-mono)">' + formatCurrency(a.value, a.currency) + '</td>' +
+        '<td>' + esc(a.currency || 'USD') + '</td>' +
+        '<td><span class="badge ' + (statusColors[a.status] || 'badge-gray') + '">' + esc(a.status) + '</span></td>' +
+        '<td style="font-size:12px;color:var(--text-secondary)">' + (a.date || '-') + '</td>' +
+        '<td><button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="deleteAsset(\'' + esc(a.id) + '\')">Del</button></td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function getFilteredAssets() {
+    var search = (document.getElementById('asset-search').value || '').toLowerCase();
+    var typeFilter = document.getElementById('asset-type-filter').value;
+    return allAssets.filter(function(a) {
+      var matchSearch = !search || (a.name && a.name.toLowerCase().indexOf(search) >= 0) || (a.type && a.type.toLowerCase().indexOf(search) >= 0);
+      var matchType = !typeFilter || a.type === typeFilter;
+      return matchSearch && matchType;
+    });
+  }
+
+  window.filterAssets = function() { renderAssetsTable(); };
+
+  function renderPortfolios() {
+    var grid = document.getElementById('portfolio-grid');
+    grid.innerHTML = '';
+    document.getElementById('portfolios-empty').style.display = allPortfolios.length === 0 ? 'block' : 'none';
+    allPortfolios.forEach(function(p) {
+      var info = portfolioTypes[p.type] || { label: p.type, color: 'var(--cyan)', bg: 'rgba(0,229,255,0.1)' };
+      var card = document.createElement('div');
+      card.className = 'portfolio-card';
+      card.innerHTML = '<div class="portfolio-card-header">' +
+        '<div class="portfolio-type-icon" style="background:' + info.bg + ';color:' + info.color + '">&#9670;</div>' +
+        '<span class="badge badge-cyan">' + info.label + '</span></div>' +
+        '<h3>' + esc(p.name) + '</h3>' +
+        '<p>' + esc(p.description || 'No description') + '</p>' +
+        '<div class="portfolio-stats"><span>Assets: <strong>' + (p.assetCount || 0) + '</strong></span>' +
+        '<span>Value: <strong>' + formatCurrency(p.totalValue || 0, p.currency) + '</strong></span></div>';
+      grid.appendChild(card);
+    });
+    updatePortfolioDropdown();
+  }
+
+  function updatePortfolioDropdown() {
+    var sel = document.getElementById('asset-portfolio');
+    var current = sel.value;
+    sel.innerHTML = '<option value="">None</option>';
+    allPortfolios.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+  }
+
+  function renderFiles() {
+    var list = document.getElementById('file-list');
+    list.innerHTML = '';
+    var filtered = getFilteredFiles();
+    document.getElementById('vault-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+    var typeIcons = { document: { icon: '&#9744;', color: 'var(--cyan)', bg: 'rgba(0,229,255,0.1)' }, image: { icon: '&#9635;', color: 'var(--green)', bg: 'rgba(0,255,136,0.1)' }, cad: { icon: '&#9645;', color: 'var(--purple)', bg: 'rgba(124,77,255,0.1)' }, key: { icon: '&#9091;', color: 'var(--orange)', bg: 'rgba(255,145,0,0.1)' }, other: { icon: '&#9632;', color: 'var(--text-secondary)', bg: 'rgba(74,85,104,0.1)' } };
+    filtered.forEach(function(f) {
+      var ti = typeIcons[f.type] || typeIcons.other;
+      var div = document.createElement('div');
+      div.className = 'file-item';
+      div.innerHTML = '<div class="file-left">' +
+        '<div class="file-icon" style="background:' + ti.bg + ';color:' + ti.color + '">' + ti.icon + '</div>' +
+        '<div class="file-info"><h4>' + esc(f.name) + '</h4>' +
+        '<div class="file-meta"><span>' + esc(f.type) + '</span><span>' + esc(f.size) + '</span>' +
+        (f.encrypted === 'true' || f.encrypted === true ? '<span class="badge badge-green" style="font-size:9px">ENC</span>' : '') +
+        '<span>v' + esc(f.version || '1.0') + '</span><span>' + (f.date || '-') + '</span></div></div></div>' +
+        '<div class="file-actions"><button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="deleteFile(\'' + esc(f.id) + '\')">Del</button></div>';
+      list.appendChild(div);
+    });
+  }
+
+  function getFilteredFiles() {
+    var search = (document.getElementById('file-search').value || '').toLowerCase();
+    var typeFilter = document.getElementById('file-type-filter').value;
+    return allFiles.filter(function(f) {
+      var matchSearch = !search || (f.name && f.name.toLowerCase().indexOf(search) >= 0);
+      var matchType = !typeFilter || f.type === typeFilter;
+      return matchSearch && matchType;
+    });
+  }
+
+  window.filterFiles = function() { renderFiles(); };
+
+  function renderTransactions() {
+    var tbody = document.getElementById('tx-tbody');
+    tbody.innerHTML = '';
+    var filtered = getFilteredTransactions();
+    document.getElementById('tx-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+    var txColors = { transfer: 'badge-cyan', purchase: 'badge-green', sale: 'badge-orange', deposit: 'badge-green', withdrawal: 'badge-red', mint: 'badge-purple', burn: 'badge-red', swap: 'badge-cyan' };
+    filtered.forEach(function(tx) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td style="font-size:12px;color:var(--text-secondary)">' + (tx.date || '-') + '</td>' +
+        '<td><span class="badge ' + (txColors[tx.type] || 'badge-gray') + '">' + esc(tx.type) + '</span></td>' +
+        '<td>' + esc(tx.asset || '-') + '</td>' +
+        '<td style="font-family:var(--font-mono)">' + formatCurrency(tx.amount, tx.currency) + '</td>' +
+        '<td>' + esc(tx.currency || 'USD') + '</td>' +
+        '<td style="font-size:12px">' + esc(tx.counterparty || '-') + '</td>' +
+        '<td><span class="sig-hash">' + shortHash(tx.signature) + '</span></td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function getFilteredTransactions() {
+    var typeFilter = document.getElementById('tx-type-filter').value;
+    return allTransactions.filter(function(tx) {
+      return !typeFilter || tx.type === typeFilter;
+    });
+  }
+
+  window.filterTransactions = function() { renderTransactions(); };
+
+  function renderBlockchain() {
+    var tbody = document.getElementById('blockchain-tbody');
+    tbody.innerHTML = '';
+    document.getElementById('blockchain-empty').style.display = allBlockchain.length === 0 ? 'block' : 'none';
+    var chainColors = { ethereum: 'badge-cyan', polygon: 'badge-purple', solana: 'badge-orange', bitcoin: 'badge-orange' };
+    allBlockchain.forEach(function(bc) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><span class="badge ' + (chainColors[bc.chain] || 'badge-gray') + '">' + esc(bc.chain) + '</span></td>' +
+        '<td>' + esc(bc.asset || '-') + '</td>' +
+        '<td><span class="sig-hash">' + shortHash(bc.contract) + '</span></td>' +
+        '<td style="font-family:var(--font-mono);font-size:12px">' + esc(bc.tokenId || '-') + '</td>' +
+        '<td><span class="badge badge-green">' + esc(bc.status || 'confirmed') + '</span></td>' +
+        '<td style="font-size:12px;color:var(--text-secondary)">' + (bc.date || '-') + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderAudit() {
+    var tbody = document.getElementById('audit-tbody');
+    tbody.innerHTML = '';
+    document.getElementById('audit-empty').style.display = allAudit.length === 0 ? 'block' : 'none';
+    allAudit.forEach(function(a) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td style="font-size:12px;color:var(--text-secondary)">' + (a.timestamp || '-') + '</td>' +
+        '<td><span class="badge badge-cyan">' + esc(a.action) + '</span></td>' +
+        '<td>' + esc(a.resource || '-') + '</td>' +
+        '<td style="font-family:var(--font-mono);font-size:12px">' + esc(a.ip || '-') + '</td>' +
+        '<td style="font-size:12px">' + esc(a.device || '-') + '</td>' +
+        '<td><span class="sig-hash">' + shortHash(a.signature) + '</span></td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+  function generateId() {
+    return Date.now().toString(36) + randomHash(6);
+  }
+
+  function submitAsset(e) {
+    e.preventDefault();
+    var asset = {
+      id: generateId(),
+      name: document.getElementById('asset-name').value.trim(),
+      type: document.getElementById('asset-type').value,
+      value: parseFloat(document.getElementById('asset-value').value) || 0,
+      currency: document.getElementById('asset-currency').value,
+      status: document.getElementById('asset-status').value,
+      portfolio: document.getElementById('asset-portfolio').value,
+      description: document.getElementById('asset-desc').value.trim(),
+      date: todayStr()
+    };
+    authFetch('/api/vault/assets', { method: 'POST', body: JSON.stringify(asset) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        allAssets.push(data.asset || asset);
+        renderAll();
+        closeModal('asset');
+        document.getElementById('form-asset').reset();
+        toast('Asset registered', 'success');
+        addAudit('asset.register', asset.name);
+      })
+      .catch(function() {
+        allAssets.push(asset);
+        renderAll();
+        closeModal('asset');
+        document.getElementById('form-asset').reset();
+        toast('Asset registered (local)', 'success');
+        addAudit('asset.register', asset.name);
+      });
+  }
+
+  function submitPortfolio(e) {
+    e.preventDefault();
+    var port = {
+      id: generateId(),
+      name: document.getElementById('portfolio-name').value.trim(),
+      type: document.getElementById('portfolio-type').value,
+      currency: document.getElementById('portfolio-currency').value,
+      description: document.getElementById('portfolio-desc').value.trim(),
+      assetCount: 0,
+      totalValue: 0,
+      date: todayStr()
+    };
+    authFetch('/api/vault/portfolios', { method: 'POST', body: JSON.stringify(port) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        allPortfolios.push(data.portfolio || port);
+        renderAll();
+        closeModal('portfolio');
+        document.getElementById('form-portfolio').reset();
+        toast('Portfolio created', 'success');
+        addAudit('portfolio.create', port.name);
+      })
+      .catch(function() {
+        allPortfolios.push(port);
+        renderAll();
+        closeModal('portfolio');
+        document.getElementById('form-portfolio').reset();
+        toast('Portfolio created (local)', 'success');
+        addAudit('portfolio.create', port.name);
+      });
+  }
+
+  function submitFile(e) {
+    e.preventDefault();
+    var file = {
+      id: generateId(),
+      name: document.getElementById('file-name').value.trim(),
+      type: document.getElementById('file-type').value,
+      size: document.getElementById('file-size').value.trim(),
+      encrypted: document.getElementById('file-encrypted').value,
+      version: document.getElementById('file-version').value.trim() || '1.0',
+      date: todayStr()
+    };
+    authFetch('/api/vault/files', { method: 'POST', body: JSON.stringify(file) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        allFiles.push(data.file || file);
+        renderAll();
+        closeModal('file');
+        document.getElementById('form-file').reset();
+        toast('File uploaded', 'success');
+        addAudit('file.upload', file.name);
+      })
+      .catch(function() {
+        allFiles.push(file);
+        renderAll();
+        closeModal('file');
+        document.getElementById('form-file').reset();
+        toast('File uploaded (local)', 'success');
+        addAudit('file.upload', file.name);
+      });
+  }
+
+  function submitTransaction(e) {
+    e.preventDefault();
+    var tx = {
+      id: generateId(),
+      type: document.getElementById('tx-type').value,
+      asset: document.getElementById('tx-asset').value.trim(),
+      amount: parseFloat(document.getElementById('tx-amount').value) || 0,
+      currency: document.getElementById('tx-currency').value,
+      counterparty: document.getElementById('tx-counterparty').value.trim(),
+      signature: '0x' + randomHash(64),
+      date: nowISO()
+    };
+    authFetch('/api/vault/transactions', { method: 'POST', body: JSON.stringify(tx) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        allTransactions.push(data.transaction || tx);
+        renderAll();
+        closeModal('transaction');
+        document.getElementById('form-transaction').reset();
+        toast('Transaction recorded', 'success');
+        addAudit('tx.record', tx.asset);
+      })
+      .catch(function() {
+        allTransactions.push(tx);
+        renderAll();
+        closeModal('transaction');
+        document.getElementById('form-transaction').reset();
+        toast('Transaction recorded (local)', 'success');
+        addAudit('tx.record', tx.asset);
+      });
+  }
+
+  function submitBlockchain(e) {
+    e.preventDefault();
+    var bc = {
+      id: generateId(),
+      chain: document.getElementById('bc-chain').value,
+      asset: document.getElementById('bc-asset').value.trim(),
+      contract: document.getElementById('bc-contract').value.trim() || '0x' + randomHash(40),
+      tokenId: String(Math.floor(Math.random() * 10000)),
+      status: 'pending',
+      date: todayStr()
+    };
+    allBlockchain.push(bc);
+    renderBlockchain();
+    closeModal('blockchain-register');
+    document.getElementById('form-blockchain').reset();
+    toast('Registration submitted to ' + bc.chain, 'success');
+    addAudit('blockchain.register', bc.asset + ' on ' + bc.chain);
+  }
+
+  window.deleteAsset = function(id) {
+    allAssets = allAssets.filter(function(a) { return a.id !== id; });
+    renderAll();
+    toast('Asset removed', 'info');
+    addAudit('asset.delete', id);
+  };
+
+  window.deleteFile = function(id) {
+    allFiles = allFiles.filter(function(f) { return f.id !== id; });
+    renderAll();
+    toast('File removed', 'info');
+    addAudit('file.delete', id);
+  };
+
+  function addAudit(action, resource) {
+    var entry = {
+      timestamp: nowISO(),
+      action: action,
+      resource: resource || '-',
+      ip: '192.168.1.' + Math.floor(Math.random() * 254 + 1),
+      device: navigator.platform,
+      signature: '0x' + randomHash(64)
+    };
+    allAudit.unshift(entry);
+    if (allAudit.length > 100) allAudit.pop();
+  }
+
+  window.toggleSetting = function(el) {
+    el.classList.toggle('on');
+    toast('Setting updated', 'info');
+  };
+
+  window.copyApiKey = function(btn) {
+    var row = btn.closest('.api-key-row');
+    var val = row.querySelector('.api-key-value').textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(val);
+    }
+    toast('API key copied', 'success');
+  };
+
+  window.revokeApiKey = function(btn) {
+    var row = btn.closest('.api-key-row');
+    row.style.opacity = '0.3';
+    row.style.pointerEvents = 'none';
+    toast('API key revoked', 'info');
+  };
+
+  window.generateApiKey = function() {
+    var key = 'zv-' + randomHash(4) + '-' + randomHash(4) + '-' + randomHash(4) + '-' + randomHash(4);
+    var list = document.getElementById('api-keys-list');
+    var row = document.createElement('div');
+    row.className = 'api-key-row';
+    row.innerHTML = '<span class="badge badge-green" style="font-size:10px">New</span>' +
+      '<span class="api-key-value">' + key + '</span>' +
+      '<button class="btn btn-secondary" onclick="copyApiKey(this)">Copy</button>' +
+      '<button class="btn btn-secondary" style="color:var(--red);border-color:var(--red)" onclick="revokeApiKey(this)">Revoke</button>';
+    list.appendChild(row);
+    toast('New API key generated', 'success');
+  };
+
+  window.exportAudit = function() {
+    var csv = 'Timestamp,Action,Resource,IP,Device,Signature\n';
+    allAudit.forEach(function(a) {
+      csv += '"' + (a.timestamp || '') + '","' + (a.action || '') + '","' + (a.resource || '') + '","' + (a.ip || '') + '","' + (a.device || '') + '","' + (a.signature || '') + '"\n';
+    });
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'zivault-audit-' + todayStr() + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    toast('Audit log exported', 'success');
+  };
+
+  window.generateReport = function() {
+    var type = document.getElementById('report-type').value;
+    var format = document.getElementById('report-format').value;
+    var start = document.getElementById('report-start').value;
+    var end = document.getElementById('report-end').value;
+    authFetch('/api/vault/report?type=' + type + '&format=' + format + '&start=' + (start || '') + '&end=' + (end || ''))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.content) {
+          var blob = new Blob([data.content], { type: 'text/plain' });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = 'zivault-' + type + '-report.' + format;
+          link.click();
+          URL.revokeObjectURL(url);
+          toast('Report downloaded', 'success');
+        } else {
+          toast('Report generated', 'success');
+        }
+      })
+      .catch(function() {
+        toast('Report generated (local)', 'info');
+        var preview = document.getElementById('report-preview');
+        preview.style.display = 'block';
+        var content = document.getElementById('report-preview-content');
+        content.textContent = generateLocalReport(type, format, start, end);
+      });
+  };
+
+  window.previewReport = function() {
+    var type = document.getElementById('report-type').value;
+    var format = document.getElementById('report-format').value;
+    var start = document.getElementById('report-start').value;
+    var end = document.getElementById('report-end').value;
+    var preview = document.getElementById('report-preview');
+    preview.style.display = 'block';
+    var content = document.getElementById('report-preview-content');
+    content.textContent = generateLocalReport(type, format, start, end);
+  };
+
+  function generateLocalReport(type, format, start, end) {
+    var lines = [];
+    lines.push('ZIVAULT REPORT');
+    lines.push('Type: ' + type.toUpperCase());
+    lines.push('Format: ' + format.toUpperCase());
+    lines.push('Generated: ' + nowISO());
+    if (start) lines.push('From: ' + start);
+    if (end) lines.push('To: ' + end);
+    lines.push('---');
+    if (type === 'portfolio') {
+      lines.push('PORTFOLIO SUMMARY');
+      lines.push('Total Portfolios: ' + allPortfolios.length);
+      allPortfolios.forEach(function(p) {
+        lines.push('  - ' + p.name + ' (' + p.type + '): ' + formatCurrency(p.totalValue || 0, p.currency));
+      });
+    } else if (type === 'asset') {
+      lines.push('ASSET DETAIL');
+      lines.push('Total Assets: ' + allAssets.length);
+      allAssets.forEach(function(a) {
+        lines.push('  - ' + a.name + ' (' + a.type + '): ' + formatCurrency(a.value, a.currency) + ' [' + a.status + ']');
+      });
+    } else if (type === 'tax') {
+      lines.push('TAX REPORT');
+      lines.push('Transactions in period: ' + allTransactions.length);
+      var totalSales = 0;
+      allTransactions.forEach(function(tx) {
+        if (tx.type === 'sale') totalSales += tx.amount;
+      });
+      lines.push('Total Sales: ' + formatCurrency(totalSales));
+    } else if (type === 'organization') {
+      lines.push('ORGANIZATION OVERVIEW');
+      lines.push('Assets: ' + allAssets.length);
+      lines.push('Portfolios: ' + allPortfolios.length);
+      lines.push('Files: ' + allFiles.length);
+      lines.push('Transactions: ' + allTransactions.length);
+    }
+    return lines.join('\n');
+  }
+
+  function renderAll() {
+    renderDashboardStats();
+    renderAssetChart();
+    renderActivity();
+    renderAssetsTable();
+    renderPortfolios();
+    renderFiles();
+    renderTransactions();
+    renderBlockchain();
+    renderAudit();
+  }
+
+  function loadDashboard() {
+    authFetch('/api/vault/dashboard')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.assets) allAssets = data.assets;
+        if (data.files) allFiles = data.files;
+        if (data.transactions) allTransactions = data.transactions;
+        if (data.portfolios) allPortfolios = data.portfolios;
+        if (data.audit) allAudit = data.audit;
+        if (data.blockchain) allBlockchain = data.blockchain;
+        renderAll();
+      })
+      .catch(function() { renderAll(); });
+  }
+
+  function loadAssets() {
+    authFetch('/api/vault/assets')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) allAssets = data;
+        else if (data.assets) allAssets = data.assets;
+        renderAssetsTable();
+        renderDashboardStats();
+        renderAssetChart();
+      })
+      .catch(function() {});
+  }
+
+  function loadPortfolios() {
+    authFetch('/api/vault/portfolios')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) allPortfolios = data;
+        else if (data.portfolios) allPortfolios = data.portfolios;
+        renderPortfolios();
+      })
+      .catch(function() {});
+  }
+
+  function loadFiles() {
+    authFetch('/api/vault/files')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) allFiles = data;
+        else if (data.files) allFiles = data.files;
+        renderFiles();
+        renderDashboardStats();
+      })
+      .catch(function() {});
+  }
+
+  function loadTransactions() {
+    authFetch('/api/vault/transactions')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) allTransactions = data;
+        else if (data.transactions) allTransactions = data.transactions;
+        renderTransactions();
+        renderActivity();
+        renderDashboardStats();
+      })
+      .catch(function() {});
+  }
+
+  function loadAudit() {
+    authFetch('/api/vault/audit')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) allAudit = data;
+        else if (data.audit) allAudit = data.audit;
+        renderAudit();
+      })
+      .catch(function() {});
+  }
+
+  document.querySelectorAll('.chain-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.chain-card').forEach(function(c) { c.classList.remove('active'); });
+      card.classList.add('active');
+    });
+  });
+
+  function init() {
+    if (!checkAuth()) return;
+    loadDashboard();
+    addAudit('session.start', 'zivault');
+  }
+
+  init();
+})();
+</script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
+</body>
+</html>

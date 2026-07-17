@@ -696,6 +696,7 @@ class SSOAuthMiddleware:
         "/materializer",
         "/video-editor",
         "/zicore-bank",
+        "/zivault",
         "/zicore-print",
         "/ziprint",
         "/download/apk",
@@ -726,6 +727,7 @@ class SSOAuthMiddleware:
         "/display-monitor",
         "/api/vr/sessions",
         "/api/mail/admin-check",
+        "/api/vault/currencies",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -949,6 +951,11 @@ async def serve_zinemotion_mail():
 @app.get("/zicore-bank")
 async def serve_zicore_bank():
     return FileResponse(str(FRONTEND_DIR / "zicore-bank.html"))
+
+
+@app.get("/zivault")
+async def serve_zivault():
+    return FileResponse(str(FRONTEND_DIR / "zivault.html"))
 
 
 @app.get("/whitepaper")
@@ -5991,6 +5998,183 @@ async def bank_portfolio(request: Request):
             "apy": 15.0
         }
     }
+
+
+# --- ZiVault: Universal Asset Vault ---
+
+from zicore.zivault import ZiVault
+
+zivault = ZiVault()
+
+
+@app.get("/api/vault/dashboard")
+async def vault_dashboard(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "dashboard": zivault.get_dashboard(str(user_id))}
+
+
+@app.get("/api/vault/currencies")
+async def vault_currencies():
+    return {"status": "ok", "currencies": zivault.list_currencies()}
+
+
+@app.get("/api/vault/assets")
+async def vault_assets(request: Request, asset_type: str = ""):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "assets": zivault.list_assets(str(user_id), asset_type=asset_type)}
+
+
+@app.post("/api/vault/assets")
+async def vault_create_asset(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    asset = zivault.create_asset(
+        str(user_id), data.get("asset_type", "custom"), data.get("name", ""),
+        value=data.get("value"), currency=data.get("currency", "ZNT"),
+        description=data.get("description", ""),
+        metadata=data.get("metadata"), tags=data.get("tags")
+    )
+    return {"status": "ok", "asset_id": asset.get("id")}
+
+
+@app.delete("/api/vault/assets/{asset_id}")
+async def vault_delete_asset(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.audit_log(str(user_id), "delete_asset", "asset", asset_id=asset_id)
+    zivault.delete_asset(asset_id, str(user_id))
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/portfolios")
+async def vault_portfolios(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "portfolios": zivault.list_portfolios(str(user_id))}
+
+
+@app.post("/api/vault/portfolios")
+async def vault_create_portfolio(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    portfolio_id = zivault.create_portfolio(
+        str(user_id), data.get("name", ""), data.get("portfolio_type", "personal"),
+        description=data.get("description", "")
+    )
+    return {"status": "ok", "portfolio_id": portfolio_id}
+
+
+@app.get("/api/vault/transactions")
+async def vault_transactions(request: Request, asset_id: str = "", limit: int = 50):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "transactions": zivault.list_transactions(str(user_id), asset_id=asset_id, limit=limit)}
+
+
+@app.post("/api/vault/transactions")
+async def vault_create_transaction(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    tx = zivault.create_transaction(
+        str(user_id), data.get("asset_id", ""), data.get("tx_type", "valuation_update"),
+        amount=data.get("amount", 0), currency=data.get("currency", "ZNT"),
+        counterparty=data.get("counterparty", ""), description=data.get("description", "")
+    )
+    return {"status": "ok", "transaction_id": tx.get("id")}
+
+
+@app.get("/api/vault/files")
+async def vault_files(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "files": zivault.list_files(str(user_id))}
+
+
+@app.post("/api/vault/files")
+async def vault_upload_file(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    file_id = zivault.create_vault_file(
+        str(user_id), data.get("filename", ""), data.get("file_type", ""),
+        size=data.get("size", 0), encrypted=data.get("encrypted", True),
+        description=data.get("description", "")
+    )
+    return {"status": "ok", "file_id": file_id}
+
+
+@app.get("/api/vault/audit")
+async def vault_audit(request: Request, limit: int = 100):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "audit_logs": zivault.get_audit_logs(str(user_id), limit=limit)}
+
+
+@app.get("/api/vault/report")
+async def vault_report(request: Request, report_type: str = "portfolio"):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "report": zivault.generate_portfolio_report(str(user_id), report_type=report_type)}
+
+
+@app.get("/api/vault/organizations")
+async def vault_organizations(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    conn = zivault.conn
+    c = conn.cursor()
+    c.execute("SELECT * FROM organizations WHERE id IN (SELECT organization_id FROM org_members WHERE user_id=?)", (str(user_id),))
+    orgs = [{"id": r[0], "name": r[1], "org_type": r[2], "owner_id": r[3], "description": r[4], "created_at": r[5]} for r in c.fetchall()]
+    return {"status": "ok", "organizations": orgs}
+
+
+@app.post("/api/vault/organizations")
+async def vault_create_organization(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    import uuid
+    org_id = str(uuid.uuid4())[:8]
+    conn = zivault.conn
+    c = conn.cursor()
+    c.execute("INSERT INTO organizations (id, name, org_type, owner_id, description) VALUES (?, ?, ?, ?, ?)",
+              (org_id, data.get("name", ""), data.get("org_type", ""), str(user_id), data.get("description", "")))
+    c.execute("INSERT INTO org_members (organization_id, user_id, role) VALUES (?, ?, 'owner')", (org_id, str(user_id)))
+    conn.commit()
+    return {"status": "ok", "org_id": org_id}
 
 
 # --- ZIO Machine Learning ---

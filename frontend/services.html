@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,13 +31,13 @@
   <div class="zicore-hero">
     <div class="zicore-hero-icon">⬡</div>
     <div>
-      <h1>Servicios ZICORE</h1>
-      <p>Ecosistema completo de servicios aerospaciales digitales. Un login, todas las divisiones, acceso por saldo ZNT.</p>
+      <h1 data-i18n="hero.title">Servicios ZICORE</h1>
+      <p data-i18n="hero.subtitle">Ecosistema completo de servicios aerospaciales digitales. Un login, todas las divisiones, acceso por saldo ZNT.</p>
       <div class="stats">
-        <div class="stat"><span class="val" id="totalSvc">0</span> servicios</div>
-        <div class="stat"><span class="val">5</span> divisiones</div>
-        <div class="stat"><span class="val">SSO</span> unificado</div>
-        <div class="stat"><span class="val">ZNT</span> acceso</div>
+        <div class="stat"><span class="val" id="totalSvc">0</span> <span data-i18n="stats.services">servicios</span></div>
+        <div class="stat"><span class="val">5</span> <span data-i18n="stats.divisions">divisiones</span></div>
+        <div class="stat"><span class="val">SSO</span> <span data-i18n="stats.sso">unificado</span></div>
+        <div class="stat"><span class="val">ZNT</span> <span data-i18n="stats.access">acceso</span></div>
       </div>
     </div>
   </div>
@@ -91,7 +91,7 @@ const SERVICES = [
   ]},
   {div:'ZICORE Services',divIcon:'⬡',divDesc:'Servicios centrales: correo, banco, almacenamiento',items:[
     {name:'ZICORE Mail',icon:'📨',color:'cyan',path:'/mail-portal',desc:'Webmail completo: inbox, compose, admin, multi-dominio',tags:['Email','IMAP'],badge:'free'},
-    {name:'ZICORE Bank',icon:'🏦',color:'green',path:'/zicore-bank',desc:'Banca ZNT: portfolio, send, stake 15% APY',tags:['ZNT','Staking'],badge:'free'},
+    {name:'ZiVault',icon:'🏦',color:'green',path:'/zivault',desc:'Universal Asset Vault: portfolio, send, stake 15% APY',tags:['ZNT','Staking'],badge:'free'},
     {name:'Cloud Storage',icon:'☁',color:'purple',path:'/storage',desc:'Almacenamiento de archivos con drag & drop',tags:['Files','Cloud'],badge:'free'},
     {name:'Browser',icon:'🌐',color:'orange',path:'/browser',desc:'Explorador web integrado con proxy CORS',tags:['Web','Proxy'],badge:'free'},
     {name:'ZiShield',icon:'🛡',color:'red',path:'/zishield',desc:'Seguridad y proteccion del sistema',tags:['Seguridad','Audit'],badge:'premium'},
@@ -159,7 +159,7 @@ function filterServices(q) {
 </script>
 <script src="/js/zicore-topbar.js"></script>
 <script>ZICORE_TOPBAR.init({brand:'ZICORE',tabs:[{label:'Servicios',href:'/services',id:'services'},{label:'Aerospace',href:'/aerospace-portal'},{label:'ZineMotion',href:'/zine-motion'},{label:'Developer',href:'/developer-portal'}],activeTab:'services'})</script>
-<script src="/js/zicore-translate.js"></script>
-<script>ZICORE_TRANSLATE.init({source:'es',target:'en'})</script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
 </body>
 </html>
