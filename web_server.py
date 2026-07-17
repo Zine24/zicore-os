@@ -735,6 +735,7 @@ class SSOAuthMiddleware:
         "/output/",    # generated content (images, meshes, etc.)
         "/css/",
         "/js/",
+        "/data/",      # i18n translations, config
         "/favicon",
         "/games/",     # game files accessible without login
         "/media/",     # media files
@@ -7450,6 +7451,7 @@ async def videochat_join(room_id: str):
 
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js-files")
 app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css-files")
+app.mount("/data", StaticFiles(directory=str(FRONTEND_DIR / "data")), name="data-files")
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 app.mount("/output", StaticFiles(directory=str(OUTPUT_DIR)), name="output")
 

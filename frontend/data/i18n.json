@@ -27,19 +27,34 @@
     "sidebar.engineering": "Engineering",
     "sidebar.aero_eng": "Aerospace Engineering",
     "sidebar.kernel": "Kernel (21 nodes)",
+    "sidebar.divisions": "DIVISIONS",
+    "sidebar.other_login": "Login",
+    "sidebar.video_chat": "Video Chat",
+    "sidebar.governance": "Governance",
+    "sidebar.web_browser": "Web Browser",
+    "sidebar.zicodex": "ZiCodex",
+    "sidebar.marketplace": "Marketplace",
+    "sidebar.developer": "Developer",
+    "sidebar.web_stats": "Web Stats",
     "div.ziaerospace": "ZiAerospace",
+    "div.ziaerospace_desc": "Vehicles, propulsion, orbital mechanics",
     "div.ziaerospace.desc": "Aerospace vehicles, missions, infrastructure",
     "div.planetary_trek": "Planetary Trek",
     "div.planetary_trek.desc": "Exploration with real NASA, USGS and LROC data",
     "div.zienvironment": "ZiEnvironment",
+    "div.zienvironment_desc": "Energy, terrain, space weather",
     "div.zienvironment.desc": "Environmental simulation, space weather, terrain",
     "div.zinemotion": "ZineMotion",
+    "div.zinemotion_desc": "Creative, entertainment, media",
     "div.zinemotion.desc": "Creative production, multimedia, 3D generation, entertainment",
     "div.manufacturing": "ZICORE Manufacturing",
     "div.manufacturing.desc": "Additive manufacturing, robotics and drones",
     "div.services": "ZICORE Services",
+    "div.zicore_services": "ZICORE Services",
+    "div.zicore_services_desc": "Mail, vault, storage, browser",
     "div.services.desc": "Core ecosystem services: mail, bank, storage",
     "div.developer": "Developer & Docs",
+    "div.developer_desc": "API, documentation, governance",
     "div.developer.desc": "Documentation, API, marketplace, governance",
     "mod.vehicle_designer": "Vehicle Designer",
     "mod.vehicle_designer.desc": "Aerospace vehicle design with unlimited templates. Mass, dimensions, propulsion, fuel, payload.",
@@ -403,7 +418,99 @@
     "status.online": "ONLINE",
     "status.sys_nominal": "SYS: NOMINAL",
     "status.creating_time": "creating time",
-    "status.materIALIZING": "MATERIALIZING IDEAS INTO REALITY"
+    "status.materIALIZING": "MATERIALIZING IDEAS INTO REALITY",
+    "nav.bank": "ZiVault",
+    "nav.bank_desc": "Universal Asset Vault",
+    "sidebar.zicore_bank": "ZiVault",
+    "service.zicore_bank": "ZiVault",
+    "service.zicore_bank_desc": "Universal Asset Vault: portfolio, send, stake 15% APY",
+    "services.div_zicore": "ZICORE Services",
+    "services.div_zicore_desc": "Core services: mail, vault, storage",
+    "topbar.zicore_bank": "ZiVault",
+    "hero.title": "ZICORE SERVICES",
+    "hero.subtitle": "Explore the complete ecosystem",
+    "stats.services": "Services",
+    "stats.divisions": "Divisions",
+    "stats.sso": "SSO",
+    "stats.access": "Free Access",
+    "sidebar.environment": "ZiEnvironment",
+    "welcome.title": "Welcome to ZICORE",
+    "welcome.subtitle": "Your digital aerospace operating system",
+    "topbar.tagline": "DIGITAL AEROSPACE OS",
+    "status.system": "System Status",
+    "hero.badge": "ECOSYSTEM MAP",
+    "hero.tagline": "Creating time",
+    "hero.description": "An interconnected network of modules, each serving a specific purpose within the ZICORE operating system",
+    "hero.cta.login": "ACCESS ZICORE",
+    "hero.cta.whitepaper": "WHITEPAPER",
+    "modules.title": "MODULE ARCHITECTURE",
+    "modules.subtitle": "Every module communicates through ZICORE Core",
+    "stats.modules": "Modules",
+    "stats.files": "Files",
+    "stats.lines": "Lines of Code",
+    "stats.uptime": "Uptime",
+    "nav.proposals": "Proposals",
+    "nav.treasury": "Treasury",
+    "nav.delegates": "Delegates",
+    "nav.create": "Create",
+    "nav.history": "History",
+    "proposals.title": "ACTIVE PROPOSALS",
+    "treasury.title": "TREASURY ALLOCATION",
+    "delegates.title": "TOP DELEGATES",
+    "create.title": "CREATE PROPOSAL",
+    "history.title": "PROPOSAL HISTORY",
+    "stats.supply": "Total Supply",
+    "stats.voters": "Registered Voters",
+    "stats.proposals": "Proposals",
+    "stats.treasury": "Treasury Balance",
+    "stats.quorum": "Avg Quorum",
+    "topbar.title": "ZICORE STORAGE",
+    "sidebar.storage": "All Files",
+    "sidebar.upload": "Upload",
+    "nav.files": "Files",
+    "nav.generated": "Generated",
+    "nav.multimedia": "Multimedia",
+    "nav.config": "Config",
+    "nav.frontend": "Frontend",
+    "ctx.download": "Download",
+    "ctx.rename": "Rename",
+    "ctx.move": "Move",
+    "ctx.delete": "Delete",
+    "btn.save": "Save",
+    "btn.cancel": "Cancel",
+    "btn.delete": "Delete",
+    "btn.search": "Search",
+    "btn.create": "Create",
+    "btn.upload": "Upload",
+    "btn.download": "Download",
+    "btn.export": "Export",
+    "btn.generate": "Generate",
+    "btn.login": "Login",
+    "btn.register": "Register",
+    "btn.logout": "Logout",
+    "status.active": "Active",
+    "status.pending": "Pending",
+    "status.error": "Error",
+    "status.ok": "OK",
+    "label.email": "Email",
+    "label.password": "Password",
+    "label.name": "Name",
+    "label.type": "Type",
+    "label.status": "Status",
+    "label.date": "Date",
+    "label.actions": "Actions",
+    "label.value": "Value",
+    "label.balance": "Balance",
+    "label.amount": "Amount",
+    "label.description": "Description",
+    "topbar.balance": "Balance",
+    "topbar.vault": "ZiVault",
+    "topbar.mail": "Mail",
+    "topbar.storage": "Storage",
+    "topbar.settings": "Settings",
+    "topbar.services": "Services",
+    "topbar.logout": "Sign Out",
+    "topbar.login": "Sign In"
   },
   "es": {
     "nav.home": "Inicio",
@@ -422,7 +529,7 @@
     "sidebar.zienvironment": "ZiEnvironment",
     "sidebar.zinemotion": "ZineMotion",
     "sidebar.others": "Otros",
-    "sidebar.config": "Configuración",
+    "sidebar.config": "Configuracion",
     "sidebar.logout": "Cerrar Sesión",
     "sidebar.downloads": "Descargas",
     "sidebar.mail_portal": "Mail Portal",
@@ -433,19 +540,34 @@
     "sidebar.engineering": "Ingeniería",
     "sidebar.aero_eng": "Ingeniería Aeroespacial",
     "sidebar.kernel": "Kernel (21 nodos)",
+    "sidebar.divisions": "DIVISIONES",
+    "sidebar.other_login": "Iniciar Sesion",
+    "sidebar.video_chat": "Video Chat",
+    "sidebar.governance": "Gobernanza",
+    "sidebar.web_browser": "Explorador Web",
+    "sidebar.zicodex": "ZiCodex",
+    "sidebar.marketplace": "Marketplace",
+    "sidebar.developer": "Developer",
+    "sidebar.web_stats": "Estadisticas",
     "div.ziaerospace": "ZiAerospace",
+    "div.ziaerospace_desc": "Vehiculos, propulsion, mecanica orbital",
     "div.ziaerospace.desc": "Vehículos, misiones, infraestructura aeroespacial",
     "div.planetary_trek": "Planetary Trek",
     "div.planetary_trek.desc": "Exploración con datos reales de NASA, USGS y LROC",
     "div.zienvironment": "ZiEnvironment",
+    "div.zienvironment_desc": "Energia, terreno, clima espacial",
     "div.zienvironment.desc": "Simulación ambiental, clima espacial, terreno",
     "div.zinemotion": "ZineMotion",
+    "div.zinemotion_desc": "Creativo, entretenimiento, medios",
     "div.zinemotion.desc": "Producción creativa, multimedia, generación 3D, entretenimiento",
     "div.manufacturing": "ZICORE Manufacturing",
     "div.manufacturing.desc": "Manufactura aditiva, robótica y drones",
     "div.services": "ZICORE Services",
+    "div.zicore_services": "Servicios ZICORE",
+    "div.zicore_services_desc": "Correo, vault, almacenamiento, navegador",
     "div.services.desc": "Servicios centrales del ecosistema: correo, banco, almacenamiento",
-    "div.developer": "Developer & Docs",
+    "div.developer": "Desarrollador y Docs",
+    "div.developer_desc": "API, documentacion, gobernanza",
     "div.developer.desc": "Documentación, API, marketplace, gobernanza",
     "mod.vehicle_designer": "Vehicle Designer",
     "mod.vehicle_designer.desc": "Diseño de vehículos aeroespaciales con plantillas ilimitadas. Masa, dimensiones, propulsión, combustible, payload.",
@@ -809,398 +931,98 @@
     "status.online": "EN LÍNEA",
     "status.sys_nominal": "SYS: NOMINAL",
     "status.creating_time": "creando el tiempo",
-    "status.materIALIZING": "MATERIALIZANDO IDEAS EN REALIDAD"
-  },
-  "nav.bank": {
-    "en": "ZiVault",
-    "es": "ZiVault"
-  },
-  "nav.bank_desc": {
-    "en": "Universal Asset Vault",
-    "es": "Vault Universal de Activos"
-  },
-  "sidebar.zicore_bank": {
-    "en": "ZiVault",
-    "es": "ZiVault"
-  },
-  "service.zicore_bank": {
-    "en": "ZiVault",
-    "es": "ZiVault"
-  },
-  "service.zicore_bank_desc": {
-    "en": "Universal Asset Vault: portfolio, send, stake 15% APY",
-    "es": "Vault Universal de Activos: portfolio, enviar, stake 15% APY"
-  },
-  "services.div_zicore": {
-    "en": "ZICORE Services",
-    "es": "Servicios ZICORE"
-  },
-  "services.div_zicore_desc": {
-    "en": "Core services: mail, vault, storage",
-    "es": "Servicios centrales: correo, banco, almacenamiento"
-  },
-  "topbar.zicore_bank": {
-    "en": "ZiVault",
-    "es": "ZiVault"
-  },
-  "hero.title": {
-    "en": "ZICORE SERVICES",
-    "es": "SERVICIOS ZICORE"
-  },
-  "hero.subtitle": {
-    "en": "Explore the complete ecosystem",
-    "es": "Explora el ecosistema completo"
-  },
-  "stats.services": {
-    "en": "Services",
-    "es": "Servicios"
-  },
-  "stats.divisions": {
-    "en": "Divisions",
-    "es": "Divisiones"
-  },
-  "stats.sso": {
-    "en": "SSO",
-    "es": "SSO"
-  },
-  "stats.access": {
-    "en": "Free Access",
-    "es": "Acceso Libre"
-  },
-  "sidebar.divisions": {
-    "en": "DIVISIONS",
-    "es": "DIVISIONES"
-  },
-  "sidebar.home": {
-    "en": "Home",
-    "es": "Inicio"
-  },
-  "sidebar.aerospace": {
-    "en": "Aerospace",
-    "es": "Aeroespacial"
-  },
-  "sidebar.crypto": {
-    "en": "Crypto & Vault",
-    "es": "Crypto & Vault"
-  },
-  "sidebar.environment": {
-    "en": "ZiEnvironment",
-    "es": "ZiEnvironment"
-  },
-  "sidebar.zinemotion": {
-    "en": "ZineMotion",
-    "es": "ZineMotion"
-  },
-  "sidebar.others": {
-    "en": "Other Modules",
-    "es": "Otros Modulos"
-  },
-  "welcome.title": {
-    "en": "Welcome to ZICORE",
-    "es": "Bienvenido a ZICORE"
-  },
-  "welcome.subtitle": {
-    "en": "Your digital aerospace operating system",
-    "es": "Tu sistema operativo aeroespacial digital"
-  },
-  "topbar.tagline": {
-    "en": "DIGITAL AEROSPACE OS",
-    "es": "SISTEMA OPERATIVO AEROESPACIAL DIGITAL"
-  },
-  "status.system": {
-    "en": "System Status",
-    "es": "Estado del Sistema"
-  },
-  "hero.badge": {
-    "en": "ECOSYSTEM MAP",
-    "es": "MAPA DEL ECOSISTEMA"
-  },
-  "hero.tagline": {
-    "en": "Creating time",
-    "es": "Creando el tiempo"
-  },
-  "hero.description": {
-    "en": "An interconnected network of modules, each serving a specific purpose within the ZICORE operating system",
-    "es": "Una red interconectada de modulos, cada uno con un proposito especifico dentro del sistema operativo ZICORE"
-  },
-  "hero.cta.login": {
-    "en": "ACCESS ZICORE",
-    "es": "ACCEDER A ZICORE"
-  },
-  "hero.cta.whitepaper": {
-    "en": "WHITEPAPER",
-    "es": "WHITEPAPER"
-  },
-  "modules.title": {
-    "en": "MODULE ARCHITECTURE",
-    "es": "ARQUITECTURA DE MODULOS"
-  },
-  "modules.subtitle": {
-    "en": "Every module communicates through ZICORE Core",
-    "es": "Cada modulo se comunica a traves del nucleo ZICORE"
-  },
-  "stats.modules": {
-    "en": "Modules",
-    "es": "Modulos"
-  },
-  "stats.files": {
-    "en": "Files",
-    "es": "Archivos"
-  },
-  "stats.lines": {
-    "en": "Lines of Code",
-    "es": "Lineas de Codigo"
-  },
-  "stats.uptime": {
-    "en": "Uptime",
-    "es": "Tiempo Activo"
-  },
-  "nav.proposals": {
-    "en": "Proposals",
-    "es": "Propuestas"
-  },
-  "nav.treasury": {
-    "en": "Treasury",
-    "es": "Tesoreria"
-  },
-  "nav.delegates": {
-    "en": "Delegates",
-    "es": "Delegados"
-  },
-  "nav.create": {
-    "en": "Create",
-    "es": "Crear"
-  },
-  "nav.history": {
-    "en": "History",
-    "es": "Historial"
-  },
-  "proposals.title": {
-    "en": "ACTIVE PROPOSALS",
-    "es": "PROPUESTAS ACTIVAS"
-  },
-  "treasury.title": {
-    "en": "TREASURY ALLOCATION",
-    "es": "ASIGNACION DEL TESORO"
-  },
-  "delegates.title": {
-    "en": "TOP DELEGATES",
-    "es": "PRINCIPALES DELEGADOS"
-  },
-  "create.title": {
-    "en": "CREATE PROPOSAL",
-    "es": "CREAR PROPUESTA"
-  },
-  "history.title": {
-    "en": "PROPOSAL HISTORY",
-    "es": "HISTORIAL DE PROPUESTAS"
-  },
-  "stats.supply": {
-    "en": "Total Supply",
-    "es": "Suministro Total"
-  },
-  "stats.voters": {
-    "en": "Registered Voters",
-    "es": "Votantes Registrados"
-  },
-  "stats.proposals": {
-    "en": "Proposals",
-    "es": "Propuestas"
-  },
-  "stats.treasury": {
-    "en": "Treasury Balance",
-    "es": "Balance del Tesoro"
-  },
-  "stats.quorum": {
-    "en": "Avg Quorum",
-    "es": "Quorum Promedio"
-  },
-  "topbar.title": {
-    "en": "ZICORE STORAGE",
-    "es": "ALMACENAMIENTO ZICORE"
-  },
-  "sidebar.storage": {
-    "en": "All Files",
-    "es": "Todos los Archivos"
-  },
-  "sidebar.upload": {
-    "en": "Upload",
-    "es": "Subir"
-  },
-  "nav.files": {
-    "en": "Files",
-    "es": "Archivos"
-  },
-  "nav.generated": {
-    "en": "Generated",
-    "es": "Generados"
-  },
-  "nav.multimedia": {
-    "en": "Multimedia",
-    "es": "Multimedia"
-  },
-  "nav.config": {
-    "en": "Config",
-    "es": "Config"
-  },
-  "nav.frontend": {
-    "en": "Frontend",
-    "es": "Frontend"
-  },
-  "ctx.download": {
-    "en": "Download",
-    "es": "Descargar"
-  },
-  "ctx.rename": {
-    "en": "Rename",
-    "es": "Renombrar"
-  },
-  "ctx.move": {
-    "en": "Move",
-    "es": "Mover"
-  },
-  "ctx.delete": {
-    "en": "Delete",
-    "es": "Eliminar"
-  },
-  "btn.save": {
-    "en": "Save",
-    "es": "Guardar"
-  },
-  "btn.cancel": {
-    "en": "Cancel",
-    "es": "Cancelar"
-  },
-  "btn.delete": {
-    "en": "Delete",
-    "es": "Eliminar"
-  },
-  "btn.search": {
-    "en": "Search",
-    "es": "Buscar"
-  },
-  "btn.create": {
-    "en": "Create",
-    "es": "Crear"
-  },
-  "btn.upload": {
-    "en": "Upload",
-    "es": "Subir"
-  },
-  "btn.download": {
-    "en": "Download",
-    "es": "Descargar"
-  },
-  "btn.export": {
-    "en": "Export",
-    "es": "Exportar"
-  },
-  "btn.generate": {
-    "en": "Generate",
-    "es": "Generar"
-  },
-  "btn.login": {
-    "en": "Login",
-    "es": "Iniciar Sesion"
-  },
-  "btn.register": {
-    "en": "Register",
-    "es": "Registrarse"
-  },
-  "btn.logout": {
-    "en": "Logout",
-    "es": "Cerrar Sesion"
-  },
-  "status.active": {
-    "en": "Active",
-    "es": "Activo"
-  },
-  "status.pending": {
-    "en": "Pending",
-    "es": "Pendiente"
-  },
-  "status.error": {
-    "en": "Error",
-    "es": "Error"
-  },
-  "status.ok": {
-    "en": "OK",
-    "es": "OK"
-  },
-  "label.email": {
-    "en": "Email",
-    "es": "Correo"
-  },
-  "label.password": {
-    "en": "Password",
-    "es": "Contrasena"
-  },
-  "label.name": {
-    "en": "Name",
-    "es": "Nombre"
-  },
-  "label.type": {
-    "en": "Type",
-    "es": "Tipo"
-  },
-  "label.status": {
-    "en": "Status",
-    "es": "Estado"
-  },
-  "label.date": {
-    "en": "Date",
-    "es": "Fecha"
-  },
-  "label.actions": {
-    "en": "Actions",
-    "es": "Acciones"
-  },
-  "label.value": {
-    "en": "Value",
-    "es": "Valor"
-  },
-  "label.balance": {
-    "en": "Balance",
-    "es": "Saldo"
-  },
-  "label.amount": {
-    "en": "Amount",
-    "es": "Cantidad"
-  },
-  "label.description": {
-    "en": "Description",
-    "es": "Descripcion"
-  },
-  "topbar.balance": {
-    "en": "Balance",
-    "es": "Saldo"
-  },
-  "topbar.vault": {
-    "en": "ZiVault",
-    "es": "ZiVault"
-  },
-  "topbar.mail": {
-    "en": "Mail",
-    "es": "Correo"
-  },
-  "topbar.storage": {
-    "en": "Storage",
-    "es": "Almacenamiento"
-  },
-  "topbar.settings": {
-    "en": "Settings",
-    "es": "Configuracion"
-  },
-  "topbar.services": {
-    "en": "Services",
-    "es": "Servicios"
-  },
-  "topbar.logout": {
-    "en": "Sign Out",
-    "es": "Cerrar Sesion"
-  },
-  "topbar.login": {
-    "en": "Sign In",
-    "es": "Iniciar Sesion"
+    "status.materIALIZING": "MATERIALIZANDO IDEAS EN REALIDAD",
+    "label.actions": "Acciones",
+    "topbar.storage": "Almacenamiento",
+    "treasury.title": "ASIGNACION DEL TESORO",
+    "label.type": "Tipo",
+    "modules.title": "ARQUITECTURA DE MODULOS",
+    "nav.bank": "ZiVault",
+    "status.error": "Error",
+    "ctx.rename": "Renombrar",
+    "status.ok": "OK",
+    "sidebar.storage": "All Files",
+    "label.email": "Correo",
+    "nav.proposals": "Propuestas",
+    "label.balance": "Balance",
+    "ctx.move": "Mover",
+    "nav.config": "Config",
+    "stats.access": "Acceso Libre",
+    "nav.files": "Archivos",
+    "hero.tagline": "Creando el tiempo",
+    "proposals.title": "PROPUESTAS ACTIVAS",
+    "ctx.delete": "Eliminar",
+    "topbar.vault": "ZiVault",
+    "stats.services": "Services",
+    "btn.download": "Descargar",
+    "btn.delete": "Eliminar",
+    "topbar.balance": "Saldo",
+    "label.name": "Nombre",
+    "delegates.title": "PRINCIPALES DELEGADOS",
+    "stats.supply": "Suministro Total",
+    "stats.lines": "Lineas de Codigo",
+    "nav.treasury": "Tesoreria",
+    "hero.cta.login": "ACCEDER A ZICORE",
+    "topbar.mail": "Correo",
+    "stats.sso": "SSO",
+    "status.system": "Estado del Sistema",
+    "stats.uptime": "Tiempo Activo",
+    "btn.register": "Registrarse",
+    "welcome.title": "Bienvenido a ZICORE",
+    "stats.divisions": "Divisions",
+    "ctx.download": "Descargar",
+    "topbar.title": "ZICORE",
+    "label.amount": "Cantidad",
+    "sidebar.environment": "ZiEnvironment",
+    "nav.generated": "Generados",
+    "label.value": "Valor",
+    "topbar.zicore_bank": "ZiVault",
+    "status.active": "Activo",
+    "btn.login": "Iniciar Sesion",
+    "btn.search": "Buscar",
+    "btn.create": "Crear",
+    "topbar.logout": "Cerrar Sesion",
+    "label.password": "Contrasena",
+    "sidebar.upload": "Subir",
+    "nav.delegates": "Delegados",
+    "topbar.settings": "Configuracion",
+    "stats.modules": "Modulos",
+    "welcome.subtitle": "Tu sistema operativo aeroespacial digital",
+    "service.zicore_bank": "ZiVault",
+    "sidebar.zicore_bank": "ZiVault",
+    "btn.cancel": "Cancelar",
+    "modules.subtitle": "Cada modulo se comunica a traves del nucleo ZICORE",
+    "nav.create": "Crear",
+    "hero.subtitle": "Creando el tiempo",
+    "history.title": "HISTORIAL DE PROPUESTAS",
+    "topbar.services": "Servicios",
+    "stats.proposals": "Propuestas",
+    "stats.treasury": "Balance del Tesoro",
+    "hero.badge": "SISTEMA OPERATIVO AEROESPACIAL DIGITAL",
+    "stats.voters": "Votantes Registrados",
+    "stats.files": "Archivos",
+    "btn.generate": "Generar",
+    "hero.description": "El ecosistema completo para ingenieria aeroespacial, asistencia IA e innovacion digital.",
+    "services.div_zicore_desc": "Servicios centrales: correo, banco, almacenamiento",
+    "btn.save": "Guardar",
+    "label.date": "Fecha",
+    "services.div_zicore": "Servicios ZICORE",
+    "nav.history": "Historial",
+    "topbar.login": "Iniciar Sesion",
+    "label.status": "Estado",
+    "create.title": "CREAR PROPUESTA",
+    "nav.bank_desc": "Vault Universal de Activos",
+    "hero.title": "SISTEMA ZICORE",
+    "nav.multimedia": "Multimedia",
+    "nav.frontend": "Frontend",
+    "stats.quorum": "Quorum Promedio",
+    "topbar.tagline": "SISTEMA OPERATIVO AEROESPACIAL DIGITAL",
+    "service.zicore_bank_desc": "Vault Universal de Activos: portfolio, enviar, stake 15% APY",
+    "btn.export": "Exportar",
+    "status.pending": "Pendiente",
+    "label.description": "Descripcion",
+    "hero.cta.whitepaper": "WHITEPAPER",
+    "btn.upload": "Subir",
+    "btn.logout": "Cerrar Sesion"
   }
 }

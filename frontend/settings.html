@@ -9,12 +9,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
 :root{--glow:#00e5ff;--glow2:#7c4dff;--panel-bg:rgba(10,14,22,0.88);--panel-border:rgba(0,229,255,0.12);--text2:#607080;--text3:#303848}
 body{display:flex;flex-direction:column}
-#topBar{height:42px;min-height:42px;background:rgba(6,8,14,0.96);border-bottom:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;padding:0 12px;gap:10px;flex-shrink:0}
-#topBar .logo{font-size:11px;letter-spacing:5px;color:var(--glow);font-weight:700}
-#topBar .logo span{color:var(--glow2)}
-.top-btn{font-size:8px;letter-spacing:2px;padding:4px 10px;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);color:var(--glow);cursor:pointer;clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);transition:all .2s}
-.top-btn:hover{background:rgba(0,229,255,0.1)}
-.top-btn.primary{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
+
 #main{flex:1;display:flex;overflow:hidden}
 #tabs{width:200px;min-width:200px;border-right:1px solid rgba(0,229,255,0.08);padding:8px 0;overflow-y:auto;flex-shrink:0}
 .tab{padding:8px 14px;font-size:9px;letter-spacing:2px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .2s}
@@ -104,12 +99,7 @@ select option{background:#0a0e16;color:var(--glow)}
 </style>
 </head>
 <body>
-<div id="topBar">
-  <span class="logo"><span>Z</span>ICORE CONFIG</span>
-  <button class="top-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}">&#9664; PORTAL</button>
-  <button class="top-btn primary" onclick="saveAll()">SAVE ALL</button>
-  <span id="saveStatus" class="fs-8 ls-1 text-2 ml-auto">v5.0.0</span>
-</div>
+<div class="ztopbar" id="topbar"></div>
 <div id="main">
   <div id="tabs">
     <div class="tab active" onclick="switchTab('general', event)">GENERAL</div>
@@ -266,13 +256,13 @@ function gatherAll(){
 
 function saveAll(){
   var data=gatherAll();
-  document.getElementById('saveStatus').textContent='SAVING...';
+  var ss=document.getElementById('saveStatus');if(ss)ss.textContent='SAVING...';
   fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
   .then(function(r){return r.json();}).then(function(){
     toast('Configuration saved successfully');
-    document.getElementById('saveStatus').textContent='SAVED '+new Date().toLocaleTimeString();
+    var ss2=document.getElementById('saveStatus');if(ss2)ss2.textContent='SAVED '+new Date().toLocaleTimeString();
     loadCfg();
-  }).catch(function(e){toast('Save error: '+e.message,true);document.getElementById('saveStatus').textContent='ERROR';});
+  }).catch(function(e){toast('Save error: '+e.message,true);var ss3=document.getElementById('saveStatus');if(ss3)ss3.textContent='ERROR';});
 }
 
 function toggleEl(el){
@@ -1131,6 +1121,20 @@ function testProvider(pid){
 }
 
 loadCfg();
+</script>
+<script src="/js/zicore-topbar.js"></script>
+<script>ZICORE_TOPBAR.init({brand:'ZICORE SETTINGS'});
+// Add Save All button to topbar
+setTimeout(function() {
+  var spacer = document.querySelector('.ztopbar-spacer');
+  if (spacer) {
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = 'SAVE ALL';
+    saveBtn.style.cssText = 'font-size:10px;letter-spacing:1px;padding:6px 14px;border:1px solid rgba(0,255,136,0.2);border-radius:4px;color:#00ff88;background:rgba(0,255,136,0.06);cursor:pointer;font-weight:600';
+    saveBtn.onclick = function() { saveAll(); };
+    spacer.parentNode.insertBefore(saveBtn, spacer);
+  }
+}, 100);
 </script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>

@@ -41,86 +41,7 @@
   a { color: var(--cyan); text-decoration: none; transition: color 0.2s; }
   a:hover { color: var(--green); }
 
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 24px;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
 
-  .topbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .topbar-logo {
-    width: 32px;
-    height: 32px;
-    border: 2px solid var(--cyan);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--cyan);
-    background: rgba(0,229,255,0.08);
-    letter-spacing: 1px;
-  }
-
-  .topbar-title {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .topbar-title h1 {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--cyan);
-    letter-spacing: 2px;
-  }
-
-  .topbar-title span {
-    font-size: 10px;
-    color: var(--text-secondary);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-  }
-
-  .topbar-nav {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .topbar-back {
-    font-size: 13px;
-    color: var(--text-secondary);
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-
-  .topbar-back:hover {
-    border-color: var(--cyan);
-    color: var(--cyan);
-  }
-
-  .topbar-status {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--green);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
 
   .status-dot {
     width: 7px;
@@ -1035,7 +956,6 @@
 
   @media (max-width: 600px) {
     .hero-stats { grid-template-columns: 1fr; }
-    .topbar { padding: 10px 16px; }
     .main-content { padding: 16px; }
     .tabs-container { gap: 0; }
     .tab-btn { padding: 10px 12px; font-size: 11px; }
@@ -1044,22 +964,7 @@
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="topbar-logo">ZV</div>
-    <div class="topbar-title">
-      <h1>ZIVAULT</h1>
-      <span>Universal Asset Vault</span>
-    </div>
-  </div>
-  <div class="topbar-nav">
-    <div class="topbar-status">
-      <div class="status-dot"></div>
-      SECURE
-    </div>
-    <a href="/" class="topbar-back">&larr; ZICORE</a>
-  </div>
-</div>
+<div class="ztopbar" id="topbar"></div>
 
 <div class="main-content">
   <div class="hero-stats">
@@ -1905,6 +1810,11 @@
     document.querySelectorAll('.tab-panel').forEach(function(p) {
       p.classList.toggle('active', p.id === 'panel-' + tabName);
     });
+    if (tabName === 'assets') loadAssets();
+    else if (tabName === 'portfolios') loadPortfolios();
+    else if (tabName === 'vault') loadFiles();
+    else if (tabName === 'transactions') loadTransactions();
+    else if (tabName === 'audit') loadAudit();
   }
 
   document.getElementById('tabs-bar').addEventListener('click', function(e) {
@@ -2158,9 +2068,8 @@
   function submitAsset(e) {
     e.preventDefault();
     var asset = {
-      id: generateId(),
+      asset_type: document.getElementById('asset-type').value,
       name: document.getElementById('asset-name').value.trim(),
-      type: document.getElementById('asset-type').value,
       value: parseFloat(document.getElementById('asset-value').value) || 0,
       currency: document.getElementById('asset-currency').value,
       status: document.getElementById('asset-status').value,
@@ -2168,10 +2077,16 @@
       description: document.getElementById('asset-desc').value.trim(),
       date: todayStr()
     };
-    authFetch('/api/vault/assets', { method: 'POST', body: JSON.stringify(asset) })
+    authFetch('/api/vault/assets', { method: 'POST', body: JSON.stringify({
+      asset_type: asset.asset_type,
+      name: asset.name,
+      value: asset.value,
+      currency: asset.currency,
+      description: asset.description
+    }) })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        allAssets.push(data.asset || asset);
+        allAssets.push(Object.assign({ id: data.asset_id, type: asset.asset_type, status: asset.status, date: asset.date }, asset));
         renderAll();
         closeModal('asset');
         document.getElementById('form-asset').reset();
@@ -2179,6 +2094,8 @@
         addAudit('asset.register', asset.name);
       })
       .catch(function() {
+        asset.id = generateId();
+        asset.type = asset.asset_type;
         allAssets.push(asset);
         renderAll();
         closeModal('asset');
@@ -2191,19 +2108,22 @@
   function submitPortfolio(e) {
     e.preventDefault();
     var port = {
-      id: generateId(),
       name: document.getElementById('portfolio-name').value.trim(),
-      type: document.getElementById('portfolio-type').value,
+      portfolio_type: document.getElementById('portfolio-type').value,
       currency: document.getElementById('portfolio-currency').value,
       description: document.getElementById('portfolio-desc').value.trim(),
       assetCount: 0,
       totalValue: 0,
       date: todayStr()
     };
-    authFetch('/api/vault/portfolios', { method: 'POST', body: JSON.stringify(port) })
+    authFetch('/api/vault/portfolios', { method: 'POST', body: JSON.stringify({
+      name: port.name,
+      portfolio_type: port.portfolio_type,
+      description: port.description
+    }) })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        allPortfolios.push(data.portfolio || port);
+        allPortfolios.push(Object.assign({ id: data.portfolio_id, type: port.portfolio_type, currency: port.currency }, port));
         renderAll();
         closeModal('portfolio');
         document.getElementById('form-portfolio').reset();
@@ -2211,6 +2131,8 @@
         addAudit('portfolio.create', port.name);
       })
       .catch(function() {
+        port.id = generateId();
+        port.type = port.portfolio_type;
         allPortfolios.push(port);
         renderAll();
         closeModal('portfolio');
@@ -2223,63 +2145,81 @@
   function submitFile(e) {
     e.preventDefault();
     var file = {
-      id: generateId(),
-      name: document.getElementById('file-name').value.trim(),
-      type: document.getElementById('file-type').value,
+      filename: document.getElementById('file-name').value.trim(),
+      file_type: document.getElementById('file-type').value,
       size: document.getElementById('file-size').value.trim(),
-      encrypted: document.getElementById('file-encrypted').value,
+      encrypted: document.getElementById('file-encrypted').value === 'true',
       version: document.getElementById('file-version').value.trim() || '1.0',
       date: todayStr()
     };
-    authFetch('/api/vault/files', { method: 'POST', body: JSON.stringify(file) })
+    authFetch('/api/vault/files', { method: 'POST', body: JSON.stringify({
+      filename: file.filename,
+      file_type: file.file_type,
+      size: file.size,
+      encrypted: file.encrypted,
+      description: ''
+    }) })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        allFiles.push(data.file || file);
+        allFiles.push(Object.assign({ id: data.file_id, name: file.filename, type: file.file_type, version: file.version, date: file.date }, file));
         renderAll();
         closeModal('file');
         document.getElementById('form-file').reset();
         toast('File uploaded', 'success');
-        addAudit('file.upload', file.name);
+        addAudit('file.upload', file.filename);
       })
       .catch(function() {
+        file.id = generateId();
+        file.name = file.filename;
+        file.type = file.file_type;
         allFiles.push(file);
         renderAll();
         closeModal('file');
         document.getElementById('form-file').reset();
         toast('File uploaded (local)', 'success');
-        addAudit('file.upload', file.name);
+        addAudit('file.upload', file.filename);
       });
   }
 
   function submitTransaction(e) {
     e.preventDefault();
     var tx = {
-      id: generateId(),
-      type: document.getElementById('tx-type').value,
-      asset: document.getElementById('tx-asset').value.trim(),
+      asset_id: document.getElementById('tx-asset').value.trim(),
+      tx_type: document.getElementById('tx-type').value,
       amount: parseFloat(document.getElementById('tx-amount').value) || 0,
       currency: document.getElementById('tx-currency').value,
       counterparty: document.getElementById('tx-counterparty').value.trim(),
+      description: '',
       signature: '0x' + randomHash(64),
       date: nowISO()
     };
-    authFetch('/api/vault/transactions', { method: 'POST', body: JSON.stringify(tx) })
+    authFetch('/api/vault/transactions', { method: 'POST', body: JSON.stringify({
+      asset_id: tx.asset_id,
+      tx_type: tx.tx_type,
+      amount: tx.amount,
+      currency: tx.currency,
+      counterparty: tx.counterparty,
+      description: tx.description
+    }) })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        allTransactions.push(data.transaction || tx);
+        allTransactions.push(Object.assign({ id: data.transaction_id, type: tx.tx_type, asset: tx.asset_id, signature: tx.signature, date: tx.date }, tx));
         renderAll();
         closeModal('transaction');
         document.getElementById('form-transaction').reset();
         toast('Transaction recorded', 'success');
-        addAudit('tx.record', tx.asset);
+        addAudit('tx.record', tx.asset_id);
       })
       .catch(function() {
+        tx.id = generateId();
+        tx.type = tx.tx_type;
+        tx.asset = tx.asset_id;
         allTransactions.push(tx);
         renderAll();
         closeModal('transaction');
         document.getElementById('form-transaction').reset();
         toast('Transaction recorded (local)', 'success');
-        addAudit('tx.record', tx.asset);
+        addAudit('tx.record', tx.asset_id);
       });
   }
 
@@ -2474,12 +2414,7 @@
     authFetch('/api/vault/dashboard')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.assets) allAssets = data.assets;
-        if (data.files) allFiles = data.files;
-        if (data.transactions) allTransactions = data.transactions;
-        if (data.portfolios) allPortfolios = data.portfolios;
-        if (data.audit) allAudit = data.audit;
-        if (data.blockchain) allBlockchain = data.blockchain;
+        var d = data.dashboard || data;
         renderAll();
       })
       .catch(function() { renderAll(); });
@@ -2489,8 +2424,7 @@
     authFetch('/api/vault/assets')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (Array.isArray(data)) allAssets = data;
-        else if (data.assets) allAssets = data.assets;
+        allAssets = data.assets || (Array.isArray(data) ? data : []);
         renderAssetsTable();
         renderDashboardStats();
         renderAssetChart();
@@ -2502,8 +2436,7 @@
     authFetch('/api/vault/portfolios')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (Array.isArray(data)) allPortfolios = data;
-        else if (data.portfolios) allPortfolios = data.portfolios;
+        allPortfolios = data.portfolios || (Array.isArray(data) ? data : []);
         renderPortfolios();
       })
       .catch(function() {});
@@ -2513,8 +2446,7 @@
     authFetch('/api/vault/files')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (Array.isArray(data)) allFiles = data;
-        else if (data.files) allFiles = data.files;
+        allFiles = data.files || (Array.isArray(data) ? data : []);
         renderFiles();
         renderDashboardStats();
       })
@@ -2525,8 +2457,7 @@
     authFetch('/api/vault/transactions')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (Array.isArray(data)) allTransactions = data;
-        else if (data.transactions) allTransactions = data.transactions;
+        allTransactions = data.transactions || (Array.isArray(data) ? data : []);
         renderTransactions();
         renderActivity();
         renderDashboardStats();
@@ -2538,8 +2469,7 @@
     authFetch('/api/vault/audit')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (Array.isArray(data)) allAudit = data;
-        else if (data.audit) allAudit = data.audit;
+        allAudit = data.audit || (Array.isArray(data) ? data : []);
         renderAudit();
       })
       .catch(function() {});
@@ -2560,6 +2490,24 @@
 
   init();
 })();
+</script>
+<script src="/js/zicore-topbar.js"></script>
+<script>
+  ZICORE_TOPBAR.init({
+    brand: 'ZIVAULT',
+    tabs: [
+      {id:'dashboard', label:'Dashboard', href:'#'},
+      {id:'assets', label:'Assets', href:'#'},
+      {id:'portfolios', label:'Portfolios', href:'#'},
+      {id:'vault', label:'Vault', href:'#'},
+      {id:'transactions', label:'Transactions', href:'#'},
+      {id:'blockchain', label:'Blockchain', href:'#'},
+      {id:'audit', label:'Audit', href:'#'},
+      {id:'reports', label:'Reports', href:'#'},
+      {id:'settings', label:'Settings', href:'#'}
+    ],
+    activeTab: 'dashboard'
+  });
 </script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>

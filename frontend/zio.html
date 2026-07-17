@@ -80,26 +80,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
 #app{display:flex;height:100vh;flex-direction:column}
 
-#topBar{
-  height:42px;min-height:42px;background:rgba(6,8,14,0.96);
-  border-bottom:1px solid rgba(0,229,255,0.1);
-  display:flex;align-items:center;padding:0 12px;gap:8px;
-}
-#topBar .logo{font-size:11px;letter-spacing:5px;color:var(--glow);font-weight:700}
-#topBar .logo span{color:var(--glow2)}
-#topBar .server-info{font-size:9px;color:var(--text2);letter-spacing:1px;margin-left:12px}
-#topBar .conn-status{
-  margin-left:auto;font-size:8px;padding:3px 10px;letter-spacing:1px;
-  border:1px solid rgba(255,60,60,0.3);color:#f44;
-}
-#topBar .conn-status.online{border-color:rgba(0,229,255,0.3);color:var(--glow)}
-#topBar .config-btn{
-  font-size:8px;letter-spacing:2px;padding:4px 10px;
-  border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);
-  color:var(--glow);cursor:pointer;transition:all .2s;
-  clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
-}
-#topBar .config-btn:hover{background:rgba(0,229,255,0.1)}
+
 
 #main{flex:1;display:flex;overflow:hidden}
 
@@ -374,13 +355,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 </head>
 <body>
 <div id="app">
-  <div id="topBar">
-    <button class="config-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}" style="margin-right:8px">&#9664; PORTAL</button>
-    <div class="logo"><span>Z</span>IO SERVER</div>
-    <div class="server-info">v5.0.0 — AI Copilot</div>
-    <div class="conn-status" id="connStatus">CONNECTING...</div>
-    <button class="config-btn" id="openConfig">CONFIG</button>
-  </div>
+  <div class="ztopbar" id="topbar"></div>
 
   <div id="main">
     <div id="sidebar">
@@ -1317,6 +1292,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   </div>
 </div>
 
+<script src="/js/zicore-topbar.js"></script>
+<script>ZICORE_TOPBAR.init({brand:'ZIO AI',tabs:[{id:'chat',label:'Chat',href:'#'}],activeTab:'chat'});
+// Add connection status to topbar
+setTimeout(function() {
+  var spacer = document.querySelector('.ztopbar-spacer');
+  if (spacer) {
+    var status = document.createElement('div');
+    status.id = 'connStatus';
+    status.style.cssText = 'font-size:10px;color:var(--cyan);font-family:var(--mono);letter-spacing:1px';
+    status.textContent = 'CONNECTING...';
+    spacer.parentNode.insertBefore(status, spacer);
+  }
+}, 100);
+</script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>
 </body>

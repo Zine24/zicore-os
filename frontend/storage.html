@@ -9,13 +9,7 @@
 :root{--bg:#04060c;--surface:rgba(10,15,30,0.85);--glass:rgba(10,15,30,0.7);--border:rgba(0,229,255,0.12);--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;--orange:#ffa500;--text:#e0e6f0;--muted:#5a6a80;--mono:'SF Mono',Consolas,monospace}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
 
-.topbar{position:fixed;top:0;left:0;right:0;height:48px;background:rgba(4,6,12,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;backdrop-filter:blur(20px)}
-.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-.topbar-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--cyan),var(--purple));border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
-.topbar-title{font-size:13px;font-weight:600;letter-spacing:1px}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.topbar-back{color:var(--muted);text-decoration:none;font-size:11px;letter-spacing:1px}
-.topbar-back:hover{color:var(--cyan)}
+
 
 .layout{display:flex;padding-top:48px;height:calc(100vh - 48px)}
 
@@ -127,15 +121,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 </head>
 <body>
 
-<div class="topbar">
-  <a href="/" class="topbar-logo">
-    <div class="topbar-icon">Z</div>
-    <div class="topbar-title" data-i18n="topbar.title">ZICORE STORAGE</div>
-  </a>
-  <div class="topbar-right">
-    <a href="/" class="topbar-back">← PORTAL</a>
-  </div>
-</div>
+<div class="ztopbar" id="topbar"></div>
 
 <div class="layout">
   <div class="sidebar">
@@ -461,6 +447,8 @@ function showToast(msg, type='success') {
 // Init
 loadFiles('data');
 </script>
+<script src="/js/zicore-topbar.js"></script>
+<script>ZICORE_TOPBAR.init({brand:'ZICORE STORAGE',tabs:[{id:'files',label:'Files',href:'#'}],activeTab:'files'});</script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>
 </body>
