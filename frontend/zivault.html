@@ -58,10 +58,30 @@
   }
 
   .main-content {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 24px;
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
   }
+
+  /* SIDEBAR */
+  .vault-shell{display:flex;height:100vh;width:100vw;overflow:hidden}
+  .vault-sidebar{width:200px;min-width:200px;background:rgba(10,14,26,0.95);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px)}
+  .vault-sidebar::-webkit-scrollbar{width:3px}
+  .vault-sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .vsb-brand{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .vsb-brand svg{width:28px;height:28px;flex-shrink:0}
+  .vsb-brand-text{font-size:11px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .vsb-brand-sub{font-size:7px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase}
+  .vsb-section{padding:12px 14px 6px;font-size:8px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;font-weight:700}
+  .vsb-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;font-size:11px;color:var(--text-secondary);border-radius:0 4px 4px 0;margin:1px 6px}
+  .vsb-item:hover{background:rgba(0,229,255,0.06);color:var(--text-primary);border-left-color:rgba(0,229,255,0.3)}
+  .vsb-item.active{background:rgba(0,229,255,0.08);color:var(--cyan);border-left-color:var(--cyan)}
+  .vsb-item .ico{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;border-radius:4px;background:rgba(0,229,255,0.04)}
+  .vsb-item:hover .ico{background:rgba(0,229,255,0.08)}
+  .vsb-item.active .ico{background:rgba(0,229,255,0.12)}
+  .vsb-divider{height:1px;background:var(--border);margin:6px 14px}
+  .vsb-footer{margin-top:auto;border-top:1px solid var(--border);padding:8px 6px}
+  .vault-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
   .hero-stats {
     display: grid;
@@ -1006,9 +1026,54 @@
 </head>
 <body>
 
-<div class="ztopbar" id="topbar"></div>
+<div class="vault-shell">
+  <!-- SIDEBAR -->
+  <nav class="vault-sidebar">
+    <div class="vsb-brand">
+      <svg viewBox="0 0 36 42" width="28" height="28"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#vb)" stroke-width="1.5"/><defs><linearGradient id="vb" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#vb)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
+      <div>
+        <div class="vsb-brand-text">ZIVAULT</div>
+        <div class="vsb-brand-sub">Asset Vault</div>
+      </div>
+    </div>
 
-<div class="main-content">
+    <div class="vsb-section">Overview</div>
+    <div class="vsb-item active" onclick="vaultNav('dashboard',this)"><div class="ico">&#9670;</div>Dashboard</div>
+
+    <div class="vsb-section">Assets</div>
+    <div class="vsb-item" onclick="vaultNav('assets',this)"><div class="ico">&#127974;</div>Asset Registry</div>
+    <div class="vsb-item" onclick="vaultNav('portfolios',this)"><div class="ico">&#128202;</div>Portfolios</div>
+    <div class="vsb-item" onclick="vaultNav('vault',this)"><div class="ico">&#128274;</div>Digital Vault</div>
+    <div class="vsb-item" onclick="vaultNav('transactions',this)"><div class="ico">&#128179;</div>Transactions</div>
+    <div class="vsb-divider"></div>
+
+    <div class="vsb-section">Blockchain</div>
+    <div class="vsb-item" onclick="vaultNav('blockchain',this)"><div class="ico">&#9783;</div>Blockchain</div>
+
+    <div class="vsb-section">Intelligence</div>
+    <div class="vsb-item" onclick="vaultNav('audit',this)"><div class="ico">&#128269;</div>Audit Center</div>
+    <div class="vsb-item" onclick="vaultNav('reports',this)"><div class="ico">&#128196;</div>Reports</div>
+    <div class="vsb-divider"></div>
+
+    <div class="vsb-section">Organize</div>
+    <div class="vsb-item" onclick="vaultNav('tags',this)"><div class="ico">&#127991;</div>Tags</div>
+    <div class="vsb-item" onclick="vaultNav('notes',this)"><div class="ico">&#128221;</div>Notes</div>
+    <div class="vsb-divider"></div>
+
+    <div class="vsb-section">Commerce</div>
+    <div class="vsb-item" onclick="vaultNav('store',this)"><div class="ico">&#128722;</div>Store</div>
+
+    <div class="vsb-footer">
+      <div class="vsb-item" onclick="vaultNav('settings',this)"><div class="ico">&#9881;</div>Settings</div>
+      <div class="vsb-item" onclick="window.location.href='/'"><div class="ico">&#9664;</div>Portal</div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="vault-main">
+    <div class="ztopbar" id="topbar"></div>
+
+    <div class="main-content">
   <div class="hero-stats">
     <div class="stat-card">
       <div class="stat-icon cyan">&#9670;</div>
@@ -1040,20 +1105,10 @@
     </div>
   </div>
 
-  <div class="tabs-container" id="tabs-bar">
-    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-    <button class="tab-btn" data-tab="assets">Assets</button>
-    <button class="tab-btn" data-tab="portfolios">Portfolios</button>
-    <button class="tab-btn" data-tab="vault">Vault</button>
-    <button class="tab-btn" data-tab="transactions">Transactions</button>
-    <button class="tab-btn" data-tab="blockchain">Blockchain</button>
-    <button class="tab-btn" data-tab="audit">Audit</button>
-    <button class="tab-btn" data-tab="reports">Reports</button>
-    <button class="tab-btn" data-tab="settings">Settings</button>
-    <button class="tab-btn" data-tab="tags">Tags</button>
-    <button class="tab-btn" data-tab="notes">Notes</button>
-    <button class="tab-btn" data-tab="store">Store</button>
   </div>
+
+  </div><!-- vault-main -->
+</div><!-- vault-shell -->
 
   <div class="tab-panel active" id="panel-dashboard">
     <div class="dashboard-grid">
@@ -1988,8 +2043,8 @@
   }
 
   function tabSwitch(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(function(b) {
-      b.classList.toggle('active', b.getAttribute('data-tab') === tabName);
+    document.querySelectorAll('.vsb-item').forEach(function(b) {
+      b.classList.remove('active');
     });
     document.querySelectorAll('.tab-panel').forEach(function(p) {
       p.classList.toggle('active', p.id === 'panel-' + tabName);
@@ -2004,11 +2059,13 @@
     else if (tabName === 'store') loadStore();
   }
 
-  document.getElementById('tabs-bar').addEventListener('click', function(e) {
-    var btn = e.target.closest('.tab-btn');
-    if (!btn) return;
-    tabSwitch(btn.getAttribute('data-tab'));
-  });
+  function vaultNav(tabName, el) {
+    document.querySelectorAll('.vsb-item').forEach(function(b) { b.classList.remove('active'); });
+    if (el) el.classList.add('active');
+    tabSwitch(tabName);
+  }
+
+  // No longer needed — sidebar handles clicks directly
 
   function openModal(name) {
     var m = document.getElementById('modal-' + name);
