@@ -6720,6 +6720,265 @@ async def vault_znt_balance(request: Request):
     return {"status": "ok", "balance": balance, "currency": "ZNT"}
 
 
+# --- ZiVault v1.0 — Enhanced Routes ---
+
+@app.get("/api/vault/net-worth")
+async def vault_net_worth(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "net_worth": zivault.get_net_worth(str(user_id))}
+
+
+@app.get("/api/vault/distribution")
+async def vault_distribution(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "distribution": zivault.get_asset_distribution(str(user_id))}
+
+
+@app.get("/api/vault/history-value")
+async def vault_history_value(request: Request, days: int = 30):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "history": zivault.get_historical_value(str(user_id), days)}
+
+
+@app.get("/api/vault/alerts")
+async def vault_alerts(request: Request, unresolved_only: bool = False):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "alerts": zivault.list_alerts(str(user_id), unresolved_only)}
+
+
+@app.post("/api/vault/alerts/{alert_id}/resolve")
+async def vault_resolve_alert(request: Request, alert_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.resolve_alert(alert_id)
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/assets/{asset_id}/history")
+async def vault_asset_history(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "history": zivault.get_asset_history(asset_id)}
+
+
+@app.get("/api/vault/portfolio/{portfolio_id}/summary")
+async def vault_portfolio_summary(request: Request, portfolio_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "summary": zivault.get_portfolio_summary(portfolio_id)}
+
+
+@app.post("/api/vault/portfolio/{portfolio_id}/snapshot")
+async def vault_portfolio_snapshot(request: Request, portfolio_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.snapshot_portfolio(portfolio_id)
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/portfolio/{portfolio_id}/history")
+async def vault_portfolio_history(request: Request, portfolio_id: str, days: int = 30):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "history": zivault.get_portfolio_history(portfolio_id, days)}
+
+
+@app.get("/api/vault/portfolio/{portfolio_id}/risk")
+async def vault_portfolio_risk(request: Request, portfolio_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "risk_score": zivault.calculate_risk_score(portfolio_id)}
+
+
+@app.get("/api/vault/files/{file_id}/versions")
+async def vault_file_versions(request: Request, file_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "versions": zivault.get_file_versions(file_id)}
+
+
+@app.get("/api/vault/ownership/{asset_id}")
+async def vault_ownership(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "ownership": zivault.get_ownership(asset_id)}
+
+
+@app.get("/api/vault/ownership/{asset_id}/history")
+async def vault_ownership_history(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "history": zivault.get_ownership_history(asset_id)}
+
+
+@app.post("/api/vault/ownership/{asset_id}/transfer")
+async def vault_transfer_ownership(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    to_owner = data.get("to_owner", "")
+    price = float(data.get("price", 0))
+    currency = data.get("currency", "ZNT")
+    zivault.transfer_ownership(asset_id, str(user_id), to_owner, price, currency)
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/transaction-summary")
+async def vault_transaction_summary(request: Request, days: int = 30):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "summary": zivault.get_transaction_summary(str(user_id), days)}
+
+
+@app.post("/api/vault/ai/categorize/{asset_id}")
+async def vault_ai_categorize(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "result": zivault.ai_categorize(asset_id)}
+
+
+@app.get("/api/vault/ai/duplicates")
+async def vault_ai_duplicates(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "duplicates": zivault.ai_detect_duplicates(str(user_id))}
+
+
+@app.get("/api/vault/ai/optimize")
+async def vault_ai_optimize(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "suggestions": zivault.ai_portfolio_optimization(str(user_id))}
+
+
+@app.get("/api/vault/ai/risk")
+async def vault_ai_risk(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "analysis": zivault.ai_risk_analysis(str(user_id))}
+
+
+@app.get("/api/vault/wallets")
+async def vault_wallets(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "wallets": zivault.list_wallets(str(user_id))}
+
+
+@app.post("/api/vault/wallets")
+async def vault_add_wallet(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    chain = data.get("chain", "ethereum")
+    address = data.get("address", "")
+    label = data.get("label", "")
+    wallet = zivault.register_wallet(str(user_id), chain, address, label)
+    return {"status": "ok", "wallet": wallet}
+
+
+@app.post("/api/vault/notifications/mark-all-read")
+async def vault_mark_all_read(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.mark_all_read(str(user_id))
+    return {"status": "ok"}
+
+
+@app.delete("/api/vault/notifications/{notification_id}")
+async def vault_delete_notification(request: Request, notification_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.delete_notification(notification_id)
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/reports/portfolio")
+async def vault_report_portfolio(request: Request, report_type: str = "full"):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "report": zivault.generate_portfolio_report(str(user_id), report_type)}
+
+
+@app.get("/api/vault/reports/asset/{asset_id}")
+async def vault_report_asset(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "report": zivault.generate_asset_report(asset_id)}
+
+
+@app.get("/api/vault/reports/audit")
+async def vault_report_audit(request: Request, date_from: str = "", date_to: str = ""):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "report": zivault.generate_audit_report(str(user_id), date_from, date_to)}
+
+
+@app.get("/api/vault/audit/export")
+async def vault_audit_export(request: Request, format: str = "json", date_from: str = "", date_to: str = ""):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "export": zivault.export_audit_logs(str(user_id), format, date_from, date_to)}
+
+
 # --- ZIO Machine Learning ---
 
 from zicore.ml_engine import ZIOML
