@@ -37,6 +37,7 @@
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
   }
 
   a { color: var(--cyan); text-decoration: none; transition: color 0.2s; }
@@ -63,25 +64,23 @@
     overflow-y: auto;
   }
 
-  /* SIDEBAR */
-  .vault-shell{display:flex;height:100vh;width:100vw;overflow:hidden}
-  .vault-sidebar{width:200px;min-width:200px;background:rgba(10,14,26,0.95);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px)}
-  .vault-sidebar::-webkit-scrollbar{width:3px}
-  .vault-sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-  .vsb-brand{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-  .vsb-brand svg{width:28px;height:28px;flex-shrink:0}
-  .vsb-brand-text{font-size:11px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .vsb-brand-sub{font-size:7px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase}
-  .vsb-section{padding:12px 14px 6px;font-size:8px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;font-weight:700}
-  .vsb-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;font-size:11px;color:var(--text-secondary);border-radius:0 4px 4px 0;margin:1px 6px}
-  .vsb-item:hover{background:rgba(0,229,255,0.06);color:var(--text-primary);border-left-color:rgba(0,229,255,0.3)}
-  .vsb-item.active{background:rgba(0,229,255,0.08);color:var(--cyan);border-left-color:var(--cyan)}
-  .vsb-item .ico{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;border-radius:4px;background:rgba(0,229,255,0.04)}
-  .vsb-item:hover .ico{background:rgba(0,229,255,0.08)}
-  .vsb-item.active .ico{background:rgba(0,229,255,0.12)}
-  .vsb-divider{height:1px;background:var(--border);margin:6px 14px}
-  .vsb-footer{margin-top:auto;border-top:1px solid var(--border);padding:8px 6px}
-  .vault-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  /* TOP NAV BAR */
+  .vault-topnav{display:flex;align-items:center;gap:0;background:rgba(10,14,26,0.95);border-bottom:1px solid var(--border);padding:0 20px;height:44px;backdrop-filter:blur(16px);position:sticky;top:0;z-index:100}
+  .vault-topnav-brand{display:flex;align-items:center;gap:8px;padding-right:20px;border-right:1px solid var(--border);margin-right:4px;cursor:pointer}
+  .vault-topnav-brand svg{width:22px;height:22px;flex-shrink:0}
+  .vault-topnav-brand span{font-size:10px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .vault-topnav-items{display:flex;align-items:center;gap:0;flex:1;overflow-x:auto}
+  .vault-topnav-items::-webkit-scrollbar{display:none}
+  .vtn-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;font-size:10px;letter-spacing:0.5px;color:var(--text-secondary);cursor:pointer;border:none;background:none;transition:all .15s;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
+  .vtn-btn:hover{color:var(--text-primary);background:rgba(255,255,255,0.02)}
+  .vtn-btn.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+  .vtn-btn svg{width:13px;height:13px;flex-shrink:0}
+  .vtn-sep{width:1px;height:18px;background:var(--border);flex-shrink:0}
+  .vault-topnav-right{display:flex;align-items:center;gap:10px;margin-left:auto;padding-left:12px;border-left:1px solid var(--border)}
+  .vtn-balance{font-family:var(--font-mono);font-size:10px;color:var(--cyan);letter-spacing:0.5px}
+  .vtn-back{font-size:10px;color:var(--text-secondary);cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:4px;transition:all .15s;background:none;font-family:inherit;white-space:nowrap}
+  .vtn-back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+  .vtn-user{font-size:10px;color:var(--text-muted);letter-spacing:0.5px}
 
   .hero-stats {
     display: grid;
@@ -1026,54 +1025,41 @@
 </head>
 <body>
 
-<div class="vault-shell">
-  <!-- SIDEBAR -->
-  <nav class="vault-sidebar">
-    <div class="vsb-brand">
-      <svg viewBox="0 0 36 42" width="28" height="28"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#vb)" stroke-width="1.5"/><defs><linearGradient id="vb" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#vb)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
-      <div>
-        <div class="vsb-brand-text">ZIVAULT</div>
-        <div class="vsb-brand-sub">Asset Vault</div>
-      </div>
-    </div>
+<!-- TOP NAV -->
+<nav class="vault-topnav">
+  <div class="vault-topnav-brand" onclick="vaultNav('dashboard')">
+    <svg viewBox="0 0 36 42"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#vb)" stroke-width="1.5"/><defs><linearGradient id="vb" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#vb)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
+    <span>ZIVAULT</span>
+  </div>
 
-    <div class="vsb-section">Overview</div>
-    <div class="vsb-item active" onclick="vaultNav('dashboard',this)"><div class="ico">&#9670;</div>Dashboard</div>
+  <div class="vault-topnav-items">
+    <button class="vtn-btn active" onclick="vaultNav('dashboard',this)"><svg viewBox="0 0 14 14"><rect x="1" y="1" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Dashboard</button>
+    <div class="vtn-sep"></div>
+    <button class="vtn-btn" onclick="vaultNav('assets',this)"><svg viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Assets</button>
+    <button class="vtn-btn" onclick="vaultNav('portfolios',this)"><svg viewBox="0 0 14 14"><circle cx="4" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="10" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Portfolios</button>
+    <button class="vtn-btn" onclick="vaultNav('vault',this)"><svg viewBox="0 0 14 14"><path d="M7 1L2 4v4c0 3 2.2 5.5 5 6 2.8-0.5 5-3 5-6V4L7 1z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Vault</button>
+    <button class="vtn-btn" onclick="vaultNav('transactions',this)"><svg viewBox="0 0 14 14"><path d="M1 7h12M9 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Transactions</button>
+    <div class="vtn-sep"></div>
+    <button class="vtn-btn" onclick="vaultNav('blockchain',this)"><svg viewBox="0 0 14 14"><rect x="3" y="3" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1"/><line x1="7" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="0.8"/><line x1="3" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="0.8"/></svg>Blockchain</button>
+    <button class="vtn-btn" onclick="vaultNav('audit',this)"><svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.2"/></svg>Audit</button>
+    <button class="vtn-btn" onclick="vaultNav('reports',this)"><svg viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="4" y1="4" x2="10" y2="4" stroke="currentColor" stroke-width="0.8"/><line x1="4" y1="6.5" x2="10" y2="6.5" stroke="currentColor" stroke-width="0.8"/><line x1="4" y1="9" x2="7" y2="9" stroke="currentColor" stroke-width="0.8"/></svg>Reports</button>
+    <div class="vtn-sep"></div>
+    <button class="vtn-btn" onclick="vaultNav('tags',this)"><svg viewBox="0 0 14 14"><path d="M1 7.5V2a1 1 0 011-1h5.5L13 7.5 7.5 13 1 7.5z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="4" cy="4.5" r="1" fill="currentColor"/></svg>Tags</button>
+    <button class="vtn-btn" onclick="vaultNav('notes',this)"><svg viewBox="0 0 14 14"><rect x="2" y="1" width="10" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="4" y1="4" x2="10" y2="4" stroke="currentColor" stroke-width="0.8"/><line x1="4" y1="6.5" x2="10" y2="6.5" stroke="currentColor" stroke-width="0.8"/></svg>Notes</button>
+    <div class="vtn-sep"></div>
+    <button class="vtn-btn" onclick="vaultNav('store',this)"><svg viewBox="0 0 14 14"><path d="M1 4h12l-1 8H2L1 4z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 4V3a3 3 0 016 0v1" fill="none" stroke="currentColor" stroke-width="1"/></svg>Store</button>
+    <button class="vtn-btn" onclick="vaultNav('settings',this)"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.8 2.8l1.4 1.4M9.8 9.8l1.4 1.4M11.2 2.8l-1.4 1.4M4.2 9.8l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1"/></svg>Settings</button>
+  </div>
 
-    <div class="vsb-section">Assets</div>
-    <div class="vsb-item" onclick="vaultNav('assets',this)"><div class="ico">&#127974;</div>Asset Registry</div>
-    <div class="vsb-item" onclick="vaultNav('portfolios',this)"><div class="ico">&#128202;</div>Portfolios</div>
-    <div class="vsb-item" onclick="vaultNav('vault',this)"><div class="ico">&#128274;</div>Digital Vault</div>
-    <div class="vsb-item" onclick="vaultNav('transactions',this)"><div class="ico">&#128179;</div>Transactions</div>
-    <div class="vsb-divider"></div>
+  <div class="vault-topnav-right">
+    <div class="vtn-balance" id="vtn-balance">0.00 ZNT</div>
+    <div class="vtn-user" id="vtn-user"></div>
+    <button class="vtn-back" onclick="window.location.href='/'"><svg viewBox="0 0 14 14" style="width:10px;height:10px"><path d="M9 2L4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Portal</button>
+  </div>
+</nav>
 
-    <div class="vsb-section">Blockchain</div>
-    <div class="vsb-item" onclick="vaultNav('blockchain',this)"><div class="ico">&#9783;</div>Blockchain</div>
-
-    <div class="vsb-section">Intelligence</div>
-    <div class="vsb-item" onclick="vaultNav('audit',this)"><div class="ico">&#128269;</div>Audit Center</div>
-    <div class="vsb-item" onclick="vaultNav('reports',this)"><div class="ico">&#128196;</div>Reports</div>
-    <div class="vsb-divider"></div>
-
-    <div class="vsb-section">Organize</div>
-    <div class="vsb-item" onclick="vaultNav('tags',this)"><div class="ico">&#127991;</div>Tags</div>
-    <div class="vsb-item" onclick="vaultNav('notes',this)"><div class="ico">&#128221;</div>Notes</div>
-    <div class="vsb-divider"></div>
-
-    <div class="vsb-section">Commerce</div>
-    <div class="vsb-item" onclick="vaultNav('store',this)"><div class="ico">&#128722;</div>Store</div>
-
-    <div class="vsb-footer">
-      <div class="vsb-item" onclick="vaultNav('settings',this)"><div class="ico">&#9881;</div>Settings</div>
-      <div class="vsb-item" onclick="window.location.href='/'"><div class="ico">&#9664;</div>Portal</div>
-    </div>
-  </nav>
-
-  <!-- MAIN CONTENT -->
-  <div class="vault-main">
-    <div class="ztopbar" id="topbar"></div>
-
-    <div class="main-content">
+<!-- MAIN CONTENT -->
+<div class="main-content" id="main-content">
   <div class="hero-stats">
     <div class="stat-card">
       <div class="stat-icon cyan">&#9670;</div>
@@ -1104,11 +1090,6 @@
       </div>
     </div>
   </div>
-
-  </div>
-
-  </div><!-- vault-main -->
-</div><!-- vault-shell -->
 
   <div class="tab-panel active" id="panel-dashboard">
     <div class="dashboard-grid">
@@ -1945,6 +1926,8 @@
 
 <div class="toast-container" id="toast-container"></div>
 
+</div><!-- main-content -->
+
 <script>
 (function() {
   'use strict';
@@ -2043,7 +2026,7 @@
   }
 
   function tabSwitch(tabName) {
-    document.querySelectorAll('.vsb-item').forEach(function(b) {
+    document.querySelectorAll('.vtn-btn').forEach(function(b) {
       b.classList.remove('active');
     });
     document.querySelectorAll('.tab-panel').forEach(function(p) {
@@ -2060,12 +2043,10 @@
   }
 
   function vaultNav(tabName, el) {
-    document.querySelectorAll('.vsb-item').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.vtn-btn').forEach(function(b) { b.classList.remove('active'); });
     if (el) el.classList.add('active');
     tabSwitch(tabName);
   }
-
-  // No longer needed — sidebar handles clicks directly
 
   function openModal(name) {
     var m = document.getElementById('modal-' + name);
@@ -3104,6 +3085,16 @@
 
   function init() {
     if (!checkAuth()) return;
+    var user = JSON.parse(localStorage.getItem('zicore_user') || '{}');
+    if (user.email) {
+      document.getElementById('vtn-user').textContent = user.email.split('@')[0];
+    }
+    authFetch('/api/vault/znt/balance')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        document.getElementById('vtn-balance').textContent = (d.balance || 0).toFixed(2) + ' ZNT';
+      })
+      .catch(function() {});
     loadDashboard();
     loadTags();
     loadNotes();
@@ -3112,27 +3103,6 @@
 
   init();
 })();
-</script>
-<script src="/js/zicore-topbar.js"></script>
-<script>
-  ZICORE_TOPBAR.init({
-    brand: 'ZIVAULT',
-    tabs: [
-      {id:'dashboard', label:'Dashboard', href:'#'},
-      {id:'assets', label:'Assets', href:'#'},
-      {id:'portfolios', label:'Portfolios', href:'#'},
-      {id:'vault', label:'Vault', href:'#'},
-      {id:'transactions', label:'Transactions', href:'#'},
-      {id:'blockchain', label:'Blockchain', href:'#'},
-      {id:'audit', label:'Audit', href:'#'},
-      {id:'reports', label:'Reports', href:'#'},
-      {id:'settings', label:'Settings', href:'#'},
-      {id:'tags', label:'Tags', href:'#'},
-      {id:'notes', label:'Notes', href:'#'},
-      {id:'store', label:'Store', href:'#'}
-    ],
-    activeTab: 'dashboard'
-  });
 </script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>
