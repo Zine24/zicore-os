@@ -80,6 +80,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
 #app{display:flex;height:100vh;flex-direction:column}
 
+/* TOP NAV */
+.zio-topnav{display:flex;align-items:center;gap:0;background:rgba(6,8,14,0.95);border-bottom:1px solid rgba(0,229,255,0.08);padding:0 16px;height:42px;backdrop-filter:blur(16px);flex-shrink:0}
+.zio-topnav-brand{display:flex;align-items:center;gap:8px;padding-right:16px;border-right:1px solid rgba(0,229,255,0.08);margin-right:4px;cursor:pointer;text-decoration:none}
+.zio-topnav-brand svg{width:20px;height:20px;flex-shrink:0}
+.zio-topnav-brand span{font-size:10px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--glow),var(--glow2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.zio-topnav-items{display:flex;align-items:center;gap:0;flex:1;overflow-x:auto}
+.zio-topnav-items::-webkit-scrollbar{display:none}
+.ztn-btn{display:flex;align-items:center;gap:5px;padding:6px 11px;font-size:10px;letter-spacing:0.5px;color:#607080;cursor:pointer;border:none;background:none;transition:all .15s;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
+.ztn-btn:hover{color:#c8d0dc;background:rgba(255,255,255,0.02)}
+.ztn-btn.active{color:var(--glow);border-bottom-color:var(--glow)}
+.ztn-btn svg{width:12px;height:12px;flex-shrink:0}
+.ztn-sep{width:1px;height:16px;background:rgba(0,229,255,0.08);flex-shrink:0}
+.zio-topnav-right{display:flex;align-items:center;gap:10px;margin-left:auto;padding-left:12px;border-left:1px solid rgba(0,229,255,0.08)}
+.ztn-status{font-size:9px;color:#607080;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+.ztn-status.online{color:#0f6}
+.ztn-status.offline{color:#f44}
+.ztn-back{font-size:10px;color:#607080;cursor:pointer;padding:4px 8px;border:1px solid rgba(0,229,255,0.08);border-radius:4px;transition:all .15s;background:none;font-family:inherit;white-space:nowrap}
+.ztn-back:hover{border-color:rgba(0,229,255,0.3);color:var(--glow)}
 
 
 #main{flex:1;display:flex;overflow:hidden}
@@ -355,7 +373,26 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 </head>
 <body>
 <div id="app">
-  <div class="ztopbar" id="topbar"></div>
+  <nav class="zio-topnav">
+    <a class="zio-topnav-brand" href="/">
+      <svg viewBox="0 0 36 42"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#zb)" stroke-width="1.5"/><defs><linearGradient id="zb" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#zb)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
+      <span>ZIO</span>
+    </a>
+    <div class="zio-topnav-items">
+      <button class="ztn-btn active" onclick="void(0)"><svg viewBox="0 0 14 14"><path d="M2 2h10v8H2z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 12l3-2 3 2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Chat</button>
+      <div class="ztn-sep"></div>
+      <button class="ztn-btn" onclick="window.open('/zicore','_blank')"><svg viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Portal</button>
+      <button class="ztn-btn" onclick="window.open('/dashboard','_blank')"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>Visualizer</button>
+      <button class="ztn-btn" onclick="window.open('/materializer','_blank')"><svg viewBox="0 0 14 14"><path d="M7 1L12 4v6L7 13L2 10V4L7 1z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M7 7L12 4M7 7L2 4M7 7v6" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>Materializer</button>
+      <button class="ztn-btn" onclick="window.open('/mail-portal','_blank')"><svg viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1"/><path d="M1 3l6 5 6-5" fill="none" stroke="currentColor" stroke-width="1"/></svg>Mail</button>
+      <button class="ztn-btn" onclick="window.open('/zivault','_blank')"><svg viewBox="0 0 14 14"><path d="M7 1L2 4v4c0 3 2.2 5.5 5 6 2.8-0.5 5-3 5-6V4L7 1z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>ZiVault</button>
+      <button class="ztn-btn" onclick="window.open('/settings','_blank')"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2" fill="none" stroke="currentColor" stroke-width="1"/></svg>Settings</button>
+    </div>
+    <div class="zio-topnav-right">
+      <div class="ztn-status" id="connStatus">CONNECTING...</div>
+      <button class="ztn-back" onclick="window.location.href='/'"><svg viewBox="0 0 14 14" style="width:10px;height:10px"><path d="M9 2L4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Portal</button>
+    </div>
+  </nav>
 
   <div id="main">
     <div id="sidebar">
@@ -782,14 +819,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     ws=new WebSocket(proto+'://'+location.host+'/ws/zio');
     ws.onopen=function(){
       document.getElementById('connStatus').textContent='ONLINE';
-      document.getElementById('connStatus').className='conn-status online';
+      document.getElementById('connStatus').className='ztn-status online';
     };
     ws.onmessage=function(evt){
       try{handleMessage(JSON.parse(evt.data));}catch(e){}
     };
     ws.onclose=function(){
       document.getElementById('connStatus').textContent='OFFLINE';
-      document.getElementById('connStatus').className='conn-status';
+      document.getElementById('connStatus').className='ztn-status';
       setTimeout(connectWS,3000);
     };
     ws.onerror=function(){ws.close();};
@@ -1292,19 +1329,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   </div>
 </div>
 
-<script src="/js/zicore-topbar.js"></script>
-<script>ZICORE_TOPBAR.init({brand:'ZIO AI',tabs:[{id:'chat',label:'Chat',href:'#'}],activeTab:'chat'});
-// Add connection status to topbar
-setTimeout(function() {
-  var spacer = document.querySelector('.ztopbar-spacer');
-  if (spacer) {
-    var status = document.createElement('div');
-    status.id = 'connStatus';
-    status.style.cssText = 'font-size:10px;color:var(--cyan);font-family:var(--mono);letter-spacing:1px';
-    status.textContent = 'CONNECTING...';
-    spacer.parentNode.insertBefore(status, spacer);
-  }
-}, 100);
+<script>
+// Connection status already in topnav
 </script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>
