@@ -26,15 +26,17 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* SIDEBAR */
-.sidebar{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px)}
+.sidebar{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px);width:220px}
 .sidebar::-webkit-scrollbar{width:3px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.sb-section{padding:12px 14px 6px;font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;font-weight:600}
-.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;font-size:12px;color:var(--text2)}
-.sb-item:hover{background:rgba(0,229,255,.04);color:var(--text)}
-.sb-item.active{background:rgba(0,229,255,.06);color:var(--cyan);border-left-color:var(--cyan)}
-.sb-item .ico{width:18px;text-align:center;font-size:13px;flex-shrink:0}
-.sb-divider{height:1px;background:var(--border);margin:8px 14px}
+.sb-section{padding:14px 16px 6px;font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;font-weight:700}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;font-size:12px;color:var(--text2);border-radius:0 4px 4px 0;margin:1px 6px}
+.sb-item:hover{background:rgba(0,229,255,.06);color:var(--text);border-left-color:rgba(0,229,255,0.3)}
+.sb-item.active{background:rgba(0,229,255,.08);color:var(--cyan);border-left-color:var(--cyan)}
+.sb-item .ico{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border-radius:4px;background:rgba(0,229,255,0.04)}
+.sb-item:hover .ico{background:rgba(0,229,255,0.08)}
+.sb-item.active .ico{background:rgba(0,229,255,0.12)}
+.sb-divider{height:1px;background:var(--border);margin:6px 16px}
 
 /* CONTENT */
 .content{display:flex;flex-direction:column;overflow:hidden}
