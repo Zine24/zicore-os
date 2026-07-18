@@ -80,20 +80,25 @@ const ZICORE_TOPBAR = {
             '<div class="ztopbar-menu-btn" onclick="ZICORE_TOPBAR.toggleDropdown()">' + initial + '</div>' +
             '<div class="ztopbar-dropdown" id="zicoreDropdown">' +
               '<div class="ztopbar-dd-header">' +
-                '<div class="ztopbar-dd-name">' + userName + '</div>' +
-                '<div class="ztopbar-dd-email">' + userEmail + '</div>' +
-                '<div class="ztopbar-dd-balance"><span data-i18n="topbar.balance">Saldo</span>: <span>' + znt + ' ZNT</span></div>' +
+                '<div class="ztopbar-dd-avatar">' + initial + '</div>' +
+                '<div class="ztopbar-dd-user">' +
+                  '<div class="ztopbar-dd-name">' + userName + '</div>' +
+                  '<div class="ztopbar-dd-email">' + userEmail + '</div>' +
+                  '<div class="ztopbar-dd-balance"><span data-i18n="topbar.balance">Saldo</span>: <span>' + znt + ' ZNT</span></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="ztopbar-dd-grid">' +
+                '<a class="ztopbar-dd-item" href="/zivault"><span>&#127974;</span><span data-i18n="topbar.vault">ZiVault</span></a>' +
+                '<a class="ztopbar-dd-item" href="/mail"><span>&#9993;</span><span data-i18n="topbar.mail">Mail</span></a>' +
+                '<a class="ztopbar-dd-item" href="/storage"><span>&#9729;</span><span data-i18n="topbar.storage">Storage</span></a>' +
+                '<a class="ztopbar-dd-item" href="/settings"><span>&#9881;</span><span data-i18n="topbar.settings">Config</span></a>' +
+                '<a class="ztopbar-dd-item" href="/services"><span>&#128203;</span><span data-i18n="topbar.services">Servicios</span></a>' +
+                '<a class="ztopbar-dd-item" href="/api-docs"><span>&#128218;</span>API</a>' +
               '</div>' +
               '<div class="ztopbar-dd-sep"></div>' +
-              '<a class="ztopbar-dd-item" href="/zivault"><span>&#127974;</span><span data-i18n="topbar.vault">ZiVault</span></a>' +
-              '<a class="ztopbar-dd-item" href="/mail"><span>&#9993;</span><span data-i18n="topbar.mail">Mail</span></a>' +
-              '<a class="ztopbar-dd-item" href="/storage"><span>&#9729;</span><span data-i18n="topbar.storage">Storage</span></a>' +
-              '<a class="ztopbar-dd-item" href="/settings"><span>&#9881;</span><span data-i18n="topbar.settings">Configuracion</span></a>' +
-              '<div class="ztopbar-dd-sep"></div>' +
-              '<a class="ztopbar-dd-item" href="/services"><span>&#128203;</span><span data-i18n="topbar.services">Servicios</span></a>' +
-              '<a class="ztopbar-dd-item" href="/api-docs"><span>&#128218;</span>API Docs</a>' +
-              '<div class="ztopbar-dd-sep"></div>' +
-              '<div class="ztopbar-dd-item danger" onclick="ZICORE_TOPBAR.logout()"><span>&#9211;</span><span data-i18n="topbar.logout">Cerrar Sesion</span></div>' +
+              '<div class="ztopbar-dd-grid">' +
+                '<div class="ztopbar-dd-item danger" onclick="ZICORE_TOPBAR.logout()"><span>&#9211;</span><span data-i18n="topbar.logout">Cerrar Sesion</span></div>' +
+              '</div>' +
             '</div>' +
           '</div>'
         :
