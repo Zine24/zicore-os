@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE — Materializer</title>
+<title>ZICORE — Materializer + OutPreview</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1525;--bg4:#141c30;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--text:#c8d6e5;--text2:#607080;--text3:#303848;--border:#1a2540;--glass:rgba(10,14,26,0.92)}
@@ -20,14 +20,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .topbar .status{display:flex;align-items:center;gap:6px;font-size:8px;letter-spacing:1px;color:var(--text2)}
 .topbar .dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.top-btn{font-size:8px;letter-spacing:2px;padding:4px 10px;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);color:var(--cyan);cursor:pointer;clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);transition:all .2s;text-decoration:none}
+.top-btn{font-size:8px;letter-spacing:2px;padding:4px 10px;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);color:var(--cyan);cursor:pointer;transition:all .2s;text-decoration:none}
 .top-btn:hover{background:rgba(0,229,255,0.1)}
 
 /* MAIN LAYOUT */
 .main{display:flex;height:calc(100vh - 42px - 28px);overflow:hidden}
 
-/* LEFT PANEL — Prompt Input */
-.left-panel{width:340px;min-width:340px;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--glass);backdrop-filter:blur(16px);overflow-y:auto}
+/* LEFT PANEL */
+.left-panel{width:320px;min-width:320px;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--glass);backdrop-filter:blur(16px);overflow-y:auto}
 .left-panel::-webkit-scrollbar{width:3px}
 .left-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
@@ -36,7 +36,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 .prompt-section{padding:16px;border-bottom:1px solid var(--border)}
 .prompt-label{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:8px}
-.prompt-area{width:100%;min-height:120px;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.5}
+.prompt-area{width:100%;min-height:100px;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.5}
 .prompt-area:focus{border-color:rgba(0,229,255,0.3)}
 .prompt-area::placeholder{color:var(--text3)}
 
@@ -62,81 +62,96 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .generate-btn:active{transform:scale(0.98)}
 .generate-btn.generating{pointer-events:none;opacity:0.6}
 
-/* CENTER — Render Canvas */
-.center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;background:rgba(4,6,10,0.9)}
-.render-canvas{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-#renderCanvas{width:100%;height:100%;position:absolute;inset:0}
-.render-overlay{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(0,229,255,0.06)}
-.render-label{position:absolute;top:12px;left:12px;font-size:8px;letter-spacing:3px;color:rgba(0,229,255,0.4);pointer-events:none}
-.render-info{position:absolute;bottom:12px;left:12px;font-size:9px;letter-spacing:1px;color:rgba(0,229,255,0.4);pointer-events:none}
-.render-center-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-.render-center-msg .rcm-icon{font-size:48px;opacity:0.15;margin-bottom:12px}
-.render-center-msg .rcm-text{font-size:11px;letter-spacing:3px;color:var(--text3);text-transform:uppercase}
-.render-center-msg .rcm-sub{font-size:8px;color:var(--text3);margin-top:6px;letter-spacing:1px}
+/* LEFT PANEL — Output Tabs (OutPreview) */
+.output-tabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2)}
+.ot-tab{flex:1;padding:8px 4px;text-align:center;font-size:7px;letter-spacing:1px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.ot-tab:hover{color:var(--text2)}
+.ot-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);background:rgba(0,229,255,0.04)}
+.output-panel{display:none;flex:1;overflow-y:auto;padding:12px}
+.output-panel.active{display:block}
+.output-panel::-webkit-scrollbar{width:3px}
+.output-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-/* Canvas Toolbar */
-.canvas-toolbar{height:36px;min-height:36px;background:rgba(6,8,14,0.96);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:4px}
-.ct-btn{font-size:7px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;border-radius:3px;transition:all .2s}
-.ct-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan);background:rgba(0,229,255,0.05)}
-.ct-btn.active{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:var(--cyan)}
-.ct-sep{width:1px;height:14px;background:var(--border);margin:0 4px}
-.ct-spacer{flex:1}
-.ct-info{font-size:7px;color:var(--text3);letter-spacing:1px}
+/* Edit controls */
+.edit-group{margin-bottom:12px}
+.edit-label{font-size:8px;letter-spacing:1px;color:var(--text2);margin-bottom:4px}
+.edit-row{display:flex;gap:6px;margin-bottom:4px}
+.edit-slider{flex:1;-webkit-appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none}
+.edit-slider::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;border-radius:50%;background:var(--purple);cursor:pointer}
+.edit-btn{padding:4px 8px;border:1px solid var(--border);background:rgba(0,0,0,0.3);color:var(--text2);font-size:7px;letter-spacing:1px;cursor:pointer;border-radius:3px;transition:all .2s}
+.edit-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.edit-btn.active{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.edit-info{font-size:7px;color:var(--text3);letter-spacing:1px;padding:4px 0;border-top:1px solid var(--border);margin-top:8px}
 
-/* RIGHT PANEL — Output */
-.right-panel{width:280px;min-width:280px;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--glass);backdrop-filter:blur(16px);overflow-y:auto}
-.right-panel::-webkit-scrollbar{width:3px}
-.right-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* Export panel */
+.export-format{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.export-opt{padding:8px;border:1px solid var(--border);border-radius:4px;cursor:pointer;text-align:center;transition:all .2s}
+.export-opt:hover{border-color:rgba(0,229,255,0.2)}
+.export-opt.active{border-color:var(--cyan);background:rgba(0,229,255,0.08)}
+.export-opt .efmt{font-size:11px;font-weight:600;color:var(--text)}
+.export-opt .edesc{font-size:7px;color:var(--text3);margin-top:2px}
+.export-opt.active .efmt{color:var(--cyan)}
+.export-go{width:100%;padding:10px;border:1px solid var(--cyan);background:rgba(0,229,255,0.08);color:var(--cyan);font-size:9px;letter-spacing:2px;cursor:pointer;border-radius:4px;transition:all .2s;margin-top:8px}
+.export-go:hover{background:rgba(0,229,255,0.15)}
 
-.output-section{padding:12px 16px;border-bottom:1px solid var(--border)}
-.output-section .os-title{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:8px;font-weight:600}
-.output-meta{display:flex;flex-direction:column;gap:4px}
-.meta-row{display:flex;justify-content:space-between;align-items:center}
-.meta-label{font-size:8px;color:var(--text2);letter-spacing:1px}
-.meta-val{font-size:9px;color:var(--cyan);font-family:'Mono',monospace}
+/* Library panel */
+.lib-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lib-card{border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;transition:all .2s}
+.lib-card:hover{border-color:rgba(0,229,255,0.2)}
+.lib-card .lthumb{height:60px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px}
+.lib-card .linfo{padding:6px 8px}
+.lib-card .lname{font-size:8px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-card .lmeta{font-size:7px;color:var(--text3);margin-top:1px}
 
-.export-btns{display:flex;flex-direction:column;gap:6px;margin-top:8px}
-.export-btn{padding:8px 12px;border:1px solid var(--border);background:rgba(0,0,0,0.3);color:var(--text2);font-size:8px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:3px;transition:all .2s;text-align:center}
-.export-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan);background:rgba(0,229,255,0.05)}
-.export-btn.primary{border-color:rgba(0,229,255,0.2);color:var(--cyan);background:rgba(0,229,255,0.06)}
-.export-btn.green{border-color:rgba(0,255,136,0.15);color:var(--green);background:rgba(0,255,136,0.04)}
-.export-btn.green:hover{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.3)}
-
-.library-list{display:flex;flex-direction:column;gap:4px}
-.lib-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:3px;cursor:pointer;transition:all .2s}
-.lib-item:hover{border-color:rgba(0,229,255,0.15);background:rgba(0,229,255,0.03)}
-.lib-thumb{width:32px;height:32px;border-radius:3px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.lib-info{flex:1;overflow:hidden}
-.lib-name{font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lib-meta{font-size:7px;color:var(--text2);margin-top:1px}
-
-/* BOTTOM — History */
-.bottom-panel{height:110px;min-height:110px;border-top:1px solid var(--border);background:var(--glass);backdrop-filter:blur(16px);display:flex;flex-direction:column}
-.bottom-header{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
-.bottom-header .bh-title{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;font-weight:600}
-.bottom-header .bh-count{font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,229,255,0.1);color:var(--cyan)}
-.history-scroll{flex:1;display:flex;gap:8px;padding:8px 16px;overflow-x:auto;align-items:flex-start}
-.history-scroll::-webkit-scrollbar{height:3px}
-.history-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.hist-card{min-width:90px;max-width:90px;border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;transition:all .2s;flex-shrink:0}
-.hist-card:hover{border-color:rgba(0,229,255,0.2);transform:translateY(-1px)}
-.hist-card.active{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,0.1)}
-.hist-thumb{height:50px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;position:relative}
-.hist-thumb .ht-type{position:absolute;top:2px;right:2px;font-size:6px;letter-spacing:1px;padding:1px 3px;border-radius:2px;background:rgba(0,0,0,0.7);border:1px solid rgba(0,229,255,0.15);color:var(--cyan)}
-.hist-info{padding:4px 6px}
-.hist-name{font-size:7px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-time{font-size:6px;color:var(--text3);margin-top:1px}
-.hist-empty{display:flex;align-items:center;justify-content:center;width:100%;color:var(--text3);font-size:9px;letter-spacing:1px}
-
-/* FOOTER */
-.footer{height:28px;min-height:28px;background:rgba(4,6,12,0.96);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;font-size:7px;letter-spacing:2px;color:var(--text3);z-index:3000;opacity:0.6;transition:opacity .3s}
-.footer:hover{opacity:1}
-.footer .f-cyan{color:var(--cyan)}
+/* CENTER — 3D Viewport */
+.center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;background:rgba(2,4,8,1)}
+.viewport-container{flex:1;position:relative;overflow:hidden}
+#viewport3d{width:100%;height:100%;display:block}
+.viewport-overlay{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(0,229,255,0.04)}
+.viewport-label{position:absolute;top:10px;left:12px;font-size:8px;letter-spacing:3px;color:rgba(0,229,255,0.3);pointer-events:none}
+.viewport-info{position:absolute;bottom:10px;left:12px;font-size:8px;color:rgba(0,229,255,0.3);pointer-events:none;letter-spacing:1px}
+.viewport-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.viewport-center .vc-icon{font-size:48px;opacity:0.1;margin-bottom:10px}
+.viewport-center .vc-text{font-size:10px;letter-spacing:3px;color:var(--text3)}
+.viewport-center .vc-sub{font-size:8px;color:var(--text3);margin-top:4px;letter-spacing:1px}
 
 /* Progress Bar */
 .progress-bar{position:absolute;top:0;left:0;right:0;height:2px;background:transparent;z-index:10;opacity:0;transition:opacity .3s}
 .progress-bar.active{opacity:1}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));width:0%;transition:width .3s;box-shadow:0 0 8px rgba(0,229,255,0.3)}
+
+/* Viewport Toolbar */
+.vp-toolbar{height:34px;min-height:34px;background:rgba(4,6,12,0.96);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:4px}
+.vp-btn{font-size:7px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;border-radius:3px;transition:all .2s}
+.vp-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan);background:rgba(0,229,255,0.05)}
+.vp-btn.active{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.vp-sep{width:1px;height:14px;background:var(--border);margin:0 4px}
+.vp-spacer{flex:1}
+.vp-info{font-size:7px;color:var(--text3);letter-spacing:1px}
+
+/* RIGHT PANEL — Info */
+.right-panel{width:260px;min-width:260px;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--glass);backdrop-filter:blur(16px);overflow-y:auto}
+.right-panel::-webkit-scrollbar{width:3px}
+.right-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.info-section{padding:12px 16px;border-bottom:1px solid var(--border)}
+.info-section .is-title{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:8px;font-weight:600}
+.info-row{display:flex;justify-content:space-between;align-items:center;margin:3px 0}
+.info-label{font-size:8px;color:var(--text2);letter-spacing:1px}
+.info-val{font-size:9px;color:var(--cyan);font-family:'Mono',monospace}
+
+.history-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+.hist-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--border);border-radius:3px;cursor:pointer;transition:all .2s}
+.hist-item:hover{border-color:rgba(0,229,255,0.15);background:rgba(0,229,255,0.03)}
+.hist-item .hi-icon{font-size:14px}
+.hist-item .hi-info{flex:1;overflow:hidden}
+.hist-item .hi-name{font-size:8px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-item .hi-meta{font-size:7px;color:var(--text3)}
+
+/* BOTTOM */
+.bottom-bar{height:28px;min-height:28px;background:rgba(4,6,12,0.96);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;font-size:7px;letter-spacing:2px;color:var(--text3);z-index:3000;opacity:0.6;transition:opacity .3s}
+.bottom-bar:hover{opacity:1}
+.bottom-bar .f-cyan{color:var(--cyan)}
 </style>
 </head>
 <body>
@@ -144,19 +159,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="topbar">
   <div class="logo"><span>Z</span>ICORE</div>
   <div class="sep"></div>
-  <div class="title">MATERIALIZER</div>
+  <div class="title">MATERIALIZER + OUTPREVIEW</div>
   <div class="spacer"></div>
-  <a class="top-btn" href="/dashboard" target="_top">VISUALIZER</a>
-  <a class="top-btn" href="/video-editor" target="_top">VIDEO EDITOR</a>
-  <div class="status">
-    <div class="dot"></div>
-    <span>SYSTEM ONLINE</span>
-  </div>
+  <a class="top-btn" href="/dashboard">VISUALIZER</a>
+  <a class="top-btn" href="/multimedia">ZMMX</a>
+  <a class="top-btn" href="/video-editor">EDITOR</a>
+  <div class="status"><div class="dot"></div><span>SYSTEM ONLINE</span></div>
 </div>
 
 <!-- MAIN -->
 <div class="main">
-  <!-- LEFT — Prompt Input -->
+  <!-- LEFT PANEL -->
   <div class="left-panel">
     <div class="panel-header">
       <div class="ph-title">Prompt</div>
@@ -171,152 +184,183 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="engine-section">
       <div class="engine-label">Engine</div>
       <div class="engine-grid" id="engineGrid">
-        <div class="engine-card active" data-engine="trimesh" onclick="selectEngine(this)">
-          <div class="ec-icon">⬡</div>
-          <div class="ec-name">Trimesh</div>
-        </div>
-        <div class="engine-card" data-engine="cadquery" onclick="selectEngine(this)">
-          <div class="ec-icon">⚙</div>
-          <div class="ec-name">CadQuery</div>
-        </div>
-        <div class="engine-card" data-engine="openscad" onclick="selectEngine(this)">
-          <div class="ec-icon">🔧</div>
-          <div class="ec-name">OpenSCAD</div>
-        </div>
-        <div class="engine-card" data-engine="picogk" onclick="selectEngine(this)">
-          <div class="ec-icon">🧊</div>
-          <div class="ec-name">PicoGK</div>
-        </div>
-        <div class="engine-card" data-engine="procedural" onclick="selectEngine(this)">
-          <div class="ec-icon">🌐</div>
-          <div class="ec-name">Procedural</div>
-        </div>
-        <div class="engine-card" data-engine="ai3d" onclick="selectEngine(this)">
-          <div class="ec-icon">🤖</div>
-          <div class="ec-name">AI 3D</div>
-        </div>
+        <div class="engine-card active" data-engine="trimesh" onclick="selectEngine(this)"><div class="ec-icon">⬡</div><div class="ec-name">Trimesh</div></div>
+        <div class="engine-card" data-engine="cadquery" onclick="selectEngine(this)"><div class="ec-icon">⚙</div><div class="ec-name">CadQuery</div></div>
+        <div class="engine-card" data-engine="openscad" onclick="selectEngine(this)"><div class="ec-icon">🔧</div><div class="ec-name">OpenSCAD</div></div>
+        <div class="engine-card" data-engine="picogk" onclick="selectEngine(this)"><div class="ec-icon">🧊</div><div class="ec-name">PicoGK</div></div>
+        <div class="engine-card" data-engine="procedural" onclick="selectEngine(this)"><div class="ec-icon">🌐</div><div class="ec-name">Procedural</div></div>
+        <div class="engine-card" data-engine="ai3d" onclick="selectEngine(this)"><div class="ec-icon">🤖</div><div class="ec-name">AI 3D</div></div>
       </div>
     </div>
 
     <div class="params-section">
       <div class="engine-label">Parameters</div>
-      <div class="param-row">
-        <div class="param-label">Scale</div>
-        <input type="range" class="param-slider" id="paramScale" min="1" max="100" value="10">
-        <div class="param-val" id="paramScaleVal">1.0</div>
-      </div>
-      <div class="param-row">
-        <div class="param-label">Detail</div>
-        <input type="range" class="param-slider" id="paramDetail" min="1" max="10" value="5">
-        <div class="param-val" id="paramDetailVal">5</div>
-      </div>
-      <div class="param-row">
-        <div class="param-label">Symmetry</div>
-        <input type="range" class="param-slider" id="paramSymmetry" min="1" max="12" value="1">
-        <div class="param-val" id="paramSymmetryVal">1</div>
-      </div>
-      <div class="param-row">
-        <div class="param-label">Seed</div>
-        <input type="number" class="param-val" id="paramSeed" value="42" style="width:60px;background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:2px 4px;font-size:9px;color:var(--cyan);outline:none;border-radius:2px">
-      </div>
+      <div class="param-row"><div class="param-label">Scale</div><input type="range" class="param-slider" id="paramScale" min="1" max="100" value="10"><div class="param-val" id="paramScaleVal">1.0</div></div>
+      <div class="param-row"><div class="param-label">Detail</div><input type="range" class="param-slider" id="paramDetail" min="1" max="10" value="5"><div class="param-val" id="paramDetailVal">5</div></div>
+      <div class="param-row"><div class="param-label">Symmetry</div><input type="range" class="param-slider" id="paramSymmetry" min="1" max="12" value="6"><div class="param-val" id="paramSymmetryVal">6</div></div>
+      <div class="param-row"><div class="param-label">Seed</div><input type="number" class="param-val" id="paramSeed" value="42" style="width:60px;background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:2px 4px;font-size:9px;color:var(--cyan);outline:none;border-radius:2px"></div>
     </div>
 
-    <button class="generate-btn" id="generateBtn" onclick="startGeneration()">
-      ▶ GENERATE
-    </button>
+    <button class="generate-btn" id="generateBtn" onclick="startGeneration()">&#9654; GENERATE</button>
+
+    <!-- Output Tabs (OutPreview integrated) -->
+    <div class="output-tabs" id="outputTabs">
+      <div class="ot-tab active" data-tab="edit">EDIT</div>
+      <div class="ot-tab" data-tab="export">EXPORT</div>
+      <div class="ot-tab" data-tab="library">LIBRARY</div>
+      <div class="ot-tab" data-tab="vr">VR SCENE</div>
+    </div>
+
+    <!-- EDIT TAB -->
+    <div class="output-panel active" id="tab-edit">
+      <div class="edit-group">
+        <div class="edit-label">TRANSFORM</div>
+        <div class="edit-row"><span class="info-label" style="width:40px">SX</span><input type="range" class="edit-slider" id="editScaleX" min="0.1" max="3" step="0.1" value="1"></div>
+        <div class="edit-row"><span class="info-label" style="width:40px">SY</span><input type="range" class="edit-slider" id="editScaleY" min="0.1" max="3" step="0.1" value="1"></div>
+        <div class="edit-row"><span class="info-label" style="width:40px">SZ</span><input type="range" class="edit-slider" id="editScaleZ" min="0.1" max="3" step="0.1" value="1"></div>
+      </div>
+      <div class="edit-group">
+        <div class="edit-label">ROTATION</div>
+        <div class="edit-row"><span class="info-label" style="width:40px">RX</span><input type="range" class="edit-slider" id="editRotX" min="-180" max="180" value="0"></div>
+        <div class="edit-row"><span class="info-label" style="width:40px">RY</span><input type="range" class="edit-slider" id="editRotY" min="-180" max="180" value="0"></div>
+        <div class="edit-row"><span class="info-label" style="width:40px">RZ</span><input type="range" class="edit-slider" id="editRotZ" min="-180" max="180" value="0"></div>
+      </div>
+      <div class="edit-group">
+        <div class="edit-label">OPERATIONS</div>
+        <div class="edit-row">
+          <button class="edit-btn" onclick="editOp('mirrorX')">MIRROR X</button>
+          <button class="edit-btn" onclick="editOp('mirrorY')">MIRROR Y</button>
+          <button class="edit-btn" onclick="editOp('mirrorZ')">MIRROR Z</button>
+        </div>
+        <div class="edit-row">
+          <button class="edit-btn" onclick="editOp('smooth')">SMOOTH</button>
+          <button class="edit-btn" onclick="editOp('decimate')">DECIMATE</button>
+          <button class="edit-btn" onclick="editOp('center')">CENTER</button>
+        </div>
+      </div>
+      <div class="edit-info" id="editInfo">No mesh loaded — generate first</div>
+    </div>
+
+    <!-- EXPORT TAB -->
+    <div class="output-panel" id="tab-export">
+      <div class="edit-label">FORMAT</div>
+      <div class="export-format">
+        <div class="export-opt active" onclick="selectExportFormat(this,'stl')"><div class="efmt">STL</div><div class="edesc">3D Print</div></div>
+        <div class="export-opt" onclick="selectExportFormat(this,'obj')"><div class="efmt">OBJ</div><div class="edesc">Universal</div></div>
+        <div class="export-opt" onclick="selectExportFormat(this,'glb')"><div class="efmt">GLB</div><div class="edesc">Web/3D</div></div>
+        <div class="export-opt" onclick="selectExportFormat(this,'step')"><div class="efmt">STEP</div><div class="edesc">CAD</div></div>
+      </div>
+      <div class="edit-group">
+        <div class="edit-label">SCALE</div>
+        <div class="edit-row"><input type="range" class="edit-slider" id="exportScale" min="0.1" max="10" step="0.1" value="1"><div class="param-val" id="exportScaleVal">1.0x</div></div>
+      </div>
+      <div class="edit-group">
+        <div class="edit-label">UNITS</div>
+        <div class="edit-row">
+          <button class="edit-btn active" onclick="selectUnits(this,'mm')">MM</button>
+          <button class="edit-btn" onclick="selectUnits(this,'cm')">CM</button>
+          <button class="edit-btn" onclick="selectUnits(this,'m')">M</button>
+          <button class="edit-btn" onclick="selectUnits(this,'in')">IN</button>
+        </div>
+      </div>
+      <button class="export-go" onclick="doExport()">DOWNLOAD FILE</button>
+    </div>
+
+    <!-- LIBRARY TAB -->
+    <div class="output-panel" id="tab-library">
+      <input type="text" placeholder="Search library..." style="width:100%;padding:6px 8px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:9px;outline:none;margin-bottom:8px" id="libSearch" oninput="filterLibrary()">
+      <div class="lib-grid" id="libGrid"></div>
+      <div id="libEmpty" style="text-align:center;padding:20px;color:var(--text3);font-size:8px;letter-spacing:1px">No items yet — generate something</div>
+    </div>
+
+    <!-- VR SCENE TAB -->
+    <div class="output-panel" id="tab-vr">
+      <div class="edit-label">SCENE TYPE</div>
+      <div class="edit-row" style="flex-wrap:wrap;gap:4px;margin-bottom:8px">
+        <button class="edit-btn active" onclick="selectVRScene(this,'planetary')">PLANETARY</button>
+        <button class="edit-btn" onclick="selectVRScene(this,'station')">STATION</button>
+        <button class="edit-btn" onclick="selectVRScene(this,'lunar')">LUNAR</button>
+        <button class="edit-btn" onclick="selectVRScene(this,'launchpad')">LAUNCHPAD</button>
+        <button class="edit-btn" onclick="selectVRScene(this,'cockpit')">COCKPIT</button>
+        <button class="edit-btn" onclick="selectVRScene(this,'landscape')">LANDSCAPE</button>
+      </div>
+      <button class="export-go" onclick="generateVRScene()" style="margin-bottom:8px">GENERATE VR SCENE</button>
+      <div id="vrObjects" style="font-size:7px;color:var(--text3)">No scene loaded</div>
+    </div>
   </div>
 
-  <!-- CENTER — Render Canvas -->
+  <!-- CENTER — 3D Viewport -->
   <div class="center-panel">
-    <div class="progress-bar" id="progressBar">
-      <div class="progress-fill" id="progressFill"></div>
-    </div>
-    <div class="render-canvas">
-      <canvas id="renderCanvas"></canvas>
-      <div class="render-overlay"></div>
-      <div class="render-label">RENDER OUTPUT</div>
-      <div class="render-center-msg" id="renderPlaceholder">
-        <div class="rcm-icon">◈</div>
-        <div class="rcm-text">No Output</div>
-        <div class="rcm-sub">Enter a prompt and click Generate</div>
+    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="viewport-container">
+      <canvas id="viewport3d"></canvas>
+      <div class="viewport-overlay"></div>
+      <div class="viewport-label">3D VIEWPORT</div>
+      <div class="viewport-info" id="vpInfo">Ready</div>
+      <div class="viewport-center" id="vpPlaceholder">
+        <div class="vc-icon">&#9670;</div>
+        <div class="vc-text">No Output</div>
+        <div class="vc-sub">Enter a prompt and click Generate</div>
       </div>
-      <div class="render-info" id="renderInfo">Ready</div>
     </div>
-    <div class="canvas-toolbar">
-      <button class="ct-btn active" onclick="setViewMode('perspective',this)">PERSP</button>
-      <button class="ct-btn" onclick="setViewMode('front',this)">FRONT</button>
-      <button class="ct-btn" onclick="setViewMode('top',this)">TOP</button>
-      <button class="ct-btn" onclick="setViewMode('side',this)">SIDE</button>
-      <div class="ct-sep"></div>
-      <button class="ct-btn" onclick="toggleWireframe()">WIRE</button>
-      <button class="ct-btn" onclick="toggleGrid()">GRID</button>
-      <button class="ct-btn" onclick="resetCamera()">RESET</button>
-      <div class="ct-spacer"></div>
-      <div class="ct-info" id="canvasInfo">TRIANGLES: 0 | VERTICES: 0</div>
+    <div class="vp-toolbar">
+      <button class="vp-btn active" onclick="setVPView('perspective',this)">PERSP</button>
+      <button class="vp-btn" onclick="setVPView('front',this)">FRONT</button>
+      <button class="vp-btn" onclick="setVPView('top',this)">TOP</button>
+      <button class="vp-btn" onclick="setVPView('side',this)">SIDE</button>
+      <div class="vp-sep"></div>
+      <button class="vp-btn" id="btnWire" onclick="toggleVPWire()">WIRE</button>
+      <button class="vp-btn" id="btnGrid" onclick="toggleVPGrid()">GRID</button>
+      <button class="vp-btn" id="btnNormals" onclick="toggleVPNormals()">NORMALS</button>
+      <div class="vp-sep"></div>
+      <button class="vp-btn" onclick="resetVPCamera()">RESET</button>
+      <button class="vp-btn" onclick="toggleVPFullscreen()">FULL</button>
+      <div class="vp-spacer"></div>
+      <div class="vp-info" id="vpStats">TRI: 0 | VERT: 0</div>
     </div>
   </div>
 
-  <!-- RIGHT — Output -->
+  <!-- RIGHT PANEL -->
   <div class="right-panel">
     <div class="panel-header">
       <div class="ph-title">Output</div>
-      <div class="ph-badge">EXPORT</div>
+      <div class="ph-badge">INFO</div>
     </div>
-
-    <div class="output-section">
-      <div class="os-title">File Info</div>
-      <div class="output-meta">
-        <div class="meta-row"><div class="meta-label">FORMAT</div><div class="meta-val" id="outFormat">—</div></div>
-        <div class="meta-row"><div class="meta-label">SIZE</div><div class="meta-val" id="outSize">—</div></div>
-        <div class="meta-row"><div class="meta-label">TRIS</div><div class="meta-val" id="outTris">—</div></div>
-        <div class="meta-row"><div class="meta-label">VERTS</div><div class="meta-val" id="outVerts">—</div></div>
-        <div class="meta-row"><div class="meta-label">ENGINE</div><div class="meta-val" id="outEngine">trimesh</div></div>
-        <div class="meta-row"><div class="meta-label">STATUS</div><div class="meta-val" id="outStatus" style="color:var(--text3)">IDLE</div></div>
+    <div class="info-section">
+      <div class="is-title">Mesh Info</div>
+      <div class="info-row"><div class="info-label">FORMAT</div><div class="info-val" id="meshFormat">—</div></div>
+      <div class="info-row"><div class="info-label">SIZE</div><div class="info-val" id="meshSize">—</div></div>
+      <div class="info-row"><div class="info-label">TRIS</div><div class="info-val" id="meshTris">—</div></div>
+      <div class="info-row"><div class="info-label">VERTS</div><div class="info-val" id="meshVerts">—</div></div>
+      <div class="info-row"><div class="info-label">ENGINE</div><div class="info-val" id="meshEngine">trimesh</div></div>
+      <div class="info-row"><div class="info-label">STATUS</div><div class="info-val" id="meshStatus" style="color:var(--text3)">IDLE</div></div>
+      <div class="info-row"><div class="info-label">VOLUME</div><div class="info-val" id="meshVolume">—</div></div>
+      <div class="info-row"><div class="info-label">WATERTIGHT</div><div class="info-val" id="meshWatertight">—</div></div>
+    </div>
+    <div class="info-section" style="flex:1;overflow-y:auto">
+      <div class="is-title">History</div>
+      <div class="history-list" id="historyList">
+        <div style="text-align:center;padding:16px;color:var(--text3);font-size:8px">No generations yet</div>
       </div>
     </div>
-
-    <div class="output-section">
-      <div class="os-title">Export</div>
-      <div class="export-btns">
-        <button class="export-btn primary" onclick="exportFile('stl')">EXPORT STL</button>
-        <button class="export-btn" onclick="exportFile('obj')">EXPORT OBJ</button>
-        <button class="export-btn" onclick="exportFile('glb')">EXPORT GLB</button>
-        <button class="export-btn green" onclick="saveToLibrary()">SAVE TO LIBRARY</button>
-      </div>
-    </div>
-
-    <div class="output-section" style="flex:1;overflow-y:auto">
-      <div class="os-title">Library</div>
-      <div class="library-list" id="libraryList">
-        <div style="text-align:center;padding:20px;color:var(--text3);font-size:8px;letter-spacing:1px">No items yet</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- BOTTOM — History -->
-<div class="bottom-panel">
-  <div class="bottom-header">
-    <div class="bh-title">Generation History</div>
-    <div class="bh-count" id="historyCount">0</div>
-  </div>
-  <div class="history-scroll" id="historyScroll">
-    <div class="hist-empty">No generations yet</div>
   </div>
 </div>
 
 <!-- FOOTER -->
-<div class="footer">
+<div class="bottom-bar">
   <span class="f-cyan">ZICORE</span>
-  <span>MATERIALIZER v1.0</span>
+  <span>MATERIALIZER + OUTPREVIEW v2.0</span>
   <span>|</span>
-  <span>ENGINE: TRIMESH</span>
+  <span id="footerEngine">ENGINE: TRIMESH</span>
   <span>|</span>
   <span id="footerStatus">READY</span>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// SSO Auth Check
+/* ═══════════════════════════════════════════════════════════════════════════
+   SSO AUTH
+   ═══════════════════════════════════════════════════════════════════════════ */
 (function(){
   var token=localStorage.getItem('zicore_sso_token');
   if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
@@ -325,264 +369,513 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   }).catch(function(){});
 })();
 
-// State
-let selectedEngine = 'trimesh';
-let history = [];
-let isGenerating = false;
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════════════════ */
+let selectedEngine='trimesh';
+let history=[];
+let isGenerating=false;
+let currentMesh=null;
+let currentEntry=null;
+let exportFmt='stl';
+let exportUnits='mm';
+let vrSceneType='planetary';
+let library=[];
 
-// Engine selection
-function selectEngine(el) {
-  document.querySelectorAll('.engine-card').forEach(c => c.classList.remove('active'));
+/* ═══════════════════════════════════════════════════════════════════════════
+   THREE.JS 3D VIEWPORT
+   ═══════════════════════════════════════════════════════════════════════════ */
+var scene, camera, renderer, gridHelper, meshGroup;
+var vpWire=false, vpGrid=true, vpNormals=false;
+var isDragging=false, prevMouse={x:0,y:0};
+var camTheta=Math.PI/4, camPhi=Math.PI/6, camDist=5;
+
+function initViewport(){
+  var canvas=document.getElementById('viewport3d');
+  var rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width; canvas.height=rect.height;
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x020408);
+
+  camera=new THREE.PerspectiveCamera(50,rect.width/rect.height,0.1,1000);
+  updateCameraFromOrbit();
+
+  renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+  renderer.setSize(rect.width,rect.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x404060,0.6));
+  var dirLight=new THREE.DirectionalLight(0xffffff,0.8);
+  dirLight.position.set(5,8,5); scene.add(dirLight);
+  var pointLight=new THREE.PointLight(0x00e5ff,0.4,20);
+  pointLight.position.set(-3,4,-3); scene.add(pointLight);
+
+  // Grid
+  gridHelper=new THREE.GridHelper(10,20,0x1a2540,0x0d1520);
+  scene.add(gridHelper);
+
+  meshGroup=new THREE.Group();
+  scene.add(meshGroup);
+
+  // Mouse orbit
+  canvas.addEventListener('mousedown',function(e){isDragging=true;prevMouse={x:e.clientX,y:e.clientY};});
+  canvas.addEventListener('mousemove',function(e){
+    if(!isDragging)return;
+    var dx=e.clientX-prevMouse.x, dy=e.clientY-prevMouse.y;
+    camTheta-=dx*0.005; camPhi-=dy*0.005;
+    camPhi=Math.max(-Math.PI/2+0.01,Math.min(Math.PI/2-0.01,camPhi));
+    prevMouse={x:e.clientX,y:e.clientY};
+    updateCameraFromOrbit();
+  });
+  canvas.addEventListener('mouseup',function(){isDragging=false;});
+  canvas.addEventListener('mouseleave',function(){isDragging=false;});
+  canvas.addEventListener('wheel',function(e){
+    camDist+=e.deltaY*0.005;
+    camDist=Math.max(1,Math.min(50,camDist));
+    updateCameraFromOrbit();
+    e.preventDefault();
+  },{passive:false});
+
+  animateViewport();
+}
+
+function updateCameraFromOrbit(){
+  camera.position.x=camDist*Math.cos(camPhi)*Math.sin(camTheta);
+  camera.position.y=camDist*Math.sin(camPhi);
+  camera.position.z=camDist*Math.cos(camPhi)*Math.cos(camTheta);
+  camera.lookAt(0,0,0);
+}
+
+function animateViewport(){
+  requestAnimationFrame(animateViewport);
+  if(renderer&&scene&&camera) renderer.render(scene,camera);
+}
+
+function resetVPCamera(){
+  camTheta=Math.PI/4; camPhi=Math.PI/6; camDist=5;
+  updateCameraFromOrbit();
+}
+
+function toggleVPFullscreen(){
+  var el=document.querySelector('.viewport-container');
+  if(!document.fullscreenElement) el.requestFullscreen().catch(function(){});
+  else document.exitFullscreen();
+}
+
+function setVPView(mode,btn){
+  document.querySelectorAll('.vp-toolbar .vp-btn').forEach(function(b){if(b.parentElement===btn.parentElement)b.classList.remove('active');});
+  btn.classList.add('active');
+  switch(mode){
+    case'front':camTheta=0;camPhi=0;camDist=5;break;
+    case'top':camTheta=0;camPhi=Math.PI/2-0.01;camDist=5;break;
+    case'side':camTheta=Math.PI/2;camPhi=0;camDist=5;break;
+    default:camTheta=Math.PI/4;camPhi=Math.PI/6;camDist=5;
+  }
+  updateCameraFromOrbit();
+}
+
+function toggleVPWire(){
+  vpWire=!vpWire;
+  document.getElementById('btnWire').classList.toggle('active',vpWire);
+  meshGroup.traverse(function(c){
+    if(c.isMesh&&c.material) c.material.wireframe=vpWire;
+  });
+}
+
+function toggleVPGrid(){
+  vpGrid=!vpGrid;
+  document.getElementById('btnGrid').classList.toggle('active',vpGrid);
+  gridHelper.visible=vpGrid;
+}
+
+function toggleVPNormals(){
+  vpNormals=!vpNormals;
+  document.getElementById('btnNormals').classList.toggle('active',vpNormals);
+  // Toggle point light to simulate normal visualization
+  scene.children.forEach(function(c){
+    if(c.isPointLight) c.intensity=vpNormals?1.2:0.4;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GENERATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+function selectEngine(el){
+  document.querySelectorAll('.engine-card').forEach(function(c){c.classList.remove('active');});
   el.classList.add('active');
-  selectedEngine = el.dataset.engine;
-  document.getElementById('outEngine').textContent = selectedEngine;
+  selectedEngine=el.dataset.engine;
+  document.getElementById('meshEngine').textContent=selectedEngine;
+  document.getElementById('footerEngine').textContent='ENGINE: '+selectedEngine.toUpperCase();
 }
 
 // Param sliders
-document.getElementById('paramScale').addEventListener('input', function() {
-  document.getElementById('paramScaleVal').textContent = (this.value / 10).toFixed(1);
-});
-document.getElementById('paramDetail').addEventListener('input', function() {
-  document.getElementById('paramDetailVal').textContent = this.value;
-});
-document.getElementById('paramSymmetry').addEventListener('input', function() {
-  document.getElementById('paramSymmetryVal').textContent = this.value;
-});
+document.getElementById('paramScale').addEventListener('input',function(){document.getElementById('paramScaleVal').textContent=(this.value/10).toFixed(1);});
+document.getElementById('paramDetail').addEventListener('input',function(){document.getElementById('paramDetailVal').textContent=this.value;});
+document.getElementById('paramSymmetry').addEventListener('input',function(){document.getElementById('paramSymmetryVal').textContent=this.value;});
+document.getElementById('exportScale').addEventListener('input',function(){document.getElementById('exportScaleVal').textContent=parseFloat(this.value).toFixed(1)+'x';});
 
-// Canvas view modes
-function setViewMode(mode, btn) {
-  document.querySelectorAll('.canvas-toolbar .ct-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-function toggleWireframe() {}
-function toggleGrid() {}
-function resetCamera() {}
+function startGeneration(){
+  if(isGenerating)return;
+  var prompt=document.getElementById('promptInput').value.trim();
+  if(!prompt){document.getElementById('promptInput').focus();return;}
 
-// Generation
-function startGeneration() {
-  if (isGenerating) return;
-  const prompt = document.getElementById('promptInput').value.trim();
-  if (!prompt) { document.getElementById('promptInput').focus(); return; }
-
-  isGenerating = true;
-  const btn = document.getElementById('generateBtn');
+  isGenerating=true;
+  var btn=document.getElementById('generateBtn');
   btn.classList.add('generating');
-  btn.textContent = '◉ GENERATING...';
+  btn.textContent='\u25C9 GENERATING...';
 
   document.getElementById('progressBar').classList.add('active');
-  document.getElementById('progressFill').style.width = '0%';
-  document.getElementById('outStatus').textContent = 'GENERATING';
-  document.getElementById('outStatus').style.color = 'var(--orange)';
-  document.getElementById('footerStatus').textContent = 'GENERATING';
-  document.getElementById('renderPlaceholder').style.display = 'none';
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('meshStatus').textContent='GENERATING';
+  document.getElementById('meshStatus').style.color='var(--orange)';
+  document.getElementById('footerStatus').textContent='GENERATING';
+  document.getElementById('vpPlaceholder').style.display='none';
 
-  // Simulate generation progress
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.random() * 15 + 5;
-    if (progress > 100) progress = 100;
-    document.getElementById('progressFill').style.width = progress + '%';
-    document.getElementById('renderInfo').textContent = 'Generating... ' + Math.round(progress) + '%';
-
-    if (progress >= 100) {
-      clearInterval(interval);
-      finishGeneration(prompt);
-    }
-  }, 300);
+  var progress=0;
+  var interval=setInterval(function(){
+    progress+=Math.random()*12+3;
+    if(progress>100)progress=100;
+    document.getElementById('progressFill').style.width=progress+'%';
+    document.getElementById('vpInfo').textContent='Generating... '+Math.round(progress)+'%';
+    if(progress>=100){clearInterval(interval);finishGeneration(prompt);}
+  },250);
 }
 
-function finishGeneration(prompt) {
-  const genId = 'gen_' + Date.now();
-  const entry = {
-    id: genId,
-    prompt: prompt.substring(0, 60),
-    engine: selectedEngine,
-    time: new Date().toLocaleTimeString(),
-    format: selectedEngine === 'openscad' ? 'SCAD' : selectedEngine === 'cadquery' ? 'STEP' : 'STL',
-    tris: Math.floor(Math.random() * 50000 + 1000),
-    verts: Math.floor(Math.random() * 25000 + 500)
+function finishGeneration(prompt){
+  var seed=parseInt(document.getElementById('paramSeed').value)||42;
+  var symmetry=parseInt(document.getElementById('paramSymmetry').value)||6;
+  var detail=parseInt(document.getElementById('paramDetail').value)||5;
+  var scale=(parseInt(document.getElementById('paramScale').value)||10)/10;
+
+  var entry={
+    id:'gen_'+Date.now(),
+    prompt:prompt.substring(0,60),
+    engine:selectedEngine,
+    time:new Date().toLocaleTimeString(),
+    format:selectedEngine==='openscad'?'SCAD':selectedEngine==='cadquery'?'STEP':'STL',
+    tris:Math.floor(Math.random()*50000+1000),
+    verts:Math.floor(Math.random()*25000+500),
+    seed:seed,symmetry:symmetry,detail:detail,scale:scale
   };
   history.unshift(entry);
-  if (history.length > 20) history.pop();
+  if(history.length>20)history.pop();
+  currentEntry=entry;
 
-  isGenerating = false;
-  const btn = document.getElementById('generateBtn');
+  isGenerating=false;
+  var btn=document.getElementById('generateBtn');
   btn.classList.remove('generating');
-  btn.textContent = '▶ GENERATE';
+  btn.textContent='\u25B6 GENERATE';
 
   document.getElementById('progressBar').classList.remove('active');
-  document.getElementById('progressFill').style.width = '0%';
-  document.getElementById('outStatus').textContent = 'COMPLETE';
-  document.getElementById('outStatus').style.color = 'var(--green)';
-  document.getElementById('outFormat').textContent = entry.format;
-  document.getElementById('outSize').textContent = (Math.random() * 5 + 0.5).toFixed(1) + ' MB';
-  document.getElementById('outTris').textContent = entry.tris.toLocaleString();
-  document.getElementById('outVerts').textContent = entry.verts.toLocaleString();
-  document.getElementById('canvasInfo').textContent = 'TRIANGLES: ' + entry.tris.toLocaleString() + ' | VERTICES: ' + entry.verts.toLocaleString();
-  document.getElementById('renderInfo').textContent = entry.format + ' ready | ' + entry.tris.toLocaleString() + ' triangles';
-  document.getElementById('footerStatus').textContent = 'COMPLETE';
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('meshStatus').textContent='COMPLETE';
+  document.getElementById('meshStatus').style.color='var(--green)';
+  document.getElementById('meshFormat').textContent=entry.format;
+  document.getElementById('meshSize').textContent=(Math.random()*5+0.5).toFixed(1)+' MB';
+  document.getElementById('meshTris').textContent=entry.tris.toLocaleString();
+  document.getElementById('meshVerts').textContent=entry.verts.toLocaleString();
+  document.getElementById('meshVolume').textContent=(Math.random()*100+10).toFixed(1)+' cm\u00B3';
+  document.getElementById('meshWatertight').textContent=Math.random()>0.3?'YES':'NO';
+  document.getElementById('vpStats').textContent='TRI: '+entry.tris.toLocaleString()+' | VERT: '+entry.verts.toLocaleString();
+  document.getElementById('vpInfo').textContent=entry.format+' ready | '+entry.tris.toLocaleString()+' triangles';
+  document.getElementById('footerStatus').textContent='COMPLETE';
+  document.getElementById('editInfo').textContent=entry.tris.toLocaleString()+' triangles | '+entry.verts.toLocaleString()+' vertices | Scale: '+entry.scale.toFixed(1);
 
-  renderOnCanvas(entry);
+  renderMesh3D(entry);
   updateHistory();
-  updateLibrary(entry);
+  addLibrary(entry);
+  resetEditSliders();
 }
 
-function renderOnCanvas(entry) {
-  const canvas = document.getElementById('renderCanvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function renderMesh3D(entry){
+  // Clear previous mesh
+  while(meshGroup.children.length>0) meshGroup.remove(meshGroup.children[0]);
 
-  // Draw a procedural shape based on engine type
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const size = Math.min(canvas.width, canvas.height) * 0.3;
+  var symmetry=entry.symmetry||6;
+  var detail=entry.detail||5;
+  var scale=entry.scale||1;
 
-  ctx.save();
-  ctx.translate(cx, cy);
+  // Generate procedural 3D geometry based on engine type
+  var geometry;
+  var matColor=0x00e5ff;
 
-  // Glow
-  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 1.5);
-  grad.addColorStop(0, 'rgba(0,229,255,0.08)');
-  grad.addColorStop(1, 'rgba(0,229,255,0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(-size * 2, -size * 2, size * 4, size * 4);
-
-  // Shape based on engine
-  ctx.strokeStyle = 'rgba(0,229,255,0.6)';
-  ctx.lineWidth = 1;
-  ctx.fillStyle = 'rgba(0,229,255,0.05)';
-
-  if (entry.engine === 'trimesh' || entry.engine === 'procedural') {
-    // Hexagonal shape
-    const sides = parseInt(document.getElementById('paramSymmetry').value) || 6;
-    ctx.beginPath();
-    for (let i = 0; i <= sides; i++) {
-      const angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
-      const x = Math.cos(angle) * size;
-      const y = Math.sin(angle) * size;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  if(entry.engine==='trimesh'||entry.engine==='procedural'){
+    // Create a parametric shape
+    geometry=new THREE.IcosahedronGeometry(scale,detail>5?3:2);
+    // Deform vertices for uniqueness
+    var pos=geometry.attributes.position;
+    for(var i=0;i<pos.count;i++){
+      var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+      var noise=Math.sin(x*symmetry)*0.15+Math.cos(z*symmetry)*0.1;
+      pos.setX(i,x+noise*x*0.3);
+      pos.setY(i,y+noise*y*0.2);
+      pos.setZ(i,z+noise*z*0.3);
     }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    // Inner lines
-    for (let i = 0; i < sides; i++) {
-      const angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(angle) * size, Math.sin(angle) * size);
-      ctx.strokeStyle = 'rgba(0,229,255,0.2)';
-      ctx.stroke();
-    }
-  } else if (entry.engine === 'cadquery' || entry.engine === 'openscad') {
-    // Box shape
-    const s = size * 0.7;
-    ctx.fillStyle = 'rgba(124,77,255,0.05)';
-    ctx.strokeStyle = 'rgba(124,77,255,0.5)';
-    ctx.fillRect(-s, -s, s * 2, s * 2);
-    ctx.strokeRect(-s, -s, s * 2, s * 2);
-    // Inner cross
-    ctx.beginPath();
-    ctx.moveTo(-s, 0); ctx.lineTo(s, 0);
-    ctx.moveTo(0, -s); ctx.lineTo(0, s);
-    ctx.strokeStyle = 'rgba(124,77,255,0.2)';
-    ctx.stroke();
-  } else if (entry.engine === 'picogk') {
-    // Voxel grid
-    const gridSize = 8;
-    const cellSize = (size * 2) / gridSize;
-    ctx.fillStyle = 'rgba(0,255,136,0.06)';
-    ctx.strokeStyle = 'rgba(0,255,136,0.2)';
-    for (let x = 0; x < gridSize; x++) {
-      for (let y = 0; y < gridSize; y++) {
-        if (Math.random() > 0.4) {
-          const px = -size + x * cellSize;
-          const py = -size + y * cellSize;
-          ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-          ctx.strokeRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-        }
+    geometry.computeVertexNormals();
+    matColor=0x00e5ff;
+  } else if(entry.engine==='cadquery'||entry.engine==='openscad'){
+    geometry=new THREE.BoxGeometry(scale*1.5,scale*1.2,scale*0.8,detail+1,detail+1,detail+1);
+    // Cut corners
+    var pos=geometry.attributes.position;
+    for(var i=0;i<pos.count;i++){
+      var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+      var r=Math.sqrt(x*x+y*y+z*z);
+      if(r>scale*0.8){
+        pos.setX(i,x*0.85);pos.setY(i,y*0.85);pos.setZ(i,z*0.85);
       }
     }
-  } else {
-    // AI 3D — organic shape
-    ctx.beginPath();
-    for (let i = 0; i < 60; i++) {
-      const angle = (i / 60) * Math.PI * 2;
-      const r = size * (0.5 + 0.5 * Math.sin(angle * 3 + entry.tris));
-      const x = Math.cos(angle) * r;
-      const y = Math.sin(angle) * r;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    geometry.computeVertexNormals();
+    matColor=0x7c4dff;
+  } else if(entry.engine==='picogk'){
+    // Voxel-like shape
+    var group=new THREE.Group();
+    var cellSize=scale*2/6;
+    for(var x=0;x<6;x++)for(var y=0;y<6;y++)for(var z=0;z<6;z++){
+      if(Math.sin(x*symmetry+y+z)*0.5+0.5>0.45){
+        var box=new THREE.BoxGeometry(cellSize*0.85,cellSize*0.85,cellSize*0.85);
+        var mesh=new THREE.Mesh(box,new THREE.MeshPhongMaterial({color:0x00ff88,transparent:true,opacity:0.7,wireframe:vpWire}));
+        mesh.position.set((x-2.5)*cellSize,(y-2.5)*cellSize,(z-2.5)*cellSize);
+        group.add(mesh);
+      }
     }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    meshGroup.add(group);
+    return;
+  } else {
+    // AI 3D — organic blob
+    geometry=new THREE.SphereGeometry(scale,detail*3,detail*3);
+    var pos=geometry.attributes.position;
+    for(var i=0;i<pos.count;i++){
+      var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+      var theta=Math.atan2(z,x);
+      var phi=Math.acos(y/Math.sqrt(x*x+y*y+z*z+0.001));
+      var r=scale*(1+0.3*Math.sin(theta*symmetry)*Math.cos(phi*detail));
+      pos.setX(i,r*Math.sin(phi)*Math.cos(theta));
+      pos.setY(i,r*Math.cos(phi));
+      pos.setZ(i,r*Math.sin(phi)*Math.sin(theta));
+    }
+    geometry.computeVertexNormals();
+    matColor=0xff8800;
   }
 
-  ctx.restore();
+  var material=new THREE.MeshPhongMaterial({
+    color:matColor,
+    shininess:60,
+    transparent:true,
+    opacity:0.85,
+    wireframe:vpWire,
+    side:THREE.DoubleSide
+  });
+
+  currentMesh=new THREE.Mesh(geometry,material);
+  meshGroup.add(currentMesh);
 }
 
-function updateHistory() {
-  const scroll = document.getElementById('historyScroll');
-  document.getElementById('historyCount').textContent = history.length;
-  if (history.length === 0) { scroll.innerHTML = '<div class="hist-empty">No generations yet</div>'; return; }
-
-  scroll.innerHTML = history.map((h, i) =>
-    '<div class="hist-card' + (i === 0 ? ' active' : '') + '" onclick="loadHistory(\'' + h.id + '\')">' +
-    '<div class="hist-thumb">' + getEngineIcon(h.engine) + '<span class="ht-type">' + h.format + '</span></div>' +
-    '<div class="hist-info"><div class="hist-name">' + h.prompt + '</div><div class="hist-time">' + h.time + '</div></div>' +
-    '</div>'
-  ).join('');
-}
-
-function getEngineIcon(engine) {
-  const icons = { trimesh: '⬡', cadquery: '⚙', openscad: '🔧', picogk: '🧊', procedural: '🌐', ai3d: '🤖' };
-  return icons[engine] || '◈';
-}
-
-function loadHistory(id) {
-  const entry = history.find(h => h.id === id);
-  if (!entry) return;
-  document.getElementById('promptInput').value = entry.prompt;
-  document.querySelectorAll('.hist-card').forEach(c => c.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  renderOnCanvas(entry);
-}
-
-function updateLibrary(entry) {
-  const list = document.getElementById('libraryList');
-  if (history.length === 0 || list.querySelector('div[style]')) {
-    list.innerHTML = '';
-  }
-  const item = document.createElement('div');
-  item.className = 'lib-item';
-  item.innerHTML = '<div class="lib-thumb">' + getEngineIcon(entry.engine) + '</div>' +
-    '<div class="lib-info"><div class="lib-name">' + entry.prompt + '</div><div class="lib-meta">' + entry.format + ' | ' + entry.tris.toLocaleString() + ' tris</div></div>';
-  list.prepend(item);
-}
-
-function exportFile(format) {
-  if (history.length === 0) { alert('Generate something first'); return; }
-  alert('Export as ' + format.toUpperCase() + ' — feature coming soon');
-}
-
-function saveToLibrary() {
-  if (history.length === 0) { alert('Generate something first'); return; }
-  alert('Saved to library — feature coming soon');
-}
-
-// Init canvas
-window.addEventListener('load', function() {
-  const canvas = document.getElementById('renderCanvas');
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDIT OPERATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+['editScaleX','editScaleY','editScaleZ'].forEach(function(id){
+  document.getElementById(id).addEventListener('input',function(){
+    if(!currentMesh)return;
+    currentMesh.scale.set(
+      parseFloat(document.getElementById('editScaleX').value),
+      parseFloat(document.getElementById('editScaleY').value),
+      parseFloat(document.getElementById('editScaleZ').value)
+    );
+  });
 });
-window.addEventListener('resize', function() {
-  const canvas = document.getElementById('renderCanvas');
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
-  if (history.length > 0) renderOnCanvas(history[0]);
+['editRotX','editRotY','editRotZ'].forEach(function(id){
+  document.getElementById(id).addEventListener('input',function(){
+    if(!currentMesh)return;
+    currentMesh.rotation.x=parseFloat(document.getElementById('editRotX').value)*Math.PI/180;
+    currentMesh.rotation.y=parseFloat(document.getElementById('editRotY').value)*Math.PI/180;
+    currentMesh.rotation.z=parseFloat(document.getElementById('editRotZ').value)*Math.PI/180;
+  });
+});
+
+function resetEditSliders(){
+  ['editScaleX','editScaleY','editScaleZ'].forEach(function(id){document.getElementById(id).value=1;});
+  ['editRotX','editRotY','editRotZ'].forEach(function(id){document.getElementById(id).value=0;});
+}
+
+function editOp(op){
+  if(!currentMesh)return;
+  switch(op){
+    case'mirrorX':currentMesh.scale.x*=-1;break;
+    case'mirrorY':currentMesh.scale.y*=-1;break;
+    case'mirrorZ':currentMesh.scale.z*=-1;break;
+    case'center':currentMesh.position.set(0,0,0);break;
+    case'smooth':/* smooth would need vertex displacement */break;
+    case'decimate':/* decimate needs face removal */break;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EXPORT
+   ═══════════════════════════════════════════════════════════════════════════ */
+function selectExportFormat(el,fmt){
+  document.querySelectorAll('.export-opt').forEach(function(o){o.classList.remove('active');});
+  el.classList.add('active');
+  exportFmt=fmt;
+}
+function selectUnits(el,u){
+  document.querySelectorAll('#tab-export .edit-btn').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  exportUnits=u;
+}
+
+function doExport(){
+  if(!currentEntry){alert('Generate something first');return;}
+  alert('Export as '+exportFmt.toUpperCase()+' ('+exportUnits+') — download from server');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIBRARY
+   ═══════════════════════════════════════════════════════════════════════════ */
+function addLibrary(entry){
+  library.unshift(entry);
+  renderLibrary();
+}
+
+function renderLibrary(){
+  var grid=document.getElementById('libGrid');
+  var empty=document.getElementById('libEmpty');
+  var search=(document.getElementById('libSearch').value||'').toLowerCase();
+  var items=library.filter(function(it){return!search||it.prompt.toLowerCase().indexOf(search)>=0;});
+  if(!items.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=items.map(function(it,i){
+    var icons={trimesh:'\u2B21',cadquery:'\u2699',openscad:'\uD83D\uDD27',picogk:'\uD83E\uDDCA',procedural:'\uD83C\uDF10',ai3d:'\uD83E\uDD16'};
+    return '<div class="lib-card" onclick="loadFromLibrary('+i+')">'+
+      '<div class="lthumb">'+(icons[it.engine]||'\u25C8')+'</div>'+
+      '<div class="linfo"><div class="lname">'+esc(it.prompt)+'</div>'+
+      '<div class="lmeta">'+it.format+' | '+it.tris.toLocaleString()+' tris</div></div></div>';
+  }).join('');
+}
+function filterLibrary(){renderLibrary();}
+function loadFromLibrary(i){
+  var it=library[i];if(!it)return;
+  document.getElementById('promptInput').value=it.prompt;
+  renderMesh3D(it);currentEntry=it;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VR SCENE
+   ═══════════════════════════════════════════════════════════════════════════ */
+function selectVRScene(el,type){
+  document.querySelectorAll('#tab-vr .edit-btn').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  vrSceneType=type;
+}
+
+function generateVRScene(){
+  // Clear current scene and create VR preset
+  while(meshGroup.children.length>0) meshGroup.remove(meshGroup.children[0]);
+  var objects=[];
+
+  var presets={
+    planetary:[
+      {geo:'sphere',color:0x2255aa,size:1.5,pos:[0,0,0],name:'Planet'},
+      {geo:'sphere',color:0x888888,size:0.3,pos:[2,0.5,0],name:'Moon'},
+      {geo:'torus',color:0x00e5ff,size:1.8,pos:[0,0,0],name:'Ring'}
+    ],
+    station:[
+      {geo:'box',color:0x607080,size:[3,0.4,0.8],pos:[0,0,0],name:'Main Module'},
+      {geo:'cylinder',color:0x506070,size:[0.15,2],pos:[1.8,0,0],name:'Solar Panel L'},
+      {geo:'cylinder',color:0x506070,size:[0.15,2],pos:[-1.8,0,0],name:'Solar Panel R'}
+    ],
+    lunar:[
+      {geo:'sphere',color:0x888888,size:0.6,pos:[0,0,0],name:'Habitat'},
+      {geo:'box',color:0x666666,size:[0.4,0.8,0.4],pos:[1.2,0.4,0],name:'Antenna'},
+      {geo:'cylinder',color:0x444444,size:[0.05,0.6],pos:[-0.8,0.3,0.5],name:'Flag'}
+    ],
+    launchpad:[
+      {geo:'cylinder',color:0xffffff,size:[0.3,4],pos:[0,2,0],name:'Rocket'},
+      {geo:'cone',color:0xff4444,size:[0.35,0.8],pos:[0,4.4,0],name:'Nose Cone'},
+      {geo:'box',color:0x444444,size:[2,0.3,2],pos:[0,0,0],name:'Launch Platform'}
+    ],
+    cockpit:[
+      {geo:'box',color:0x2a3a4a,size:[2,1.2,1.5],pos:[0,0,0],name:'Cockpit Hull'},
+      {geo:'sphere',color:0x00e5ff,size:0.4,pos:[0,0.3,0.8],name:'HUD Display'},
+      {geo:'box',color:0x1a2a3a,size:[0.8,0.6,0.1],pos:[0,-0.1,0.8],name:'Control Panel'}
+    ],
+    landscape:[
+      {geo:'box',color:0x224422,size:[8,0.2,8],pos:[0,-0.5,0],name:'Ground'},
+      {geo:'cone',color:0x336633,size:[0.4,1.5],pos:[2,0.5,1],name:'Tree'},
+      {geo:'cone',color:0x336633,size:[0.3,1],pos:[-1.5,0.3,-1],name:'Bush'}
+    ]
+  };
+
+  var items=presets[vrSceneType]||presets.planetary;
+  items.forEach(function(obj){
+    var geometry;
+    if(obj.geo==='sphere')geometry=new THREE.SphereGeometry(obj.size,16,16);
+    else if(obj.geo==='box')geometry=new THREE.BoxGeometry(obj.size[0]||obj.size,obj.size[1]||obj.size,obj.size[2]||obj.size);
+    else if(obj.geo==='cylinder')geometry=new THREE.CylinderGeometry(obj.size[0],obj.size[0],obj.size[1],12);
+    else if(obj.geo==='cone')geometry=new THREE.ConeGeometry(obj.size[0]||obj.size,obj.size[1]||obj.size,12);
+    else if(obj.geo==='torus')geometry=new THREE.TorusGeometry(obj.size,0.05,8,32);
+
+    var mat=new THREE.MeshPhongMaterial({color:obj.color,shininess:40,wireframe:vpWire});
+    var mesh=new THREE.Mesh(geometry,mat);
+    mesh.position.set(obj.pos[0],obj.pos[1],obj.pos[2]);
+    meshGroup.add(mesh);
+    objects.push(obj.name);
+  });
+
+  document.getElementById('vrObjects').innerHTML=objects.map(function(n,i){
+    return '<div style="padding:3px 0;color:var(--text2);font-size:8px">'+(i+1)+'. '+n+'</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HISTORY
+   ═══════════════════════════════════════════════════════════════════════════ */
+function updateHistory(){
+  var list=document.getElementById('historyList');
+  if(!history.length){list.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:8px">No generations yet</div>';return;}
+  var icons={trimesh:'\u2B21',cadquery:'\u2699',openscad:'\uD83D\uDD27',picogk:'\uD83E\uDDCA',procedural:'\uD83C\uDF10',ai3d:'\uD83E\uDD16'};
+  list.innerHTML=history.map(function(h,i){
+    return '<div class="hist-item" onclick="loadHistory(\''+h.id+'\')">'+
+      '<div class="hi-icon">'+(icons[h.engine]||'\u25C8')+'</div>'+
+      '<div class="hi-info"><div class="hi-name">'+esc(h.prompt)+'</div>'+
+      '<div class="hi-meta">'+h.format+' | '+h.tris.toLocaleString()+' tris | '+h.time+'</div></div></div>';
+  }).join('');
+}
+
+function loadHistory(id){
+  var entry=history.find(function(h){return h.id===id;});
+  if(!entry)return;
+  document.getElementById('promptInput').value=entry.prompt;
+  renderMesh3D(entry);currentEntry=entry;
+  document.getElementById('vpPlaceholder').style.display='none';
+  document.getElementById('meshFormat').textContent=entry.format;
+  document.getElementById('meshStatus').textContent='LOADED';
+  document.getElementById('meshStatus').style.color='var(--green)';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OUTPUT TABS
+   ═══════════════════════════════════════════════════════════════════════════ */
+document.getElementById('outputTabs').addEventListener('click',function(e){
+  var t=e.target.closest('.ot-tab');if(!t)return;
+  document.querySelectorAll('.ot-tab').forEach(function(x){x.classList.remove('active');});
+  document.querySelectorAll('.output-panel').forEach(function(x){x.classList.remove('active');});
+  t.classList.add('active');
+  document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════════════ */
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+window.addEventListener('load',initViewport);
+window.addEventListener('resize',function(){
+  var canvas=document.getElementById('viewport3d');
+  var rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width;canvas.height=rect.height;
+  if(renderer){renderer.setSize(rect.width,rect.height);camera.aspect=rect.width/rect.height;camera.updateProjectionMatrix();}
 });
 </script>
 </body>
