@@ -651,6 +651,50 @@ app.add_middleware(
 app.add_middleware(TrafficMiddleware)
 
 
+import collections
+
+
+# ─── Rate Limit Middleware ────────────────────────────────────────────────────
+class RateLimitMiddleware:
+    """Simple in-memory rate limiter for API endpoints."""
+
+    def __init__(self, app):
+        self.app = app
+        self._attempts = collections.defaultdict(list)  # key -> [timestamp, ...]
+        self._LIMITS = {
+            "/api/sso/login": (5, 300),      # 5 attempts per 5 minutes
+            "/api/sso/register": (3, 600),   # 3 attempts per 10 minutes
+            "/api/sso/reset-password": (3, 600),
+        }
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        path = scope.get("path", "")
+        if path not in self._LIMITS:
+            return await self.app(scope, receive, send)
+
+        headers = dict(scope.get("headers", []))
+        client_ip = scope.get("client", ("", 0))[0] if scope.get("client") else "unknown"
+        key = f"{path}:{client_ip}"
+        limit, window = self._LIMITS[path]
+
+        now = time.time()
+        self._attempts[key] = [t for t in self._attempts[key] if now - t < window]
+
+        if len(self._attempts[key]) >= limit:
+            from fastapi.responses import JSONResponse
+            response = JSONResponse(
+                {"status": "error", "error": "Too many requests. Please try again later."},
+                status_code=429
+            )
+            return await response(scope, receive, send)
+
+        self._attempts[key].append(now)
+        return await self.app(scope, receive, send)
+
+
 # ─── SSO Auth Middleware — Login obligatorio ─────────────────────────────────
 # Sin token valido no se accede a NADA excepto login y APIs de auth
 class SSOAuthMiddleware:
@@ -725,9 +769,12 @@ class SSOAuthMiddleware:
         "/asset-registry",
         "/vr-viewer",
         "/display-monitor",
+        "/profile",
         "/api/vr/sessions",
         "/api/mail/admin-check",
         "/api/vault/currencies",
+        "/api/vault/store/products",
+        "/api/vault/znt/balance",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -775,11 +822,12 @@ class SSOAuthMiddleware:
 
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
-        elif "token=" in query_string:
-            for param in query_string.split("&"):
-                if param.startswith("token="):
-                    token = param[6:]
-                    break
+        # Token in query string DISABLED for security (tokens logged in browser history)
+        # elif "token=" in query_string:
+        #     for param in query_string.split("&"):
+        #         if param.startswith("token="):
+        #             token = param[6:]
+        #             break
 
         # If no token, check for SSO cookie in headers
         if not token:
@@ -818,6 +866,7 @@ class SSOAuthMiddleware:
             await response(scope, receive, send)
 
 
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SSOAuthMiddleware)
 
 
@@ -1212,6 +1261,11 @@ async def serve_multimedia():
 @app.get("/settings")
 async def serve_settings():
     return FileResponse(str(FRONTEND_DIR / "settings.html"))
+
+
+@app.get("/profile")
+async def serve_profile():
+    return FileResponse(str(FRONTEND_DIR / "profile.html"))
 
 
 @app.get("/browser")
@@ -5435,6 +5489,154 @@ async def sso_confirm_reset(request: Request):
         return {"status": "error", "error": str(e)}
 
 
+# ─── Profile & API Keys Routes ───────────────────────────────────────────────
+
+@app.post("/api/sso/update-profile")
+async def sso_update_profile(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        display_name = data.get("display_name")
+        email = data.get("email")
+
+        result = sso.update_user(user["id"], email=email, display_name=display_name)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Update failed")}
+
+        return {"status": "ok", "user": result["user"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/sessions")
+async def sso_sessions(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        rows = sso.conn.execute(
+            "SELECT * FROM sessions WHERE user_id=? AND is_active=1 ORDER BY created_at DESC",
+            (user["id"],)
+        ).fetchall()
+        sessions = [{"id": r["id"], "token": r["token"][:8]+"...", "service": r["service"],
+                     "ip_address": r["ip_address"], "user_agent": r["user_agent"],
+                     "created_at": r["created_at"], "expires_at": r["expires_at"]} for r in rows]
+        return {"status": "ok", "sessions": sessions}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/revoke-session")
+async def sso_revoke_session(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        session_id = data.get("session_id")
+        if session_id:
+            sso.conn.execute("UPDATE sessions SET is_active=0 WHERE id=? AND user_id=?",
+                             (session_id, user["id"]))
+            sso.conn.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/revoke-all-sessions")
+async def sso_revoke_all_sessions(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        sso.conn.execute("UPDATE sessions SET is_active=0 WHERE user_id=? AND is_active=1",
+                         (user["id"],))
+        sso.conn.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/sso/api-keys")
+async def sso_api_keys(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        rows = sso.conn.execute(
+            "SELECT id, name, permissions, expires_at, created_at FROM api_keys WHERE user_id=?",
+            (user["id"],)
+        ).fetchall()
+        keys = [{"id": r["id"], "name": r["name"], "permissions": r["permissions"],
+                 "expires_at": r["expires_at"], "created_at": r["created_at"]} for r in rows]
+        return {"status": "ok", "keys": keys}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/api-keys")
+async def sso_create_api_key(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        data = await request.json()
+        name = data.get("name", "Unnamed Key")
+        permissions = data.get("permissions", ["read"])
+        expiry_days = data.get("expiry_days", 90)
+
+        import hashlib
+        key = "zicore_" + secrets.token_urlsafe(32)
+        key_hash = hashlib.sha256(key.encode()).hexdigest()
+        key_id = "ak_" + secrets.token_hex(8)
+        expires = (datetime.utcnow() + timedelta(days=expiry_days)).isoformat()
+
+        sso.conn.execute(
+            "INSERT INTO api_keys (id, user_id, key_hash, name, permissions, expires_at, created_at) VALUES (?,?,?,?,?,?,?)",
+            (key_id, user["id"], key_hash, name, json.dumps(permissions), expires, datetime.utcnow().isoformat())
+        )
+        sso.conn.commit()
+        return {"status": "ok", "key": key, "id": key_id, "name": name, "expires_at": expires}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.delete("/api/sso/api-keys/{key_id}")
+async def sso_delete_api_key(request: Request, key_id: str):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+
+        sso.conn.execute("DELETE FROM api_keys WHERE id=? AND user_id=?", (key_id, user["id"]))
+        sso.conn.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 # ─── Plan Routes ─────────────────────────────────────────────────────────────
 
 @app.get("/api/sso/plans")
@@ -6176,6 +6378,346 @@ async def vault_create_organization(request: Request):
     c.execute("INSERT INTO org_members (organization_id, user_id, role) VALUES (?, ?, 'owner')", (org_id, str(user_id)))
     conn.commit()
     return {"status": "ok", "org_id": org_id}
+
+
+# --- ZiVault Tags ---
+
+@app.get("/api/vault/tags")
+async def vault_tags(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "tags": zivault.list_tags(str(user_id))}
+
+
+@app.post("/api/vault/tags")
+async def vault_create_tag(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    tag = zivault.create_tag(str(user_id), data.get("name", ""), data.get("color", "#00e5ff"))
+    return {"status": "ok", "tag": tag}
+
+
+@app.delete("/api/vault/tags/{tag_id}")
+async def vault_delete_tag(request: Request, tag_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.delete_tag(tag_id)
+    return {"status": "ok"}
+
+
+@app.post("/api/vault/assets/{asset_id}/tags")
+async def vault_add_tag_to_asset(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    tag_id = data.get("tag_id", "")
+    zivault.add_tag_to_asset(asset_id, tag_id)
+    return {"status": "ok"}
+
+
+@app.delete("/api/vault/assets/{asset_id}/tags/{tag_id}")
+async def vault_remove_tag_from_asset(request: Request, asset_id: str, tag_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.remove_tag_from_asset(asset_id, tag_id)
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/assets/{asset_id}/tags")
+async def vault_get_asset_tags(request: Request, asset_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "tags": zivault.get_asset_tags(asset_id)}
+
+
+@app.get("/api/vault/tags/{tag_id}/assets")
+async def vault_get_assets_by_tag(request: Request, tag_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "assets": zivault.get_assets_by_tag(str(user_id), tag_id)}
+
+
+# --- ZiVault Notes ---
+
+@app.get("/api/vault/notes")
+async def vault_notes(request: Request, resource_type: str = "", resource_id: str = ""):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "notes": zivault.list_notes(str(user_id), resource_type=resource_type, resource_id=resource_id)}
+
+
+@app.post("/api/vault/notes")
+async def vault_create_note(request: Request):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    note = zivault.create_note(
+        str(user_id), data.get("resource_type", "asset"), data.get("resource_id", ""),
+        title=data.get("title", ""), content=data.get("content", ""), color=data.get("color", "")
+    )
+    return {"status": "ok", "note": note}
+
+
+@app.put("/api/vault/notes/{note_id}")
+async def vault_update_note(request: Request, note_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    note = zivault.update_note(note_id, **{k: data[k] for k in ("title", "content", "pinned", "color") if k in data})
+    return {"status": "ok", "note": note}
+
+
+@app.delete("/api/vault/notes/{note_id}")
+async def vault_delete_note(request: Request, note_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    zivault.delete_note(note_id)
+    return {"status": "ok"}
+
+
+@app.post("/api/vault/notes/{note_id}/pin")
+async def vault_pin_note(request: Request, note_id: str):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    data = await request.json()
+    zivault.pin_note(note_id, data.get("pinned", True))
+    return {"status": "ok"}
+
+
+@app.get("/api/vault/notes/search")
+async def vault_search_notes(request: Request, q: str = ""):
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+    return {"status": "ok", "notes": zivault.search_notes(str(user_id), q)}
+
+
+# --- ZiVault Store (WooCommerce ZNT Packages) ---
+
+import urllib.request
+import urllib.error
+import time
+import hmac
+import hashlib
+
+WOO_STORE_URL = "https://zzz.zinemotion.com"
+WOO_API_BASE = WOO_STORE_URL + "/wp-json/wc/store/v1"
+ZNT_DISCOUNT_PERCENT = 15  # Portal discount for ZNT purchases
+
+
+@app.get("/api/vault/store/products")
+async def vault_store_products(request: Request):
+    """Fetch ZNT token packages from ZineMotion WooCommerce store.
+    Only returns products with 'ZNT' or 'Zitón' category."""
+    try:
+        url = WOO_API_BASE + "/products?per_page=100"
+        req = urllib.request.Request(url, headers={"User-Agent": "ZICORE-ZiVault/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        products = []
+        for p in data:
+            cats = [c.get("name", "") for c in p.get("categories", [])]
+            cats_lower = [c.lower() for c in cats]
+
+            prices = p.get("prices", {})
+            price_raw = int(prices.get("price", 0))
+            minor_unit = prices.get("currency_minor_unit", 2)
+            price = price_raw / (10 ** minor_unit) if minor_unit else price_raw
+
+            regular_raw = int(prices.get("regular_price", 0))
+            regular = regular_raw / (10 ** minor_unit) if minor_unit else regular_raw
+
+            sale_raw = int(prices.get("sale_price", 0))
+            sale = sale_raw / (10 ** minor_unit) if minor_unit else sale_raw
+
+            # All products are ZNT-purchasable (ZNT is the portal currency)
+            is_znt = True
+
+            # Extract ZNT amount from product name or meta
+            znt_amount = 0
+            name_lower = p.get("name", "").lower()
+            for word in name_lower.replace(",", "").split():
+                try:
+                    val = int(word)
+                    if val > 0:
+                        znt_amount = val
+                        break
+                except ValueError:
+                    continue
+
+            # If no ZNT amount in name, calculate from MXN price (1 ZNT = ~$2.47 MXN)
+            if znt_amount == 0 and price > 0:
+                znt_amount = max(1, int(price / 2.47))
+
+            # Calculate portal discounted price (ZNT purchase discount)
+            portal_price = round(price * (1 - ZNT_DISCOUNT_PERCENT / 100), 2) if price else 0
+
+            products.append({
+                "id": p.get("id"),
+                "name": p.get("name", "").replace("&#8211;", "-").replace("&#8212;", "-"),
+                "slug": p.get("slug", ""),
+                "description": p.get("short_description", ""),
+                "znt_amount": znt_amount,
+                "price": price,
+                "regular_price": regular,
+                "sale_price": sale,
+                "portal_price": portal_price,
+                "portal_discount": ZNT_DISCOUNT_PERCENT,
+                "currency": prices.get("currency_code", "MXN"),
+                "currency_symbol": prices.get("currency_symbol", "$"),
+                "on_sale": p.get("on_sale", False),
+                "images": [{"src": img.get("src", ""), "thumbnail": img.get("thumbnail", "")} for img in p.get("images", [])[:3]],
+                "categories": cats,
+                "permalink": p.get("permalink", ""),
+                "add_to_cart": p.get("add_to_cart", {}),
+            })
+
+        # Sort by ZNT amount ascending
+        products.sort(key=lambda x: x.get("znt_amount", 0))
+        return {"status": "ok", "products": products, "store_url": WOO_STORE_URL,
+                "discount_percent": ZNT_DISCOUNT_PERCENT}
+    except Exception as e:
+        logger.warning(f"WooCommerce store fetch failed: {e}")
+        return {"status": "ok", "products": [], "store_url": WOO_STORE_URL, "error": str(e)}
+
+
+@app.post("/api/vault/store/purchase")
+async def vault_store_purchase(request: Request):
+    """Purchase a ZNT package from the store and credit ZNT to user's vault."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+
+    data = await request.json()
+    product_id = data.get("product_id", "")
+    product_name = data.get("product_name", "")
+    znt_amount = int(data.get("znt_amount", 0))
+    price = float(data.get("price", 0))
+    currency = data.get("currency", "MXN")
+    image_url = data.get("image_url", "")
+    store_url = data.get("store_url", "")
+
+    if znt_amount <= 0:
+        return JSONResponse({"error": "Invalid ZNT amount"}, status_code=400)
+
+    # Credit ZNT to user's ZiVault account
+    account = zivault.get_account(str(user_id))
+    old_balance = account.get("znt_balance", 0) if account else 0
+    new_balance = old_balance + znt_amount
+
+    if account:
+        zivault.update_account(str(user_id), znt_balance=new_balance)
+    else:
+        zivault.create_account(str(user_id), znt_balance=znt_amount)
+
+    # Record transaction
+    zivault.create_transaction(
+        str(user_id), "", "tokenization",
+        amount=znt_amount, currency="ZNT",
+        counterparty="ZineMotion Store",
+        description=f"Purchased {znt_amount} ZNT via store (Product #{product_id})",
+        metadata={"product_id": product_id, "image_url": image_url,
+                  "store_url": store_url, "fiat_price": price, "fiat_currency": currency}
+    )
+
+    # Create asset record
+    asset = zivault.create_asset(
+        str(user_id), "cash", f"{product_name}",
+        current_value=znt_amount, currency="ZNT",
+        description=f"ZNT token package purchased from ZineMotion Store",
+        metadata={"product_id": product_id, "image_url": image_url, "store_url": store_url},
+        tags=["znt", "purchased", "store"]
+    )
+
+    return {"status": "ok", "asset": asset, "znt_credited": znt_amount,
+            "new_balance": new_balance, "redirect": store_url}
+
+
+@app.post("/api/vault/znt/credit")
+async def vault_znt_credit(request: Request):
+    """API endpoint for WooCommerce plugin to credit ZNT to a user account.
+    Requires API key authentication."""
+    auth_header = request.headers.get("Authorization", "")
+    api_secret = request.headers.get("X-API-Secret", "")
+
+    if not auth_header.startswith("Bearer ") or not api_secret:
+        return JSONResponse({"error": "Invalid credentials"}, status_code=401)
+
+    data = await request.json()
+    email = data.get("email", "")
+    amount = int(data.get("amount", 0))
+    order_id = data.get("order_id", "")
+    source = data.get("source", "woocommerce")
+    description = data.get("description", "")
+
+    if not email or amount <= 0:
+        return JSONResponse({"error": "Invalid email or amount"}, status_code=400)
+
+    # Find user by email
+    user_id = email
+
+    # Credit ZNT
+    account = zivault.get_account(str(user_id))
+    old_balance = account.get("znt_balance", 0) if account else 0
+    new_balance = old_balance + amount
+
+    if account:
+        zivault.update_account(str(user_id), znt_balance=new_balance)
+    else:
+        zivault.create_account(str(user_id), znt_balance=amount)
+
+    # Record transaction
+    zivault.create_transaction(
+        str(user_id), "", "tokenization",
+        amount=amount, currency="ZNT",
+        counterparty="WooCommerce",
+        description=description or f"WooCommerce order #{order_id}: +{amount} ZNT",
+        metadata={"order_id": order_id, "source": source}
+    )
+
+    logger.info(f"ZNT credit: {amount} ZNT → {email} (Order #{order_id})")
+    return {"status": "ok", "znt_credited": amount, "new_balance": new_balance}
+
+
+@app.get("/api/vault/znt/balance")
+async def vault_znt_balance(request: Request):
+    """Get user's current ZNT balance."""
+    user = request.scope.get("state", {}).get("sso_user", {})
+    user_id = user.get("id") or user.get("email", "")
+    if not user_id:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+
+    account = zivault.get_account(str(user_id))
+    balance = account.get("znt_balance", 0) if account else 0
+    return {"status": "ok", "balance": balance, "currency": "ZNT"}
 
 
 # --- ZIO Machine Learning ---

@@ -6,7 +6,7 @@ for all ZICORE modules (ZIO, Materializer, Mission Control, etc.).
 
 Tables: users, sessions, services, user_services, audit_log
 Auth: bcrypt (with hashlib fallback), secrets.token_urlsafe
-Sessions: 30-day expiry
+Sessions: 7-day expiry
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-_DEFAULT_SESSION_EXPIRY_DAYS: int = 30
+_DEFAULT_SESSION_EXPIRY_DAYS: int = 7
 _TOKEN_BYTES: int = 32
 
 _DEFAULT_SERVICES: List[Dict[str, str]] = [
@@ -193,6 +193,29 @@ class ZICORESSO:
             )
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                username    TEXT    NOT NULL,
+                ip_address  TEXT,
+                success     INTEGER DEFAULT 0,
+                created_at  TEXT    NOT NULL
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                id          TEXT PRIMARY KEY,
+                user_id     INTEGER NOT NULL,
+                key_hash    TEXT NOT NULL,
+                name        TEXT DEFAULT '',
+                permissions TEXT DEFAULT '[]',
+                expires_at  TEXT,
+                created_at  TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
         self.conn.commit()
 
     def _seed_services(self) -> None:
@@ -269,8 +292,14 @@ class ZICORESSO:
         """
         if not username or not username.strip():
             return {"success": False, "error": "Username is required"}
-        if not password or len(password) < 6:
-            return {"success": False, "error": "Password must be at least 6 characters"}
+        if not password or len(password) < 8:
+            return {"success": False, "error": "Password must be at least 8 characters"}
+        if not any(c.isupper() for c in password):
+            return {"success": False, "error": "Password must contain at least one uppercase letter"}
+        if not any(c.islower() for c in password):
+            return {"success": False, "error": "Password must contain at least one lowercase letter"}
+        if not any(c.isdigit() for c in password):
+            return {"success": False, "error": "Password must contain at least one number"}
 
         username = username.strip().lower()
 
@@ -327,14 +356,34 @@ class ZICORESSO:
             ).fetchone()
             if not row:
                 self._log_audit(None, "login_failed", f"Unknown user '{username}'", ip_address)
+                self.conn.execute(
+                    "INSERT INTO login_attempts (username, ip_address, success, created_at) VALUES (?,?,0,?)",
+                    (username, ip_address or "unknown", self._now())
+                )
+                self.conn.commit()
                 return {"success": False, "error": "Invalid credentials"}
 
             if not row["is_active"]:
                 self._log_audit(row["id"], "login_blocked", "Account disabled", ip_address)
                 return {"success": False, "error": "Account is disabled"}
 
+            # Check for too many failed attempts
+            fifteen_min_ago = (datetime.utcnow() - timedelta(minutes=15)).isoformat()
+            failed_count = self.conn.execute(
+                "SELECT COUNT(*) as cnt FROM login_attempts WHERE username=? AND success=0 AND created_at>? AND ip_address=?",
+                (username, fifteen_min_ago, ip_address or "unknown")
+            ).fetchone()["cnt"]
+            if failed_count >= 5:
+                self._log_audit(row["id"], "login_blocked", "Too many failed attempts", ip_address)
+                return {"success": False, "error": "Account temporarily locked. Try again in 15 minutes."}
+
             if not _verify_password(password, row["password"]):
                 self._log_audit(row["id"], "login_failed", "Bad password", ip_address)
+                self.conn.execute(
+                    "INSERT INTO login_attempts (username, ip_address, success, created_at) VALUES (?,?,0,?)",
+                    (username, ip_address or "unknown", self._now())
+                )
+                self.conn.commit()
                 return {"success": False, "error": "Invalid credentials"}
 
             token = secrets.token_urlsafe(_TOKEN_BYTES)
@@ -349,6 +398,12 @@ class ZICORESSO:
             self.conn.commit()
 
             self._log_audit(row["id"], "login", f"service={service}", ip_address)
+
+            self.conn.execute(
+                "INSERT INTO login_attempts (username, ip_address, success, created_at) VALUES (?,?,1,?)",
+                (username, ip_address or "unknown", self._now())
+            )
+            self.conn.commit()
 
             return {
                 "success": True,
@@ -541,8 +596,14 @@ class ZICORESSO:
 
             {"success": True} or {"success": False, "error": "..."}
         """
-        if not new_password or len(new_password) < 6:
-            return {"success": False, "error": "New password must be at least 6 characters"}
+        if not new_password or len(new_password) < 8:
+            return {"success": False, "error": "New password must be at least 8 characters"}
+        if not any(c.isupper() for c in new_password):
+            return {"success": False, "error": "New password must contain at least one uppercase letter"}
+        if not any(c.islower() for c in new_password):
+            return {"success": False, "error": "New password must contain at least one lowercase letter"}
+        if not any(c.isdigit() for c in new_password):
+            return {"success": False, "error": "New password must contain at least one number"}
 
         try:
             row = self.conn.execute(
@@ -576,8 +637,14 @@ class ZICORESSO:
 
             {"success": True} or {"success": False, "error": "..."}
         """
-        if not new_password or len(new_password) < 6:
-            return {"success": False, "error": "New password must be at least 6 characters"}
+        if not new_password or len(new_password) < 8:
+            return {"success": False, "error": "New password must be at least 8 characters"}
+        if not any(c.isupper() for c in new_password):
+            return {"success": False, "error": "New password must contain at least one uppercase letter"}
+        if not any(c.islower() for c in new_password):
+            return {"success": False, "error": "New password must contain at least one lowercase letter"}
+        if not any(c.isdigit() for c in new_password):
+            return {"success": False, "error": "New password must contain at least one number"}
 
         try:
             row = self.conn.execute(

@@ -208,6 +208,34 @@ def init_db():
         created_at TEXT DEFAULT (datetime('now'))
     )""")
 
+    c.execute("""CREATE TABLE IF NOT EXISTS tags (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        color TEXT DEFAULT '#00e5ff',
+        created_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(user_id, name)
+    )""")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS asset_tags (
+        asset_id TEXT REFERENCES assets(id),
+        tag_id TEXT REFERENCES tags(id),
+        PRIMARY KEY (asset_id, tag_id)
+    )""")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        title TEXT DEFAULT '',
+        content TEXT DEFAULT '',
+        pinned INTEGER DEFAULT 0,
+        color TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    )""")
+
     # Seed default currencies
     default_currencies = [
         ("ZNT", "Zitón", "Z", 1),
@@ -696,3 +724,154 @@ class ZiVault:
         except Exception:
             conn.close()
             return []
+
+    # ── TAGS ───────────────────────────────────────────────────────────────────
+
+    def create_tag(self, user_id: str, name: str, color: str = "#00e5ff") -> dict:
+        tid = "tg_" + uuid.uuid4().hex[:12]
+        conn = _db()
+        try:
+            conn.execute("INSERT INTO tags (id, user_id, name, color) VALUES (?,?,?,?)",
+                         (tid, user_id, name.strip(), color))
+            conn.commit()
+            tag = dict(conn.execute("SELECT * FROM tags WHERE id=?", (tid,)).fetchone())
+            conn.close()
+            return tag
+        except sqlite3.IntegrityError:
+            conn.close()
+            row = conn.execute("SELECT * FROM tags WHERE user_id=? AND name=?", (user_id, name.strip())).fetchone()
+            return dict(row) if row else {"id": tid, "name": name, "color": color}
+
+    def list_tags(self, user_id: str) -> list:
+        conn = _db()
+        rows = conn.execute("SELECT * FROM tags WHERE user_id=? ORDER BY name", (user_id,)).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def delete_tag(self, tag_id: str) -> bool:
+        conn = _db()
+        conn.execute("DELETE FROM asset_tags WHERE tag_id=?", (tag_id,))
+        conn.execute("DELETE FROM tags WHERE id=?", (tag_id,))
+        conn.commit()
+        conn.close()
+        return True
+
+    def add_tag_to_asset(self, asset_id: str, tag_id: str) -> bool:
+        conn = _db()
+        try:
+            conn.execute("INSERT OR IGNORE INTO asset_tags (asset_id, tag_id) VALUES (?,?)", (asset_id, tag_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception:
+            conn.close()
+            return False
+
+    def remove_tag_from_asset(self, asset_id: str, tag_id: str) -> bool:
+        conn = _db()
+        conn.execute("DELETE FROM asset_tags WHERE asset_id=? AND tag_id=?", (asset_id, tag_id))
+        conn.commit()
+        conn.close()
+        return True
+
+    def get_asset_tags(self, asset_id: str) -> list:
+        conn = _db()
+        rows = conn.execute("""
+            SELECT t.* FROM tags t
+            JOIN asset_tags at ON t.id = at.tag_id
+            WHERE at.asset_id = ?
+        """, (asset_id,)).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_assets_by_tag(self, user_id: str, tag_id: str) -> list:
+        conn = _db()
+        rows = conn.execute("""
+            SELECT a.* FROM assets a
+            JOIN asset_tags at ON a.id = at.asset_id
+            WHERE at.tag_id = ? AND a.owner_id = ? AND a.status = 'active'
+        """, (tag_id, user_id)).fetchall()
+        conn.close()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["tags"] = json.loads(d.get("tags", "[]"))
+            d["metadata"] = json.loads(d.get("metadata", "{}"))
+            result.append(d)
+        return result
+
+    # ── NOTES ──────────────────────────────────────────────────────────────────
+
+    def create_note(self, user_id: str, resource_type: str, resource_id: str,
+                    title: str = "", content: str = "", color: str = "") -> dict:
+        nid = "nt_" + uuid.uuid4().hex[:12]
+        conn = _db()
+        conn.execute("""INSERT INTO notes (id, user_id, resource_type, resource_id, title, content, color)
+            VALUES (?,?,?,?,?,?,?)""", (nid, user_id, resource_type, resource_id, title, content, color))
+        conn.commit()
+        note = dict(conn.execute("SELECT * FROM notes WHERE id=?", (nid,)).fetchone())
+        conn.close()
+        self._log(user_id, "note_created", resource_type, resource_id, title)
+        return note
+
+    def list_notes(self, user_id: str, resource_type: str = "", resource_id: str = "") -> list:
+        conn = _db()
+        q = "SELECT * FROM notes WHERE user_id=?"
+        params: list = [user_id]
+        if resource_type:
+            q += " AND resource_type=?"
+            params.append(resource_type)
+        if resource_id:
+            q += " AND resource_id=?"
+            params.append(resource_id)
+        q += " ORDER BY pinned DESC, updated_at DESC"
+        rows = conn.execute(q, params).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_note(self, note_id: str) -> Optional[dict]:
+        conn = _db()
+        row = conn.execute("SELECT * FROM notes WHERE id=?", (note_id,)).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def update_note(self, note_id: str, **kwargs) -> Optional[dict]:
+        conn = _db()
+        updates = []
+        params = []
+        for k in ("title", "content", "pinned", "color"):
+            if k in kwargs:
+                updates.append(f"{k}=?")
+                params.append(kwargs[k])
+        if updates:
+            updates.append("updated_at=datetime('now')")
+            params.append(note_id)
+            conn.execute(f"UPDATE notes SET {', '.join(updates)} WHERE id=?", params)
+            conn.commit()
+        note = self.get_note(note_id)
+        conn.close()
+        return note
+
+    def delete_note(self, note_id: str) -> bool:
+        conn = _db()
+        conn.execute("DELETE FROM notes WHERE id=?", (note_id,))
+        conn.commit()
+        conn.close()
+        return True
+
+    def pin_note(self, note_id: str, pinned: bool = True) -> bool:
+        conn = _db()
+        conn.execute("UPDATE notes SET pinned=?, updated_at=datetime('now') WHERE id=?", (1 if pinned else 0, note_id))
+        conn.commit()
+        conn.close()
+        return True
+
+    def search_notes(self, user_id: str, query: str) -> list:
+        conn = _db()
+        q = "%{}%".format(query)
+        rows = conn.execute(
+            "SELECT * FROM notes WHERE user_id=? AND (title LIKE ? OR content LIKE ?) ORDER BY updated_at DESC LIMIT 50",
+            (user_id, q, q)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]

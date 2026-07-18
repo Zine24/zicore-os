@@ -24,6 +24,7 @@
     --text-primary: #e0e6f0;
     --text-secondary: #7a8599;
     --text-muted: #4a5568;
+    --radius: 8px;
     --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
     --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   }
@@ -945,7 +946,48 @@
     white-space: nowrap;
   }
 
-  @media (max-width: 900px) {
+    /* Tags */
+  .tags-cloud{display:flex;flex-wrap:wrap;gap:8px;padding:16px 0}
+  .tag-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid transparent}
+  .tag-pill:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  .tag-pill .tag-count{background:rgba(255,255,255,.1);padding:1px 6px;border-radius:10px;font-size:10px}
+  .tag-pill .tag-delete{cursor:pointer;opacity:.5;transition:opacity .2s;margin-left:4px}
+  .tag-pill .tag-delete:hover{opacity:1}
+  .color-pick{width:24px;height:24px;border-radius:50%;cursor:pointer;transition:transform .2s;border:2px solid transparent}
+  .color-pick:hover{transform:scale(1.2)}
+  .color-pick.selected{border-color:white;box-shadow:0 0 8px rgba(255,255,255,.3)}
+  .tag-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
+
+  /* Notes */
+  .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:16px 0}
+  .note-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;position:relative}
+  .note-card:hover{border-color:var(--cyan-dim);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .note-card.pinned{border-color:var(--orange-dim)}
+  .note-card .note-pin{position:absolute;top:8px;right:8px;font-size:12px;cursor:pointer;opacity:.5;transition:opacity .2s}
+  .note-card .note-pin:hover{opacity:1}
+  .note-card .note-pin.active{opacity:1;color:var(--orange)}
+  .note-card h4{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+  .note-card .note-preview{font-size:11px;color:var(--text-secondary);line-height:1.5;max-height:60px;overflow:hidden;margin-bottom:8px}
+  .note-card .note-meta{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-muted)}
+  .note-card .note-resource{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:4px;background:rgba(0,229,255,.06);color:var(--cyan);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+  .note-card .note-actions{display:flex;gap:4px}
+  .note-card .note-actions button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px;transition:all .15s}
+  .note-card .note-actions button:hover{color:var(--text-primary);background:rgba(255,255,255,.05)}
+
+.store-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .2s}
+.store-card:hover{border-color:var(--cyan-dim);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.store-card-img{width:100%;height:180px;object-fit:cover;border-bottom:1px solid var(--border)}
+.store-card-body{padding:14px}
+.store-card-body h3{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-primary);line-height:1.4}
+.store-card-cats{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.store-card-price{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.store-card-price .current{font-size:18px;font-weight:700;color:var(--cyan);font-family:var(--font-mono)}
+.store-card-price .original{font-size:12px;color:var(--text-muted);text-decoration:line-through}
+.store-card-price .badge-sale{background:var(--red);color:white;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
+.store-card-actions{display:flex;gap:8px}
+.store-card-actions .btn{flex:1;text-align:center;font-size:11px;padding:8px}
+
+@media (max-width: 900px) {
     .hero-stats { grid-template-columns: repeat(2, 1fr); }
     .dashboard-grid { grid-template-columns: 1fr; }
     .blockchain-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1008,6 +1050,9 @@
     <button class="tab-btn" data-tab="audit">Audit</button>
     <button class="tab-btn" data-tab="reports">Reports</button>
     <button class="tab-btn" data-tab="settings">Settings</button>
+    <button class="tab-btn" data-tab="tags">Tags</button>
+    <button class="tab-btn" data-tab="notes">Notes</button>
+    <button class="tab-btn" data-tab="store">Store</button>
   </div>
 
   <div class="tab-panel active" id="panel-dashboard">
@@ -1427,6 +1472,61 @@
       </div>
     </div>
   </div>
+
+  <div class="tab-panel" id="panel-tags">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">Tags</div>
+        <button class="btn btn-primary" onclick="openModal('tag')">+ New Tag</button>
+      </div>
+      <div class="tags-cloud" id="tags-cloud"></div>
+      <div class="settings-section" style="margin-top:16px">
+        <h3>Assets by Tag</h3>
+        <select id="tag-filter" onchange="loadAssetsByTag()">
+          <option value="">Select a tag...</option>
+        </select>
+        <div id="tag-assets-list" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-notes">
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="filter-bar">
+          <div class="search-box">
+            <span style="color:var(--text-muted)">&#9906;</span>
+            <input type="text" id="note-search" placeholder="Search notes..." oninput="filterNotes()">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('note')">+ New Note</button>
+      </div>
+      <div class="notes-grid" id="notes-grid"></div>
+      <div id="notes-empty" style="display:none;text-align:center;padding:40px;color:var(--text-muted)">
+        <div style="font-size:32px;margin-bottom:8px">&#128221;</div>
+        <div>No notes yet. Create your first note.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-store">
+    <div class="panel-header">
+      <h2>ZineMotion Store</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text-muted)">Powered by WooCommerce</span>
+        <a href="https://zzz.zinemotion.com" target="_blank" class="btn btn-secondary" style="font-size:11px">Visit Store</a>
+      </div>
+    </div>
+    <div id="store-loading" style="text-align:center;padding:40px;color:var(--text-muted)">
+      <div style="font-size:24px;margin-bottom:8px">&#8987;</div>
+      Loading products from ZineMotion Store...
+    </div>
+    <div id="store-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:16px 0"></div>
+    <div id="store-empty" style="display:none;text-align:center;padding:40px;color:var(--text-muted)">
+      <div style="font-size:32px;margin-bottom:8px">&#128722;</div>
+      <div>No products available at the moment.</div>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="modal-asset">
@@ -1704,6 +1804,90 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-tag">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Create Tag</h2>
+      <button class="modal-close" onclick="closeModal('tag')">&times;</button>
+    </div>
+    <form id="form-tag" onsubmit="submitTag(event)">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" class="form-input" id="tag-name" required placeholder="e.g. important, crypto, space">
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <div class="color-pick" style="background:#00e5ff" onclick="selectTagColor(this,'#00e5ff')"></div>
+          <div class="color-pick" style="background:#00ff88" onclick="selectTagColor(this,'#00ff88')"></div>
+          <div class="color-pick" style="background:#7c4dff" onclick="selectTagColor(this,'#7c4dff')"></div>
+          <div class="color-pick" style="background:#ff9100" onclick="selectTagColor(this,'#ff9100')"></div>
+          <div class="color-pick" style="background:#ff3d3d" onclick="selectTagColor(this,'#ff3d3d')"></div>
+          <div class="color-pick" style="background:#f7931a" onclick="selectTagColor(this,'#f7931a')"></div>
+          <div class="color-pick" style="background:#e040fb" onclick="selectTagColor(this,'#e040fb')"></div>
+          <div class="color-pick" style="background:#ffffff" onclick="selectTagColor(this,'#ffffff')"></div>
+        </div>
+        <input type="hidden" id="tag-color" value="#00e5ff">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-primary">Create Tag</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('tag')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-note">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="note-modal-title">New Note</h2>
+      <button class="modal-close" onclick="closeModal('note')">&times;</button>
+    </div>
+    <form id="form-note" onsubmit="submitNote(event)">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" class="form-input" id="note-title" required placeholder="Note title">
+      </div>
+      <div class="form-group">
+        <label>Attach to</label>
+        <div style="display:flex;gap:8px">
+          <select class="form-input" id="note-resource-type" onchange="loadNoteResources()" style="flex:1">
+            <option value="asset">Asset</option>
+            <option value="portfolio">Portfolio</option>
+            <option value="file">File</option>
+            <option value="transaction">Transaction</option>
+            <option value="general">General</option>
+          </select>
+          <select class="form-input" id="note-resource-id" style="flex:2">
+            <option value="">None (general note)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Content</label>
+        <textarea class="form-input" id="note-content" rows="6" placeholder="Write your note here..." style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <div class="color-pick note-color-opt" style="background:transparent;border:1px solid var(--border)" onclick="selectNoteColor(this,'')"></div>
+          <div class="color-pick note-color-opt" style="background:rgba(0,229,255,0.2);border:1px solid rgba(0,229,255,0.5)" onclick="selectNoteColor(this,'#00e5ff')"></div>
+          <div class="color-pick note-color-opt" style="background:rgba(0,255,136,0.2);border:1px solid rgba(0,255,136,0.5)" onclick="selectNoteColor(this,'#00ff88')"></div>
+          <div class="color-pick note-color-opt" style="background:rgba(124,77,255,0.2);border:1px solid rgba(124,77,255,0.5)" onclick="selectNoteColor(this,'#7c4dff')"></div>
+          <div class="color-pick note-color-opt" style="background:rgba(255,145,0,0.2);border:1px solid rgba(255,145,0,0.5)" onclick="selectNoteColor(this,'#ff9100')"></div>
+          <div class="color-pick note-color-opt" style="background:rgba(255,61,61,0.2);border:1px solid rgba(255,61,61,0.5)" onclick="selectNoteColor(this,'#ff3d3d')"></div>
+        </div>
+        <input type="hidden" id="note-color" value="">
+      </div>
+      <input type="hidden" id="note-edit-id" value="">
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-primary" id="note-submit-btn">Create Note</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('note')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="toast-container" id="toast-container"></div>
 
 <script>
@@ -1815,6 +1999,9 @@
     else if (tabName === 'vault') loadFiles();
     else if (tabName === 'transactions') loadTransactions();
     else if (tabName === 'audit') loadAudit();
+    else if (tabName === 'tags') loadTags();
+    else if (tabName === 'notes') loadNotes();
+    else if (tabName === 'store') loadStore();
   }
 
   document.getElementById('tabs-bar').addEventListener('click', function(e) {
@@ -2482,9 +2669,387 @@
     });
   });
 
+  // ── TAGS ──────────────────────────────────────────────────────────────────
+  var allTags = [];
+  var selectedTagColor = '#00e5ff';
+
+  window.selectTagColor = function(el, color) {
+    document.querySelectorAll('#form-tag .color-pick').forEach(function(p) { p.classList.remove('selected'); });
+    el.classList.add('selected');
+    document.getElementById('tag-color').value = color;
+    selectedTagColor = color;
+  };
+
+  function submitTag(e) {
+    e.preventDefault();
+    var name = document.getElementById('tag-name').value.trim();
+    if (!name) return;
+    authFetch('/api/vault/tags', { method: 'POST', body: JSON.stringify({ name: name, color: selectedTagColor }) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.tag) allTags.push(data.tag);
+        renderTags();
+        closeModal('tag');
+        document.getElementById('form-tag').reset();
+        toast('Tag created', 'success');
+      })
+      .catch(function() {
+        var local = { id: 'tg_' + Date.now().toString(36), name: name, color: selectedTagColor };
+        allTags.push(local);
+        renderTags();
+        closeModal('tag');
+        document.getElementById('form-tag').reset();
+        toast('Tag created (local)', 'success');
+      });
+  }
+
+  function loadTags() {
+    authFetch('/api/vault/tags')
+      .then(function(r) { return r.json(); })
+      .then(function(data) { allTags = data.tags || []; renderTags(); })
+      .catch(function() { renderTags(); });
+  }
+
+  function renderTags() {
+    var cloud = document.getElementById('tags-cloud');
+    var filter = document.getElementById('tag-filter');
+    if (!cloud) return;
+    cloud.innerHTML = '';
+    if (filter) {
+      var cur = filter.value;
+      filter.innerHTML = '<option value="">Select a tag...</option>';
+    }
+    if (allTags.length === 0) {
+      cloud.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:20px">No tags yet. Create your first tag to organize assets.</div>';
+      return;
+    }
+    allTags.forEach(function(t) {
+      var pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.style.background = t.color + '18';
+      pill.style.borderColor = t.color + '44';
+      pill.style.color = t.color;
+      pill.innerHTML = '<span>' + esc(t.name) + '</span>' +
+        '<span class="tag-delete" onclick="event.stopPropagation();deleteTag(\'' + t.id + '\')">&times;</span>';
+      pill.onclick = function() {
+        document.getElementById('tag-filter').value = t.id;
+        loadAssetsByTag();
+      };
+      cloud.appendChild(pill);
+      if (filter) {
+        var opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        filter.appendChild(opt);
+      }
+    });
+    if (filter) filter.value = cur || '';
+  }
+
+  window.deleteTag = function(tagId) {
+    authFetch('/api/vault/tags/' + tagId, { method: 'DELETE' })
+      .then(function() {
+        allTags = allTags.filter(function(t) { return t.id !== tagId; });
+        renderTags();
+        toast('Tag deleted', 'info');
+      })
+      .catch(function() {
+        allTags = allTags.filter(function(t) { return t.id !== tagId; });
+        renderTags();
+        toast('Tag deleted (local)', 'info');
+      });
+  };
+
+  window.loadAssetsByTag = function() {
+    var tagId = document.getElementById('tag-filter').value;
+    var container = document.getElementById('tag-assets-list');
+    container.innerHTML = '';
+    if (!tagId) return;
+    authFetch('/api/vault/tags/' + tagId + '/assets')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var assets = data.assets || [];
+        if (assets.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px">No assets with this tag.</div>';
+          return;
+        }
+        assets.forEach(function(a) {
+          var div = document.createElement('div');
+          div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px';
+          div.innerHTML = '<div><strong style="font-size:13px">' + esc(a.name) + '</strong> <span class="badge badge-cyan" style="margin-left:8px">' + esc(a.asset_type || a.type) + '</span></div>' +
+            '<div style="font-family:var(--font-mono);font-size:12px;color:var(--cyan)">' + formatCurrency(a.current_value || a.value, a.currency) + '</div>';
+          container.appendChild(div);
+        });
+      })
+      .catch(function() {
+        container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px">Error loading assets.</div>';
+      });
+  };
+
+  // ── NOTES ─────────────────────────────────────────────────────────────────
+  var allNotes = [];
+  var selectedNoteColor = '';
+
+  window.selectNoteColor = function(el, color) {
+    document.querySelectorAll('#form-note .color-pick').forEach(function(p) { p.classList.remove('selected'); });
+    el.classList.add('selected');
+    document.getElementById('note-color').value = color;
+    selectedNoteColor = color;
+  };
+
+  window.loadNoteResources = function() {
+    var type = document.getElementById('note-resource-type').value;
+    var sel = document.getElementById('note-resource-id');
+    sel.innerHTML = '<option value="">None (general note)</option>';
+    var items = [];
+    if (type === 'asset') items = allAssets;
+    else if (type === 'portfolio') items = allPortfolios;
+    else if (type === 'file') items = allFiles;
+    else if (type === 'transaction') items = allTransactions;
+    items.forEach(function(item) {
+      var opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name || item.filename || item.id;
+      sel.appendChild(opt);
+    });
+  };
+
+  function submitNote(e) {
+    e.preventDefault();
+    var editId = document.getElementById('note-edit-id').value;
+    var payload = {
+      title: document.getElementById('note-title').value.trim(),
+      content: document.getElementById('note-content').value.trim(),
+      resource_type: document.getElementById('note-resource-type').value,
+      resource_id: document.getElementById('note-resource-id').value,
+      color: selectedNoteColor
+    };
+    var promise;
+    if (editId) {
+      promise = authFetch('/api/vault/notes/' + editId, { method: 'PUT', body: JSON.stringify(payload) });
+    } else {
+      promise = authFetch('/api/vault/notes', { method: 'POST', body: JSON.stringify(payload) });
+    }
+    promise.then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (editId) {
+          var idx = allNotes.findIndex(function(n) { return n.id === editId; });
+          if (idx >= 0 && data.note) allNotes[idx] = data.note;
+        } else if (data.note) {
+          allNotes.unshift(data.note);
+        }
+        renderNotes();
+        closeModal('note');
+        document.getElementById('form-note').reset();
+        document.getElementById('note-edit-id').value = '';
+        document.getElementById('note-modal-title').textContent = 'New Note';
+        document.getElementById('note-submit-btn').textContent = 'Create Note';
+        toast(editId ? 'Note updated' : 'Note created', 'success');
+      })
+      .catch(function() {
+        if (!editId) {
+          var local = Object.assign({ id: 'nt_' + Date.now().toString(36), pinned: 0, created_at: nowISO(), updated_at: nowISO() }, payload);
+          allNotes.unshift(local);
+          renderNotes();
+          closeModal('note');
+          document.getElementById('form-note').reset();
+          toast('Note created (local)', 'success');
+        }
+      });
+  }
+
+  function loadNotes() {
+    authFetch('/api/vault/notes')
+      .then(function(r) { return r.json(); })
+      .then(function(data) { allNotes = data.notes || []; renderNotes(); })
+      .catch(function() { renderNotes(); });
+  }
+
+  function renderNotes() {
+    var grid = document.getElementById('notes-grid');
+    var empty = document.getElementById('notes-empty');
+    if (!grid) return;
+    grid.innerHTML = '';
+    var filtered = getFilteredNotes();
+    if (empty) empty.style.display = filtered.length === 0 ? 'block' : 'none';
+    filtered.forEach(function(n) {
+      var card = document.createElement('div');
+      card.className = 'note-card' + (n.pinned ? ' pinned' : '');
+      if (n.color) card.style.borderLeftColor = n.color;
+      var timeStr = timeAgo(n.updated_at || n.created_at);
+      var resourceBadge = n.resource_type && n.resource_type !== 'general' ?
+        '<span class="note-resource">' + esc(n.resource_type) + '</span>' : '';
+      card.innerHTML = '<div class="note-pin' + (n.pinned ? ' active' : '') + '" onclick="event.stopPropagation();togglePinNote(\'' + n.id + '\',' + (n.pinned ? 'false' : 'true') + ')">&#128204;</div>' +
+        '<h4>' + esc(n.title || 'Untitled') + '</h4>' +
+        '<div class="note-preview">' + esc(n.content || 'No content') + '</div>' +
+        '<div class="note-meta">' +
+          '<div>' + resourceBadge + ' <span>' + timeStr + '</span></div>' +
+          '<div class="note-actions">' +
+            '<button onclick="event.stopPropagation();editNote(\'' + n.id + '\')" title="Edit">&#9998;</button>' +
+            '<button onclick="event.stopPropagation();deleteNote(\'' + n.id + '\')" title="Delete" style="color:var(--red)">&#128465;</button>' +
+          '</div>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  function getFilteredNotes() {
+    var search = (document.getElementById('note-search').value || '').toLowerCase();
+    return allNotes.filter(function(n) {
+      return !search || (n.title && n.title.toLowerCase().indexOf(search) >= 0) || (n.content && n.content.toLowerCase().indexOf(search) >= 0);
+    });
+  }
+
+  window.filterNotes = function() { renderNotes(); };
+
+  window.togglePinNote = function(noteId, pinned) {
+    authFetch('/api/vault/notes/' + noteId + '/pin', { method: 'POST', body: JSON.stringify({ pinned: pinned === 'true' || pinned === true }) })
+      .then(function() { loadNotes(); })
+      .catch(function() {
+        var n = allNotes.find(function(x) { return x.id === noteId; });
+        if (n) n.pinned = pinned === 'true' || pinned === true ? 1 : 0;
+        renderNotes();
+      });
+  };
+
+  window.editNote = function(noteId) {
+    var note = allNotes.find(function(n) { return n.id === noteId; });
+    if (!note) return;
+    document.getElementById('note-edit-id').value = note.id;
+    document.getElementById('note-title').value = note.title || '';
+    document.getElementById('note-content').value = note.content || '';
+    document.getElementById('note-resource-type').value = note.resource_type || 'general';
+    loadNoteResources();
+    setTimeout(function() {
+      document.getElementById('note-resource-id').value = note.resource_id || '';
+    }, 200);
+    if (note.color) {
+      selectedNoteColor = note.color;
+      document.getElementById('note-color').value = note.color;
+    }
+    document.getElementById('note-modal-title').textContent = 'Edit Note';
+    document.getElementById('note-submit-btn').textContent = 'Save Changes';
+    openModal('note');
+  };
+
+  window.deleteNote = function(noteId) {
+    authFetch('/api/vault/notes/' + noteId, { method: 'DELETE' })
+      .then(function() {
+        allNotes = allNotes.filter(function(n) { return n.id !== noteId; });
+        renderNotes();
+        toast('Note deleted', 'info');
+      })
+      .catch(function() {
+        allNotes = allNotes.filter(function(n) { return n.id !== noteId; });
+        renderNotes();
+        toast('Note deleted (local)', 'info');
+      });
+  };
+
+  // ── STORE ─────────────────────────────────────────────────────────────────
+  var storeProducts = [];
+  var storeUrl = '';
+
+  function loadStore() {
+    document.getElementById('store-loading').style.display = 'block';
+    document.getElementById('store-grid').style.display = 'none';
+    document.getElementById('store-empty').style.display = 'none';
+    
+    authFetch('/api/vault/store/products')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        storeProducts = data.products || [];
+        storeUrl = data.store_url || 'https://zzz.zinemotion.com';
+        document.getElementById('store-loading').style.display = 'none';
+        renderStore();
+      })
+      .catch(function() {
+        document.getElementById('store-loading').style.display = 'none';
+        document.getElementById('store-empty').style.display = 'block';
+      });
+  }
+
+  function renderStore() {
+    var grid = document.getElementById('store-grid');
+    var empty = document.getElementById('store-empty');
+    grid.innerHTML = '';
+    if (storeProducts.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    
+    storeProducts.forEach(function(p) {
+      var card = document.createElement('div');
+      card.className = 'store-card';
+      
+      var imgHtml = p.images && p.images.length > 0 ?
+        '<img class="store-card-img" src="' + esc(p.images[0].thumbnail || p.images[0].src) + '" alt="' + esc(p.name) + '" loading="lazy">' :
+        '<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-input);color:var(--text-muted);font-size:32px">&#128247;</div>';
+      
+      var catsHtml = (p.categories || []).map(function(c) {
+        return '<span class="badge badge-cyan" style="font-size:9px">' + esc(c) + '</span>';
+      }).join('');
+      
+      var priceHtml = '';
+      if (p.on_sale && p.sale_price < p.regular_price) {
+        priceHtml = '<span class="current">' + p.currency_symbol + formatNum(p.sale_price) + '</span>' +
+          '<span class="original">' + p.currency_symbol + formatNum(p.regular_price) + '</span>' +
+          '<span class="badge-sale">SALE</span>';
+      } else {
+        priceHtml = '<span class="current">' + p.currency_symbol + formatNum(p.price) + '</span>';
+      }
+      
+      card.innerHTML = imgHtml +
+        '<div class="store-card-body">' +
+          '<h3>' + esc(p.name) + '</h3>' +
+          '<div class="store-card-cats">' + catsHtml + '</div>' +
+          '<div class="store-card-price">' + priceHtml + '<span style="font-size:10px;color:var(--text-muted)">' + esc(p.currency) + '</span></div>' +
+          '<div class="store-card-actions">' +
+            '<button class="btn btn-secondary" onclick="window.open(\'' + esc(p.permalink) + '\',\'_blank\')">View</button>' +
+            '<button class="btn btn-primary" onclick="purchaseStoreProduct(' + p.id + ')">Add to Vault</button>' +
+          '</div>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  window.purchaseStoreProduct = function(productId) {
+    var product = storeProducts.find(function(p) { return p.id === productId; });
+    if (!product) return;
+    
+    var payload = {
+      product_id: product.id,
+      product_name: product.name,
+      price: product.on_sale ? product.sale_price : product.price,
+      currency: product.currency,
+      image_url: product.images && product.images[0] ? product.images[0].src : '',
+      store_url: product.permalink,
+      categories: product.categories
+    };
+    
+    authFetch('/api/vault/store/purchase', { method: 'POST', body: JSON.stringify(payload) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.asset) {
+          allAssets.push(data.asset);
+          renderAll();
+        }
+        toast('Product added to your vault!', 'success');
+        addAudit('store.purchase', product.name);
+      })
+      .catch(function() {
+        toast('Added to vault (local)', 'success');
+        addAudit('store.purchase', product.name);
+      });
+  };
+
   function init() {
     if (!checkAuth()) return;
     loadDashboard();
+    loadTags();
+    loadNotes();
     addAudit('session.start', 'zivault');
   }
 
@@ -2504,7 +3069,10 @@
       {id:'blockchain', label:'Blockchain', href:'#'},
       {id:'audit', label:'Audit', href:'#'},
       {id:'reports', label:'Reports', href:'#'},
-      {id:'settings', label:'Settings', href:'#'}
+      {id:'settings', label:'Settings', href:'#'},
+      {id:'tags', label:'Tags', href:'#'},
+      {id:'notes', label:'Notes', href:'#'},
+      {id:'store', label:'Store', href:'#'}
     ],
     activeTab: 'dashboard'
   });

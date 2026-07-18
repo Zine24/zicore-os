@@ -453,7 +453,9 @@ function handleAuthSuccess(token, user) {
   localStorage.setItem(SSO_TOKEN_KEY, token);
   if (user) localStorage.setItem(SSO_USER_KEY, JSON.stringify(user));
   // Set cookie so server middleware can read it on page loads
-  document.cookie = 'zicore_sso_token=' + token + '; path=/; max-age=2592000; SameSite=Lax';
+  var cookieStr = 'zicore_sso_token=' + token + '; path=/; max-age=2592000; SameSite=Lax';
+  if (location.protocol === 'https:') cookieStr += '; Secure';
+  document.cookie = cookieStr;
 
   // Redirect to portal or previous page
   const redirect = localStorage.getItem(REDIRECT_KEY);
@@ -476,7 +478,9 @@ async function verifyToken(token) {
     if (res.ok) {
       const data = await res.json();
       // Ensure cookie is set for server-side middleware
-      document.cookie = 'zicore_sso_token=' + token + '; path=/; max-age=2592000; SameSite=Lax';
+      var cookieStr2 = 'zicore_sso_token=' + token + '; path=/; max-age=2592000; SameSite=Lax';
+      if (location.protocol === 'https:') cookieStr2 += '; Secure';
+      document.cookie = cookieStr2;
       const redirect = localStorage.getItem(REDIRECT_KEY);
       localStorage.removeItem(REDIRECT_KEY);
       if (redirect && redirect !== '/login') {
@@ -521,7 +525,9 @@ function showLoggedInState(user) {
 function logout() {
   localStorage.removeItem(SSO_TOKEN_KEY);
   localStorage.removeItem(SSO_USER_KEY);
-  document.cookie = 'zicore_sso_token=; path=/; max-age=0';
+  var clearStr = 'zicore_sso_token=; path=/; max-age=0; SameSite=Lax';
+  if (location.protocol === 'https:') clearStr += '; Secure';
+  document.cookie = clearStr;
   document.getElementById('headerBar').style.display = 'none';
   document.getElementById('authCard').style.display = '';
   document.querySelector('.logo').style.display = '';
