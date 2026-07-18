@@ -788,6 +788,7 @@ class SSOAuthMiddleware:
         "/media/",     # media files
         "/static/",    # static assets
         "/installers/", # downloadable installers and APKs
+        "/api/library/", # generation library (public for sidebar)
     )
 
     def __init__(self, app):
@@ -3033,6 +3034,88 @@ async def library_remove_tag(gen_id: int, tag: str):
         if not ok:
             return JSONResponse({"status": "error", "error": "Generation not found"}, status_code=404)
         return {"status": "ok", "id": gen_id, "tag": tag}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/library/unified")
+async def library_unified():
+    """Return all library assets in a flat list for the global sidebar."""
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        results = generation_library.list(limit=500)
+        # Also append media files from MEDIA_DIR that aren't already in the library
+        existing_paths = {r.get("file_path", "") for r in results}
+        media_root = MEDIA_DIR
+        if media_root.is_dir():
+            for ext_pattern in ("**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.webp",
+                                "**/*.mp3", "**/*.wav", "**/*.ogg", "**/*.flac",
+                                "**/*.mp4", "**/*.webm", "**/*.ogv",
+                                "**/*.stl", "**/*.obj", "**/*.glb", "**/*.gltf"):
+                for fp in media_root.glob(ext_pattern):
+                    rel = str(fp.relative_to(media_root)).replace("\\", "/")
+                    if rel in existing_paths:
+                        continue
+                    try:
+                        sz = fp.stat().st_size
+                    except OSError:
+                        sz = 0
+                    ext = fp.suffix.lower().lstrip(".")
+                    type_map = {
+                        "png":"image","jpg":"image","jpeg":"image","gif":"image","webp":"image","bmp":"image",
+                        "mp3":"audio","wav":"audio","ogg":"audio","flac":"audio","m4a":"audio",
+                        "mp4":"video","webm":"video","ogv":"video","mov":"video","mkv":"video",
+                        "stl":"3d","obj":"3d","glb":"3d","gltf":"3d","ply":"3d",
+                    }
+                    results.append({
+                        "id": 0,
+                        "prompt": fp.stem,
+                        "output_type": type_map.get(ext, "other"),
+                        "engine": "media",
+                        "file_path": rel,
+                        "file_format": ext,
+                        "thumbnail_path": "",
+                        "tags": "[]",
+                        "metadata": json.dumps({"size": sz}),
+                        "created_at": "",
+                        "updated_at": "",
+                        "is_favorite": False,
+                        "folder_id": None,
+                    })
+        return {"status": "ok", "assets": results}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/library/save")
+async def library_save(body: dict):
+    """Save a generation from a specific module (materializer, video-editor, etc.)."""
+    try:
+        if generation_library is None:
+            return JSONResponse({"status": "error", "error": "Generation Library not available"}, status_code=503)
+        prompt = body.get("prompt", "")
+        output_type = body.get("type", "unknown")
+        engine = body.get("engine", "")
+        file_path = body.get("file_path", "")
+        file_format = body.get("format", "")
+        tags = body.get("tags", [])
+        metadata = body.get("metadata", {})
+        source = body.get("source", "")  # e.g. "materializer", "video-editor", "audio-editor"
+        if source:
+            metadata["source"] = source
+        if not file_path:
+            return JSONResponse({"status": "error", "error": "file_path required"}, status_code=400)
+        gen_id = generation_library.add(
+            prompt=prompt,
+            output_type=output_type,
+            engine=engine,
+            file_path=file_path,
+            file_format=file_format,
+            tags=tags,
+            metadata=metadata,
+        )
+        return {"status": "ok", "id": gen_id}
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
