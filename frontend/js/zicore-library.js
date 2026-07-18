@@ -358,7 +358,7 @@
       const thumb = thumbUrl(a);
       const playing = state.player.asset && state.player.asset.id === a.id;
       const isAudio = type === 'audio';
-      html += `<div class="zlib-card${playing?' playing':''}" data-id="${a.id}" ondblclick="ZICORE_LIBRARY.play(${a.id})">
+      html += `<div class="zlib-card${playing?' playing':''}" data-id="${a.id}" draggable="true" data-file="${fileUrl(a)}" data-type="${type}" data-name="${displayName(a)}" ondblclick="ZICORE_LIBRARY.play(${a.id})" ondragstart="ZICORE_LIBRARY.dragStart(event)">
         <div class="zlib-card-thumb">
           ${thumb ? `<img src="${thumb}" loading="lazy" />` : `<span class="zlib-type-icon">${TYPE_ICONS[type]||''}</span>`}
           <div class="zlib-card-playing">▶</div>
@@ -475,15 +475,52 @@
     }
   }
 
+  /* ── Drag and Drop ─────────────────────────────────────────── */
+  function dragStart(e) {
+    const card = e.target.closest('.zlib-card');
+    if (!card) return;
+    const data = {
+      id: card.dataset.id,
+      file: card.dataset.file,
+      type: card.dataset.type,
+      name: card.dataset.name,
+    };
+    e.dataTransfer.setData('application/zicore-library', JSON.stringify(data));
+    e.dataTransfer.setData('text/plain', data.file);
+    e.dataTransfer.effectAllowed = 'copyLink';
+    card.style.opacity = '0.5';
+    setTimeout(() => { card.style.opacity = ''; }, 100);
+  }
+
+  function makeDropZone(el, onDrop) {
+    if (!el) return;
+    el.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      el.classList.add('zlib-drop-hover');
+    });
+    el.addEventListener('dragleave', () => {
+      el.classList.remove('zlib-drop-hover');
+    });
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.classList.remove('zlib-drop-hover');
+      let data = null;
+      try {
+        data = JSON.parse(e.dataTransfer.getData('application/zicore-library'));
+      } catch(err) {}
+      if (data && onDrop) onDrop(data, e);
+    });
+  }
+
   /* ── inject into every page ────────────────────────────────── */
   function init() {
     renderFAB();
-    // auto-fetch on init
     fetchAssets();
   }
 
   /* ── expose ────────────────────────────────────────────────── */
-  window[NS] = { init, toggle, play, fav, playPause, prev, next, seek, vol, toggleShuffle, toggleRepeat, toggleMute, state };
+  window[NS] = { init, toggle, play, fav, playPause, prev, next, seek, vol, toggleShuffle, toggleRepeat, toggleMute, dragStart, makeDropZone, state };
 
   // auto-init when DOM ready
   if (document.readyState === 'loading') {

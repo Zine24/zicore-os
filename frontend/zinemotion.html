@@ -453,20 +453,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
     <div class="section-tag reveal">004 — Contact</div>
     <h2 class="section-title reveal reveal-delay-1">Let's build something<br>together</h2>
     <div class="contact-layout">
-      <form class="contact-form reveal reveal-delay-2" onsubmit="event.preventDefault()">
+      <form class="contact-form reveal reveal-delay-2" onsubmit="submitContact(event)">
         <div class="form-group">
           <label class="form-label">Name</label>
-          <input class="form-input" type="text" placeholder="Your name">
+          <input class="form-input" type="text" id="contact-name" placeholder="Your name" required>
         </div>
         <div class="form-group">
           <label class="form-label">Email</label>
-          <input class="form-input" type="email" placeholder="you@email.com">
+          <input class="form-input" type="email" id="contact-email" placeholder="you@email.com" required>
         </div>
         <div class="form-group">
           <label class="form-label">Message</label>
-          <textarea class="form-textarea" placeholder="Tell us about your project..."></textarea>
+          <textarea class="form-textarea" id="contact-message" placeholder="Tell us about your project..." required></textarea>
         </div>
-        <button class="form-submit" type="submit">Send Message</button>
+        <button class="form-submit" type="submit" id="contact-btn">Send Message</button>
+        <div id="contact-status" style="font-size:12px;letter-spacing:1px;margin-top:8px;display:none"></div>
       </form>
       <div class="contact-info reveal reveal-delay-3">
         <div class="contact-block">
@@ -498,6 +499,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
       <a href="https://zcs.zicore.space" target="_blank">ZICORE</a>
       <a href="https://zicore.space" target="_blank">ZiCore</a>
       <a href="#contacto">Contact</a>
+      <a href="https://zcs.zicore.space/disclaimer">Disclaimer</a>
+      <a href="https://zcs.zicore.space/terms-of-service">Terms</a>
+      <a href="https://zcs.zicore.space/privacy-policy">Privacy</a>
     </div>
   </div>
 </footer>
@@ -523,6 +527,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
 document.querySelectorAll('a[href^="#"]').forEach(function(a){
   a.addEventListener('click',function(e){e.preventDefault();var t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth'})});
 });
+function submitContact(e){
+  e.preventDefault();
+  var name=document.getElementById('contact-name').value;
+  var email=document.getElementById('contact-email').value;
+  var msg=document.getElementById('contact-message').value;
+  var btn=document.getElementById('contact-btn');
+  var status=document.getElementById('contact-status');
+  btn.textContent='SENDING...';btn.disabled=true;status.style.display='none';
+  fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email,message:msg})})
+  .then(function(r){return r.json()}).then(function(d){
+    if(d.status==='ok'){status.textContent='Message sent successfully!';status.style.color='#00ff88';status.style.display='block';
+      document.getElementById('contact-name').value='';document.getElementById('contact-email').value='';document.getElementById('contact-message').value='';
+    }else{status.textContent=d.error||'Failed to send';status.style.color='#ff5555';status.style.display='block';}
+    btn.textContent='SEND MESSAGE';btn.disabled=false;
+  }).catch(function(){status.textContent='Network error';status.style.color='#ff5555';status.style.display='block';btn.textContent='SEND MESSAGE';btn.disabled=false;});
+}
 </script>
 </body>
 </html>

@@ -775,6 +775,9 @@ class SSOAuthMiddleware:
         "/api/vault/currencies",
         "/api/vault/store/products",
         "/api/vault/znt/balance",
+        "/disclaimer",
+        "/api/contact",
+        "/api/contact/submissions",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -1134,6 +1137,68 @@ async def serve_terms():
 @app.get("/privacy-policy")
 async def serve_privacy():
     return FileResponse(str(FRONTEND_DIR / "privacy-policy.html"))
+
+
+@app.get("/disclaimer")
+async def serve_disclaimer():
+    return FileResponse(str(FRONTEND_DIR / "disclaimer.html"))
+
+
+@app.post("/api/contact")
+async def contact_form(request: Request):
+    """Receive contact form submission and store it."""
+    try:
+        data = await request.json()
+        name = data.get("name", "").strip()
+        email = data.get("email", "").strip()
+        message = data.get("message", "").strip()
+        if not name or not email or not message:
+            return JSONResponse({"status": "error", "error": "Name, email, and message are required"}, status_code=400)
+        # Store in contact submissions file
+        contacts_file = Path(__file__).parent / "data" / "contact_submissions.json"
+        contacts_file.parent.mkdir(parents=True, exist_ok=True)
+        submissions = []
+        if contacts_file.exists():
+            try:
+                submissions = json.loads(contacts_file.read_text(encoding="utf-8"))
+            except Exception:
+                submissions = []
+        submissions.append({
+            "name": name,
+            "email": email,
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat(),
+            "read": False,
+        })
+        contacts_file.write_text(json.dumps(submissions, indent=2, ensure_ascii=False), encoding="utf-8")
+        # Try to send email notification if mail is available
+        try:
+            if mail_server is not None:
+                mail_server.send_email(
+                    to="hola@zinemotion.com.mx",
+                    subject=f"ZICORE Contact: {name}",
+                    body=f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}",
+                    from_addr="noreply@zinemotion.com.mx",
+                    html=False,
+                )
+        except Exception:
+            pass  # Don't fail the form if email fails
+        return {"status": "ok", "message": "Message received"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/contact/submissions")
+async def contact_submissions():
+    """Get all contact form submissions (admin)."""
+    try:
+        contacts_file = Path(__file__).parent / "data" / "contact_submissions.json"
+        if not contacts_file.exists():
+            return {"status": "ok", "submissions": []}
+        submissions = json.loads(contacts_file.read_text(encoding="utf-8"))
+        return {"status": "ok", "submissions": submissions, "count": len(submissions)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @app.get("/zio")
