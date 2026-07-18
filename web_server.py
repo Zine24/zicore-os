@@ -1173,14 +1173,19 @@ async def contact_form(request: Request):
         contacts_file.write_text(json.dumps(submissions, indent=2, ensure_ascii=False), encoding="utf-8")
         # Try to send email notification if mail is available
         try:
+            sent = False
             if mail_server is not None:
-                mail_server.send_email(
+                r = mail_server.send_email(
                     to="hola@zinemotion.com.mx",
                     subject=f"ZICORE Contact: {name}",
                     body=f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}",
                     from_addr="noreply@zinemotion.com.mx",
                     html=False,
                 )
+                if isinstance(r, dict) and r.get("success"):
+                    sent = True
+            if not sent and oracle_email and oracle_email.enabled:
+                oracle_email.send_contact_notification(name, email, message)
         except Exception:
             pass  # Don't fail the form if email fails
         return {"status": "ok", "message": "Message received"}
@@ -4462,6 +4467,11 @@ async def thunderbird_compose(request: Request):
 from zicore.mail_integration import MailServer
 mail_server = MailServer()
 
+try:
+    from zicore.oracle_email import oracle_email
+except Exception:
+    oracle_email = None
+
 
 @app.get("/api/mail/admin-check")
 async def mail_admin_check(request: Request):
@@ -4605,14 +4615,20 @@ async def mail_list_aliases():
 
 @app.post("/api/mail/send")
 async def mail_send(request: Request):
-    """Send an email."""
+    """Send an email — tries Gmail relay first, falls back to Oracle Email Delivery."""
     data = await request.json()
     to = data.get("to", "")
     subject = data.get("subject", "")
     body = data.get("body", "")
     from_addr = data.get("from", "")
     html = data.get("html", False)
-    return {"status": "ok", "result": mail_server.send_email(to, subject, body, from_addr, html)}
+    # Try Gmail relay first
+    result = mail_server.send_email(to, subject, body, from_addr, html)
+    if isinstance(result, dict) and result.get("success") is False:
+        # Gmail failed — try Oracle Email Delivery
+        if oracle_email and oracle_email.enabled:
+            result = oracle_email.send(to, subject, body, from_addr, html)
+    return {"status": "ok", "result": result}
 
 
 @app.get("/api/mail/inbox")
