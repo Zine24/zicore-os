@@ -4354,6 +4354,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     <div class="mirror-section-title">ENGINE STATUS</div>
     <div class="mirror-row"><span class="label">ZIO Agent</span><span class="val ok" id="mirZio">ONLINE</span></div>
     <div class="mirror-row"><span class="label">Ollama</span><span class="val" id="mirOllama">--</span></div>
+    <div class="mirror-row"><span class="label">Ollama URL</span><span class="val" id="mirOllamaUrl" style="font-size:6px;color:var(--text3)">--</span></div>
+    <div class="mirror-row"><span class="label">Models</span><span class="val" id="mirModels" style="font-size:6px;color:var(--text3)">--</span></div>
     <div class="mirror-row"><span class="label">Stable Diffusion</span><span class="val" id="mirSD">--</span></div>
     <div class="mirror-row"><span class="label">Hunyuan3D</span><span class="val" id="mir3d">--</span></div>
     <div class="mirror-row"><span class="label">Mail Server</span><span class="val" id="mirMail">--</span></div>
@@ -4476,12 +4478,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
     fetch('/api/ollama/status').then(r=>r.json()).then(d=>{
       const el = document.getElementById('mirOllama');
+      const urlEl = document.getElementById('mirOllamaUrl');
+      const modelsEl = document.getElementById('mirModels');
       if (d.ollama && d.ollama.status === 'online') {
-        el.textContent = 'ONLINE (' + (d.ollama.models||[]).length + ')';
+        el.textContent = 'ONLINE';
         el.className = 'val ok';
+        var models = d.ollama.models || [];
+        var url = d.ollama.base_url || d.ollama.url || '--';
+        urlEl.textContent = url;
+        modelsEl.textContent = models.length + ' models: ' + models.map(function(m){return m.name||m}).join(', ');
       } else {
         el.textContent = 'OFFLINE';
         el.className = 'val warn';
+        urlEl.textContent = '--';
+        modelsEl.textContent = '--';
       }
     }).catch(()=>{});
 

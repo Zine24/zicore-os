@@ -1584,7 +1584,19 @@ async def ollama_status():
     base_url = config.get("providers", {}).get("ollama", {}).get("base_url", "127.0.0.1:11434")
     if not base_url.startswith("http"):
         base_url = f"http://{base_url}"
-    return status(base_url)
+    result = status(base_url)
+    wrapped = {"ollama": result, "source": "ollama"}
+    if result.get("status") != "online":
+        zicore_url = config.get("providers", {}).get("zicore_native", {}).get("base_url", "")
+        if zicore_url:
+            if not zicore_url.startswith("http"):
+                zicore_url = f"http://{zicore_url}"
+            zr = status(zicore_url)
+            if zr.get("status") == "online":
+                wrapped["ollama"] = zr
+                wrapped["source"] = "zicore_native"
+                wrapped["ollama"]["base_url"] = zicore_url
+    return wrapped
 
 
 @app.post("/api/ollama/start")
@@ -1828,13 +1840,26 @@ async def get_system_stats():
             config = load_config()
             active_prov = config.get("zio_engine", {}).get("active_provider", "zicore_native")
             ollama_cfg = config.get("providers", {}).get("ollama", {})
+            zicore_cfg = config.get("providers", {}).get("zicore_native", {})
+            ollama_url = ollama_cfg.get("base_url", OLLAMA_BASE_URL)
+            if not ollama_url.startswith("http"):
+                ollama_url = f"http://{ollama_url}"
             if ollama_cfg.get("enabled"):
                 import urllib.request as _req
                 try:
-                    _req.urlopen(OLLAMA_BASE_URL + "/api/tags", timeout=2)
+                    _req.urlopen(ollama_url + "/api/tags", timeout=3)
                     ollama_ok = True
                 except Exception:
-                    pass
+                    if zicore_cfg.get("enabled"):
+                        zicore_url = zicore_cfg.get("base_url", "")
+                        if zicore_url and not zicore_url.startswith("http"):
+                            zicore_url = f"http://{zicore_url}"
+                        if zicore_url:
+                            try:
+                                _req.urlopen(zicore_url + "/api/tags", timeout=3)
+                                ollama_ok = True
+                            except Exception:
+                                pass
         except Exception:
             pass
         return {
