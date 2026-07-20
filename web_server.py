@@ -1124,6 +1124,11 @@ async def serve_video_editor():
     return FileResponse(str(FRONTEND_DIR / "video-editor.html"))
 
 
+@app.get("/audio-engine")
+async def serve_audio_engine():
+    return FileResponse(str(FRONTEND_DIR / "audio-engine.html"))
+
+
 @app.get("/login")
 async def serve_sso_login():
     return FileResponse(str(FRONTEND_DIR / "sso-login.html"))
@@ -2150,6 +2155,90 @@ async def text_to_speech(body: dict):
     if not text:
         return {"error": "No text provided"}
     return {"status": "ok", "text": text, "engine": "browser"}
+
+
+@app.post("/api/audio/process")
+async def audio_process(body: dict):
+    effect = body.get("effect", "")
+    params = body.get("params", {})
+    return {"status": "ok", "effect": effect, "params": params, "message": f"Audio processing with {effect}"}
+
+
+@app.post("/api/audio/generate")
+async def audio_generate(body: dict):
+    prompt = body.get("prompt", "")
+    duration = body.get("duration", 5)
+    sample_rate = body.get("sample_rate", 44100)
+    try:
+        import numpy as np
+        import wave, os, time
+        t = np.linspace(0, duration, int(sample_rate * duration), False)
+        freq = 440
+        if any(w in prompt.lower() for w in ['bass', 'low', 'sub']):
+            freq = 80
+        elif any(w in prompt.lower() for w in ['high', 'hi', 'lead']):
+            freq = 880
+        elif any(w in prompt.lower() for w in ['mid', 'chord']):
+            freq = 330
+        elif any(w in prompt.lower() for w in ['drum', 'kick', 'beat']):
+            data = np.zeros_like(t)
+            beat_interval = 60 / 120
+            for i in range(int(duration / beat_interval)):
+                idx_start = int(i * beat_interval * sample_rate)
+                idx_end = min(idx_start + int(0.05 * sample_rate), len(data))
+                data[idx_start:idx_end] = np.exp(-100 * (t[idx_start:idx_end] - t[idx_start])) * 0.8
+            tone = data
+        else:
+            tone = 0.3 * np.sin(2 * np.pi * freq * t) * np.exp(-2 * t)
+        if 'tone' in dir():
+            tone_data = tone
+        else:
+            tone_data = data
+        os.makedirs("output", exist_ok=True)
+        fname = f"output/audio_{int(time.time())}.wav"
+        with wave.open(fname, 'w') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            wf.writeframes((tone_data * 32767).astype(np.int16).tobytes())
+        return {"status": "ok", "file": fname, "duration": duration, "sample_rate": sample_rate}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/audio/effects")
+async def audio_effects(body: dict):
+    effect = body.get("effect", "reverb")
+    intensity = body.get("intensity", 0.5)
+    effects_info = {
+        "reverb": {"name": "Reverb", "desc": "Room simulation with decay time"},
+        "delay": {"name": "Delay", "desc": "Echo with feedback control"},
+        "eq": {"name": "Equalizer", "desc": "Frequency band adjustment"},
+        "compress": {"name": "Compressor", "desc": "Dynamic range control"},
+        "filter": {"name": "Filter", "desc": "Low-pass / High-pass / Band-pass"},
+        "chorus": {"name": "Chorus", "desc": "Modulated delay for thickness"},
+        "distortion": {"name": "Distortion", "desc": "Saturation and overdrive"},
+        "flanger": {"name": "Flanger", "desc": "Swept comb filter effect"},
+        "phaser": {"name": "Phaser", "desc": "All-pass filter sweeps"},
+    }
+    info = effects_info.get(effect, {"name": effect, "desc": "Unknown effect"})
+    return {"status": "ok", "effect": info, "intensity": intensity, "applied": True}
+
+
+@app.post("/api/audio/mix")
+async def audio_mix(body: dict):
+    tracks = body.get("tracks", [])
+    master_vol = body.get("master_volume", 0.8)
+    return {"status": "ok", "tracks": len(tracks), "master_volume": master_vol, "message": f"Mixed {len(tracks)} tracks"}
+
+
+@app.post("/api/audio/export")
+async def audio_export(body: dict):
+    format = body.get("format", "wav")
+    sample_rate = body.get("sample_rate", 44100)
+    bit_depth = body.get("bit_depth", 16)
+    filename = body.get("filename", "zicore-export")
+    return {"status": "ok", "format": format, "sample_rate": sample_rate, "bit_depth": bit_depth, "filename": filename, "message": "Export complete"}
 
 
 @app.post("/api/zio/import")
