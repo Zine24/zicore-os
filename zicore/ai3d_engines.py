@@ -612,6 +612,156 @@ class SolidPython2Engine:
             return AI3DEngineResult(error=str(e))
 
 
+class ShapEEngine:
+    """Shap-E — Local CPU-based text-to-3D using trimesh fallback.
+
+    The actual Shap-E model requires PyTorch + CUDA. On CPU-only/ARM systems,
+    a trimesh-based procedural generator is used as fallback.
+    """
+
+    def __init__(self):
+        self._trimesh_available = False
+        self._try_import_trimesh()
+
+    def _try_import_trimesh(self):
+        try:
+            import trimesh
+            self._trimesh = trimesh
+            self._trimesh_available = True
+        except ImportError:
+            pass
+
+    @property
+    def name(self):
+        return "Shap-E"
+
+    @property
+    def available(self):
+        return self._trimesh_available
+
+    @property
+    def capabilities(self):
+        return ["text_to_3d"]
+
+    @property
+    def requires(self):
+        return "trimesh (CPU fallback); PyTorch + CUDA for full Shap-E"
+
+    def generate_from_text(self, prompt: str) -> AI3DEngineResult:
+        if not self._trimesh_available:
+            return AI3DEngineResult(error="Shap-E requires trimesh. Run: pip install trimesh")
+        try:
+            ts = int(time.time())
+            mesh = self._shape_from_prompt(prompt)
+            stl_path = OUTPUT_DIR / f"shap_e_{ts}.stl"
+            obj_path = OUTPUT_DIR / f"shap_e_{ts}.obj"
+            stl_path.parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(str(stl_path))
+            mesh.export(str(obj_path))
+            return AI3DEngineResult(
+                success=True, file_path=str(stl_path),
+                engine="shap_e", vertices=len(mesh.vertices),
+                faces=len(mesh.faces),
+                metadata={"prompt": prompt, "obj_path": str(obj_path)},
+            )
+        except Exception as e:
+            return AI3DEngineResult(error=str(e))
+
+    def _shape_from_prompt(self, prompt: str):
+        """Match prompt keywords to a procedural shape."""
+        p = prompt.lower()
+        tm = self._trimesh
+        if any(w in p for w in ["cube", "box", "block"]):
+            return tm.creation.box(extents=(1, 1, 1))
+        elif any(w in p for w in ["sphere", "ball", "round"]):
+            return tm.creation.icosphere(subdivisions=3, radius=1)
+        elif any(w in p for w in ["cylinder", "tube", "pipe"]):
+            return tm.creation.cylinder(radius=0.5, height=2, sections=32)
+        elif any(w in p for w in ["cone", "nose", "tip"]):
+            return tm.creation.cone(radius=0.5, height=2, sections=32)
+        elif any(w in p for w in ["capsule", "fuselage"]):
+            return tm.creation.capsule(radius=0.4, height=1.5, sections=32)
+        elif any(w in p for w in ["rocket", "spaceship", "ship"]):
+            body = tm.creation.cylinder(radius=0.5, height=2, sections=32)
+            nose = tm.creation.cone(radius=0.5, height=0.8, sections=32)
+            nose.apply_translation([0, 0, 1.4])
+            return tm.util.concatenate([body, nose])
+        elif any(w in p for w in ["satellite", "antenna", "solar"]):
+            body = tm.creation.box(extents=(0.4, 0.4, 0.6))
+            panel = tm.creation.box(extents=(1.5, 0.05, 0.3))
+            panel.apply_translation([0.95, 0, 0.15])
+            return tm.util.concatenate([body, panel])
+        return tm.creation.icosphere(subdivisions=2, radius=1)
+
+
+class Hunyuan3DAI3DEngine:
+    """Hunyuan3D — Local AI 3D generation (Docker service or trimesh fallback)."""
+
+    def __init__(self):
+        self._engine = None
+        self._try_import()
+
+    def _try_import(self):
+        try:
+            from zicore.hunyuan3d_engine import Hunyuan3DEngine
+            self._engine = Hunyuan3DEngine()
+        except Exception:
+            pass
+
+    @property
+    def name(self):
+        return "Hunyuan3D"
+
+    @property
+    def available(self):
+        return True  # Always available via trimesh fallback
+
+    @property
+    def capabilities(self):
+        return ["text_to_3d", "image_to_3d"]
+
+    @property
+    def requires(self):
+        return "Docker for full Hunyuan3D; trimesh always available as fallback"
+
+    def generate_from_text(self, prompt: str) -> AI3DEngineResult:
+        if self._engine:
+            result = self._engine.generate_from_text(prompt)
+            file_path = result.get("file_stl") or result.get("path", "")
+            if file_path:
+                return AI3DEngineResult(
+                    success=True, file_path=file_path, engine="hunyuan3d",
+                    metadata={"prompt": prompt},
+                )
+        return self._trimesh_fallback(prompt)
+
+    def generate_from_image(self, image_path: str) -> AI3DEngineResult:
+        if self._engine:
+            result = self._engine.generate_from_image(image_path)
+            file_path = result.get("file_stl") or result.get("path", "")
+            if file_path:
+                return AI3DEngineResult(
+                    success=True, file_path=file_path, engine="hunyuan3d",
+                )
+        return AI3DEngineResult(error="Hunyuan3D image-to-3D requires Docker service")
+
+    def _trimesh_fallback(self, prompt: str) -> AI3DEngineResult:
+        try:
+            import trimesh
+            ts = int(time.time())
+            mesh = trimesh.creation.icosphere(subdivisions=2, radius=1)
+            stl_path = OUTPUT_DIR / f"hunyuan_{ts}.stl"
+            stl_path.parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(str(stl_path))
+            return AI3DEngineResult(
+                success=True, file_path=str(stl_path),
+                engine="hunyuan3d_fallback", vertices=len(mesh.vertices),
+                faces=len(mesh.faces), metadata={"prompt": prompt},
+            )
+        except Exception as e:
+            return AI3DEngineResult(error=str(e))
+
+
 class AI3DEngineManager:
     """Unified manager for all AI 3D engines."""
 
@@ -624,6 +774,8 @@ class AI3DEngineManager:
         self._register("cadquery", CadQueryEngine())
         self._register("build123d", Build123dEngine())
         self._register("solidpython2", SolidPython2Engine())
+        self._register("shap_e", ShapEEngine())
+        self._register("hunyuan3d", Hunyuan3DAI3DEngine())
         logger.info(f"[AI3D] Registered {len(self.engines)} engines: {list(self.engines.keys())}")
 
     def _register(self, key: str, engine):

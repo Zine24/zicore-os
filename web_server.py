@@ -3304,28 +3304,14 @@ async def api_generate(data: dict = {}):
     prompt = data.get("prompt", "")
     if not prompt:
         return {"error": "prompt required"}
-    heavy_types = {"video", "3d", "batch", "audio_long"}
     try:
-        if gen_type in heavy_types:
-            node_result = _node_request("/api/generate", method="POST", payload=data, timeout=300)
-            if node_result.get("status") != "error":
-                node_result["source"] = "node"
-                return node_result
-        if gen_type == "image":
-            try:
-                from zicore.materializer import ZICOREMaterializer
-                m = ZICOREMaterializer()
-                result = m.materialize(f"Generate image: {prompt}", output_dir="output/images")
-                return {"status": "ok", "type": "image", "path": str(getattr(result, "file_path", ""))}
-            except Exception as e:
-                return {"status": "ok", "type": "image", "message": f"Image generation queued: {prompt}", "error": str(e)}
-        elif gen_type == "video":
-            return {"status": "ok", "type": "video", "message": f"Video generation queued: {prompt}"}
-        elif gen_type == "3d":
-            return {"status": "ok", "type": "3d", "message": f"3D generation queued: {prompt}"}
-        else:
-            return {"status": "ok", "type": gen_type, "message": f"Generation queued: {prompt}"}
+        sys.path.insert(0, str(Path(__file__).parent))
+        from zicore.generation_pipeline import pipeline
+        result = pipeline.generate(gen_type, prompt)
+        result["type"] = gen_type
+        return result
     except Exception as e:
+        logger.error(f"/api/generate error: {e}", exc_info=True)
         return {"status": "error", "error": str(e)}
 
 
@@ -3697,13 +3683,11 @@ async def video_generate(body: dict):
         width = body.get("width", 640)
         height = body.get("height", 480)
         fps = body.get("fps", 24)
-        provider = body.get("provider", "")
 
         sys.path.insert(0, str(Path(__file__).parent))
-        from agent.generator import ZICoreGenerator
-        gen = ZICoreGenerator()
+        from zicore.generation_pipeline import pipeline
 
-        result = gen.generate_video(prompt, width=width, height=height, duration=duration, fps=fps)
+        result = pipeline.generate_video(prompt, width=width, height=height, duration=duration, fps=fps)
         return {"status": "ok", "result": result}
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -3811,12 +3795,13 @@ async def zio_websocket(websocket: WebSocket):
             elif command == "generate":
                 try:
                     sys.path.insert(0, str(Path(__file__).parent))
-                    from agent.generator import generator
+                    from zicore.generation_pipeline import pipeline
                     import asyncio
                     gen_type = payload.get("type", "image")
                     prompt = payload.get("prompt", "")
                     await websocket.send_json({"type": "generating", "generating_type": gen_type})
-                    result = generator.generate(gen_type, prompt)
+                    result = pipeline.generate(gen_type, prompt)
+                    result["type"] = gen_type
                     await websocket.send_json({"type": "generated", "result": result})
                 except Exception as e:
                     await websocket.send_json({"type": "error", "message": str(e)})
@@ -5504,6 +5489,13 @@ async def sso_register(request: Request):
         except Exception as e:
             logger.warning(f"SSO: Failed to create mail account for {email}: {e}")
 
+        # Auto-login after registration
+        client_ip = request.client.host if request.client else "unknown"
+        ua = request.headers.get("User-Agent", "")
+        login_result = sso.login(username, password, service="zicore-web", ip_address=client_ip, user_agent=ua)
+
+        if login_result.get("success"):
+            return {"status": "ok", "token": login_result["token"], "expires_at": login_result["expires_at"], "user": login_result["user"]}
         return {"status": "ok", "user": user}
     except Exception as e:
         logger.error(f"SSO register error: {e}")

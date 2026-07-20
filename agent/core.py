@@ -10,12 +10,44 @@ from typing import Any, Dict, Optional
 CONFIG_DIR = Path(__file__).parent.parent / "data" / "config"
 CONFIG_FILE = CONFIG_DIR / "zio_config.json"
 DEFAULT_OLLAMA_BASE = os.environ.get("ZICORE_OLLAMA_BASE_URL", "http://localhost:11434")
+
+PROJECTS_DIR = Path(__file__).parent.parent / "projects"
+PROJECTS_DIR.mkdir(exist_ok=True)
+PROJECT_FILE = PROJECTS_DIR / ".project_active"
+
 SYSTEM_PROMPT = (
     "You are ZIO, the ZICORE Intelligence Operator. You control and assist the "
     "ZICORE system with aerospace operations, generation tools, code navigation, "
     "safe workspace edits, and diagnostics. You are running on ZICORE Native "
     "using local inference. Respond concisely and precisely."
 )
+
+
+def _get_active_project() -> str:
+    if PROJECT_FILE.exists():
+        return PROJECT_FILE.read_text().strip()
+    return ""
+
+
+def _set_active_project(name: str):
+    PROJECTS_DIR.mkdir(exist_ok=True)
+    PROJECT_FILE.write_text(name.strip())
+
+
+def _list_projects() -> list:
+    PROJECTS_DIR.mkdir(exist_ok=True)
+    return sorted(
+        d.name for d in PROJECTS_DIR.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    )
+
+
+def _ensure_project(name: str) -> Path:
+    p = PROJECTS_DIR / name
+    p.mkdir(parents=True, exist_ok=True)
+    for sub in ["generations", "exports", "notes", "data"]:
+        (p / sub).mkdir(exist_ok=True)
+    return p
 
 
 def _load_config() -> dict:
@@ -86,8 +118,18 @@ class ZICoreAgent:
             return "code_explain"
         if any(w in msg for w in ["simulate", "simulation", "sim", "run simulation"]):
             return "simulate"
+        if any(w in msg for w in ["generate sound", "generate audio", "make a sound", "create a sound", "play sound", "sfx"]):
+            return "generate_sound"
         if any(w in msg for w in ["edit video", "cut video", "trim video", "video editor"]):
             return "video"
+        if any(w in msg for w in ["project", "projects"]):
+            if any(w in msg for w in ["create project", "new project", "add project", "make project"]):
+                return "project_create"
+            if any(w in msg for w in ["switch project", "select project", "change project", "open project", "use project"]):
+                return "project_switch"
+            if any(w in msg for w in ["list projects", "show projects", "my projects"]):
+                return "project_list"
+            return "project_info"
         if any(w in msg for w in ["system status", "health check", "system health", "show stats"]):
             return "status"
         if any(w in msg for w in [
@@ -108,20 +150,67 @@ class ZICoreAgent:
         intent = self._detect_intent(message)
 
         if intent == "status":
+            active = _get_active_project()
+            proj = f" | Active project: {active}" if active else ""
             return {
                 "intent": "status",
                 "outputs": {
-                    "text": "All ZICORE systems operational. ZIO agent active.",
+                    "text": f"All ZICORE systems operational. ZIO agent active.{proj}",
                 },
             }
 
-        if intent in ("generate_image", "generate_3d", "video"):
-            return {
-                "intent": intent,
-                "outputs": {
-                    "text": f"Request received: {intent}. Use the Materializer workspace to process this request.",
-                },
-            }
+        if intent == "project_create":
+            name = message.lower().replace("create project", "").replace("new project", "").strip()
+            if not name:
+                name = f"project_{int(__import__('time').time())}"
+            path = _ensure_project(name)
+            _set_active_project(name)
+            return {"intent": "project_create", "outputs": {"text": f"Project '{name}' created at {path}. Now active."}}
+
+        if intent == "project_switch":
+            parts = message.lower().split()
+            for w in parts:
+                p = PROJECTS_DIR / w
+                if p.is_dir() and not w.startswith("."):
+                    _set_active_project(w)
+                    return {"intent": "project_switch", "outputs": {"text": f"Switched to project '{w}'."}}
+            projects = _list_projects()
+            if not projects:
+                return {"intent": "project_switch", "outputs": {"text": "No projects found. Create one first."}}
+            return {"intent": "project_switch", "outputs": {"text": f"Projects: {', '.join(projects)}. Specify one to switch."}}
+
+        if intent == "project_list":
+            projects = _list_projects()
+            active = _get_active_project()
+            if not projects:
+                return {"intent": "project_list", "outputs": {"text": "No projects yet. Say 'create project <name>'."}}
+            lines = [f"{'* ' if p == active else '  '}{p}" for p in projects]
+            return {"intent": "project_list", "outputs": {"text": "Projects:\n" + "\n".join(lines)}}
+
+        if intent == "project_info":
+            active = _get_active_project()
+            if active:
+                p = PROJECTS_DIR / active
+                items = [str(f.relative_to(p)) for f in p.rglob("*") if f.is_file()]
+                return {"intent": "project_info", "outputs": {"text": f"Project: {active}\nPath: {p}\nFiles: {len(items)}"}}
+            return {"intent": "project_info", "outputs": {"text": "No active project. Create or switch to one."}}
+
+        if intent in ("generate_image", "generate_3d", "generate_sound", "video"):
+            try:
+                from agent.generator import generator as gen
+                active = _get_active_project()
+                if intent == "generate_image":
+                    result = gen.generate_image(message, output_dir=str(PROJECTS_DIR / active / "generations") if active else None)
+                elif intent == "generate_3d":
+                    result = gen.generate_3d(message, output_dir=str(PROJECTS_DIR / active / "generations") if active else None)
+                elif intent == "generate_sound":
+                    result = gen.generate_sound(message, output_dir=str(PROJECTS_DIR / active / "generations") if active else None)
+                elif intent == "video":
+                    result = gen.generate_video(message, output_dir=str(PROJECTS_DIR / active / "generations") if active else None)
+                text = f"[{intent.upper()}] Generated: {result.get('file', result.get('path', result.get('message', 'done')))}"
+                return {"intent": intent, "outputs": {"text": text, "generation": result}}
+            except Exception as e:
+                return {"intent": intent, "outputs": {"text": f"Generation failed: {e}"}}
 
         if intent == "code_write":
             reply = self._ollama_chat(

@@ -1732,7 +1732,7 @@ const ProfileApp = {
        ============================================================ */
 
     checkAuth() {
-        const token = localStorage.getItem('sso_token');
+        const token = localStorage.getItem('zicore_sso_token');
         if (!token) {
             this.toast('Authentication required. Redirecting to login...', 'error');
             setTimeout(() => { window.location.href = '/login'; }, 1500);
@@ -1742,7 +1742,7 @@ const ProfileApp = {
     },
 
     authFetch(url, options = {}) {
-        const token = localStorage.getItem('sso_token');
+        const token = localStorage.getItem('zicore_sso_token');
         const headers = { 'Content-Type': 'application/json', ...options.headers };
         if (token) {
             headers['Authorization'] = 'Bearer ' + token;
@@ -1758,7 +1758,7 @@ const ProfileApp = {
         try {
             const res = await this.authFetch('/api/sso/me');
             if (res.status === 401) {
-                localStorage.removeItem('sso_token');
+                localStorage.removeItem('zicore_sso_token');
                 window.location.href = '/login';
                 return;
             }
