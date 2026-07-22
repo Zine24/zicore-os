@@ -370,6 +370,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;margin-top:12px;width:100%;
 }
 </style>
+<link rel="stylesheet" href="/css/zicore-library.css">
 </head>
 <body>
 <div id="app">
@@ -444,6 +445,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         </div>
         <div class="provider-item" id="btnImportChat">
           <div class="provider-dot disabled"></div>Import Chat
+        </div>
+        <div class="provider-item" id="openConfig">
+          <div class="provider-dot enabled"></div>Configuration
         </div>
       </div>
     </div>
@@ -723,18 +727,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
   function useOllamaModel(model){
     if(!config.providers)config.providers={};
-    if(!config.providers.ollama)config.providers.ollama={};
-    config.providers.ollama.default_model=model;
+    if(!config.providers.zicore_native)config.providers.zicore_native={};
+    config.providers.zicore_native.default_model=model;
     if(!config.zio_engine)config.zio_engine={};
-    config.zio_engine.active_provider='ollama';
+    config.zio_engine.active_provider='zicore_native';
     config.zio_engine.active_model=model;
-    activeProvider='ollama';
+    activeProvider='zicore_native';
     fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
     .then(function(){
       renderProviders();
       updateModelSelect();
       loadOllamaModels();
-      addMsg('system','Switched to Ollama model: '+model);
+      addMsg('system','Switched to ZICORE Native model: '+model);
     });
   }
 
@@ -1298,7 +1302,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
 <input type="file" id="importFileInput" accept=".json,.jsonl,.txt,.csv" style="display:none">
 
-<div id="importModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;">
+<div id="importModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
   <div style="background:#0d1117;border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:24px;max-width:420px;width:90%;color:#e0e0e0;font-family:monospace;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <span style="color:#00e5ff;font-size:14px;font-weight:bold;">IMPORT CHAT HISTORY</span>
@@ -1334,7 +1338,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 </script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>
-<link rel="stylesheet" href="/css/zicore-library.css">
 <script src="/js/zicore-polyfills.js"></script>
 <script src="/js/zicore-library.js"></script>
 </body>

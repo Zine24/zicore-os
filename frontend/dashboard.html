@@ -4480,13 +4480,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       const el = document.getElementById('mirOllama');
       const urlEl = document.getElementById('mirOllamaUrl');
       const modelsEl = document.getElementById('mirModels');
-      if (d.ollama && d.ollama.status === 'online') {
-        el.textContent = 'ONLINE';
+      if (d.status === 'online') {
+        el.textContent = 'ONLINE (' + (d.source || 'ollama') + ')';
         el.className = 'val ok';
-        var models = d.ollama.models || [];
-        var url = d.ollama.base_url || d.ollama.url || '--';
+        var models = d.models || [];
+        var url = d.base_url || d.host || '--';
         urlEl.textContent = url;
-        modelsEl.textContent = models.length + ' models: ' + models.map(function(m){return m.name||m}).join(', ');
+        modelsEl.textContent = models.length + ' models: ' + models.join(', ');
       } else {
         el.textContent = 'OFFLINE';
         el.className = 'val warn';

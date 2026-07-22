@@ -43,7 +43,7 @@ def _doh_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
         import requests as _r
         resp = _r.get(f"https://1.1.1.1/dns-query?name={host}&type=A",
             headers={"Accept": "application/dns-json", "Host": "cloudflare-dns.com"},
-            timeout=5, verify=False)
+            timeout=5, verify=True)
         data = resp.json()
         result = []
         for ans in data.get("Answer", []):
@@ -337,7 +337,10 @@ def _request_json(url: str, method: str = "GET", headers: dict = None, payload: 
     data = None
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+    hdrs = headers or {}
+    if "User-Agent" not in hdrs:
+        hdrs["User-Agent"] = "ZICORE/5.0"
+    req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read())
 
@@ -644,7 +647,18 @@ class TrafficMiddleware:
 app = FastAPI(title="ZICORE Web Server", version="5.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://zcs.zicore.space",
+        "https://zicore.space",
+        "https://zinemotion.com.mx",
+        "https://www.zinemotion.com.mx",
+        "https://zichat.zinemotion.com",
+        "https://zzz.zinemotion.com",
+        "http://localhost:4000",
+        "http://localhost:8080",
+        "http://192.168.1.85:4000",
+        "http://192.168.1.68:8080",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -738,6 +752,7 @@ class SSOAuthMiddleware:
         "/games",
         "/outpreview",
         "/materializer",
+        "/visualizer",
         "/video-editor",
         "/zicore-bank",
         "/zivault",
@@ -792,6 +807,9 @@ class SSOAuthMiddleware:
         "/static/",    # static assets
         "/installers/", # downloadable installers and APKs
         "/api/library/", # generation library (public for sidebar)
+        "/api/preview/", # mesh preview images
+        "/api/simulate/", # mesh simulation
+        "/v1/", # OpenAI-compatible ZIO endpoint for Open-WebUI
     )
 
     def __init__(self, app):
@@ -1119,6 +1137,11 @@ async def serve_materializer():
     return FileResponse(str(FRONTEND_DIR / "materializer.html"))
 
 
+@app.get("/visualizer")
+async def serve_visualizer():
+    return FileResponse(str(FRONTEND_DIR / "visualizer.html"))
+
+
 @app.get("/video-editor")
 async def serve_video_editor():
     return FileResponse(str(FRONTEND_DIR / "video-editor.html"))
@@ -1389,7 +1412,7 @@ async def proxy_fetch(url: str = "", headers_json: str = ""):
                 extra_headers.update(json.loads(headers_json))
             except Exception:
                 pass
-        resp = _req.get(url, headers=extra_headers, timeout=15, verify=False, allow_redirects=True)
+        resp = _req.get(url, headers=extra_headers, timeout=15, verify=True, allow_redirects=True)
         content_type = resp.headers.get("Content-Type", "text/html")
         body = resp.text
         if "text/html" in content_type:
@@ -1581,22 +1604,24 @@ async def provider_models(provider: str):
 async def ollama_status():
     from zicore.ollama_service import status
     config = load_config()
+    # Try zicore_native (VPS) first — this is the primary inference
+    zicore_url = config.get("providers", {}).get("zicore_native", {}).get("base_url", "")
+    if zicore_url:
+        if not zicore_url.startswith("http"):
+            zicore_url = f"http://{zicore_url}"
+        result = status(zicore_url)
+        if result.get("status") == "online":
+            result["base_url"] = zicore_url
+            return {"status": "online", "host": result.get("host", zicore_url), "models": result.get("models", []),
+                    "source": "zicore_native", "base_url": zicore_url}
+    # Fallback to ollama provider (.68)
     base_url = config.get("providers", {}).get("ollama", {}).get("base_url", "127.0.0.1:11434")
     if not base_url.startswith("http"):
         base_url = f"http://{base_url}"
     result = status(base_url)
-    wrapped = {"ollama": result, "source": "ollama"}
-    if result.get("status") != "online":
-        zicore_url = config.get("providers", {}).get("zicore_native", {}).get("base_url", "")
-        if zicore_url:
-            if not zicore_url.startswith("http"):
-                zicore_url = f"http://{zicore_url}"
-            zr = status(zicore_url)
-            if zr.get("status") == "online":
-                wrapped["ollama"] = zr
-                wrapped["source"] = "zicore_native"
-                wrapped["ollama"]["base_url"] = zicore_url
-    return wrapped
+    result["base_url"] = base_url
+    return {"status": result.get("status", "offline"), "host": result.get("host", base_url),
+            "models": result.get("models", []), "source": "ollama", "base_url": base_url}
 
 
 @app.post("/api/ollama/start")
@@ -1798,6 +1823,104 @@ async def chat_with_context(body: dict):
         return {"status": "error", "provider": provider, "error": str(e)}
 
 
+# ─── OpenAI-Compatible Endpoint for ZIO (Open-WebUI integration) ────────────
+
+ZIO_MODELS = [
+    {
+        "id": "zicore",
+        "object": "model",
+        "created": int(time.time()),
+        "owned_by": "zicore",
+        "permission": [],
+    },
+    {
+        "id": "zicore:aerospace",
+        "object": "model",
+        "created": int(time.time()),
+        "owned_by": "zicore",
+        "permission": [],
+    },
+    {
+        "id": "zicore:mission",
+        "object": "model",
+        "created": int(time.time()),
+        "owned_by": "zicore",
+        "permission": [],
+    },
+]
+
+
+@app.get("/v1/models")
+async def openai_list_models():
+    return {
+        "object": "list",
+        "data": ZIO_MODELS,
+    }
+
+
+@app.post("/v1/chat/completions")
+async def openai_chat_completions(body: dict):
+    try:
+        model = body.get("model", "zicore")
+        messages = body.get("messages", [])
+        stream = body.get("stream", False)
+
+        if not messages:
+            return JSONResponse({"error": "messages required"}, status_code=400)
+
+        # Build session context from messages
+        system_prompt = ""
+        user_messages = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_prompt = msg.get("content", "")
+            elif msg.get("role") in ("user", "assistant"):
+                user_messages.append(msg.get("content", ""))
+
+        last_message = user_messages[-1] if user_messages else ""
+
+        # Map model to ZIO variant
+        zio_session_id = f"zichat_{model.replace(':', '_')}"
+        if "aerospace" in model:
+            context = {"source": "openai", "mode": "aerospace", "system_prompt": system_prompt}
+        elif "mission" in model:
+            context = {"source": "openai", "mode": "mission", "system_prompt": system_prompt}
+        else:
+            context = {"source": "openai", "system_prompt": system_prompt}
+
+        sys.path.insert(0, str(Path(__file__).parent))
+        from agent.core import ZICoreAgent
+        agent = ZICoreAgent(session_id=zio_session_id)
+        result = await agent.process(last_message, context)
+        reply = result.get("outputs", {}).get("text",
+                result.get("outputs", {}).get("zio_msg", ""))
+
+        if not reply:
+            reply = "I'm sorry, I couldn't process that request."
+
+        return {
+            "id": f"chatcmpl-{int(time.time())}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": reply},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": len(str(messages)) // 4,
+                "completion_tokens": len(reply) // 4,
+                "total_tokens": (len(str(messages)) + len(reply)) // 4,
+            },
+        }
+    except Exception as e:
+        logger.error(f"OpenAI chat error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.get("/api/telemetry")
 async def get_telemetry():
     """Get real-time telemetry data."""
@@ -1836,6 +1959,9 @@ async def get_system_stats():
         ollama_ok = False
         sd_ok = False
         active_prov = "zicore_native"
+        ollama_models = []
+        ollama_host = ""
+        ollama_url_active = ""
         try:
             config = load_config()
             active_prov = config.get("zio_engine", {}).get("active_provider", "zicore_native")
@@ -1844,22 +1970,36 @@ async def get_system_stats():
             ollama_url = ollama_cfg.get("base_url", OLLAMA_BASE_URL)
             if not ollama_url.startswith("http"):
                 ollama_url = f"http://{ollama_url}"
+            # Try ollama provider first (.68)
             if ollama_cfg.get("enabled"):
                 import urllib.request as _req
                 try:
-                    _req.urlopen(ollama_url + "/api/tags", timeout=3)
+                    req = _req.Request(ollama_url + "/api/tags", headers={"User-Agent": "ZICORE/5.0"})
+                    resp = _req.urlopen(req, timeout=3)
                     ollama_ok = True
+                    ollama_host = ollama_url
+                    ollama_url_active = ollama_url
+                    tags = json.loads(resp.read().decode())
+                    ollama_models = [m.get("name", "") for m in tags.get("models", []) if m.get("name")]
                 except Exception:
-                    if zicore_cfg.get("enabled"):
-                        zicore_url = zicore_cfg.get("base_url", "")
-                        if zicore_url and not zicore_url.startswith("http"):
-                            zicore_url = f"http://{zicore_url}"
-                        if zicore_url:
-                            try:
-                                _req.urlopen(zicore_url + "/api/tags", timeout=3)
-                                ollama_ok = True
-                            except Exception:
-                                pass
+                    pass
+            # Fallback to zicore_native (VPS)
+            if not ollama_ok and zicore_cfg.get("enabled"):
+                zicore_url = zicore_cfg.get("base_url", "")
+                if zicore_url and not zicore_url.startswith("http"):
+                    zicore_url = f"http://{zicore_url}"
+                if zicore_url:
+                    try:
+                        import urllib.request as _req
+                        req = _req.Request(zicore_url + "/api/tags", headers={"User-Agent": "ZICORE/5.0"})
+                        resp = _req.urlopen(req, timeout=5)
+                        ollama_ok = True
+                        ollama_host = zicore_url
+                        ollama_url_active = zicore_url
+                        tags = json.loads(resp.read().decode())
+                        ollama_models = [m.get("name", "") for m in tags.get("models", []) if m.get("name")]
+                    except Exception:
+                        pass
         except Exception:
             pass
         return {
@@ -1872,6 +2012,9 @@ async def get_system_stats():
             "disk_total_gb": round(disk.total / 1073741824, 1),
             "uptime": uptime_str,
             "ollama_status": ollama_ok,
+            "ollama_host": ollama_host,
+            "ollama_url": ollama_url_active,
+            "ollama_models": ollama_models,
             "sd_status": sd_ok,
             "active_provider": active_prov,
         }
@@ -2014,7 +2157,7 @@ async def vision_ocr(data: dict = {}):
                 ov = OpenVision()
                 result = ov.analyze_media(tmp.name)
                 text = str(result)
-            except:
+            except Exception:
                 text = "[OCR] Backend processing required"
             os.unlink(tmp.name)
         else:
@@ -2762,7 +2905,7 @@ async def mesh_generate(body: dict):
                     scad_path = output_dir / f"temp_{__import__('time').time():.0f}.scad"
                     scad_path.write_text(script)
                     stl_path = output_dir / f"openscad_{__import__('time').time():.0f}.stl"
-                    result = subprocess.run(["openscad", "-o", str(stl_path), str(scad_path)],
+                    result = await asyncio.to_thread(subprocess.run, ["openscad", "-o", str(stl_path), str(scad_path)],
                                             capture_output=True, text=True, timeout=30)
                     scad_path.unlink(missing_ok=True)
                     if stl_path.exists():
@@ -3412,6 +3555,96 @@ async def outpreview_export_vr(gen_id: str):
         return {"status": "error", "error": str(e)}
 
 
+# ─── Preview Generation ───────────────────────────────────────────────────────
+
+@app.post("/api/preview/generate")
+async def preview_generate(body: dict):
+    try:
+        file_path = body.get("file", "")
+        if not file_path:
+            return JSONResponse({"status": "error", "error": "file path required"}, status_code=400)
+        width = body.get("width", 800)
+        height = body.get("height", 600)
+        lighting = body.get("lighting", "aerospace")
+
+        abs_path = Path(__file__).parent / file_path.lstrip("/")
+        if not abs_path.exists():
+            return JSONResponse({"status": "error", "error": "File not found"}, status_code=404)
+
+        import trimesh
+        loaded = trimesh.load(str(abs_path))
+        if isinstance(loaded, trimesh.Scene):
+            mesh = loaded.dump(concatenate=True)
+        else:
+            mesh = loaded
+
+        from zicore.materializer_workflow import PreviewEngine
+        engine = PreviewEngine()
+        preview_path = engine.render_preview(mesh, lighting=lighting, width=width, height=height)
+        if not preview_path:
+            return JSONResponse({"status": "error", "error": "Preview generation failed (Pillow not available)"}, status_code=500)
+
+        rel_path = "/output/previews/" + Path(preview_path).name
+        return {"status": "ok", "preview_url": rel_path}
+    except Exception as e:
+        logger.error(f"Preview generate error: {e}")
+        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+
+
+# ─── Simulation API ─────────────────────────────────────────────────────────
+
+@app.post("/api/simulate/mesh")
+async def simulate_mesh(body: dict):
+    try:
+        file_path = body.get("file", "")
+        sim_types = body.get("simulations", ["structural", "aerodynamic", "mass_properties", "orbital"])
+        material_name = body.get("material", "aluminum_6061")
+        altitude = body.get("altitude", 400000)
+        velocity = body.get("velocity", 7800)
+        load_force = body.get("load", 1000.0)
+
+        if not file_path:
+            return JSONResponse({"status": "error", "error": "file path required"}, status_code=400)
+        abs_path = Path(__file__).parent / file_path.lstrip("/")
+        if not abs_path.exists():
+            return JSONResponse({"status": "error", "error": "File not found"}, status_code=404)
+
+        import trimesh
+        loaded = trimesh.load(str(abs_path))
+        if isinstance(loaded, trimesh.Scene):
+            mesh = loaded.dump(concatenate=True)
+        else:
+            mesh = loaded
+
+        from zicore.materializer_workflow import SimulationEngine, MaterialLibrary
+        sim = SimulationEngine()
+        mat_lib = MaterialLibrary()
+        material = mat_lib.get(material_name) or mat_lib.get("aluminum_6061")
+
+        results = {}
+        if "structural" in sim_types:
+            results["structural"] = sim.structural_analysis(mesh, material, load=load_force).to_dict()
+        if "aerodynamic" in sim_types:
+            results["aerodynamic"] = sim.aerodynamic_estimate(mesh, material, velocity=velocity, altitude=altitude).to_dict()
+        if "mass_properties" in sim_types:
+            mass_result = sim.mass_properties(mesh, material)
+            results["mass_properties"] = mass_result.to_dict()
+        mass_kg = 1000
+        if "mass_properties" in results:
+            mass_kg = results["mass_properties"].get("results", {}).get("mass_kg", 1000)
+        if "orbital" in sim_types:
+            results["orbital"] = sim.orbital_simulation(mass=mass_kg, altitude=altitude).to_dict()
+        if "thermal" in sim_types:
+            results["thermal"] = sim.thermal_analysis(mesh, material).to_dict()
+
+        return {"status": "ok", "simulations": results, "material": material.name}
+    except Exception as e:
+        logger.error(f"Simulate error: {e}")
+        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+
+
+# ─── General Generation API ───────────────────────────────────────────────────
+
 @app.post("/api/generate")
 async def api_generate(data: dict = {}):
     gen_type = data.get("type", "image")
@@ -3528,7 +3761,7 @@ User description: {prompt}"""
         req = urllib.request.Request(
             f"{base_url}/api/generate",
             data=ollama_payload,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "User-Agent": "ZICORE/5.0"},
             method="POST"
         )
         with urllib.request.urlopen(req, timeout=60) as resp:
@@ -3668,6 +3901,19 @@ async def code_execute(body: dict):
         if language != "python":
             return {"success": False, "error": f"Unsupported language: {language}. Only Python is supported."}
         
+        if len(code) > 5000:
+            return {"success": False, "error": "Code too long (max 5000 chars)"}
+        
+        _dangerous_imports = ['subprocess', 'shutil', 'ctypes', 'socket', 'multiprocessing', 'threading']
+        _dangerous_patterns = ['os.system', 'os.popen', '__import__', 'eval(', 'exec(', 'open(/etc', 'open(/proc']
+        code_lower = code.lower()
+        for pat in _dangerous_patterns:
+            if pat in code_lower:
+                return {"success": False, "error": f"Blocked dangerous pattern: {pat}"}
+        for imp in _dangerous_imports:
+            if f'import {imp}' in code_lower or f'from {imp}' in code_lower:
+                return {"success": False, "error": f"Blocked import: {imp}"}
+        
         import subprocess
         import sys
         import tempfile
@@ -3679,8 +3925,10 @@ async def code_execute(body: dict):
             temp_file = f.name
         
         try:
-            # Execute with timeout
-            result = subprocess.run(
+            # Execute with timeout (non-blocking)
+            import asyncio
+            result = await asyncio.to_thread(
+                subprocess.run,
                 [sys.executable, temp_file],
                 capture_output=True,
                 text=True,
@@ -3708,7 +3956,7 @@ async def code_execute(body: dict):
             # Clean up temp file
             try:
                 os.unlink(temp_file)
-            except:
+            except Exception:
                 pass
                 
     except subprocess.TimeoutExpired:
@@ -5131,9 +5379,14 @@ async def mail_upgrade_plan(request: Request):
         safe_email = mail_server._sanitize_sql(email)
         safe_plan = mail_server._sanitize_sql(new_plan)
         sql = f"UPDATE virtual_users SET plan='{safe_plan}' WHERE email='{safe_email}'"
-        result = subprocess.run(
+        db_password = os.environ.get('DB_MAIL_PASSWORD', '')
+        if not db_password:
+            return JSONResponse({"error": "Mail DB not configured"}, status_code=503)
+        import asyncio
+        result = await asyncio.to_thread(
+            subprocess.run,
             ["docker", "exec", "zicore-mail-db", "mariadb", "-u", "zicore_mail",
-             f"-p{os.environ.get('DB_MAIL_PASSWORD', 'zicore_mail_pass_2026')}",
+             f"-p{db_password}",
              "zicore_mail", "-e", sql],
             capture_output=True, text=True, timeout=10
         )
@@ -6288,7 +6541,7 @@ async def bank_account(request: Request):
     user_id = user.get("id", user.get("email", ""))
     email = user.get("email", "")
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     conn = sqlite3.connect(str(BANK_DB))
     c = conn.cursor()
@@ -6315,7 +6568,7 @@ async def bank_balance(request: Request):
     user = request.scope.get("state", {}).get("sso_user", {})
     user_id = user.get("id", user.get("email", ""))
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     conn = sqlite3.connect(str(BANK_DB))
     c = conn.cursor()
@@ -6331,7 +6584,7 @@ async def bank_transactions(request: Request, limit: int = 50):
     user = request.scope.get("state", {}).get("sso_user", {})
     user_id = user.get("id", user.get("email", ""))
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     conn = sqlite3.connect(str(BANK_DB))
     c = conn.cursor()
@@ -6351,7 +6604,7 @@ async def bank_send(request: Request):
     user = request.scope.get("state", {}).get("sso_user", {})
     user_id = user.get("id", user.get("email", ""))
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     data = await request.json()
     to_email = data.get("to", "")
@@ -6398,7 +6651,7 @@ async def bank_staking(request: Request):
     user = request.scope.get("state", {}).get("sso_user", {})
     user_id = user.get("id", user.get("email", ""))
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     conn = sqlite3.connect(str(BANK_DB))
     c = conn.cursor()
@@ -6416,7 +6669,7 @@ async def bank_stake(request: Request):
     user = request.scope.get("state", {}).get("sso_user", {})
     user_id = user.get("id", user.get("email", ""))
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     data = await request.json()
     amount = float(data.get("amount", 0))
@@ -6446,7 +6699,7 @@ async def bank_portfolio(request: Request):
     user = request.scope.get("state", {}).get("sso_user", {})
     user_id = user.get("id", user.get("email", ""))
     if not user_id:
-        return {"error": "Authentication required"}, 401
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
 
     conn = sqlite3.connect(str(BANK_DB))
     c = conn.cursor()
@@ -7517,7 +7770,7 @@ async def fs_list(body: dict = {}):
                 "size": stat.st_size,
                 "modified": int(stat.st_mtime),
             })
-        except:
+        except Exception:
             pass
     return {"status": "ok", "items": items, "cwd": str(target.relative_to(base))}
 
@@ -7957,7 +8210,7 @@ async def serve_ziprint():
     f = FRONTEND_DIR / "ziprint.html"
     if f.exists():
         return FileResponse(str(f))
-    return {"error": "ZiPrint not deployed yet", "status": 503}, 503
+    return JSONResponse({"error": "ZiPrint not deployed yet", "status": 503}, status_code=503)
 
 @app.get("/api/print/printers")
 async def print_list_printers():
@@ -8168,7 +8421,7 @@ async def print_camera_stream(printer_id: str):
                     if not chunk:
                         break
                     yield chunk
-            except:
+            except Exception:
                 pass
         from starlette.responses import StreamingResponse
         return StreamingResponse(stream_gen(), media_type=content_type)

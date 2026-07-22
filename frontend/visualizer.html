@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Visualizer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--bg2:#0a0e1a;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--text:#c8d6e5;--text2:#607080;--text3:#303848;--border:#1a2540}
+@font-face{font-family:'Mono';src:local('Cascadia Code'),local('Consolas'),local('monospace')}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw;user-select:none}
+.topbar{height:42px;background:rgba(10,14,26,0.92);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:100;backdrop-filter:blur(20px)}
+.topbar .logo{font-size:11px;letter-spacing:5px;font-weight:700;color:var(--cyan)}
+.topbar .logo span{color:var(--purple)}
+.topbar .sep{width:1px;height:16px;background:var(--border)}
+.topbar .title{font-size:10px;letter-spacing:3px;color:var(--text2);text-transform:uppercase}
+.topbar .spacer{flex:1}
+.top-btn{font-size:8px;letter-spacing:2px;padding:4px 10px;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.03);color:var(--cyan);cursor:pointer;transition:all .2s;text-decoration:none}
+.top-btn:hover{background:rgba(0,229,255,0.1)}
+.main{display:flex;height:calc(100vh - 42px);overflow:hidden}
+.viewport-wrap{flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at center,#0a0e1a 0%,#020408 100%)}
+#viewport3d{width:100%;height:100%;display:block}
+.hud{position:absolute;top:12px;left:12px;pointer-events:none;z-index:10}
+.hud-title{font-size:8px;letter-spacing:3px;color:rgba(0,229,255,0.3)}
+.hud-data{margin-top:6px;display:flex;flex-direction:column;gap:2px}
+.hud-row{font-size:9px;font-family:'Mono',monospace;color:rgba(200,214,229,0.4)}
+.hud-row .hud-val{color:var(--cyan);opacity:0.6}
+.info-panel{width:240px;background:rgba(10,14,26,0.92);border-left:1px solid var(--border);padding:12px;overflow-y:auto;backdrop-filter:blur(16px);display:flex;flex-direction:column;gap:8px}
+.info-panel::-webkit-scrollbar{width:3px}
+.info-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.ip-section{border-bottom:1px solid var(--border);padding-bottom:10px}
+.ip-title{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px}
+.ip-row{display:flex;justify-content:space-between;padding:2px 0;font-size:9px}
+.ip-label{color:var(--text2);letter-spacing:1px}
+.ip-val{color:var(--cyan);font-family:'Mono',monospace}
+.load-zone{border:1px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;transition:all .2s}
+.load-zone:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.03)}
+.load-zone .lz-icon{font-size:24px;opacity:0.3;margin-bottom:6px}
+.load-zone .lz-text{font-size:8px;color:var(--text3);letter-spacing:1px}
+.bottom-bar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:2px;color:var(--text3);opacity:0.5;z-index:10}
+.sim-toggle{position:absolute;bottom:8px;right:12px;z-index:10;display:flex;gap:4px}
+.sim-btn{padding:4px 10px;font-size:7px;letter-spacing:1px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;border-radius:3px;transition:all .2s}
+.sim-btn:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
+.sim-btn.active{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"><span>Z</span>ICORE</div>
+  <div class="sep"></div>
+  <div class="title">VISUALIZER</div>
+  <div class="sep"></div>
+  <div class="title" style="font-size:8px;color:var(--text3)">SIMULATION VIEWER</div>
+  <div class="spacer"></div>
+  <a class="top-btn" href="/materializer">MATERIALIZER</a>
+  <a class="top-btn" href="/dashboard">MISSION CONTROL</a>
+</div>
+<div class="main">
+  <div class="viewport-wrap">
+    <canvas id="viewport3d"></canvas>
+    <div class="hud">
+      <div class="hud-title">SIMULATION DATA</div>
+      <div class="hud-data">
+        <div class="hud-row">ALTITUDE  <span class="hud-val" id="hudAlt">0.0 m</span></div>
+        <div class="hud-row">VELOCITY  <span class="hud-val" id="hudVel">0.0 m/s</span></div>
+        <div class="hud-row">ACCEL     <span class="hud-val" id="hudAcc">0.0 m/s²</span></div>
+        <div class="hud-row">MASS      <span class="hud-val" id="hudMass">0.0 kg</span></div>
+        <div class="hud-row">THRUST    <span class="hud-val" id="hudThrust">0.0 KN</span></div>
+        <div class="hud-row">DRAG      <span class="hud-val" id="hudDrag">0.0 N</span></div>
+      </div>
+    </div>
+    <div class="sim-toggle">
+      <button class="sim-btn active" id="simBtnOrbit" onclick="toggleSimMode('orbit')">ORBIT</button>
+      <button class="sim-btn" id="simBtnFree" onclick="toggleSimMode('free')">FREE</button>
+      <button class="sim-btn" onclick="resetVPCamera()">RESET CAM</button>
+      <button class="sim-btn" onclick="toggleFullscreen()">FULL</button>
+    </div>
+    <div class="bottom-bar">ZICORE VISUALIZER v1.0 — PURE SIMULATION VIEWER</div>
+  </div>
+  <div class="info-panel">
+    <div class="load-zone" onclick="loadFromUrl()">
+      <div class="lz-icon">&#9670;</div>
+      <div class="lz-text">CLICK TO LOAD MESH</div>
+    </div>
+    <div class="ip-section">
+      <div class="ip-title">Mesh Info</div>
+      <div class="ip-row"><span class="ip-label">FILE</span><span class="ip-val" id="vFile">—</span></div>
+      <div class="ip-row"><span class="ip-label">TRIS</span><span class="ip-val" id="vTris">—</span></div>
+      <div class="ip-row"><span class="ip-label">VERTS</span><span class="ip-val" id="vVerts">—</span></div>
+      <div class="ip-row"><span class="ip-label">STATUS</span><span class="ip-val" id="vStatus" style="color:var(--text3)">IDLE</span></div>
+    </div>
+    <div class="ip-section">
+      <div class="ip-title">Controls</div>
+      <div style="font-size:7px;color:var(--text3);line-height:1.8">
+        LEFT DRAG — Orbit<br>
+        SCROLL — Zoom<br>
+        RIGHT DRAG — Pan
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script>
+/* ─── SSO AUTH ─────────────────────────────────────────────────────────────── */
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
+var scene, camera, renderer, meshGroup, gridHelper;
+var isDragging = false, prevMouse = { x: 0, y: 0 };
+var camTheta = Math.PI / 4, camPhi = Math.PI / 6, camDist = 5;
+var currentMesh = null;
+var simMode = 'orbit';
+var simTime = 0;
+var loadUrl = null;
+
+function initViewport() {
+  var canvas = document.getElementById('viewport3d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width; canvas.height = rect.height;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020408);
+
+  camera = new THREE.PerspectiveCamera(50, rect.width / rect.height, 0.1, 10000);
+  updateCamera();
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setSize(rect.width, rect.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+  var dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(5, 8, 5); scene.add(dl);
+  var pl = new THREE.PointLight(0x00e5ff, 0.3, 30); pl.position.set(-3, 4, -3); scene.add(pl);
+  var bgLight = new THREE.PointLight(0x7c4dff, 0.15, 40); bgLight.position.set(3, -2, 5); scene.add(bgLight);
+
+  gridHelper = new THREE.GridHelper(20, 40, 0x1a2540, 0x0d1520);
+  scene.add(gridHelper);
+
+  var axesHelper = new THREE.AxesHelper(3);
+  scene.add(axesHelper);
+
+  meshGroup = new THREE.Group();
+  scene.add(meshGroup);
+
+  canvas.addEventListener('mousedown', function (e) {
+    if (e.button === 2) { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; }
+  });
+  canvas.addEventListener('mousemove', function (e) {
+    if (!isDragging) return;
+    var dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+    camTheta -= dx * 0.005; camPhi -= dy * 0.005;
+    camPhi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, camPhi));
+    prevMouse = { x: e.clientX, y: e.clientY };
+    updateCamera();
+  });
+  canvas.addEventListener('mouseup', function () { isDragging = false; });
+  canvas.addEventListener('mouseleave', function () { isDragging = false; });
+  canvas.addEventListener('wheel', function (e) {
+    camDist += e.deltaY * 0.005;
+    camDist = Math.max(0.5, Math.min(200, camDist));
+    updateCamera();
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  animate();
+}
+
+function updateCamera() {
+  simTime += 0.008;
+  if (simMode === 'orbit' && currentMesh) {
+    camTheta += 0.002;
+  }
+  camera.position.x = camDist * Math.cos(camPhi) * Math.sin(camTheta);
+  camera.position.y = camDist * Math.sin(camPhi);
+  camera.position.z = camDist * Math.cos(camPhi) * Math.cos(camTheta);
+  camera.lookAt(0, 0, 0);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  updateHUD();
+  if (renderer && scene && camera) renderer.render(scene, camera);
+}
+
+function resetVPCamera() {
+  camTheta = Math.PI / 4; camPhi = Math.PI / 6; camDist = 5;
+  updateCamera();
+}
+
+function toggleSimMode(mode) {
+  simMode = mode;
+  document.getElementById('simBtnOrbit').classList.toggle('active', mode === 'orbit');
+  document.getElementById('simBtnFree').classList.toggle('active', mode === 'free');
+}
+
+function toggleFullscreen() {
+  var el = document.querySelector('.viewport-wrap');
+  if (!document.fullscreenElement) el.requestFullscreen().catch(function () { });
+  else document.exitFullscreen();
+}
+
+function updateHUD() {
+  if (!currentMesh) return;
+  var t = simTime % 60;
+  var alt = 25000 + 15000 * Math.sin(t * 0.5);
+  var vel = 1200 + 800 * Math.cos(t * 0.7);
+  document.getElementById('hudAlt').textContent = alt.toFixed(0) + ' m';
+  document.getElementById('hudVel').textContent = vel.toFixed(0) + ' m/s';
+  document.getElementById('hudAcc').textContent = (9.81 + 2 * Math.sin(t * 1.3)).toFixed(2) + ' m/s²';
+  document.getElementById('hudMass').textContent = (5000 - t * 2).toFixed(0) + ' kg';
+  document.getElementById('hudThrust').textContent = (200 + 50 * Math.sin(t * 0.3)).toFixed(1) + ' KN';
+  document.getElementById('hudDrag').textContent = (120 + 80 * Math.cos(t * 0.9)).toFixed(0) + ' N';
+}
+
+function loadSTL(url, callback) {
+  while (meshGroup.children.length > 0) meshGroup.remove(meshGroup.children[0]);
+  currentMesh = null;
+
+  var loader = new THREE.STLLoader();
+  loader.load(url, function (geometry) {
+    geometry.computeVertexNormals();
+    var mat = new THREE.MeshPhongMaterial({
+      color: 0x00e5ff, shininess: 60, transparent: true, opacity: 0.85, side: THREE.DoubleSide
+    });
+    currentMesh = new THREE.Mesh(geometry, mat);
+
+    geometry.computeBoundingBox();
+    var box = geometry.boundingBox;
+    var center = new THREE.Vector3();
+    box.getCenter(center);
+    currentMesh.position.sub(center);
+
+    var size = new THREE.Vector3();
+    box.getSize(size);
+    var maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 10) {
+      var sc = 10 / maxDim;
+      currentMesh.scale.set(sc, sc, sc);
+    }
+    meshGroup.add(currentMesh);
+    var tris = geometry.index ? geometry.index.count / 3 : geometry.attributes.position.count / 3;
+    var verts = geometry.attributes.position.count;
+    document.getElementById('vTris').textContent = Math.floor(tris).toLocaleString();
+    document.getElementById('vVerts').textContent = verts.toLocaleString();
+    document.getElementById('vStatus').textContent = 'LOADED';
+    document.getElementById('vStatus').style.color = 'var(--green)';
+    if (callback) callback();
+  }, undefined, function (err) {
+    document.getElementById('vStatus').textContent = 'LOAD ERROR';
+    document.getElementById('vStatus').style.color = 'var(--red)';
+    if (callback) callback(err);
+  });
+}
+
+function loadFromUrl() {
+  var url = loadUrl || localStorage.getItem('zicore_visualizer_mesh');
+  if (!url) { prompt('Enter mesh URL (e.g. /output/meshes/mesh_123.stl):', '/output/'); }
+  url = prompt('Enter mesh URL:', url || '/output/');
+  if (!url) return;
+  loadUrl = url;
+  localStorage.setItem('zicore_visualizer_mesh', url);
+  document.getElementById('vFile').textContent = url.split('/').pop();
+  document.getElementById('vStatus').textContent = 'LOADING...';
+  document.getElementById('vStatus').style.color = 'var(--orange)';
+  loadSTL(url);
+}
+
+function loadMeshFromMaterializer(fileUrl) {
+  loadUrl = fileUrl;
+  localStorage.setItem('zicore_visualizer_mesh', fileUrl);
+  document.getElementById('vFile').textContent = fileUrl.split('/').pop();
+  document.getElementById('vStatus').textContent = 'LOADING...';
+  document.getElementById('vStatus').style.color = 'var(--orange)';
+  loadSTL(fileUrl);
+}
+
+window.addEventListener('load', function () {
+  initViewport();
+  var params = new URLSearchParams(window.location.search);
+  var fileParam = params.get('file');
+  if (fileParam) {
+    loadMeshFromMaterializer(fileParam);
+  } else {
+    var stored = localStorage.getItem('zicore_visualizer_mesh');
+    if (stored) { loadUrl = stored; document.getElementById('vFile').textContent = stored.split('/').pop(); }
+  }
+});
+
+window.addEventListener('resize', function () {
+  var canvas = document.getElementById('viewport3d');
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width; canvas.height = rect.height;
+  if (renderer) { renderer.setSize(rect.width, rect.height); camera.aspect = rect.width / rect.height; camera.updateProjectionMatrix(); }
+});
+</script>
+</body>
+</html>

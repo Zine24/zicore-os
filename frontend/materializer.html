@@ -103,6 +103,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .lib-card .lname{font-size:8px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-card .lmeta{font-size:7px;color:var(--text3);margin-top:1px}
 
+/* Simulation panel */
+.sim-check{display:flex;align-items:center;gap:6px;font-size:8px;color:var(--text2);cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:3px;transition:all .2s}
+.sim-check:hover{border-color:rgba(0,229,255,0.2)}
+.sim-check input[type="checkbox"]{-webkit-appearance:none;width:12px;height:12px;border:1px solid var(--border);border-radius:2px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sim-check input[type="checkbox"]:checked{background:var(--cyan);border-color:var(--cyan)}
+.sim-check input[type="checkbox"]:checked::after{content:"✓";color:var(--bg);font-size:9px;font-weight:bold}
+.sim-result{margin-bottom:6px;padding:8px;border:1px solid var(--border);border-radius:3px;background:rgba(0,0,0,0.15)}
+.sim-result .sr-header{font-size:8px;font-weight:600;color:var(--cyan);margin-bottom:4px;letter-spacing:1px;display:flex;justify-content:space-between}
+.sim-result .sr-row{display:flex;justify-content:space-between;font-size:7px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.sim-result .sr-row .sr-label{color:var(--text3)}
+.sim-result .sr-row .sr-value{color:var(--text);font-family:monospace}
+.sim-result .sr-warn{color:var(--orange);font-size:7px;padding:3px 0;border-top:1px solid rgba(255,150,0,0.1);margin-top:3px}
+
 /* CENTER — 3D Viewport */
 .center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;background:rgba(2,4,8,1)}
 .viewport-container{flex:1;position:relative;overflow:hidden}
@@ -161,7 +174,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="sep"></div>
   <div class="title">MATERIALIZER + OUTPREVIEW</div>
   <div class="spacer"></div>
-  <a class="top-btn" href="/dashboard">VISUALIZER</a>
+  <a class="top-btn" href="/visualizer">VISUALIZER</a>
   <a class="top-btn" href="/multimedia">ZMMX</a>
   <a class="top-btn" href="/video-editor">EDITOR</a>
   <div class="status"><div class="dot"></div><span>SYSTEM ONLINE</span></div>
@@ -209,6 +222,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="ot-tab" data-tab="export">EXPORT</div>
       <div class="ot-tab" data-tab="library">LIBRARY</div>
       <div class="ot-tab" data-tab="vr">VR SCENE</div>
+      <div class="ot-tab" data-tab="sim">SIMULATION</div>
     </div>
 
     <!-- EDIT TAB -->
@@ -287,6 +301,52 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="export-go" onclick="generateVRScene()" style="margin-bottom:8px">GENERATE VR SCENE</button>
       <div id="vrObjects" style="font-size:7px;color:var(--text3)">No scene loaded</div>
     </div>
+
+    <!-- SIMULATION TAB -->
+    <div class="output-panel" id="tab-sim">
+      <div class="edit-label">SIMULATION TYPES</div>
+      <div class="edit-row" style="flex-wrap:wrap;gap:4px;margin-bottom:8px">
+        <label class="sim-check"><input type="checkbox" id="simStructural" checked> <span>Structural</span></label>
+        <label class="sim-check"><input type="checkbox" id="simAero" checked> <span>Aerodynamic</span></label>
+        <label class="sim-check"><input type="checkbox" id="simMass" checked> <span>Mass Props</span></label>
+        <label class="sim-check"><input type="checkbox" id="simOrbital"> <span>Orbital</span></label>
+        <label class="sim-check"><input type="checkbox" id="simThermal"> <span>Thermal</span></label>
+      </div>
+
+      <div class="edit-label">MATERIAL</div>
+      <div class="edit-row" style="margin-bottom:8px">
+        <select id="simMaterial" style="flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:9px;padding:4px;outline:none">
+          <option value="aluminum_6061">Aluminum 6061</option>
+          <option value="aluminum_7075">Aluminum 7075</option>
+          <option value="titanium_6al4v">Titanium 6Al-4V</option>
+          <option value="steel_4130">Steel 4130</option>
+          <option value="stainless_steel_304">Stainless 304</option>
+          <option value="inconel_718">Inconel 718</option>
+          <option value="carbon_fiber_epoxy">Carbon Fiber Epoxy</option>
+          <option value="PLA">PLA</option>
+        </select>
+      </div>
+
+      <div class="edit-label">PARAMETERS</div>
+      <div class="edit-row" style="margin-bottom:4px">
+        <span class="info-label" style="width:60px">Altitude</span>
+        <input type="range" class="edit-slider" id="simAltitude" min="0" max="1000000" step="1000" value="400000">
+        <span class="param-val" id="simAltitudeVal" style="width:50px;text-align:right">400 km</span>
+      </div>
+      <div class="edit-row" style="margin-bottom:4px">
+        <span class="info-label" style="width:60px">Velocity</span>
+        <input type="range" class="edit-slider" id="simVelocity" min="0" max="12000" step="100" value="7800">
+        <span class="param-val" id="simVelocityVal" style="width:50px;text-align:right">7.8 km/s</span>
+      </div>
+      <div class="edit-row" style="margin-bottom:8px">
+        <span class="info-label" style="width:60px">Load</span>
+        <input type="range" class="edit-slider" id="simLoad" min="100" max="50000" step="100" value="1000">
+        <span class="param-val" id="simLoadVal" style="width:50px;text-align:right">1.0 kN</span>
+      </div>
+
+      <button class="export-go" onclick="runSimulation()" style="margin-bottom:8px">▶ RUN SIMULATION</button>
+      <div id="simResults" style="font-size:7px;color:var(--text3);max-height:300px;overflow-y:auto">No simulation run yet</div>
+    </div>
   </div>
 
   <!-- CENTER — 3D Viewport -->
@@ -315,6 +375,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="vp-sep"></div>
       <button class="vp-btn" onclick="resetVPCamera()">RESET</button>
       <button class="vp-btn" onclick="toggleVPFullscreen()">FULL</button>
+      <div class="vp-sep"></div>
+      <button class="vp-btn" style="color:var(--purple);border-color:rgba(124,77,255,0.3)" onclick="sendToVisualizer()">SEND TO VISUALIZER</button>
       <div class="vp-spacer"></div>
       <div class="vp-info" id="vpStats">TRI: 0 | VERT: 0</div>
     </div>
@@ -357,6 +419,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
    SSO AUTH
@@ -535,18 +598,45 @@ function startGeneration(){
 
   var progress=0;
   var interval=setInterval(function(){
-    progress+=Math.random()*12+3;
-    if(progress>100)progress=100;
+    progress+=8;
+    if(progress>90)progress=90;
     document.getElementById('progressFill').style.width=progress+'%';
     document.getElementById('vpInfo').textContent='Generating... '+Math.round(progress)+'%';
-    if(progress>=100){clearInterval(interval);finishGeneration(prompt);}
-  },250);
+  },400);
+
+  var engine=selectedEngine;
+  var detail=parseInt(document.getElementById('paramDetail').value)||5;
+  var payload={
+    prompt:prompt,
+    model:detail>=7?'gemma3:4b':'gemma3:1b',
+    engine:engine==='cadquery'||engine==='openscad'?engine:'local'
+  };
+
+  var token=localStorage.getItem('zicore_sso_token')||'';
+  fetch('/api/ai3d/ollama-generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(r){return r.json();}).then(function(data){
+    clearInterval(interval);
+    document.getElementById('progressFill').style.width='100%';
+    document.getElementById('vpInfo').textContent='Loading preview...';
+    finishGeneration(prompt,data,payload);
+  }).catch(function(err){
+    clearInterval(interval);
+    document.getElementById('progressBar').classList.remove('active');
+    document.getElementById('meshStatus').textContent='ERROR';
+    document.getElementById('meshStatus').style.color='var(--red)';
+    document.getElementById('footerStatus').textContent='ERROR';
+    document.getElementById('vpInfo').textContent='Generation failed';
+    isGenerating=false;
+    btn.classList.remove('generating');
+    btn.textContent='\u25B6 GENERATE';
+  });
 }
 
-function finishGeneration(prompt){
+function finishGeneration(prompt,data,payload){
   var seed=parseInt(document.getElementById('paramSeed').value)||42;
-  var symmetry=parseInt(document.getElementById('paramSymmetry').value)||6;
-  var detail=parseInt(document.getElementById('paramDetail').value)||5;
   var scale=(parseInt(document.getElementById('paramScale').value)||10)/10;
 
   var entry={
@@ -554,10 +644,11 @@ function finishGeneration(prompt){
     prompt:prompt.substring(0,60),
     engine:selectedEngine,
     time:new Date().toLocaleTimeString(),
-    format:selectedEngine==='openscad'?'SCAD':selectedEngine==='cadquery'?'STEP':'STL',
-    tris:Math.floor(Math.random()*50000+1000),
-    verts:Math.floor(Math.random()*25000+500),
-    seed:seed,symmetry:symmetry,detail:detail,scale:scale
+    format:'STL',
+    file:data.file||'',
+    preview:'',
+    tris:0,verts:0,
+    seed:seed,scale:scale
   };
   history.unshift(entry);
   if(history.length>20)history.pop();
@@ -573,103 +664,81 @@ function finishGeneration(prompt){
   document.getElementById('meshStatus').textContent='COMPLETE';
   document.getElementById('meshStatus').style.color='var(--green)';
   document.getElementById('meshFormat').textContent=entry.format;
-  document.getElementById('meshSize').textContent=(Math.random()*5+0.5).toFixed(1)+' MB';
-  document.getElementById('meshTris').textContent=entry.tris.toLocaleString();
-  document.getElementById('meshVerts').textContent=entry.verts.toLocaleString();
-  document.getElementById('meshVolume').textContent=(Math.random()*100+10).toFixed(1)+' cm\u00B3';
-  document.getElementById('meshWatertight').textContent=Math.random()>0.3?'YES':'NO';
-  document.getElementById('vpStats').textContent='TRI: '+entry.tris.toLocaleString()+' | VERT: '+entry.verts.toLocaleString();
-  document.getElementById('vpInfo').textContent=entry.format+' ready | '+entry.tris.toLocaleString()+' triangles';
+  document.getElementById('meshEngine').textContent=selectedEngine;
   document.getElementById('footerStatus').textContent='COMPLETE';
-  document.getElementById('editInfo').textContent=entry.tris.toLocaleString()+' triangles | '+entry.verts.toLocaleString()+' vertices | Scale: '+entry.scale.toFixed(1);
 
-  renderMesh3D(entry);
-  updateHistory();
-  addLibrary(entry);
-  resetEditSliders();
+  // Generate preview image
+  if(data.file){
+    fetchPreview(data.file,function(previewUrl){
+      if(previewUrl)entry.preview=previewUrl;
+    });
+    document.getElementById('vpInfo').textContent='Loading 3D model...';
+    loadSTL(data.file,function(mesh,stats){
+      if(!mesh)return;
+      entry.tris=stats.tris;
+      entry.verts=stats.verts;
+      document.getElementById('meshTris').textContent=(stats.tris||0).toLocaleString();
+      document.getElementById('meshVerts').textContent=(stats.verts||0).toLocaleString();
+      document.getElementById('vpStats').textContent='TRI: '+(stats.tris||0).toLocaleString()+' | VERT: '+(stats.verts||0).toLocaleString();
+      document.getElementById('vpInfo').textContent='STL ready | '+(stats.tris||0).toLocaleString()+' triangles';
+      document.getElementById('meshSize').textContent=(stats.size||0).toFixed(1)+' MB';
+      document.getElementById('editInfo').textContent=(stats.tris||0).toLocaleString()+' triangles | '+(stats.verts||0).toLocaleString()+' vertices';
+      updateHistory();
+      addLibrary(entry);
+      resetEditSliders();
+    });
+  }else{
+    updateHistory();
+    addLibrary(entry);
+    resetEditSliders();
+  }
 }
 
-function renderMesh3D(entry){
-  // Clear previous mesh
-  while(meshGroup.children.length>0) meshGroup.remove(meshGroup.children[0]);
-
-  var symmetry=entry.symmetry||6;
-  var detail=entry.detail||5;
-  var scale=entry.scale||1;
-
-  // Generate procedural 3D geometry based on engine type
-  var geometry;
-  var matColor=0x00e5ff;
-
-  if(entry.engine==='trimesh'||entry.engine==='procedural'){
-    // Create a parametric shape
-    geometry=new THREE.IcosahedronGeometry(scale,detail>5?3:2);
-    // Deform vertices for uniqueness
-    var pos=geometry.attributes.position;
-    for(var i=0;i<pos.count;i++){
-      var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
-      var noise=Math.sin(x*symmetry)*0.15+Math.cos(z*symmetry)*0.1;
-      pos.setX(i,x+noise*x*0.3);
-      pos.setY(i,y+noise*y*0.2);
-      pos.setZ(i,z+noise*z*0.3);
+function fetchPreview(filePath,callback){
+  var token=localStorage.getItem('zicore_sso_token')||'';
+  fetch('/api/preview/generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({file:filePath,width:400,height:300})
+  }).then(function(r){return r.json();}).then(function(data){
+    if(data.preview_url){
+      currentEntry.preview=data.preview_url;
+      if(callback)callback(data.preview_url);
     }
+  }).catch(function(){});
+}
+
+function loadSTL(filePath,callback){
+  while(meshGroup.children.length>0)meshGroup.remove(meshGroup.children[0]);
+  currentMesh=null;
+
+  var url=filePath.startsWith('http')?filePath:filePath;
+  var loader=new THREE.STLLoader();
+  loader.load(url,function(geometry){
     geometry.computeVertexNormals();
-    matColor=0x00e5ff;
-  } else if(entry.engine==='cadquery'||entry.engine==='openscad'){
-    geometry=new THREE.BoxGeometry(scale*1.5,scale*1.2,scale*0.8,detail+1,detail+1,detail+1);
-    // Cut corners
-    var pos=geometry.attributes.position;
-    for(var i=0;i<pos.count;i++){
-      var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
-      var r=Math.sqrt(x*x+y*y+z*z);
-      if(r>scale*0.8){
-        pos.setX(i,x*0.85);pos.setY(i,y*0.85);pos.setZ(i,z*0.85);
-      }
-    }
-    geometry.computeVertexNormals();
-    matColor=0x7c4dff;
-  } else if(entry.engine==='picogk'){
-    // Voxel-like shape
-    var group=new THREE.Group();
-    var cellSize=scale*2/6;
-    for(var x=0;x<6;x++)for(var y=0;y<6;y++)for(var z=0;z<6;z++){
-      if(Math.sin(x*symmetry+y+z)*0.5+0.5>0.45){
-        var box=new THREE.BoxGeometry(cellSize*0.85,cellSize*0.85,cellSize*0.85);
-        var mesh=new THREE.Mesh(box,new THREE.MeshPhongMaterial({color:0x00ff88,transparent:true,opacity:0.7,wireframe:vpWire}));
-        mesh.position.set((x-2.5)*cellSize,(y-2.5)*cellSize,(z-2.5)*cellSize);
-        group.add(mesh);
-      }
-    }
-    meshGroup.add(group);
-    return;
-  } else {
-    // AI 3D — organic blob
-    geometry=new THREE.SphereGeometry(scale,detail*3,detail*3);
-    var pos=geometry.attributes.position;
-    for(var i=0;i<pos.count;i++){
-      var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
-      var theta=Math.atan2(z,x);
-      var phi=Math.acos(y/Math.sqrt(x*x+y*y+z*z+0.001));
-      var r=scale*(1+0.3*Math.sin(theta*symmetry)*Math.cos(phi*detail));
-      pos.setX(i,r*Math.sin(phi)*Math.cos(theta));
-      pos.setY(i,r*Math.cos(phi));
-      pos.setZ(i,r*Math.sin(phi)*Math.sin(theta));
-    }
-    geometry.computeVertexNormals();
-    matColor=0xff8800;
-  }
-
-  var material=new THREE.MeshPhongMaterial({
-    color:matColor,
-    shininess:60,
-    transparent:true,
-    opacity:0.85,
-    wireframe:vpWire,
-    side:THREE.DoubleSide
+    var material=new THREE.MeshPhongMaterial({
+      color:0x00e5ff,shininess:60,transparent:true,opacity:0.85,wireframe:vpWire,side:THREE.DoubleSide
+    });
+    currentMesh=new THREE.Mesh(geometry,material);
+    geometry.computeBoundingBox();
+    var box=geometry.boundingBox;
+    var center=new THREE.Vector3();
+    box.getCenter(center);
+    currentMesh.position.sub(center);
+    var size=new THREE.Vector3();
+    box.getSize(size);
+    var maxDim=Math.max(size.x,size.y,size.z);
+    if(maxDim>5){var sc=5/maxDim;currentMesh.scale.set(sc,sc,sc);}
+    meshGroup.add(currentMesh);
+    var tris=geometry.index?geometry.index.count/3:geometry.attributes.position.count/3;
+    var verts=geometry.attributes.position.count;
+    var sizeMB=geometry.attributes.position.array.byteLength/1048576;
+    if(callback)callback(currentMesh,{tris:Math.floor(tris),verts:verts,size:sizeMB});
+  },undefined,function(err){
+    console.error('STL load error:',err);
+    document.getElementById('vpInfo').textContent='Failed to load 3D model';
+    if(callback)callback(null,{tris:0,verts:0,size:0});
   });
-
-  currentMesh=new THREE.Mesh(geometry,material);
-  meshGroup.add(currentMesh);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -727,7 +796,20 @@ function selectUnits(el,u){
 
 function doExport(){
   if(!currentEntry){alert('Generate something first');return;}
-  alert('Export as '+exportFmt.toUpperCase()+' ('+exportUnits+') — download from server');
+  var url=currentEntry.file;
+  if(!url){alert('No file to download');return;}
+  var a=document.createElement('a');
+  a.href=url;
+  a.download=currentEntry.prompt.replace(/[^a-z0-9]/gi,'_').substring(0,30)+'.'+exportFmt;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function sendToVisualizer(){
+  if(!currentEntry||!currentEntry.file){alert('Generate something first');return;}
+  localStorage.setItem('zicore_visualizer_mesh',currentEntry.file);
+  window.open('/visualizer?file='+encodeURIComponent(currentEntry.file),'_blank');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -757,7 +839,8 @@ function filterLibrary(){renderLibrary();}
 function loadFromLibrary(i){
   var it=library[i];if(!it)return;
   document.getElementById('promptInput').value=it.prompt;
-  renderMesh3D(it);currentEntry=it;
+  currentEntry=it;
+  if(it.file){loadSTL(it.file);}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -829,6 +912,124 @@ function generateVRScene(){
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   SIMULATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+document.getElementById('simAltitude').addEventListener('input',function(){document.getElementById('simAltitudeVal').textContent=(this.value/1000).toFixed(0)+' km';});
+document.getElementById('simVelocity').addEventListener('input',function(){document.getElementById('simVelocityVal').textContent=(this.value/1000).toFixed(1)+' km/s';});
+document.getElementById('simLoad').addEventListener('input',function(){document.getElementById('simLoadVal').textContent=(this.value/1000).toFixed(1)+' kN';});
+
+function runSimulation(){
+  var resultsDiv=document.getElementById('simResults');
+  var file=currentEntry?currentEntry.file:null;
+  if(!file){resultsDiv.innerHTML='<div style="padding:8px;color:var(--orange);font-size:8px">No mesh loaded — generate first</div>';return;}
+
+  var types=[];
+  if(document.getElementById('simStructural').checked)types.push('structural');
+  if(document.getElementById('simAero').checked)types.push('aerodynamic');
+  if(document.getElementById('simMass').checked)types.push('mass_properties');
+  if(document.getElementById('simOrbital').checked)types.push('orbital');
+  if(document.getElementById('simThermal').checked)types.push('thermal');
+  if(!types.length){resultsDiv.innerHTML='<div style="padding:8px;color:var(--orange);font-size:8px">Select at least one simulation type</div>';return;}
+
+  resultsDiv.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:8px">Running simulation...</div>';
+
+  var payload={
+    file:file,
+    simulations:types,
+    material:document.getElementById('simMaterial').value,
+    altitude:parseInt(document.getElementById('simAltitude').value),
+    velocity:parseInt(document.getElementById('simVelocity').value),
+    load:parseFloat(document.getElementById('simLoad').value)
+  };
+
+  var token=localStorage.getItem('zicore_sso_token')||'';
+  fetch('/api/simulate/mesh',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify(payload)
+  }).then(function(r){return r.json();}).then(function(data){
+    if(data.status!=='ok'){resultsDiv.innerHTML='<div style="padding:8px;color:var(--red);font-size:8px">Error: '+(data.error||'Unknown')+'</div>';return;}
+
+    var html='<div style="font-size:7px;color:var(--text2);margin-bottom:6px;letter-spacing:1px">Material: <span style="color:var(--cyan)">'+data.material+'</span></div>';
+    var sims=data.simulations||{};
+    var labels={
+      structural:'STRUCTURAL ANALYSIS',
+      aerodynamic:'AERODYNAMIC ESTIMATE',
+      mass_properties:'MASS PROPERTIES',
+      orbital:'ORBITAL SIMULATION',
+      thermal:'THERMAL ANALYSIS'
+    };
+
+    Object.keys(sims).forEach(function(key){
+      var s=sims[key];
+      if(!s||!s.results)return;
+      html+='<div class="sim-result"><div class="sr-header"><span>'+(labels[key]||key.toUpperCase())+'</span><span style="font-size:7px;color:'+(s.success?'var(--green)':'var(--red)')+'">'+(s.success?'PASS':'FAIL')+'</span></div>';
+
+      var displayMap={
+        structural:[
+          {k:'stress_MPa',l:'Stress',f:function(v){return v.toFixed(2)+' MPa'}},
+          {k:'safety_factor',l:'Safety Factor',f:function(v){return v.toFixed(2)}},
+          {k:'yield_strength_MPa',l:'Yield Strength',f:function(v){return v.toFixed(0)+' MPa'}},
+          {k:'deflection_mm',l:'Deflection',f:function(v){return v.toFixed(2)+' mm'}},
+          {k:'mass_kg',l:'Mass',f:function(v){return v.toFixed(3)+' kg'}},
+          {k:'pass_fail',l:'Result',f:function(v){return v}}
+        ],
+        aerodynamic:[
+          {k:'mach_number',l:'Mach',f:function(v){return v.toFixed(2)}},
+          {k:'drag_force_N',l:'Drag',f:function(v){return v.toFixed(1)+' N'}},
+          {k:'lift_force_N',l:'Lift',f:function(v){return v.toFixed(1)+' N'}},
+          {k:'dynamic_pressure_Pa',l:'Dynamic Pressure',f:function(v){return (v/1000).toFixed(1)+' kPa'}},
+          {k:'heating_rate_Wm2',l:'Heating Rate',f:function(v){return v.toFixed(0)+' W/m²'}},
+          {k:'air_density_kgm3',l:'Air Density',f:function(v){return v.toFixed(4)+' kg/m³'}}
+        ],
+        mass_properties:[
+          {k:'mass_kg',l:'Mass',f:function(v){return v.toFixed(3)+' kg'}},
+          {k:'mass_lb',l:'Mass',f:function(v){return v.toFixed(2)+' lb'}},
+          {k:'volume_cm3',l:'Volume',f:function(v){return v.toFixed(2)+' cm³'}},
+          {k:'density_kgm3',l:'Density',f:function(v){return v.toFixed(0)+' kg/m³'}},
+          {k:'estimated_cost_usd',l:'Est. Cost',f:function(v){return '$'+v.toFixed(2)}}
+        ],
+        orbital:[
+          {k:'altitude_m',l:'Altitude',f:function(v){return (v/1000).toFixed(0)+' km'}},
+          {k:'orbit_radius_m',l:'Orbit Radius',f:function(v){return (v/1000).toFixed(0)+' km'}},
+          {k:'circular_velocity_kms',l:'Velocity',f:function(v){return v.toFixed(2)+' km/s'}},
+          {k:'orbital_period_min',l:'Period',f:function(v){return v.toFixed(1)+' min'}},
+          {k:'escape_velocity_kms',l:'Escape Vel',f:function(v){return v.toFixed(2)+' km/s'}},
+          {k:'inclination_deg',l:'Inclination',f:function(v){return v.toFixed(1)+'°'}}
+        ],
+        thermal:[
+          {k:'temp_max_C',l:'Max Temp',f:function(v){return v.toFixed(0)+' °C'}},
+          {k:'thermal_stress_MPa',l:'Thermal Stress',f:function(v){return v.toFixed(2)+' MPa'}},
+          {k:'thermal_expansion_um_m',l:'Expansion',f:function(v){return v.toFixed(2)+' µm/m'}},
+          {k:'heat_energy_J',l:'Heat Energy',f:function(v){return v.toFixed(0)+' J'}}
+        ]
+      };
+
+      var fields=displayMap[key]||[];
+      fields.forEach(function(f){
+        var v=s.results[f.k];
+        if(v!==undefined&&v!==null){
+          html+='<div class="sr-row"><span class="sr-label">'+f.l+'</span><span class="sr-value">'+f.f(v)+'</span></div>';
+        }
+      });
+
+      if(s.warnings&&s.warnings.length){
+        s.warnings.forEach(function(w){
+          html+='<div class="sr-warn">⚠ '+w+'</div>';
+        });
+      }
+
+      html+='<div style="font-size:6px;color:var(--text3);margin-top:4px;text-align:right">'+(s.duration?s.duration.toFixed(3):'0')+'s</div>';
+      html+='</div>';
+    });
+
+    resultsDiv.innerHTML=html;
+  }).catch(function(err){
+    resultsDiv.innerHTML='<div style="padding:8px;color:var(--red);font-size:8px">Network error: '+err.message+'</div>';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    HISTORY
    ═══════════════════════════════════════════════════════════════════════════ */
 function updateHistory(){
@@ -847,11 +1048,12 @@ function loadHistory(id){
   var entry=history.find(function(h){return h.id===id;});
   if(!entry)return;
   document.getElementById('promptInput').value=entry.prompt;
-  renderMesh3D(entry);currentEntry=entry;
+  currentEntry=entry;
   document.getElementById('vpPlaceholder').style.display='none';
   document.getElementById('meshFormat').textContent=entry.format;
   document.getElementById('meshStatus').textContent='LOADED';
   document.getElementById('meshStatus').style.color='var(--green)';
+  if(entry.file){loadSTL(entry.file);}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

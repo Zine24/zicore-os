@@ -95,14 +95,19 @@ def _docker_compose_cmd(args):
 
 def status(base_url=None):
     """Check if Ollama is running (Docker or native)."""
-    host = base_url or DEFAULT_HOST
-    if host.startswith("http://"):
-        host = host[7:]
-    elif host.startswith("https://"):
-        host = host[8:]
+    raw = base_url or DEFAULT_HOST
+    scheme = "http"
+    host = raw
+    if raw.startswith("https://"):
+        scheme = "https"
+        host = raw[8:]
+    elif raw.startswith("http://"):
+        scheme = "http"
+        host = raw[7:]
     try:
-        req = urllib.request.Request(f"http://{host}/api/tags", method="GET")
-        resp = urllib.request.urlopen(req, timeout=3)
+        url = f"{scheme}://{host}/api/tags"
+        req = urllib.request.Request(url, method="GET", headers={"User-Agent": "ZICORE/5.0"})
+        resp = urllib.request.urlopen(req, timeout=5)
         data = json.loads(resp.read())
         models = [m.get("name", "unknown") for m in data.get("models", [])]
         mode = "docker" if _is_docker_running() else "native"
