@@ -793,6 +793,8 @@ class SSOAuthMiddleware:
         "/disclaimer",
         "/api/contact",
         "/api/contact/submissions",
+        "/admin",
+        "/server-admin",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -810,6 +812,7 @@ class SSOAuthMiddleware:
         "/api/preview/", # mesh preview images
         "/api/simulate/", # mesh simulation
         "/v1/", # OpenAI-compatible ZIO endpoint for Open-WebUI
+        "/api/admin/", # server admin console API
     )
 
     def __init__(self, app):
@@ -4807,6 +4810,185 @@ async def thunderbird_compose(request: Request):
     subject = data.get("subject", "")
     body = data.get("body", "")
     return {"status": "ok", "result": thunderbird_int.open_compose(to, subject, body)}
+
+
+# --- Server Admin Console ---
+
+try:
+    import paramiko
+except ImportError:
+    paramiko = None
+
+ADMIN_SERVERS = {
+    ".85": {"name": ".85 Primary", "ip": "192.168.1.85", "user": "z", "password": "Jilo1981"},
+    ".68": {"name": ".68 Ollama", "ip": "192.168.1.68", "user": "zinemotion", "password": "Jilo1981"},
+    "vps": {"name": "VPS Oracle", "ip": "160.34.209.208", "user": "oracle-admin", "password": "zicore2026"},
+}
+
+
+async def _ssh_exec(server: str, command: str, timeout: int = 30) -> dict:
+    """Execute a command on a remote server via SSH."""
+    if server not in ADMIN_SERVERS:
+        return {"success": False, "error": f"Unknown server: {server}"}
+    info = ADMIN_SERVERS[server]
+    try:
+        if paramiko is None:
+            raise ImportError("paramiko not available")
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(info["ip"], username=info["user"], password=info["password"],
+                       timeout=10, allow_agent=False, look_for_keys=False)
+        stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
+        out = stdout.read().decode("utf-8", errors="replace")
+        err = stderr.read().decode("utf-8", errors="replace")
+        rc = stdout.channel.recv_exit_status()
+        client.close()
+        return {"success": True, "stdout": out, "stderr": err, "returncode": rc}
+    except ImportError:
+        # Fallback: use subprocess ssh
+        import subprocess as _sp
+        try:
+            result = _sp.run(
+                ["sshpass", "-p", info["password"], "ssh", "-o", "StrictHostKeyChecking=no",
+                 f"{info['user']}@{info['ip']}", command],
+                capture_output=True, text=True, timeout=timeout
+            )
+            return {"success": True, "stdout": result.stdout, "stderr": result.stderr,
+                    "returncode": result.returncode}
+        except FileNotFoundError:
+            # Last resort: plain ssh (will prompt for password)
+            try:
+                result = _sp.run(
+                    ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+                     f"{info['user']}@{info['ip']}", command],
+                    capture_output=True, text=True, timeout=timeout
+                )
+                return {"success": True, "stdout": result.stdout, "stderr": result.stderr,
+                        "returncode": result.returncode}
+            except Exception as e2:
+                return {"success": False, "error": str(e2)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def _get_server_stats(server: str) -> dict:
+    """Get basic stats from a server."""
+    result = await _ssh_exec(server,
+        "echo CPU:$(top -bn1 | grep 'Cpu(s)' | awk '{print $2}')% "
+        "RAM:$(free -m | awk '/Mem:/{printf \"%d/%d\", $3, $2}') "
+        "RAM_PCT:$(free | awk '/Mem:/{printf \"%.0f\", $3/$2*100}') "
+        "DISK:$(df -h / | awk 'NR==2{print $5}') "
+        "UPTIME:$(uptime -p)", timeout=10)
+    stats = {"online": result.get("success", False), "cpu": "--", "ram": "--",
+             "ram_pct": 0, "disk": "--", "disk_pct": 0, "uptime": "--"}
+    if result.get("stdout"):
+        for part in result["stdout"].split():
+            if part.startswith("CPU:"):
+                stats["cpu"] = part[4:] if part[4:] != "%" else "0%"
+            elif part.startswith("RAM:"):
+                stats["ram"] = part[4:]
+            elif part.startswith("RAM_PCT:"):
+                try: stats["ram_pct"] = int(part[8:])
+                except: pass
+            elif part.startswith("DISK:"):
+                stats["disk"] = part[5:]
+                try: stats["disk_pct"] = int(part[5:].replace("%", ""))
+                except: pass
+            elif part.startswith("UPTIME:"):
+                stats["uptime"] = part[7:]
+    return stats
+
+
+@app.get("/api/admin/servers")
+async def admin_servers():
+    """Get status of all servers."""
+    import asyncio
+    tasks = {}
+    for key in ADMIN_SERVERS:
+        if key == ".85":
+            # Local server — quick local check
+            import subprocess as _sp
+            try:
+                r = _sp.run(["bash", "-c",
+                    "echo CPU:$(top -bn1 | grep 'Cpu(s)' | awk '{print $2}')% "
+                    "RAM:$(free -m | awk '/Mem:/{printf \"%d/%d\", $3, $2}') "
+                    "RAM_PCT:$(free | awk '/Mem:/{printf \"%.0f\", $3/$2*100}') "
+                    "DISK:$(df -h / | awk 'NR==2{print $5}') "
+                    "UPTIME:$(uptime -p)"],
+                    capture_output=True, text=True, timeout=10)
+                stats = {"online": True, "cpu": "--", "ram": "--", "ram_pct": 0,
+                         "disk": "--", "disk_pct": 0, "uptime": "--"}
+                for part in r.stdout.split():
+                    if part.startswith("CPU:"): stats["cpu"] = part[4:]
+                    elif part.startswith("RAM:"): stats["ram"] = part[4:]
+                    elif part.startswith("RAM_PCT:"):
+                        try: stats["ram_pct"] = int(part[8:])
+                        except: pass
+                    elif part.startswith("DISK:"):
+                        stats["disk"] = part[5:]
+                        try: stats["disk_pct"] = int(part[5:].replace("%", ""))
+                        except: pass
+                    elif part.startswith("UPTIME:"): stats["uptime"] = part[7:]
+                tasks[key] = stats
+            except Exception:
+                tasks[key] = {"online": False, "cpu": "--", "ram": "--", "ram_pct": 0,
+                              "disk": "--", "disk_pct": 0, "uptime": "--"}
+        else:
+            tasks[key] = _get_server_stats(key)
+    # Wait for remote results
+    results = {}
+    for key, val in tasks.items():
+        if isinstance(val, dict):
+            results[key] = val
+        else:
+            try:
+                results[key] = await val
+            except Exception:
+                results[key] = {"online": False, "cpu": "--", "ram": "--", "ram_pct": 0,
+                                "disk": "--", "disk_pct": 0, "uptime": "--"}
+    return JSONResponse(content=results)
+
+
+@app.post("/api/admin/execute")
+async def admin_execute(request: Request):
+    """Execute command on a server."""
+    data = await request.json()
+    server = data.get("server", ".85")
+    command = data.get("command", "")
+    timeout = data.get("timeout", 30)
+    if not command:
+        return JSONResponse(content={"error": "No command"}, status_code=400)
+    if server == ".85":
+        # Local execution
+        import subprocess as _sp
+        import shlex
+        try:
+            result = await asyncio.to_thread(
+                _sp.run, command, shell=True, capture_output=True, text=True, timeout=timeout
+            )
+            return {"result": {"success": True, "stdout": result.stdout,
+                               "stderr": result.stderr, "returncode": result.returncode}}
+        except _sp.TimeoutExpired:
+            return {"result": {"success": False, "error": "Command timed out"}}
+        except Exception as e:
+            return {"result": {"success": False, "error": str(e)}}
+    result = await _ssh_exec(server, command, timeout)
+    return {"result": result}
+
+
+@app.get("/api/admin")
+async def admin_page():
+    """Serve admin console HTML."""
+    from fastapi.responses import FileResponse
+    html_path = FRONTEND_DIR / "server-admin.html"
+    if html_path.exists():
+        return FileResponse(str(html_path), media_type="text/html")
+    return JSONResponse(content={"error": "Admin console not found"}, status_code=404)
+
+
+@app.get("/server-admin")
+async def server_admin_redirect():
+    return {"status": "ok", "admin_url": "/admin"}
 
 
 # --- ZICORE Mail Server ---
