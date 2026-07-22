@@ -814,6 +814,8 @@ class SSOAuthMiddleware:
         "/v1/", # OpenAI-compatible ZIO endpoint for Open-WebUI
         "/api/admin/", # server admin console API
         "/ollama/", # Ollama reverse proxy (VPS → local:11434)
+        "/shell", # interactive SSH shell terminal
+        "/api/shell/", # shell API (servers, sessions, close)
     )
 
     def __init__(self, app):
@@ -5068,6 +5070,156 @@ async def admin_page():
 @app.get("/server-admin")
 async def server_admin_redirect():
     return {"status": "ok", "admin_url": "/admin"}
+
+
+# --- ZICORE Interactive Shell ---
+# Real-time SSH terminal via WebSocket + paramiko PTY
+
+try:
+    from zicore.shell_manager import shell_manager, SHELL_SERVERS
+except ImportError:
+    shell_manager = None
+    SHELL_SERVERS = {}
+
+
+@app.get("/shell")
+async def shell_page():
+    from fastapi.responses import FileResponse
+    html_path = FRONTEND_DIR / "shell.html"
+    if html_path.exists():
+        return FileResponse(str(html_path), media_type="text/html")
+    return JSONResponse(content={"error": "Shell module not found"}, status_code=404)
+
+
+@app.get("/api/shell/servers")
+async def shell_servers():
+    """List available shell servers."""
+    servers = {}
+    for key, info in SHELL_SERVERS.items():
+        servers[key] = {
+            "name": info["name"],
+            "ip": info["ip"],
+            "role": info["role"],
+            "color": info["color"],
+        }
+    return {"servers": servers, "has_manager": shell_manager is not None}
+
+
+@app.get("/api/shell/sessions")
+async def shell_sessions():
+    """List active shell sessions."""
+    if shell_manager is None:
+        return {"sessions": [], "error": "Shell manager not available"}
+    return {"sessions": shell_manager.list_sessions()}
+
+
+@app.post("/api/shell/close")
+async def shell_close_session(request: Request):
+    """Close a shell session."""
+    if shell_manager is None:
+        return JSONResponse(content={"error": "Shell manager not available"}, status_code=503)
+    data = await request.json()
+    sid = data.get("session_id", "")
+    ok = shell_manager.close_session(sid)
+    return {"success": ok}
+
+
+@app.websocket("/ws/shell/{server_key}")
+async def shell_websocket(websocket: WebSocket, server_key: str):
+    """Interactive SSH shell via WebSocket.
+    
+    Protocol (JSON messages):
+      Client → Server:
+        {"type": "input", "data": "..."}   — keyboard input
+        {"type": "resize", "cols": 120, "rows": 40}  — terminal resize
+        {"type": "ping"}                    — keepalive
+      Server → Client:
+        {"type": "output", "data": "..."}   — terminal output
+        {"type": "connected", "session_id": "..."}
+        {"type": "disconnected", "reason": "..."}
+        {"type": "error", "message": "..."}
+        {"type": "pong"}
+    """
+    if shell_manager is None:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": "Shell manager not available"})
+        await websocket.close()
+        return
+
+    if server_key not in SHELL_SERVERS:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": f"Unknown server: {server_key}"})
+        await websocket.close()
+        return
+
+    await websocket.accept()
+    session_id = None
+
+    try:
+        loop = asyncio.get_event_loop()
+
+        # Output callback: sends terminal data to WebSocket
+        async def on_output(sid: str, data):
+            nonlocal session_id
+            try:
+                if data is None:
+                    await websocket.send_json({"type": "disconnected", "reason": "channel_closed"})
+                else:
+                    await websocket.send_json({"type": "output", "data": data})
+            except Exception:
+                pass
+
+        # Create session
+        result = shell_manager.create_session(
+            server_key,
+            cols=120,
+            rows=40,
+            output_callback=on_output,
+            loop=loop,
+        )
+
+        if not result["success"]:
+            await websocket.send_json({"type": "error", "message": result.get("error", "Connection failed")})
+            await websocket.close()
+            return
+
+        session_id = result["session_id"]
+        await websocket.send_json({"type": "connected", "session_id": session_id})
+
+        # Message loop
+        while True:
+            msg = await websocket.receive_json()
+            msg_type = msg.get("type", "")
+
+            if msg_type == "input":
+                session = shell_manager.get_session(session_id)
+                if session:
+                    session.send_input(msg.get("data", ""))
+                else:
+                    break
+
+            elif msg_type == "resize":
+                session = shell_manager.get_session(session_id)
+                if session:
+                    session.resize(msg.get("cols", 120), msg.get("rows", 40))
+
+            elif msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+
+            elif msg_type == "disconnect":
+                break
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.error(f"Shell WebSocket error: {e}")
+    finally:
+        if session_id:
+            shell_manager.close_session(session_id)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 # --- ZICORE Mail Server ---
