@@ -3,17 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE Shell — Interactive Terminal</title>
+<title>ZICORE Shell</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
 :root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--bg:#04060c;--panel:rgba(10,14,22,0.95);--border:rgba(0,229,255,0.12)}
 
-/* TOP BAR */
 #topBar{
   height:38px;background:rgba(6,8,14,0.98);border-bottom:1px solid rgba(0,229,255,0.1);
-  display:flex;align-items:center;padding:0 14px;gap:8px;position:relative;z-index:100;
+  display:flex;align-items:center;padding:0 14px;gap:8px;z-index:100;
 }
 #topBar .logo{font-size:10px;letter-spacing:5px;color:var(--glow);font-weight:700}
 #topBar .logo span{color:var(--purple)}
@@ -31,26 +30,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:
   height:36px;background:rgba(8,10,18,0.98);border-bottom:1px solid rgba(0,229,255,0.08);
   display:flex;align-items:center;padding:0 12px;gap:6px;
 }
-.server-btn{
-  display:flex;align-items:center;gap:5px;padding:4px 12px;border:1px solid;
-  background:transparent;cursor:pointer;font-size:8px;letter-spacing:1.5px;
-  font-family:inherit;transition:all .2s;text-transform:uppercase;
-}
-.server-btn .dot{width:6px;height:6px;border-radius:50%}
-.server-btn[data-server=".85"]{border-color:rgba(0,255,136,0.2);color:#00ff88}
-.server-btn[data-server=".85"] .dot{background:#00ff88}
-.server-btn[data-server=".85"]:hover,.server-btn[data-server=".85"].active{background:rgba(0,255,136,0.08);box-shadow:0 0 8px rgba(0,255,136,0.15)}
-.server-btn[data-server=".68"]{border-color:rgba(124,77,255,0.2);color:#7c4dff}
-.server-btn[data-server=".68"] .dot{background:#7c4dff}
-.server-btn[data-server=".68"]:hover,.server-btn[data-server=".68"].active{background:rgba(124,77,255,0.08);box-shadow:0 0 8px rgba(124,77,255,0.15)}
-.server-btn[data-server="vps"]{border-color:rgba(0,229,255,0.2);color:var(--glow)}
-.server-btn[data-server="vps"] .dot{background:var(--glow)}
-.server-btn[data-server="vps"]:hover,.server-btn[data-server="vps"].active{background:rgba(0,229,255,0.08);box-shadow:0 0 8px rgba(0,229,255,0.15)}
-
-.server-btn .dot.offline{background:#f44!important}
-
-#toolbar .sep{width:1px;height:18px;background:rgba(0,229,255,0.06);margin:0 4px}
-
 .action-btn{
   font-size:7px;letter-spacing:2px;padding:4px 10px;border:1px solid rgba(0,229,255,0.12);
   background:rgba(0,229,255,0.03);color:#607080;cursor:pointer;font-family:inherit;transition:all .2s;
@@ -58,11 +37,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:
 .action-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
 .action-btn.danger{border-color:rgba(255,68,68,0.2);color:#f44}
 .action-btn.danger:hover{background:rgba(255,68,68,0.08)}
-.action-btn.active-session{border-color:rgba(0,255,136,0.3);color:var(--green);background:rgba(0,255,136,0.06)}
-
 #statusText{margin-left:auto;font-size:8px;letter-spacing:1px;color:#607080}
 #statusText .connected{color:var(--green)}
 #statusText .disconnected{color:#f44}
+#statusText .connecting{color:#fa0}
 
 /* SESSION TABS */
 #sessionBar{
@@ -85,56 +63,55 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:
 .session-tab:hover .tab-close{opacity:0.5}
 .session-tab .tab-close:hover{opacity:1;background:rgba(255,68,68,0.2);color:#f44}
 
-/* TERMINAL CONTAINER */
-#terminalContainer{
-  flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;
-}
-#terminalWrap{
-  flex:1;overflow:hidden;padding:2px;
-}
-#xterm-container{
-  width:100%;height:100%;
-}
+/* TERMINAL */
+#terminalContainer{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#terminalWrap{flex:1;overflow:hidden;padding:2px}
+#xterm-container{width:100%;height:100%}
 
-/* WELCOME SCREEN */
+/* WELCOME / CONNECT FORM */
 #welcome{
   position:absolute;top:0;left:0;right:0;bottom:0;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:var(--bg);z-index:10;
 }
 #welcome.hidden{display:none}
-#welcome h1{
-  font-size:14px;letter-spacing:8px;color:var(--glow);margin-bottom:4px;font-weight:300;
-}
+#welcome h1{font-size:14px;letter-spacing:8px;color:var(--glow);margin-bottom:4px;font-weight:300}
 #welcome h1 span{color:var(--purple)}
 #welcome .sub{font-size:8px;letter-spacing:4px;color:#607080;margin-bottom:30px;text-transform:uppercase}
-#welcome .server-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:680px;max-width:90vw;
-}
-#welcome .srv-card{
-  background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;
-  cursor:pointer;transition:all .25s;position:relative;overflow:hidden;
-}
-#welcome .srv-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0.5}
-#welcome .srv-card[data-srv=".85"]::before{background:#00ff88}
-#welcome .srv-card[data-srv=".68"]::before{background:#7c4dff}
-#welcome .srv-card[data-srv="vps"]::before{background:var(--glow)}
-#welcome .srv-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,229,255,0.08)}
-#welcome .srv-card .srv-name{font-size:11px;font-weight:600;margin-bottom:2px}
-#welcome .srv-card[data-srv=".85"] .srv-name{color:#00ff88}
-#welcome .srv-card[data-srv=".68"] .srv-name{color:#7c4dff}
-#welcome .srv-card[data-srv="vps"] .srv-name{color:var(--glow)}
-#welcome .srv-card .srv-role{font-size:7px;letter-spacing:2px;color:#607080;margin-bottom:8px;text-transform:uppercase}
-#welcome .srv-card .srv-ip{font-size:9px;color:#404858;font-family:'Cascadia Code','Fira Code',monospace}
-#welcome .srv-card .srv-hint{
-  font-size:7px;color:#607080;margin-top:8px;padding-top:8px;
-  border-top:1px solid rgba(0,229,255,0.06);
-}
-#welcome .footer-hint{
-  margin-top:24px;font-size:7px;letter-spacing:2px;color:#303848;
-}
 
-/* LAYOUT */
+.connect-form{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;
+  width:380px;max-width:90vw;
+}
+.connect-form .form-title{
+  font-size:9px;letter-spacing:3px;color:var(--glow);margin-bottom:14px;text-transform:uppercase;
+  padding-bottom:8px;border-bottom:1px solid rgba(0,229,255,0.08);
+}
+.form-row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.form-row label{
+  font-size:8px;letter-spacing:1.5px;color:#607080;text-transform:uppercase;width:55px;flex-shrink:0;
+}
+.form-row input,.form-row select{
+  flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;
+  padding:6px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+.form-row input:focus{border-color:var(--glow)}
+.form-row input::placeholder{color:#303848}
+.form-row input[type=number]{width:60px;flex:none}
+.connect-btn{
+  width:100%;padding:8px;margin-top:6px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);
+  color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+.connect-btn:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
+.connect-btn:disabled{opacity:0.4;cursor:not-allowed}
+.form-hint{
+  margin-top:10px;font-size:7px;letter-spacing:1px;color:#303848;text-align:center;
+}
+.form-error{
+  margin-top:8px;font-size:8px;color:#f44;text-align:center;display:none;
+}
+.footer-hint{margin-top:24px;font-size:7px;letter-spacing:2px;color:#303848}
+
 body{display:flex;flex-direction:column}
 </style>
 </head>
@@ -143,26 +120,16 @@ body{display:flex;flex-direction:column}
 <div id="topBar">
   <div class="logo">ZI<span>CORE</span></div>
   <div class="sep"></div>
-  <div class="subtitle">Shell Terminal</div>
+  <div class="subtitle">Shell</div>
   <a class="nav-btn" href="/admin">ADMIN</a>
   <a class="nav-btn" href="/aerospace">AEROSPACE</a>
   <div id="clock">--:--:-- UTC</div>
 </div>
 
 <div id="toolbar">
-  <button class="server-btn" data-server=".85" onclick="connectServer('.85')">
-    <span class="dot"></span> .85
-  </button>
-  <button class="server-btn" data-server=".68" onclick="connectServer('.68')">
-    <span class="dot"></span> .68
-  </button>
-  <button class="server-btn" data-server="vps" onclick="connectServer('vps')">
-    <span class="dot"></span> VPS
-  </button>
-  <div class="sep"></div>
-  <button class="action-btn" onclick="newSession()">+ NEW</button>
-  <button class="action-btn danger" onclick="disconnectAll()">DISCONNECT ALL</button>
-  <span id="statusText">Select a server to connect</span>
+  <button class="action-btn" onclick="showConnect()">+ CONNECT</button>
+  <button class="action-btn" id="btnDisconnect" onclick="disconnectActive()" style="display:none">DISCONNECT</button>
+  <span id="statusText">Ready</span>
 </div>
 
 <div id="sessionBar"></div>
@@ -170,28 +137,32 @@ body{display:flex;flex-direction:column}
 <div id="terminalContainer">
   <div id="welcome">
     <h1>ZI<span>CORE</span> SHELL</h1>
-    <div class="sub">Interactive SSH Terminal</div>
-    <div class="server-grid">
-      <div class="srv-card" data-srv=".85" onclick="connectServer('.85')">
-        <div class="srv-name">.85 Primary</div>
-        <div class="srv-role">Web Server + Materializer</div>
-        <div class="srv-ip">192.168.1.85:22</div>
-        <div class="srv-hint">Ubuntu x86_64 · Xeon E5345 · 8GB RAM</div>
+    <div class="sub">SSH Terminal</div>
+
+    <div class="connect-form" id="connectForm">
+      <div class="form-title">New Connection</div>
+      <div class="form-row">
+        <label>Host</label>
+        <input id="inpHost" placeholder="192.168.1.100 or example.com" autofocus>
       </div>
-      <div class="srv-card" data-srv=".68" onclick="connectServer('.68')">
-        <div class="srv-name">.68 Ollama</div>
-        <div class="srv-role">Ollama Server + Zichat</div>
-        <div class="srv-ip">192.168.1.68:22</div>
-        <div class="srv-hint">Ubuntu x86_64 · i3-550 · 13GB RAM</div>
+      <div class="form-row">
+        <label>Port</label>
+        <input id="inpPort" type="number" value="22" min="1" max="65535">
       </div>
-      <div class="srv-card" data-srv="vps" onclick="connectServer('vps')">
-        <div class="srv-name">VPS Oracle</div>
-        <div class="srv-role">ARM64 + Ollama</div>
-        <div class="srv-ip">160.34.209.208:22</div>
-        <div class="srv-hint">Oracle Cloud ARM · 4 OCPU · 24GB RAM</div>
+      <div class="form-row">
+        <label>User</label>
+        <input id="inpUser" placeholder="root">
       </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input id="inpPass" type="password" placeholder="***">
+      </div>
+      <button class="connect-btn" id="connectBtn" onclick="doConnect()">CONNECT</button>
+      <div class="form-error" id="connectError"></div>
+      <div class="form-hint">Ctrl+Shift+C copy · Ctrl+Shift+V paste</div>
     </div>
-    <div class="footer-hint">CLICK TO CONNECT · Ctrl+Shift+C TO COPY · Ctrl+Shift+V TO PASTE</div>
+
+    <div class="footer-hint">SSH via paramiko · sessions timeout after 10 min idle</div>
   </div>
 
   <div id="terminalWrap">
@@ -203,32 +174,22 @@ body{display:flex;flex-direction:column}
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
 <script>
-const SERVERS = {
-  '.85': { name: '.85 Primary', color: '#00ff88' },
-  '.68': { name: '.68 Ollama', color: '#7c4dff' },
-  'vps': { name: 'VPS Oracle', color: '#00e5ff' },
-};
-
-// State
 let term = null;
 let fitAddon = null;
-let sessions = {};   // { sessionId: { ws, serverKey, term: null, el: null } }
+let sessions = {};
 let activeSession = null;
 
-// Clock
 setInterval(() => {
-  const now = new Date();
-  document.getElementById('clock').textContent = now.toUTCString().slice(-12, -4) + ' UTC';
+  document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC';
 }, 1000);
 
-// Init xterm
 function initTerminal() {
   if (term) return;
   term = new Terminal({
     cursorBlink: true,
     cursorStyle: 'bar',
     fontSize: 13,
-    fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
+    fontFamily: "'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace",
     theme: {
       background: '#04060c',
       foreground: '#c8d0dc',
@@ -236,41 +197,25 @@ function initTerminal() {
       cursorAccent: '#04060c',
       selectionBackground: 'rgba(0,229,255,0.2)',
       selectionForeground: '#ffffff',
-      black: '#0a0e16',
-      red: '#ff5555',
-      green: '#00ff88',
-      yellow: '#ffb86c',
-      blue: '#61afef',
-      magenta: '#7c4dff',
-      cyan: '#00e5ff',
-      white: '#c8d0dc',
-      brightBlack: '#607080',
-      brightRed: '#ff6e6e',
-      brightGreen: '#50fa7b',
-      brightYellow: '#ffb86c',
-      brightBlue: '#79c0ff',
-      brightMagenta: '#bd93f9',
-      brightCyan: '#00e5ff',
-      brightWhite: '#ffffff',
+      black: '#0a0e16', red: '#ff5555', green: '#00ff88', yellow: '#ffb86c',
+      blue: '#61afef', magenta: '#7c4dff', cyan: '#00e5ff', white: '#c8d0dc',
+      brightBlack: '#607080', brightRed: '#ff6e6e', brightGreen: '#50fa7b',
+      brightYellow: '#ffb86c', brightBlue: '#79c0ff', brightMagenta: '#bd93f9',
+      brightCyan: '#00e5ff', brightWhite: '#ffffff',
     },
     allowProposedApi: true,
     scrollback: 10000,
     convertEol: true,
-    allowTransparency: true,
   });
 
   fitAddon = new FitAddon.FitAddon();
   term.loadAddon(fitAddon);
 
-  try {
-    const webLinksAddon = new WebLinksAddon.WebLinksAddon();
-    term.loadAddon(webLinksAddon);
-  } catch(e) {}
+  try { term.loadAddon(new WebLinksAddon.WebLinksAddon()); } catch(e) {}
 
   term.open(document.getElementById('xterm-container'));
   fitAddon.fit();
 
-  // Send keyboard input to active session
   term.onData(data => {
     if (activeSession && sessions[activeSession]) {
       const s = sessions[activeSession];
@@ -280,7 +225,6 @@ function initTerminal() {
     }
   });
 
-  // Handle resize
   term.onResize(({ cols, rows }) => {
     for (const sid in sessions) {
       const s = sessions[sid];
@@ -290,12 +234,8 @@ function initTerminal() {
     }
   });
 
-  // Resize on window resize
-  window.addEventListener('resize', () => {
-    if (fitAddon) fitAddon.fit();
-  });
+  window.addEventListener('resize', () => { if (fitAddon) fitAddon.fit(); });
 
-  // Ctrl+Shift+C / Ctrl+Shift+V for copy/paste
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.shiftKey && e.key === 'C') {
       const sel = term.getSelection();
@@ -315,131 +255,118 @@ function initTerminal() {
     }
   });
 
-  // Observe container resize
-  const ro = new ResizeObserver(() => {
-    if (fitAddon) fitAddon.fit();
-  });
-  ro.observe(document.getElementById('terminalWrap'));
+  new ResizeObserver(() => { if (fitAddon) fitAddon.fit(); }).observe(document.getElementById('terminalWrap'));
 }
 
-// Connect to server
-function connectServer(serverKey) {
-  if (!serverKey || !SERVERS[serverKey]) return;
-  initTerminal();
+function showConnect() {
+  document.getElementById('welcome').classList.remove('hidden');
+  document.getElementById('inpHost').focus();
+}
 
-  // Check if already connected to this server
-  for (const sid in sessions) {
-    if (sessions[sid].serverKey === serverKey && sessions[sid].ws.readyState === WebSocket.OPEN) {
-      switchSession(sid);
-      return;
-    }
+function doConnect() {
+  const host = document.getElementById('inpHost').value.trim();
+  const port = parseInt(document.getElementById('inpPort').value) || 22;
+  const user = document.getElementById('inpUser').value.trim();
+  const pass = document.getElementById('inpPass').value;
+  const errEl = document.getElementById('connectError');
+  const btn = document.getElementById('connectBtn');
+
+  if (!host || !user) {
+    errEl.textContent = 'Host and User are required';
+    errEl.style.display = 'block';
+    return;
   }
 
-  setStatus('Connecting to ' + SERVERS[serverKey].name + '...', 'connecting');
-  highlightServerBtn(serverKey);
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'CONNECTING...';
+  setStatus('Connecting to ' + user + '@' + host + ':' + port + '...', 'connecting');
+
+  initTerminal();
 
   const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${wsProto}//${location.host}/ws/shell/${serverKey}`;
-
-  const ws = new WebSocket(wsUrl);
-  let sessionId = null;
+  const ws = new WebSocket(wsProto + '//' + location.host + '/ws/shell');
 
   ws.onopen = () => {
-    setStatus('Connected to ' + SERVERS[serverKey].name, 'connected');
+    ws.send(JSON.stringify({ type: 'connect', host, port, user, password: pass }));
   };
+
+  let sessionId = null;
 
   ws.onmessage = (evt) => {
     try {
       const msg = JSON.parse(evt.data);
-      handleShellMessage(serverKey, sessionId, msg, ws);
-      if (msg.session_id) sessionId = msg.session_id;
+
+      if (msg.type === 'connected') {
+        sessionId = msg.session_id;
+        sessions[sessionId] = { ws, host, port, user, connected: true };
+        activeSession = sessionId;
+
+        document.getElementById('welcome').classList.add('hidden');
+        document.getElementById('btnDisconnect').style.display = '';
+        term.focus();
+        fitAddon.fit();
+        renderSessionBar();
+        setStatus('Connected: ' + user + '@' + host, 'connected');
+
+        const dims = fitAddon.proposeDimensions();
+        if (dims) ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+
+        btn.disabled = false;
+        btn.textContent = 'CONNECT';
+      }
+
+      if (msg.type === 'output' && activeSession === sessionId) {
+        term.write(msg.data);
+      }
+
+      if (msg.type === 'disconnected') {
+        if (sessions[sessionId]) sessions[sessionId].connected = false;
+        renderSessionBar();
+        if (activeSession === sessionId) {
+          term.writeln('\r\n\x1b[33m[Session ended]\x1b[0m');
+        }
+        setStatus('Disconnected', 'disconnected');
+      }
+
+      if (msg.type === 'error') {
+        errEl.textContent = msg.message || 'Connection failed';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'CONNECT';
+        setStatus('Error: ' + msg.message, 'disconnected');
+      }
     } catch(e) {}
   };
 
   ws.onclose = () => {
-    if (sessionId && sessions[sessionId]) {
-      sessions[sessionId].connected = false;
-      updateSessionTab(sessionId);
-    }
-    setStatus('Disconnected from ' + SERVERS[serverKey].name, 'disconnected');
-    // If this was the active session, clear terminal
-    if (activeSession === sessionId) {
-      term.clear();
-      term.writeln('\r\n\x1b[31m[Connection closed]\x1b[0m');
+    btn.disabled = false;
+    btn.textContent = 'CONNECT';
+    if (!sessionId || !sessions[sessionId]) {
+      setStatus('Connection closed', 'disconnected');
     }
   };
 
   ws.onerror = () => {
-    setStatus('Connection failed to ' + SERVERS[serverKey].name, 'disconnected');
+    errEl.textContent = 'WebSocket error';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'CONNECT';
+    setStatus('Connection failed', 'disconnected');
   };
 }
 
-// Handle shell messages
-function handleShellMessage(serverKey, sessionId, msg, ws) {
-  switch (msg.type) {
-    case 'connected':
-      sessionId = msg.session_id;
-      sessions[sessionId] = {
-        ws,
-        serverKey,
-        connected: true,
-        el: null,
-      };
-      activeSession = sessionId;
-      document.getElementById('welcome').classList.add('hidden');
-      term.focus();
-      fitAddon.fit();
-      renderSessionBar();
-      setStatus('Connected: ' + SERVERS[serverKey].name + ' (' + sessionId.slice(-8) + ')', 'connected');
-      highlightServerBtn(serverKey);
-
-      // Send initial resize
-      const dims = fitAddon.proposeDimensions();
-      if (dims) {
-        ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
-      }
-      break;
-
-    case 'output':
-      if (term && activeSession === sessionId) {
-        term.write(msg.data);
-      }
-      break;
-
-    case 'disconnected':
-      if (sessions[sessionId]) {
-        sessions[sessionId].connected = false;
-        updateSessionTab(sessionId);
-      }
-      if (activeSession === sessionId) {
-        term.writeln('\r\n\x1b[33m[Session ended]\x1b[0m');
-      }
-      break;
-
-    case 'error':
-      term.writeln('\r\n\x1b[31m[Error: ' + (msg.message || 'Unknown') + ']\x1b[0m');
-      setStatus('Error: ' + msg.message, 'disconnected');
-      break;
-
-    case 'pong':
-      break;
-  }
-}
-
-// Session management
 function renderSessionBar() {
   const bar = document.getElementById('sessionBar');
   bar.innerHTML = '';
   for (const sid in sessions) {
     const s = sessions[sid];
-    const info = SERVERS[s.serverKey] || {};
     const tab = document.createElement('div');
     tab.className = 'session-tab' + (sid === activeSession ? ' active' : '');
-    tab.innerHTML = `
-      <span class="tab-dot" style="background:${s.connected ? info.color : '#f44'}"></span>
-      ${info.name || s.serverKey}
-      <span class="tab-close" onclick="event.stopPropagation();closeSession('${sid}')">&times;</span>
-    `;
+    tab.innerHTML =
+      '<span class="tab-dot" style="background:' + (s.connected ? 'var(--green)' : '#f44') + '"></span>' +
+      s.user + '@' + s.host +
+      '<span class="tab-close" onclick="event.stopPropagation();closeSession(\'' + sid + '\')">&times;</span>';
     tab.onclick = () => switchSession(sid);
     bar.appendChild(tab);
   }
@@ -449,25 +376,16 @@ function switchSession(sid) {
   if (!sessions[sid]) return;
   activeSession = sid;
   const s = sessions[sid];
-
   document.getElementById('welcome').classList.add('hidden');
-  highlightServerBtn(s.serverKey);
+  document.getElementById('btnDisconnect').style.display = s.connected ? '' : 'none';
   renderSessionBar();
-
-  // Clear and reconnect terminal display
   term.clear();
   if (s.ws && s.ws.readyState === WebSocket.OPEN) {
-    // Session is alive — just refocus
     term.focus();
-    setStatus('Active: ' + (SERVERS[s.serverKey]?.name || s.serverKey), 'connected');
+    setStatus('Active: ' + s.user + '@' + s.host, 'connected');
   } else {
-    term.writeln('\r\n\x1b[33m[Session disconnected — click reconnect]\x1b[0m');
     setStatus('Disconnected', 'disconnected');
   }
-}
-
-function updateSessionTab(sid) {
-  renderSessionBar();
 }
 
 function closeSession(sid) {
@@ -480,57 +398,34 @@ function closeSession(sid) {
   }
   if (activeSession === sid) {
     activeSession = null;
-    // Switch to another session or show welcome
     const remaining = Object.keys(sessions);
-    if (remaining.length > 0) {
-      switchSession(remaining[remaining.length - 1]);
-    } else {
+    if (remaining.length > 0) switchSession(remaining[remaining.length - 1]);
+    else {
       document.getElementById('welcome').classList.remove('hidden');
-      term.clear();
-      setStatus('Select a server to connect', '');
-      highlightServerBtn(null);
+      if (term) term.clear();
+      document.getElementById('btnDisconnect').style.display = 'none';
+      setStatus('Ready', '');
     }
   }
   renderSessionBar();
 }
 
-function disconnectAll() {
-  for (const sid in sessions) {
-    if (sessions[sid].ws) {
-      sessions[sid].ws.send(JSON.stringify({ type: 'disconnect' }));
-      sessions[sid].ws.close();
-    }
-  }
-  sessions = {};
-  activeSession = null;
-  document.getElementById('welcome').classList.remove('hidden');
-  if (term) term.clear();
-  setStatus('All sessions disconnected', 'disconnected');
-  highlightServerBtn(null);
-  renderSessionBar();
+function disconnectActive() {
+  if (activeSession) closeSession(activeSession);
 }
 
-function newSession() {
-  // Reconnect to current server or show welcome
-  if (activeSession && sessions[activeSession]) {
-    connectServer(sessions[activeSession].serverKey);
-  }
-}
-
-// UI helpers
 function setStatus(text, state) {
   const el = document.getElementById('statusText');
-  const cls = state === 'connected' ? 'connected' : state === 'disconnected' ? 'disconnected' : '';
-  el.innerHTML = `<span class="${cls}">${text}</span>`;
+  el.innerHTML = '<span class="' + state + '">' + text + '</span>';
 }
 
-function highlightServerBtn(serverKey) {
-  document.querySelectorAll('.server-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.server === serverKey);
-  });
-}
+// Enter to connect
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !document.getElementById('welcome').classList.contains('hidden')) {
+    doConnect();
+  }
+});
 
-// Keepalive ping
 setInterval(() => {
   for (const sid in sessions) {
     const s = sessions[sid];
@@ -539,13 +434,6 @@ setInterval(() => {
     }
   }
 }, 30000);
-
-// Handle focus
-document.addEventListener('click', e => {
-  if (term && activeSession && !e.target.closest('button') && !e.target.closest('.session-tab')) {
-    term.focus();
-  }
-});
 </script>
 </body>
 </html>
