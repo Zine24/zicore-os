@@ -55,7 +55,6 @@ data/media/
 
 # Temp/debug files
 debug_test.py
-ssh_*.py
 fix_*.py
 test_*.py
 oem_config.json
