@@ -92,7 +92,10 @@ class ZICoreAgent:
         req = urllib.request.Request(
             f"{base_url}/api/chat",
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "ZICORE/5.0",
+            },
             method="POST",
         )
         try:
@@ -240,14 +243,35 @@ class ZICoreAgent:
             return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
 
         if intent == "simulate":
-            reply = self._ollama_chat(
-                "You are a simulation expert for aerospace systems. "
-                "Describe the simulation setup, parameters, and expected results. "
-                "Use ZICORE simulation modules when available.\n\n" + message
-            )
-            self.history.append({"role": "user", "content": message})
-            self.history.append({"role": "assistant", "content": reply})
-            return {"intent": intent, "outputs": {"text": reply, "zio_msg": reply}}
+            try:
+                from zicore.simulation_engine import SimulationEngine
+                engine = SimulationEngine()
+                result = engine.generate(message, resolution=512)
+                sim_id = result.get("simulation_id", "")
+                scene_url = f"/visualizer?sim={sim_id}"
+                entity_count = len(result.get("config", {}).get("entities", []))
+                body_name = result.get("config", {}).get("body", {}).get("name", "unknown")
+                terrain_name = result.get("config", {}).get("terrain", {}).get("preset", "unknown")
+                text = (
+                    f"[SIMULATION GENERATED] ID: {sim_id}\n"
+                    f"Body: {body_name} | Terrain: {terrain_name}\n"
+                    f"Entities: {entity_count}\n"
+                    f"Open Viewer: {scene_url}\n"
+                    f"Status: {result.get('status', 'unknown')}"
+                )
+                self.history.append({"role": "user", "content": message})
+                self.history.append({"role": "assistant", "content": text})
+                return {
+                    "intent": intent,
+                    "outputs": {
+                        "text": text,
+                        "zio_msg": text,
+                        "simulation": result,
+                    },
+                }
+            except Exception as e:
+                error_text = f"[SIMULATION ERROR] Failed to generate simulation: {e}"
+                return {"intent": intent, "outputs": {"text": error_text, "zio_msg": error_text}}
 
         if intent == "aerospace_design":
             aerospace_system = (

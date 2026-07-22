@@ -813,6 +813,7 @@ class SSOAuthMiddleware:
         "/api/simulate/", # mesh simulation
         "/v1/", # OpenAI-compatible ZIO endpoint for Open-WebUI
         "/api/admin/", # server admin console API
+        "/ollama/", # Ollama reverse proxy (VPS → local:11434)
     )
 
     def __init__(self, app):
@@ -2035,6 +2036,84 @@ async def get_system_stats():
     except Exception as e:
         return {"error": str(e)}
 
+
+# ─── SIMULATION ENGINE API ROUTES ──────────────────────────────────────────
+sim_engine = None
+def _get_sim_engine():
+    global sim_engine
+    if sim_engine is None:
+        from zicore.simulation_engine import SimulationEngine
+        sim_engine = SimulationEngine()
+    return sim_engine
+
+@app.post("/api/simulate/full")
+async def api_simulate_full(request: Request):
+    """Generate a simulation from a natural language prompt."""
+    try:
+        body = await request.json()
+        prompt = body.get("prompt", "")
+        resolution = body.get("resolution", 512)
+        if not prompt:
+            return {"status": "error", "error": "No prompt provided"}
+        engine = _get_sim_engine()
+        result = engine.generate(prompt, resolution=resolution, async_mode=False)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+@app.get("/api/simulate/scene/{sim_id}")
+async def api_simulate_scene(sim_id: str):
+    """Get the scene configuration for a simulation."""
+    try:
+        engine = _get_sim_engine()
+        scene = engine.get_scene(sim_id)
+        if scene is None:
+            return {"error": f"Simulation {sim_id} not found"}
+        return scene
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/simulate/status/{sim_id}")
+async def api_simulate_status(sim_id: str):
+    """Get the status of a simulation."""
+    try:
+        engine = _get_sim_engine()
+        status = engine.get_status(sim_id)
+        if status is None:
+            return {"error": f"Simulation {sim_id} not found"}
+        return {"status": "ok", "simulation": status}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/simulate/list")
+async def api_simulate_list():
+    """List all simulations."""
+    try:
+        engine = _get_sim_engine()
+        sims = engine.list_simulations()
+        return {"status": "ok", "simulations": sims}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/simulate/entities")
+async def api_simulate_entities():
+    """List available entity templates."""
+    try:
+        engine = _get_sim_engine()
+        entities = engine.get_available_entities()
+        return {"status": "ok", "entities": entities}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/simulate/bodies")
+async def api_simulate_bodies():
+    """List available celestial bodies."""
+    try:
+        engine = _get_sim_engine()
+        bodies = engine.get_available_bodies()
+        return {"status": "ok", "bodies": bodies}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/api/themes")
 async def get_themes():
@@ -8960,6 +9039,43 @@ app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css-fi
 app.mount("/data", StaticFiles(directory=str(FRONTEND_DIR / "data")), name="data-files")
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 app.mount("/output", StaticFiles(directory=str(OUTPUT_DIR)), name="output")
+
+
+# --- Ollama Reverse Proxy (VPS → local Ollama:11434) ---
+# Allows .68/Zichat to reach VPS Ollama via vps.zicore.space/ollama/
+
+import http.client
+
+OLLAMA_PROXY_URL = os.environ.get("OLLAMA_PROXY_URL", "http://localhost:11434")
+
+@app.api_route("/ollama/{path:path}", methods=["GET", "POST", "DELETE", "PUT"])
+async def ollama_proxy(path: str, request: Request):
+    """Reverse proxy: /ollama/* → localhost:11434/*"""
+    target = f"{OLLAMA_PROXY_URL}/{path}"
+    method = request.method
+    try:
+        body = await request.body()
+        from urllib.parse import urlparse
+        parsed = urlparse(target)
+        conn = http.client.HTTPConnection(parsed.hostname, parsed.port or 11434, timeout=120)
+        headers = {k: v for k, v in request.headers.items()
+                   if k.lower() not in ("host", "transfer-encoding")}
+        conn.request(method, parsed.path, body=body, headers=headers)
+        resp = conn.getresponse()
+        resp_body = resp.read()
+        ct = resp.getheader("content-type", "application/json")
+        return JSONResponse(
+            content=json.loads(resp_body) if "json" in ct else resp_body.decode("utf-8", errors="replace"),
+            status_code=resp.status,
+            media_type=ct,
+        )
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=502)
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 # Static mounts for new output types
 _AUDIO_DIR = OUTPUT_DIR / "audio"
