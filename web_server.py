@@ -4976,7 +4976,7 @@ async def admin_execute(request: Request):
     return {"result": result}
 
 
-@app.get("/api/admin")
+@app.get("/admin")
 async def admin_page():
     """Serve admin console HTML."""
     from fastapi.responses import FileResponse
