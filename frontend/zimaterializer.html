@@ -3,520 +3,1163 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZiMaterializer — 3D / Video / Audio</title>
+<title>ZICORE ZiVR — Real World + Generated 3D Engine</title>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
-:root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff5555;--yellow:#ffb86c;--bg:#04060c;--panel:rgba(8,12,20,0.98);--border:rgba(0,229,255,0.1)}
+:root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff5555;--yellow:#ffb86c;--bg:#04060c;--panel:rgba(8,12,20,0.98);--border:rgba(0,229,255,0.1);--border2:rgba(0,229,255,0.06)}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+body{display:flex;flex-direction:column}
 
-#topBar{height:34px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.08);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+/* TOP BAR */
+#topBar{height:34px;background:rgba(6,8,14,0.99);border-bottom:1px solid var(--border2);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;z-index:100}
 .logo{font-size:10px;letter-spacing:4px;font-weight:700}.logo b{color:var(--purple)}.logo em{color:var(--glow);font-style:normal}
-.sep{width:1px;height:16px;background:rgba(0,229,255,0.08)}
-.nav-btn{font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;text-decoration:none;transition:all .2s}
+.sep{width:1px;height:16px;background:var(--border2)}
+.nav-btn{font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid var(--border);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;text-decoration:none;transition:all .2s}
 .nav-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
 #clock{margin-left:auto;font-size:9px;color:#607080;letter-spacing:1px;font-variant-numeric:tabular-nums}
 
-/* MODULE TABS */
-#moduleTabs{display:flex;background:rgba(4,6,12,0.99);border-bottom:1px solid rgba(0,229,255,0.06);flex-shrink:0}
-.mod-tab{padding:6px 16px;font-size:8px;letter-spacing:2px;color:#607080;cursor:pointer;border-right:1px solid rgba(0,229,255,0.04);transition:all .2s;position:relative;display:flex;align-items:center;gap:6px}
-.mod-tab:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
-.mod-tab.active{color:var(--glow);background:rgba(0,229,255,0.06)}
-.mod-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--glow)}
-.mod-tab .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+/* MODE TABS */
+#modeTabs{display:flex;background:rgba(4,6,12,0.99);border-bottom:1px solid var(--border2);flex-shrink:0;z-index:90}
+.mode-tab{padding:8px 18px;font-size:8px;letter-spacing:2px;color:#607080;cursor:pointer;border-right:1px solid rgba(0,229,255,0.04);transition:all .2s;position:relative;display:flex;align-items:center;gap:6px}
+.mode-tab:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
+.mode-tab.active{color:var(--glow);background:rgba(0,229,255,0.06)}
+.mode-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--glow)}
+.mode-tab .icon{font-size:12px}
 
-/* MODULE PANELS */
-#moduleContent{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
-.module-view{flex:1;display:none;flex-direction:column;overflow:hidden}
-.module-view.active{display:flex}
+/* MAIN LAYOUT */
+#mainContent{flex:1;display:flex;overflow:hidden;position:relative}
 
-/* ─── 3D MATERIALIZER ──────────────────────────────── */
-.mat-layout{flex:1;display:flex;overflow:hidden}
-.mat-left{width:280px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
-.mat-center{flex:1;display:flex;flex-direction:column;position:relative;min-width:0}
-.mat-right{width:220px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+/* LEFT PANEL */
+#leftPanel{width:280px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:20;transition:width .2s}
+#leftPanel.collapsed{width:0;overflow:hidden}
+.panel-section{border-bottom:1px solid var(--border2)}
+.section-title{font-size:7px;letter-spacing:2px;color:var(--purple);text-transform:uppercase;padding:8px 12px 4px}
+.section-pad{padding:8px 12px}
 
-.section-title{font-size:7px;letter-spacing:2px;color:var(--purple);text-transform:uppercase;padding:8px 12px 4px;border-bottom:1px solid rgba(0,229,255,0.04)}
-.section-pad{padding:10px 12px}
+/* SEARCH */
+.search-box{display:flex;gap:4px}
+.search-input{flex:1;background:rgba(0,0,0,0.4);border:1px solid var(--border);color:#c8d0dc;padding:6px 10px;font-size:10px;font-family:inherit;outline:none}
+.search-input:focus{border-color:var(--glow)}
+.search-input::placeholder{color:#303848}
+.search-btn{padding:6px 12px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--glow);font-size:8px;letter-spacing:2px;cursor:pointer;font-family:inherit;transition:all .2s}
+.search-btn:hover{background:rgba(0,229,255,0.15)}
 
-.gen-prompt{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:8px 10px;font-size:11px;font-family:inherit;outline:none;resize:none;min-height:60px}
+/* WORLD PRESETS */
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.preset-card{padding:6px 8px;background:rgba(0,0,0,0.3);border:1px solid var(--border);cursor:pointer;transition:all .2s;text-align:center}
+.preset-card:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.05)}
+.preset-card.active{border-color:var(--glow);background:rgba(0,229,255,0.08)}
+.preset-card .icon{font-size:16px;display:block;margin-bottom:2px}
+.preset-card .name{font-size:7px;letter-spacing:1px;color:#607080}
+.preset-card.active .name{color:var(--glow)}
+
+/* GENERATE */
+.gen-prompt{width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);color:#c8d0dc;padding:8px 10px;font-size:10px;font-family:inherit;outline:none;resize:none;min-height:50px}
 .gen-prompt:focus{border-color:var(--glow)}
 .gen-prompt::placeholder{color:#303848}
-
-.param-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.param-row label{font-size:8px;letter-spacing:1px;color:#607080;width:55px;text-transform:uppercase;flex-shrink:0}
-.param-slider{flex:1;accent-color:var(--glow);height:3px}
-.param-val{font-size:9px;color:var(--glow);width:30px;text-align:right;font-variant-numeric:tabular-nums}
-
-.engine-select{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
-.engine-btn{padding:3px 8px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
+.engine-row{display:flex;gap:4px;margin-top:6px}
+.engine-btn{flex:1;padding:4px;border:1px solid var(--border);background:rgba(0,0,0,0.2);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center}
 .engine-btn.active{color:var(--glow);border-color:var(--glow);background:rgba(0,229,255,0.08)}
-
-.gen-btn{width:100%;padding:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s}
-.gen-btn:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
+.gen-btn{width:100%;padding:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:8px}
+.gen-btn:hover{background:rgba(0,229,255,0.15)}
 .gen-btn:disabled{opacity:0.4;cursor:not-allowed}
 
-#threeCanvas{width:100%;height:100%;background:#080c14}
-.viewport-controls{position:absolute;bottom:10px;left:10px;display:flex;gap:4px;z-index:10}
-.view-btn{padding:3px 8px;background:rgba(6,8,14,0.9);border:1px solid rgba(0,229,255,0.1);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit}
+/* ASSETS */
+.asset-list{max-height:150px;overflow-y:auto}
+.asset-item{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border2);cursor:pointer;font-size:8px}
+.asset-item:hover{background:rgba(0,229,255,0.03)}
+.asset-icon{width:20px;height:20px;background:rgba(0,229,255,0.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.asset-name{flex:1;color:#8090a0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.asset-size{color:#404858;font-size:7px}
 
-.mesh-info{font-size:9px;line-height:1.6}
-.mesh-info .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,229,255,0.03)}
-.mesh-info .label{color:#607080}.mesh-info .val{color:var(--glow)}
+/* VIEWPORT */
+#viewportContainer{flex:1;position:relative;overflow:hidden;background:#080c14}
+#cesiumContainer{width:100%;height:100%;display:none}
+#babylonCanvas{width:100%;height:100%;display:none;touch-action:none}
+.viewport-overlay{position:absolute;top:10px;right:10px;display:flex;gap:4px;z-index:30}
+.view-btn{padding:4px 10px;background:rgba(6,8,14,0.9);border:1px solid var(--border);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
+.view-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
+.view-btn.active{color:var(--glow);border-color:var(--glow)}
+.status-bar{position:absolute;bottom:0;left:0;right:0;height:24px;background:rgba(6,8,14,0.95);border-top:1px solid var(--border2);display:flex;align-items:center;padding:0 10px;gap:12px;font-size:7px;color:#506070;letter-spacing:1px;z-index:30}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
 
-/* ─── VIDEO EDITOR ─────────────────────────────────── */
-.vid-layout{flex:1;display:flex;flex-direction:column}
-.vid-top{flex:1;display:flex;overflow:hidden;min-height:0}
-.vid-preview{flex:1;display:flex;align-items:center;justify-content:center;background:#080c14;position:relative}
-.vid-preview canvas{max-width:100%;max-height:100%}
-.vid-tools{width:200px;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:10px}
+/* LOADING */
+#loadingOverlay{position:absolute;inset:0;background:rgba(4,6,12,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;transition:opacity .3s}
+#loadingOverlay.hidden{opacity:0;pointer-events:none}
+.loader-ring{width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--glow);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{margin-top:12px;font-size:9px;color:var(--glow);letter-spacing:3px}
 
-.vid-transport{height:36px;background:rgba(6,8,14,0.99);border-top:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
-.transport-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;font-size:14px;border-radius:50%;transition:all .2s}
-.transport-btn:hover{color:var(--glow);border-color:var(--glow)}
-.transport-btn.active{background:rgba(0,229,255,0.1);color:var(--glow)}
-.timecode{font-size:11px;color:var(--glow);font-variant-numeric:tabular-nums;letter-spacing:2px}
-
-.vid-timeline{height:150px;background:var(--panel);border-top:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
-.timeline-ruler{height:18px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04);position:relative;overflow:hidden}
-.timeline-tracks{flex:1;overflow-y:auto}
-.timeline-track{height:36px;border-bottom:1px solid rgba(0,229,255,0.03);position:relative;display:flex;align-items:center;padding-left:60px}
-.track-label{position:absolute;left:0;width:60px;font-size:7px;letter-spacing:1px;color:#607080;text-transform:uppercase;padding-left:6px}
-.track-clip{height:28px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.15);border-radius:3px;position:absolute;top:4px;min-width:40px;display:flex;align-items:center;padding:0 6px;font-size:7px;color:var(--glow)}
-
-/* ─── AUDIO ENGINE ─────────────────────────────────── */
-.aud-layout{flex:1;display:flex;flex-direction:column}
-.aud-top{height:100px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0}
-.aud-transport{display:flex;gap:6px;align-items:center}
-.aud-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;font-size:12px;border-radius:50%;transition:all .2s}
-.aud-btn:hover{color:var(--glow);border-color:var(--glow)}
-.aud-btn.rec{color:var(--red)}
-.aud-btn.rec.active{background:rgba(255,68,68,0.15);animation:pulse 1s infinite}
-.aud-bpm{display:flex;align-items:center;gap:4px;font-size:9px;color:#607080}
-.aud-bpm input{width:40px;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--glow);padding:2px 4px;font-size:10px;text-align:center;outline:none;font-family:inherit}
-
-.aud-main{flex:1;display:flex;overflow:hidden;min-height:0}
-.aud-sidebar{width:160px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
-.track-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;font-size:9px}
-.track-item:hover{background:rgba(0,229,255,0.03)}
-.track-item.active{background:rgba(0,229,255,0.06)}
-.track-color{width:8px;height:8px;border-radius:2px;flex-shrink:0}
-.track-name{flex:1;color:#c8d0dc}
-.track-controls{display:flex;gap:2px}
-.track-ctrl{font-size:7px;padding:1px 4px;color:#607080;cursor:pointer;border:1px solid transparent}
-.track-ctrl:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
-.track-ctrl.muted{color:var(--red)}
-
-.aud-timeline{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.aud-ruler{height:20px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04)}
-.aud-tracks{flex:1;overflow-y:auto}
-.aud-track-row{height:48px;border-bottom:1px solid rgba(0,229,255,0.03);position:relative}
-.aud-region{position:absolute;height:36px;top:6px;border-radius:3px;display:flex;align-items:center;padding:0 6px;font-size:7px;color:#fff;cursor:pointer;transition:opacity .2s}
-.aud-region:hover{opacity:0.8}
-
-.aud-mixer{height:80px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;overflow-x:auto}
-.mixer-channel{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:40px}
-.mixer-fader{width:4px;height:40px;background:rgba(0,229,255,0.08);border-radius:2px;position:relative}
-.mixer-fill{position:absolute;bottom:0;width:100%;background:var(--glow);border-radius:2px}
-.mixer-label{font-size:6px;color:#607080;letter-spacing:1px}
-.mixer-db{font-size:7px;color:var(--glow);font-variant-numeric:tabular-nums}
-
-.aud-effects{height:30px;background:rgba(6,8,14,0.99);border-top:1px solid rgba(0,229,255,0.04);display:flex;align-items:center;padding:0 12px;gap:4px;flex-shrink:0}
-.fx-btn{padding:2px 8px;border:1px solid rgba(0,229,255,0.08);background:rgba(0,229,255,0.02);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
-.fx-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
-.fx-btn.active{color:var(--glow);border-color:var(--glow);background:rgba(0,229,255,0.06)}
-
-/* SHARED */
-.prop-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.prop-row label{font-size:7px;letter-spacing:1px;color:#607080;width:50px;text-transform:uppercase;flex-shrink:0}
-.prop-input{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:3px 6px;font-size:9px;font-family:inherit;outline:none}
-.prop-input:focus{border-color:var(--glow)}
-.tbtn{padding:3px 8px;border:1px solid rgba(0,229,255,0.08);background:rgba(0,229,255,0.02);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
-.tbtn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
-.tbtn.primary{color:var(--glow);border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.06)}
-.empty-state{display:flex;align-items:center;justify-content:center;height:100%;color:#303848;font-size:10px;letter-spacing:2px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-body{display:flex;flex-direction:column}
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(8,12,20,0.98);border:1px solid rgba(0,229,255,0.15);border-radius:6px;padding:8px 20px;font-size:10px;color:var(--green);z-index:500;pointer-events:none}
 </style>
 </head>
 <body>
 
 <div id="topBar">
-  <div class="logo"><b>ZI</b><em>MATERIALIZER</em></div>
+  <div class="logo"><b>ZI</b><em>VR</em></div>
   <div class="sep"></div>
   <a class="nav-btn" href="/shell">SHELL</a>
   <a class="nav-btn" href="/console">CONSOLE</a>
   <a class="nav-btn" href="/zimail">MAIL</a>
+  <a class="nav-btn" href="/simulator">SIM</a>
   <a class="nav-btn" href="https://zicore.space">ZICORE</a>
   <div id="clock"></div>
 </div>
 
-<div id="moduleTabs">
-  <div class="mod-tab active" onclick="switchModule('3d')"><span class="dot"></span>3D GENERATOR</div>
-  <div class="mod-tab" onclick="switchModule('video')"><span class="dot"></span>VIDEO EDITOR</div>
-  <div class="mod-tab" onclick="switchModule('audio')"><span class="dot"></span>AUDIO ENGINE</div>
+<div id="modeTabs">
+  <div class="mode-tab active" onclick="switchMode('realworld')"><span class="icon">🌍</span> REAL WORLD</div>
+  <div class="mode-tab" onclick="switchMode('generated')"><span class="icon">🎮</span> GENERATED WORLD</div>
+  <div class="mode-tab" onclick="switchMode('space')"><span class="icon">🚀</span> SPACE</div>
 </div>
 
-<div id="moduleContent">
-  <!-- 3D MATERIALIZER -->
-  <div class="module-view active" id="mod-3d">
-    <div class="mat-layout">
-      <div class="mat-left">
-        <div class="section-title">Generate</div>
-        <div class="section-pad">
-          <textarea class="gen-prompt" id="genPrompt" placeholder="Describe what to generate...&#10;e.g. rocket nozzle, gear, bracket"></textarea>
-          <div style="margin-top:8px">
-            <div class="section-title">Engine</div>
-            <div class="engine-select" id="engineSelect">
-              <button class="engine-btn active" onclick="selectEngine(this,'trimesh')">Trimesh</button>
-              <button class="engine-btn" onclick="selectEngine(this,'openscad')">OpenSCAD</button>
-              <button class="engine-btn" onclick="selectEngine(this,'cadquery')">CadQuery</button>
-              <button class="engine-btn" onclick="selectEngine(this,'build123d')">Build123d</button>
-              <button class="engine-btn" onclick="selectEngine(this,'picogk')">PicoGK</button>
-            </div>
-          </div>
-          <div class="param-row"><label>Scale</label><input type="range" class="param-slider" id="paramScale" min="0.1" max="5" step="0.1" value="1"><span class="param-val" id="valScale">1.0</span></div>
-          <div class="param-row"><label>Detail</label><input type="range" class="param-slider" id="paramDetail" min="8" max="128" step="8" value="32"><span class="param-val" id="valDetail">32</span></div>
-          <div class="param-row"><label>Smooth</label><input type="range" class="param-slider" id="paramSmooth" min="0" max="5" step="1" value="0"><span class="param-val" id="valSmooth">0</span></div>
-          <button class="gen-btn" id="genBtn" onclick="generate3D()">GENERATE</button>
+<div id="mainContent">
+  <div id="leftPanel">
+    <!-- SEARCH (Real World) -->
+    <div class="panel-section" id="searchSection">
+      <div class="section-title">Location</div>
+      <div class="section-pad">
+        <div class="search-box">
+          <input class="search-input" id="locationSearch" placeholder="Search any city..." value="Zocalo, CDMX, Mexico" onkeydown="if(event.key==='Enter')flyToSearch()">
+          <button class="search-btn" onclick="flyToSearch()">GO</button>
         </div>
-        <div class="section-title">Output</div>
-        <div class="section-pad mesh-info" id="meshInfo">
-          <div class="row"><span class="label">Format</span><span class="val">--</span></div>
-          <div class="row"><span class="label">Triangles</span><span class="val">--</span></div>
-          <div class="row"><span class="label">Vertices</span><span class="val">--</span></div>
-          <div class="row"><span class="label">Volume</span><span class="val">--</span></div>
-          <div class="row"><span class="label">Watertight</span><span class="val">--</span></div>
-        </div>
-        <div class="section-title">History</div>
-        <div class="section-pad" id="genHistory" style="flex:1;overflow-y:auto"><div style="font-size:8px;color:#303848">No generations yet</div></div>
-      </div>
-      <div class="mat-center">
-        <canvas id="threeCanvas"></canvas>
-        <div class="viewport-controls">
-          <button class="view-btn" onclick="resetCamera()">RESET</button>
-          <button class="view-btn" onclick="toggleWireframe()">WIRE</button>
-          <button class="view-btn" onclick="toggleGrid()">GRID</button>
+        <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">
+          <button class="engine-btn" onclick="flyTo(19.4326,-99.1332,'CDMX')">CDMX</button>
+          <button class="engine-btn" onclick="flyTo(40.7488,-73.9854,'NYC')">NYC</button>
+          <button class="engine-btn" onclick="flyTo(51.5074,-0.1278,'London')">London</button>
+          <button class="engine-btn" onclick="flyTo(35.6762,139.6503,'Tokyo')">Tokyo</button>
+          <button class="engine-btn" onclick="flyTo(25.2048,55.2708,'Dubai')">Dubai</button>
+          <button class="engine-btn" onclick="flyTo(-33.8688,151.2093,'Sydney')">Sydney</button>
+          <button class="engine-btn" onclick="flyTo(48.8566,2.3522,'Paris')">Paris</button>
+          <button class="engine-btn" onclick="flyTo(34.0522,-118.2437,'LA')">LA</button>
         </div>
       </div>
-      <div class="mat-right">
-        <div class="section-title">Properties</div>
-        <div class="section-pad">
-          <div class="prop-row"><label>Name</label><input class="prop-input" id="meshName" value="--"></div>
-          <div class="prop-row"><label>Color</label><input class="prop-input" type="color" id="meshColor" value="#00e5ff" onchange="setMeshColor(this.value)"></div>
+    </div>
+
+    <!-- WORLD PRESETS (Generated) -->
+    <div class="panel-section" id="presetSection" style="display:none">
+      <div class="section-title">World Presets</div>
+      <div class="section-pad">
+        <div class="preset-grid">
+          <div class="preset-card" onclick="loadPreset('city')"><span class="icon">🏙️</span><span class="name">CYBER CITY</span></div>
+          <div class="preset-card" onclick="loadPreset('forest')"><span class="icon">🌲</span><span class="name">ANCIENT FOREST</span></div>
+          <div class="preset-card" onclick="loadPreset('ocean')"><span class="icon">🌊</span><span class="name">DEEP OCEAN</span></div>
+          <div class="preset-card" onclick="loadPreset('space_station')"><span class="icon">🛸</span><span class="name">SPACE STATION</span></div>
+          <div class="preset-card" onclick="loadPreset('medieval')"><span class="icon">🏰</span><span class="name">MEDIEVAL</span></div>
+          <div class="preset-card" onclick="loadPreset('cyberpunk')"><span class="icon">🌃</span><span class="name">NEON TOKYO</span></div>
+          <div class="preset-card" onclick="loadPreset('underwater')"><span class="icon">🐠</span><span class="name">ABYSSAL DEPTHS</span></div>
+          <div class="preset-card" onclick="loadPreset('lunar')"><span class="icon">🌙</span><span class="name">LUNAR COLONY</span></div>
+          <div class="preset-card" onclick="loadPreset('fantasy')"><span class="icon">✨</span><span class="name">FLOATING ISLANDS</span></div>
         </div>
-        <div class="section-title">Simulation</div>
-        <div class="section-pad" style="font-size:8px;color:#607080">
-          <label style="display:flex;gap:4px;margin-bottom:4px;cursor:pointer"><input type="checkbox" class="sim-check" value="structural"> Structural Analysis</label>
-          <label style="display:flex;gap:4px;margin-bottom:4px;cursor:pointer"><input type="checkbox" class="sim-check" value="aerodynamic"> Aerodynamics</label>
-          <label style="display:flex;gap:4px;margin-bottom:4px;cursor:pointer"><input type="checkbox" class="sim-check" value="mass"> Mass Properties</label>
-          <button class="tbtn" style="width:100%;margin-top:6px" onclick="runSimulation()">RUN SIMULATION</button>
-          <div id="simResults" style="margin-top:8px;color:var(--green);font-size:9px"></div>
+      </div>
+    </div>
+
+    <!-- GENERATE 3D -->
+    <div class="panel-section" id="generateSection">
+      <div class="section-title">Generate 3D Asset</div>
+      <div class="section-pad">
+        <textarea class="gen-prompt" id="genPrompt" placeholder="Describe a 3D object...&#10;e.g. futuristic drone, medieval sword, neon sign"></textarea>
+        <div class="engine-row">
+          <button class="engine-btn active" onclick="selectEngine(this,'tripo')">Tripo3D</button>
+          <button class="engine-btn" onclick="selectEngine(this,'stability')">Stability</button>
+          <button class="engine-btn" onclick="selectEngine(this,'builtin')">Built-in</button>
+        </div>
+        <button class="gen-btn" id="genBtn" onclick="generateAsset()">GENERATE</button>
+        <div id="genStatus" style="margin-top:6px;font-size:8px;color:#607080"></div>
+      </div>
+    </div>
+
+    <!-- ASSETS -->
+    <div class="panel-section" id="assetsSection" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="section-title">Scene Objects</div>
+      <div class="section-pad" style="flex:1;overflow-y:auto">
+        <div class="asset-list" id="assetList">
+          <div class="asset-item"><div class="asset-icon">📦</div><span class="asset-name">No objects yet</span></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- VIDEO EDITOR -->
-  <div class="module-view" id="mod-video">
-    <div class="vid-layout">
-      <div class="vid-top">
-        <div class="vid-preview"><canvas id="vidCanvas" width="640" height="360"></canvas></div>
-        <div class="vid-tools">
-          <div class="section-title">Properties</div>
-          <div style="padding:8px">
-            <div class="prop-row"><label>Width</label><input class="prop-input" value="1920"></div>
-            <div class="prop-row"><label>Height</label><input class="prop-input" value="1080"></div>
-            <div class="prop-row"><label>FPS</label><input class="prop-input" value="30"></div>
-          </div>
-          <div class="section-title">Effects</div>
-          <div style="padding:8px;display:flex;flex-wrap:wrap;gap:4px">
-            <button class="tbtn">Blur</button><button class="tbtn">Sharpen</button>
-            <button class="tbtn">Brightness</button><button class="tbtn">Contrast</button>
-            <button class="tbtn">Saturation</button><button class="tbtn">Vignette</button>
-          </div>
-          <div class="section-title">Transitions</div>
-          <div style="padding:8px;display:flex;flex-wrap:wrap;gap:4px">
-            <button class="tbtn">Cut</button><button class="tbtn">Dissolve</button>
-            <button class="tbtn">Wipe</button><button class="tbtn">Slide</button>
-            <button class="tbtn">Fade</button>
-          </div>
-        </div>
-      </div>
-      <div class="vid-transport">
-        <button class="transport-btn" onclick="vidAction('rew')">&#9198;</button>
-        <button class="transport-btn" onclick="vidAction('play')" id="vidPlayBtn">&#9654;</button>
-        <button class="transport-btn" onclick="vidAction('stop')">&#9632;</button>
-        <button class="transport-btn" onclick="vidAction('fwd')">&#9197;</button>
-        <span class="timecode" id="vidTimecode">00:00:00:00</span>
-      </div>
-      <div class="vid-timeline">
-        <div class="timeline-ruler"></div>
-        <div class="timeline-tracks">
-          <div class="timeline-track"><span class="track-label">Video</span><div class="track-clip" style="left:60px;width:300px">clip_01.mp4</div></div>
-          <div class="timeline-track"><span class="track-label">Audio</span><div class="track-clip" style="left:60px;width:250px;background:rgba(124,77,255,0.1);border-color:rgba(124,77,255,0.2);color:var(--purple)">audio_01.wav</div></div>
-          <div class="timeline-track"><span class="track-label">Text</span></div>
-        </div>
-      </div>
+  <!-- VIEWPORT -->
+  <div id="viewportContainer">
+    <div id="cesiumContainer"></div>
+    <canvas id="babylonCanvas"></canvas>
+    <div class="viewport-overlay">
+      <button class="view-btn" id="btnOrbit" onclick="setCameraMode('orbit')">ORBIT</button>
+      <button class="view-btn" id="btnWalk" onclick="setCameraMode('walk')">WALK</button>
+      <button class="view-btn" id="btnFly" onclick="setCameraMode('fly')">FLY</button>
+      <button class="view-btn" onclick="takeScreenshot()">📷</button>
+      <button class="view-btn" id="btnRecord" onclick="toggleRecord()">⏺ REC</button>
     </div>
-  </div>
-
-  <!-- AUDIO ENGINE -->
-  <div class="module-view" id="mod-audio">
-    <div class="aud-layout">
-      <div class="aud-top">
-        <div class="aud-transport">
-          <button class="aud-btn" onclick="audAction('rew')">&#9198;</button>
-          <button class="aud-btn" onclick="audAction('play')" id="audPlayBtn">&#9654;</button>
-          <button class="aud-btn rec" id="audRecBtn" onclick="audAction('rec')">&#9679;</button>
-          <button class="aud-btn" onclick="audAction('stop')">&#9632;</button>
-        </div>
-        <span class="timecode" id="audTimecode">00:00:00</span>
-        <div class="aud-bpm">BPM <input type="number" id="audBpm" value="120" min="40" max="300"></div>
-        <div class="aud-bpm"><input type="checkbox" id="audLoop" style="accent-color:var(--glow)"> LOOP</div>
-        <div style="margin-left:auto;display:flex;gap:4px">
-          <button class="tbtn" onclick="addAudTrack()">+ TRACK</button>
-          <button class="tbtn" onclick="exportAudio()">EXPORT</button>
-        </div>
-      </div>
-      <div class="aud-main">
-        <div class="aud-sidebar" id="audTrackList"></div>
-        <div class="aud-timeline">
-          <div class="aud-ruler"></div>
-          <div class="aud-tracks" id="audTracks"></div>
-        </div>
-      </div>
-      <div class="aud-mixer" id="audMixer"></div>
-      <div class="aud-effects">
-        <span style="font-size:7px;color:#607080;letter-spacing:2px;margin-right:6px">FX:</span>
-        <button class="fx-btn">Reverb</button><button class="fx-btn">Delay</button>
-        <button class="fx-btn">EQ</button><button class="fx-btn">Compressor</button>
-        <button class="fx-btn">Limiter</button><button class="fx-btn">Chorus</button>
-        <button class="fx-btn">Filter</button>
-      </div>
+    <div class="status-bar">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+      <span style="margin-left:auto" id="statusCoords">19.4326, -99.1332</span>
+      <span id="statusFPS">-- FPS</span>
+    </div>
+    <div id="loadingOverlay">
+      <div class="loader-ring"></div>
+      <div class="loader-text" id="loaderText">INITIALIZING ENGINE</div>
     </div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/loaders/babylonjs-loaders.min.js"></script>
+<script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs-materials.min.js"></script>
 <script>
-setInterval(() => { document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC'; }, 1000);
+// ─── CONFIG ────────────────────────────────────────────
+const ZIVR_CONFIG = {
+  google_maps_key: '',
+  default_location: { lat: 19.4326, lng: -99.1332, name: 'Zocalo, CDMX' },
+  world_presets: {}
+};
+let currentMode = 'realworld';
+let selectedEngine = 'tripo';
+let cesiumViewer = null;
+let babylonEngine = null;
+let babylonScene = null;
+let sceneObjects = [];
+let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
 
-// ─── Module Switching ─────────────────────────────────
-function switchModule(mod) {
-  document.querySelectorAll('.module-view').forEach(v => v.className = 'module-view');
-  document.getElementById('mod-' + mod).className = 'module-view active';
-  document.querySelectorAll('.tab-mod').forEach(t => t.className = 'tab-mod');
-  document.querySelectorAll('.mod-tab').forEach(t => t.className = 'mod-tab');
-  const idx = {'3d':0,'video':1,'audio':2}[mod];
-  document.querySelectorAll('.mod-tab')[idx].className = 'mod-tab active';
-  if (mod === '3d') initThree();
+// ─── INIT ──────────────────────────────────────────────
+async function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  try {
+    const r = await fetch('/api/zivr/config');
+    const cfg = await r.json();
+    Object.assign(ZIVR_CONFIG, cfg);
+  } catch(e) { console.warn('Failed to load ZiVR config:', e); }
+  initCesium();
+  initBabylon();
+  hideLoading('Engines ready');
 }
 
-// ─── 3D Materializer ──────────────────────────────────
-let scene, camera, renderer, currentMesh, gridHelper, wireframeMode = false;
-let selectedEngine = 'trimesh';
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC';
+}
 
+function hideLoading(msg) {
+  document.getElementById('loaderText').textContent = msg || 'READY';
+  setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 500);
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─── MODE SWITCHING ────────────────────────────────────
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach((t,i) => {
+    t.className = 'mode-tab' + (['realworld','generated','space'][i] === mode ? ' active' : '');
+  });
+  const cesium = document.getElementById('cesiumContainer');
+  const babylon = document.getElementById('babylonCanvas');
+  const search = document.getElementById('searchSection');
+  const presets = document.getElementById('presetSection');
+
+  if (mode === 'realworld') {
+    cesium.style.display = 'block';
+    babylon.style.display = 'none';
+    search.style.display = '';
+    presets.style.display = 'none';
+    if (cesiumViewer) cesiumViewer.resize();
+  } else if (mode === 'generated') {
+    cesium.style.display = 'none';
+    babylon.style.display = 'block';
+    search.style.display = 'none';
+    presets.style.display = '';
+    if (babylonEngine) babylonEngine.resize();
+  } else if (mode === 'space') {
+    window.location.href = '/simulator';
+    return;
+  }
+}
+
+// ─── CESIUM (REAL WORLD) ───────────────────────────────
+function initCesium() {
+  const key = ZIVR_CONFIG.google_maps_key;
+  if (!key) {
+    document.getElementById('statusText').textContent = 'No Google Maps key';
+    return;
+  }
+  Cesium.Ion.defaultAccessToken = null;
+  cesiumViewer = new Cesium.Viewer('cesiumContainer', {
+    baseLayerPicker: false,
+    geocoder: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    animation: false,
+    timeline: false,
+    fullscreenButton: false,
+    vrButton: false,
+    selectionIndicator: false,
+    infoBox: false,
+    requestRenderMode: false,
+    maximumRenderTimeChange: Infinity,
+    mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL,
+  });
+
+  const osmLayer = cesiumViewer.imageryLayers.addImageryProvider(
+    new Cesium.OpenStreetMapImageryProvider({
+      url: 'https://tile.openstreetmap.org/',
+    })
+  );
+  osmLayer.alpha = 0.3;
+
+  const loc = ZIVR_CONFIG.default_location;
+  cesiumViewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(loc.lng, loc.lat, 2000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-45),
+      roll: 0,
+    },
+    duration: 2,
+  });
+
+  cesiumViewer.scene.globe.enableLighting = true;
+  cesiumViewer.scene.fog.enabled = true;
+  cesiumViewer.scene.skyAtmosphere.show = true;
+
+  // Google Photorealistic 3D Tiles
+  loadGoogle3DTiles(key);
+
+  cesiumViewer.camera.changed.addEventListener(() => {
+    const pos = cesiumViewer.camera.positionCartographic;
+    if (pos) {
+      const lat = Cesium.Math.toDegrees(pos.latitude).toFixed(4);
+      const lng = Cesium.Math.toDegrees(pos.longitude).toFixed(4);
+      document.getElementById('statusCoords').textContent = `${lat}, ${lng}`;
+    }
+  });
+
+  document.getElementById('statusText').textContent = 'CesiumJS + Google 3D Tiles';
+}
+
+function loadGoogle3DTiles(apiKey) {
+  try {
+    const tileset = cesiumViewer.scene.primitives.add(
+      new Cesium.Cesium3DTileset({
+        url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`,
+        showCreditsOnScreen: true,
+        maximumScreenSpaceError: 16,
+        dynamicScreenSpaceError: true,
+        dynamicScreenSpaceErrorDensity: 0.00278,
+        dynamicScreenSpaceErrorFactor: 4,
+        preferLeaves: true,
+        skipLevelOfDetail: false,
+      })
+    );
+    cesiumViewer.scene.globe.show = false;
+    document.getElementById('statusText').textContent = 'Google Photorealistic 3D Tiles loaded';
+  } catch(e) {
+    console.warn('Google 3D Tiles failed, using fallback:', e);
+    document.getElementById('statusText').textContent = '3D Tiles failed — using satellite view';
+  }
+}
+
+function flyTo(lat, lng, name) {
+  if (!cesiumViewer) return;
+  cesiumViewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 1500),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-60),
+      roll: 0,
+    },
+    duration: 2.5,
+  });
+  document.getElementById('locationSearch').value = name;
+  document.getElementById('statusCoords').textContent = `${lat}, ${lng}`;
+  toast(`Flying to ${name}`);
+}
+
+function flyToSearch() {
+  const query = document.getElementById('locationSearch').value.trim();
+  if (!query) return;
+  const cities = {
+    'zocalo': [19.4326, -99.1332, 'Zocalo, CDMX'],
+    'cdmx': [19.4326, -99.1332, 'CDMX'],
+    'mexico': [19.4326, -99.1332, 'Mexico City'],
+    'nyc': [40.7488, -73.9854, 'New York City'],
+    'new york': [40.7488, -73.9854, 'NYC'],
+    'london': [51.5074, -0.1278, 'London'],
+    'tokyo': [35.6762, 139.6503, 'Tokyo'],
+    'dubai': [25.2048, 55.2708, 'Dubai'],
+    'sydney': [-33.8688, 151.2093, 'Sydney'],
+    'paris': [48.8566, 2.3522, 'Paris'],
+    'la': [34.0522, -118.2437, 'Los Angeles'],
+    'rome': [41.9028, 12.4964, 'Rome'],
+    'berlin': [52.52, 13.405, 'Berlin'],
+    'cairo': [30.0444, 31.2357, 'Cairo'],
+    'rio': [-22.9068, -43.1729, 'Rio de Janeiro'],
+    'bangkok': [13.7563, 100.5018, 'Bangkok'],
+    'singapore': [1.3521, 103.8198, 'Singapore'],
+    'moscow': [55.7558, 37.6173, 'Moscow'],
+    'beijing': [39.9042, 116.4074, 'Beijing'],
+    'mumbai': [19.076, 72.8777, 'Mumbai'],
+    'toronto': [43.6532, -79.3832, 'Toronto'],
+    'san francisco': [37.7749, -122.4194, 'San Francisco'],
+    'miami': [25.7617, -80.1918, 'Miami'],
+    'cancun': [21.1619, -86.8515, 'Cancun'],
+    'guadalajara': [20.6597, -103.3496, 'Guadalajara'],
+    'monterrey': [25.6866, -100.3161, 'Monterrey'],
+  };
+  const q = query.toLowerCase();
+  for (const [key, coords] of Object.entries(cities)) {
+    if (q.includes(key)) {
+      flyTo(coords[0], coords[1], coords[2]);
+      return;
+    }
+  }
+  // Try geocoding via Nominatim
+  geocodeAndFly(query);
+}
+
+async function geocodeAndFly(query) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, {
+      headers: { 'User-Agent': 'ZICORE-ZiVR/5.0' }
+    });
+    const data = await r.json();
+    if (data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      flyTo(lat, lng, query);
+    } else {
+      toast('Location not found');
+    }
+  } catch(e) {
+    toast('Geocoding failed');
+  }
+}
+
+// ─── BABYLON.JS (GENERATED WORLDS) ────────────────────
+function initBabylon() {
+  const canvas = document.getElementById('babylonCanvas');
+  babylonEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+  babylonScene = createScene(babylonEngine, canvas);
+  babylonEngine.runRenderLoop(() => {
+    if (currentMode === 'generated' && babylonScene) babylonScene.render();
+  });
+  window.addEventListener('resize', () => {
+    if (babylonEngine) babylonEngine.resize();
+  });
+  let frames = 0;
+  setInterval(() => {
+    document.getElementById('statusFPS').textContent = babylonEngine ? babylonEngine.getFps().toFixed(0) + ' FPS' : '-- FPS';
+  }, 1000);
+}
+
+function createScene(engine, canvas) {
+  const scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.02, 0.025, 0.04, 1);
+  scene.ambientColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+  scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+  scene.fogDensity = 0.005;
+  scene.fogColor = new BABYLON.Color3(0.02, 0.025, 0.04);
+
+  // Camera
+  const camera = new BABYLON.ArcRotateCamera('cam', -Math.PI / 4, Math.PI / 3, 15, BABYLON.Vector3.Zero(), scene);
+  camera.attachControl(canvas, true);
+  camera.lowerRadiusLimit = 1;
+  camera.upperRadiusLimit = 500;
+  camera.wheelPrecision = 10;
+  camera.panningSensibility = 100;
+
+  // Lighting
+  const hemi = new BABYLON.HemisphericLight('hemi', new BABYLON.Vector3(0, 1, 0), scene);
+  hemi.intensity = 0.6;
+  hemi.diffuse = new BABYLON.Color3(0.8, 0.85, 1);
+  hemi.groundColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+
+  const dir = new BABYLON.DirectionalLight('dir', new BABYLON.Vector3(-1, -2, 1), scene);
+  dir.position = new BABYLON.Vector3(10, 20, -10);
+  dir.intensity = 0.8;
+
+  // Shadows
+  const shadowGen = new BABYLON.ShadowGenerator(1024, dir);
+  shadowGen.useBlurExponentialShadowMap = true;
+  shadowGen.blurKernel = 32;
+  scene._shadowGen = shadowGen;
+
+  // Ground
+  const ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 100, height: 100, subdivisions: 32 }, scene);
+  const groundMat = new BABYLON.PBRMaterial('groundMat', scene);
+  groundMat.albedoColor = new BABYLON.Color3(0.15, 0.18, 0.22);
+  groundMat.metallic = 0.1;
+  groundMat.roughness = 0.9;
+  ground.material = groundMat;
+  ground.receiveShadows = true;
+
+  // Grid overlay
+  const gridMat = new BABYLON.GridMaterial('grid', scene);
+  gridMat.majorUnitFrequency = 5;
+  gridMat.minorUnitVisibility = 0.3;
+  gridMat.gridRatio = 1;
+  gridMat.opacity = 0.4;
+  gridMat.mainColor = new BABYLON.Color3(0, 0.9, 1);
+  gridMat.lineColor = new BABYLON.Color3(0, 0.9, 1);
+  gridMat.backFaceCulling = false;
+  const gridPlane = BABYLON.MeshBuilder.CreateGround('grid', { width: 100, height: 100 }, scene);
+  gridPlane.position.y = 0.01;
+  gridPlane.material = gridMat;
+
+  // Skybox
+  const skybox = BABYLON.MeshBuilder.CreateBox('skybox', { size: 200 }, scene);
+  const skyMat = new BABYLON.StandardMaterial('skyMat', scene);
+  skyMat.backFaceCulling = false;
+  skyMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+  skyMat.specularColor = new BABYLON.Color3(0, 0, 0);
+  const skyColor = new BABYLON.Color3(0.02, 0.03, 0.06);
+  skyMat.emissiveColor = skyColor;
+  skybox.material = skyMat;
+  skybox.infiniteDistance = true;
+
+  scene._ground = ground;
+  scene._skybox = skybox;
+  scene._camera = camera;
+  return scene;
+}
+
+// ─── WORLD PRESETS ─────────────────────────────────────
+const PRESET_CONFIGS = {
+  city: {
+    clearColor: [0.01, 0.01, 0.03],
+    fogDensity: 0.008,
+    fogColor: [0.01, 0.01, 0.03],
+    groundColor: [0.08, 0.08, 0.1],
+    skyColor: [0.01, 0.01, 0.03],
+    hemiIntensity: 0.4,
+    dirIntensity: 1.0,
+    dirColor: [0.6, 0.7, 1.0],
+    objects: 'city',
+  },
+  forest: {
+    clearColor: [0.02, 0.05, 0.02],
+    fogDensity: 0.015,
+    fogColor: [0.02, 0.05, 0.02],
+    groundColor: [0.08, 0.15, 0.06],
+    skyColor: [0.05, 0.1, 0.05],
+    hemiIntensity: 0.5,
+    dirIntensity: 0.6,
+    dirColor: [0.9, 1.0, 0.7],
+    objects: 'forest',
+  },
+  ocean: {
+    clearColor: [0.0, 0.03, 0.08],
+    fogDensity: 0.02,
+    fogColor: [0.0, 0.03, 0.08],
+    groundColor: [0.0, 0.05, 0.12],
+    skyColor: [0.0, 0.03, 0.08],
+    hemiIntensity: 0.3,
+    dirIntensity: 0.5,
+    dirColor: [0.2, 0.5, 0.8],
+    objects: 'ocean',
+  },
+  space_station: {
+    clearColor: [0.01, 0.01, 0.02],
+    fogDensity: 0.001,
+    fogColor: [0.01, 0.01, 0.02],
+    groundColor: [0.12, 0.12, 0.15],
+    skyColor: [0.0, 0.0, 0.01],
+    hemiIntensity: 0.3,
+    dirIntensity: 0.8,
+    dirColor: [0.7, 0.8, 1.0],
+    objects: 'space_station',
+  },
+  medieval: {
+    clearColor: [0.06, 0.03, 0.01],
+    fogDensity: 0.01,
+    fogColor: [0.06, 0.03, 0.01],
+    groundColor: [0.15, 0.12, 0.08],
+    skyColor: [0.08, 0.04, 0.02],
+    hemiIntensity: 0.5,
+    dirIntensity: 0.7,
+    dirColor: [1.0, 0.8, 0.5],
+    objects: 'medieval',
+  },
+  cyberpunk: {
+    clearColor: [0.01, 0.005, 0.03],
+    fogDensity: 0.012,
+    fogColor: [0.01, 0.005, 0.03],
+    groundColor: [0.05, 0.02, 0.08],
+    skyColor: [0.02, 0.005, 0.04],
+    hemiIntensity: 0.3,
+    dirIntensity: 0.6,
+    dirColor: [0.8, 0.3, 1.0],
+    objects: 'cyberpunk',
+  },
+  underwater: {
+    clearColor: [0.0, 0.02, 0.06],
+    fogDensity: 0.025,
+    fogColor: [0.0, 0.02, 0.06],
+    groundColor: [0.02, 0.06, 0.1],
+    skyColor: [0.0, 0.02, 0.06],
+    hemiIntensity: 0.2,
+    dirIntensity: 0.3,
+    dirColor: [0.1, 0.4, 0.7],
+    objects: 'underwater',
+  },
+  lunar: {
+    clearColor: [0.01, 0.01, 0.015],
+    fogDensity: 0.001,
+    fogColor: [0.01, 0.01, 0.015],
+    groundColor: [0.15, 0.14, 0.13],
+    skyColor: [0.0, 0.0, 0.0],
+    hemiIntensity: 0.15,
+    dirIntensity: 1.2,
+    dirColor: [1.0, 1.0, 0.95],
+    objects: 'lunar',
+  },
+  fantasy: {
+    clearColor: [0.03, 0.01, 0.06],
+    fogDensity: 0.008,
+    fogColor: [0.03, 0.01, 0.06],
+    groundColor: [0.1, 0.08, 0.15],
+    skyColor: [0.04, 0.02, 0.08],
+    hemiIntensity: 0.5,
+    dirIntensity: 0.7,
+    dirColor: [0.8, 0.6, 1.0],
+    objects: 'fantasy',
+  },
+};
+
+function loadPreset(presetName) {
+  if (!babylonScene) return;
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  const cfg = PRESET_CONFIGS[presetName];
+  if (!cfg) return;
+
+  const s = babylonScene;
+  s.clearColor = new BABYLON.Color4(...cfg.clearColor, 1);
+  s.fogDensity = cfg.fogDensity;
+  s.fogColor = new BABYLON.Color3(...cfg.fogColor);
+  if (s._ground) s._ground.material.albedoColor = new BABYLON.Color3(...cfg.groundColor);
+  if (s._skybox) s._skybox.material.emissiveColor = new BABYLON.Color3(...cfg.skyColor);
+
+  const hemi = s.lights.find(l => l.name === 'hemi');
+  if (hemi) {
+    hemi.intensity = cfg.hemiIntensity;
+    hemi.diffuse = new BABYLON.Color3(...cfg.dirColor);
+  }
+  const dir = s.lights.find(l => l.name === 'dir');
+  if (dir) {
+    dir.intensity = cfg.dirIntensity;
+    dir.diffuse = new BABYLON.Color3(...cfg.dirColor);
+  }
+
+  // Clear old objects
+  sceneObjects.forEach(obj => { if (obj.mesh) obj.mesh.dispose(); });
+  sceneObjects = [];
+
+  // Generate preset objects
+  generatePresetObjects(cfg.objects);
+  switchMode('generated');
+  toast(`Loaded: ${presetName.replace('_',' ')}`);
+}
+
+function generatePresetObjects(worldType) {
+  const s = babylonScene;
+  if (!s) return;
+  const configs = {
+    city: () => {
+      for (let i = 0; i < 8; i++) {
+        const h = 2 + Math.random() * 8;
+        const b = BABYLON.MeshBuilder.CreateBox('bldg_' + i, { height: h, width: 1 + Math.random() * 2, depth: 1 + Math.random() * 2 }, s);
+        b.position = new BABYLON.Vector3((Math.random()-0.5)*20, h/2, (Math.random()-0.5)*20);
+        const m = new BABYLON.PBRMaterial('bldgMat_' + i, s);
+        m.albedoColor = new BABYLON.Color3(0.1, 0.12, 0.18);
+        m.metallic = 0.7; m.roughness = 0.3;
+        m.emissiveColor = new BABYLON.Color3(0.0, 0.02, 0.05);
+        b.material = m;
+        sceneObjects.push({ name: 'Building ' + (i+1), mesh: b, type: 'building' });
+        s._shadowGen.addShadowCaster(b);
+      }
+      // Neon lights
+      const neonColors = [[0,0.9,1],[0.5,0,1],[1,0,0.5]];
+      for (let i = 0; i < 5; i++) {
+        const light = new BABYLON.PointLight('neon_' + i, new BABYLON.Vector3((Math.random()-0.5)*15, 2+Math.random()*5, (Math.random()-0.5)*15), s);
+        const c = neonColors[i % neonColors.length];
+        light.diffuse = new BABYLON.Color3(...c);
+        light.intensity = 0.5;
+        light.range = 10;
+        const sp = BABYLON.MeshBuilder.CreateSphere('neonSphere_' + i, { diameter: 0.15 }, s);
+        sp.position = light.position.clone();
+        const nm = new BABYLON.StandardMaterial('neonMat_' + i, s);
+        nm.emissiveColor = new BABYLON.Color3(...c);
+        sp.material = nm;
+        sceneObjects.push({ name: 'Neon Light ' + (i+1), mesh: sp, type: 'light' });
+      }
+    },
+    forest: () => {
+      for (let i = 0; i < 20; i++) {
+        const trunk = BABYLON.MeshBuilder.CreateCylinder('trunk_' + i, { height: 2+Math.random()*2, diameter: 0.3 }, s);
+        trunk.position = new BABYLON.Vector3((Math.random()-0.5)*30, 1, (Math.random()-0.5)*30);
+        const tm = new BABYLON.PBRMaterial('trunkMat_' + i, s);
+        tm.albedoColor = new BABYLON.Color3(0.25, 0.15, 0.08);
+        tm.roughness = 0.95;
+        trunk.material = tm;
+        const leaves = BABYLON.MeshBuilder.CreateSphere('leaves_' + i, { diameter: 1.5+Math.random() }, s);
+        leaves.position = trunk.position.clone();
+        leaves.position.y += 2;
+        const lm = new BABYLON.PBRMaterial('leavesMat_' + i, s);
+        lm.albedoColor = new BABYLON.Color3(0.05, 0.2+Math.random()*0.1, 0.03);
+        lm.roughness = 0.9;
+        leaves.material = lm;
+        sceneObjects.push({ name: 'Tree ' + (i+1), mesh: trunk, type: 'tree' });
+        s._shadowGen.addShadowCaster(trunk);
+        s._shadowGen.addShadowCaster(leaves);
+      }
+    },
+    ocean: () => {
+      const water = BABYLON.MeshBuilder.CreateGround('water', { width: 80, height: 80, subdivisions: 64 }, s);
+      const wm = new BABYLON.PBRMaterial('waterMat', s);
+      wm.albedoColor = new BABYLON.Color3(0.0, 0.08, 0.2);
+      wm.metallic = 0.9; wm.roughness = 0.05;
+      wm.alpha = 0.85;
+      water.material = wm;
+      sceneObjects.push({ name: 'Ocean Surface', mesh: water, type: 'water' });
+      for (let i = 0; i < 6; i++) {
+        const coral = BABYLON.MeshBuilder.CreateSphere('coral_' + i, { diameter: 0.5+Math.random(), segments: 8 }, s);
+        coral.position = new BABYLON.Vector3((Math.random()-0.5)*15, -0.5, (Math.random()-0.5)*15);
+        const cm = new BABYLON.PBRMaterial('coralMat_' + i, s);
+        const colors = [[1,0.3,0.3],[1,0.6,0.1],[0.5,0,1],[0,0.8,0.8]];
+        cm.albedoColor = new BABYLON.Color3(...colors[i % colors.length]);
+        cm.roughness = 0.8;
+        coral.material = cm;
+        sceneObjects.push({ name: 'Coral ' + (i+1), mesh: coral, type: 'coral' });
+      }
+    },
+    space_station: () => {
+      // Central hub
+      const hub = BABYLON.MeshBuilder.CreateCylinder('hub', { height: 3, diameter: 4 }, s);
+      hub.rotation.z = Math.PI / 2;
+      const hm = new BABYLON.PBRMaterial('hubMat', s);
+      hm.albedoColor = new BABYLON.Color3(0.3, 0.3, 0.35);
+      hm.metallic = 0.9; hm.roughness = 0.2;
+      hub.material = hm;
+      sceneObjects.push({ name: 'Central Hub', mesh: hub, type: 'structure' });
+      s._shadowGen.addShadowCaster(hub);
+      // Corridors
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2;
+        const corridor = BABYLON.MeshBuilder.CreateCylinder('corr_' + i, { height: 5, diameter: 1.2 }, s);
+        corridor.position = new BABYLON.Vector3(Math.cos(angle)*4, 0, Math.sin(angle)*4);
+        corridor.rotation.z = Math.PI / 2;
+        corridor.rotation.y = angle;
+        const cm = new BABYLON.PBRMaterial('corrMat_' + i, s);
+        cm.albedoColor = new BABYLON.Color3(0.25, 0.25, 0.3);
+        cm.metallic = 0.85; cm.roughness = 0.25;
+        corridor.material = cm;
+        sceneObjects.push({ name: 'Corridor ' + (i+1), mesh: corridor, type: 'structure' });
+        // End module
+        const mod = BABYLON.MeshBuilder.CreateBox('mod_' + i, { size: 2 }, s);
+        mod.position = new BABYLON.Vector3(Math.cos(angle)*7, 0, Math.sin(angle)*7);
+        mod.material = hm;
+        sceneObjects.push({ name: 'Module ' + (i+1), mesh: mod, type: 'module' });
+        s._shadowGen.addShadowCaster(corridor);
+        s._shadowGen.addShadowCaster(mod);
+      }
+      // Solar panels
+      for (let i = 0; i < 2; i++) {
+        const panel = BABYLON.MeshBuilder.CreateBox('solar_' + i, { width: 4, height: 0.05, depth: 2 }, s);
+        panel.position = new BABYLON.Vector3(0, 3 + i*1.5, (i===0?1:-1)*3);
+        const pm = new BABYLON.PBRMaterial('solarMat_' + i, s);
+        pm.albedoColor = new BABYLON.Color3(0.05, 0.05, 0.3);
+        pm.metallic = 0.95; pm.roughness = 0.1;
+        panel.material = pm;
+        sceneObjects.push({ name: 'Solar Panel ' + (i+1), mesh: panel, type: 'solar' });
+      }
+      // Emergency lights
+      for (let i = 0; i < 6; i++) {
+        const angle = (i/6)*Math.PI*2;
+        const el = new BABYLON.PointLight('emerg_' + i, new BABYLON.Vector3(Math.cos(angle)*5, 2, Math.sin(angle)*5), s);
+        el.diffuse = new BABYLON.Color3(1, 0.2, 0.1);
+        el.intensity = 0.3;
+        el.range = 5;
+      }
+    },
+    medieval: () => {
+      // Castle walls
+      for (let i = 0; i < 4; i++) {
+        const wall = BABYLON.MeshBuilder.CreateBox('wall_' + i, { width: 8, height: 4, depth: 0.8 }, s);
+        const angle = (i/4)*Math.PI*2;
+        wall.position = new BABYLON.Vector3(Math.cos(angle)*5, 2, Math.sin(angle)*5);
+        wall.rotation.y = angle + Math.PI/2;
+        const wm = new BABYLON.PBRMaterial('wallMat_' + i, s);
+        wm.albedoColor = new BABYLON.Color3(0.25, 0.2, 0.15);
+        wm.roughness = 0.95;
+        wall.material = wm;
+        sceneObjects.push({ name: 'Castle Wall ' + (i+1), mesh: wall, type: 'wall' });
+        s._shadowGen.addShadowCaster(wall);
+        // Towers
+        const tower = BABYLON.MeshBuilder.CreateCylinder('tower_' + i, { height: 6, diameter: 1.5 }, s);
+        tower.position = new BABYLON.Vector3(Math.cos(angle)*5, 3, Math.sin(angle)*5);
+        tower.material = wm;
+        sceneObjects.push({ name: 'Tower ' + (i+1), mesh: tower, type: 'tower' });
+        s._shadowGen.addShadowCaster(tower);
+      }
+      // Torch lights
+      for (let i = 0; i < 8; i++) {
+        const angle = (i/8)*Math.PI*2;
+        const torch = new BABYLON.PointLight('torch_' + i, new BABYLON.Vector3(Math.cos(angle)*5, 3, Math.sin(angle)*5), s);
+        torch.diffuse = new BABYLON.Color3(1, 0.7, 0.3);
+        torch.intensity = 0.4;
+        torch.range = 6;
+      }
+    },
+    cyberpunk: () => {
+      // Neon buildings
+      for (let i = 0; i < 10; i++) {
+        const h = 3 + Math.random() * 10;
+        const b = BABYLON.MeshBuilder.CreateBox('neonBldg_' + i, { height: h, width: 1+Math.random()*2, depth: 1+Math.random()*2 }, s);
+        b.position = new BABYLON.Vector3((Math.random()-0.5)*25, h/2, (Math.random()-0.5)*25);
+        const m = new BABYLON.PBRMaterial('neonMat_' + i, s);
+        m.albedoColor = new BABYLON.Color3(0.05, 0.02, 0.08);
+        m.metallic = 0.8; m.roughness = 0.2;
+        b.material = m;
+        sceneObjects.push({ name: 'Neon Tower ' + (i+1), mesh: b, type: 'building' });
+        s._shadowGen.addShadowCaster(b);
+      }
+      // Neon signs (colored emissive boxes)
+      const neonColors = [[1,0,0.5],[0,0.8,1],[0.5,0,1],[0,1,0.5],[1,0.3,0]];
+      for (let i = 0; i < 8; i++) {
+        const sign = BABYLON.MeshBuilder.CreatePlane('sign_' + i, { width: 1+Math.random(), height: 0.3+Math.random()*0.5 }, s);
+        sign.position = new BABYLON.Vector3((Math.random()-0.5)*20, 2+Math.random()*5, (Math.random()-0.5)*20);
+        sign.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+        const sm = new BABYLON.StandardMaterial('signMat_' + i, s);
+        const c = neonColors[i % neonColors.length];
+        sm.emissiveColor = new BABYLON.Color3(...c);
+        sm.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        sign.material = sm;
+        sceneObjects.push({ name: 'Neon Sign ' + (i+1), mesh: sign, type: 'sign' });
+      }
+    },
+    underwater: () => {
+      // Vents
+      for (let i = 0; i < 5; i++) {
+        const vent = BABYLON.MeshBuilder.CreateCylinder('vent_' + i, { height: 2+Math.random()*2, diameterTop: 0.2, diameterBottom: 1 }, s);
+        vent.position = new BABYLON.Vector3((Math.random()-0.5)*20, 0, (Math.random()-0.5)*20);
+        const vm = new BABYLON.PBRMaterial('ventMat_' + i, s);
+        vm.albedoColor = new BABYLON.Color3(0.15, 0.12, 0.1);
+        vm.roughness = 0.9;
+        vent.material = vm;
+        sceneObjects.push({ name: 'Hydrothermal Vent ' + (i+1), mesh: vent, type: 'vent' });
+      }
+      // Jellyfish
+      for (let i = 0; i < 8; i++) {
+        const jf = BABYLON.MeshBuilder.CreateSphere('jelly_' + i, { diameter: 0.5, segments: 8 }, s);
+        jf.position = new BABYLON.Vector3((Math.random()-0.5)*20, 1+Math.random()*5, (Math.random()-0.5)*20);
+        const jm = new BABYLON.StandardMaterial('jellyMat_' + i, s);
+        const c = neonColors[i % neonColors.length];
+        jm.emissiveColor = new BABYLON.Color3(c[0]*0.5, c[1]*0.5, c[2]*0.5);
+        jm.alpha = 0.6;
+        jf.material = jm;
+        sceneObjects.push({ name: 'Jellyfish ' + (i+1), mesh: jf, type: 'creature' });
+      }
+    },
+    lunar: () => {
+      // Craters
+      for (let i = 0; i < 6; i++) {
+        const crater = BABYLON.MeshBuilder.CreateTorus('crater_' + i, { diameter: 2+Math.random()*3, thickness: 0.3, tessellation: 32 }, s);
+        crater.position = new BABYLON.Vector3((Math.random()-0.5)*25, 0.1, (Math.random()-0.5)*25);
+        const cm = new BABYLON.PBRMaterial('craterMat_' + i, s);
+        cm.albedoColor = new BABYLON.Color3(0.12, 0.11, 0.1);
+        cm.roughness = 1;
+        crater.material = cm;
+        sceneObjects.push({ name: 'Crater ' + (i+1), mesh: crater, type: 'terrain' });
+      }
+      // Habitat
+      const habitat = BABYLON.MeshBuilder.CreateCylinder('habitat', { height: 2, diameter: 3, tessellation: 16 }, s);
+      habitat.position.y = 1;
+      const hm = new BABYLON.PBRMaterial('habMat', s);
+      hm.albedoColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+      hm.metallic = 0.5; hm.roughness = 0.4;
+      habitat.material = hm;
+      sceneObjects.push({ name: 'Lunar Habitat', mesh: habitat, type: 'habitat' });
+      s._shadowGen.addShadowCaster(habitat);
+      // Rover
+      const rover = BABYLON.MeshBuilder.CreateBox('rover', { width: 1.5, height: 0.8, depth: 1 }, s);
+      rover.position = new BABYLON.Vector3(4, 0.4, 2);
+      const rm = new BABYLON.PBRMaterial('roverMat', s);
+      rm.albedoColor = new BABYLON.Color3(0.7, 0.7, 0.7);
+      rm.metallic = 0.6; rm.roughness = 0.3;
+      rover.material = rm;
+      sceneObjects.push({ name: 'Lunar Rover', mesh: rover, type: 'vehicle' });
+      s._shadowGen.addShadowCaster(rover);
+    },
+    fantasy: () => {
+      // Floating islands
+      for (let i = 0; i < 5; i++) {
+        const island = BABYLON.MeshBuilder.CreateSphere('island_' + i, { diameter: 2+Math.random()*3, segments: 8 }, s);
+        island.position = new BABYLON.Vector3((Math.random()-0.5)*20, 3+Math.random()*8, (Math.random()-0.5)*20);
+        island.scaling.y = 0.4;
+        const im = new BABYLON.PBRMaterial('islandMat_' + i, s);
+        im.albedoColor = new BABYLON.Color3(0.1, 0.2, 0.08);
+        im.roughness = 0.9;
+        island.material = im;
+        sceneObjects.push({ name: 'Floating Island ' + (i+1), mesh: island, type: 'island' });
+        // Crystal on top
+        const crystal = BABYLON.MeshBuilder.CreatePolyhedron('crystal_' + i, { type: 1, size: 0.3+Math.random()*0.3 }, s);
+        crystal.position = island.position.clone();
+        crystal.position.y += 1;
+        const ccm = new BABYLON.StandardMaterial('crystalMat_' + i, s);
+        const cc = neonColors[i % neonColors.length];
+        ccm.emissiveColor = new BABYLON.Color3(...cc);
+        ccm.alpha = 0.7;
+        crystal.material = ccm;
+        sceneObjects.push({ name: 'Crystal ' + (i+1), mesh: crystal, type: 'crystal' });
+      }
+      // Portal
+      const portal = BABYLON.MeshBuilder.CreateTorus('portal', { diameter: 3, thickness: 0.2, tessellation: 32 }, s);
+      portal.position.y = 3;
+      const pm = new BABYLON.StandardMaterial('portalMat', s);
+      pm.emissiveColor = new BABYLON.Color3(0.5, 0, 1);
+      pm.alpha = 0.8;
+      portal.material = pm;
+      sceneObjects.push({ name: 'Portal', mesh: portal, type: 'portal' });
+      const portalLight = new BABYLON.PointLight('portalLight', new BABYLON.Vector3(0, 3, 0), s);
+      portalLight.diffuse = new BABYLON.Color3(0.5, 0, 1);
+      portalLight.intensity = 0.8;
+      portalLight.range = 10;
+    },
+  };
+  const genFn = configs[worldType];
+  if (genFn) genFn();
+  updateAssetList();
+}
+
+// ─── ASSET GENERATION ──────────────────────────────────
 function selectEngine(btn, engine) {
-  document.querySelectorAll('.engine-btn').forEach(b => b.className = 'engine-btn');
-  btn.className = 'engine-btn active';
+  document.querySelectorAll('#generateSection .engine-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
   selectedEngine = engine;
 }
 
-['paramScale','paramDetail','paramSmooth'].forEach(id => {
-  document.getElementById(id)?.addEventListener('input', function() {
-    document.getElementById('val' + id.replace('param','')).textContent = this.value;
-  });
-});
-
-function initThree() {
-  const canvas = document.getElementById('threeCanvas');
-  if (renderer) return;
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x080c14);
-  camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-  camera.position.set(3, 2, 3);
-  camera.lookAt(0, 0, 0);
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  const amb = new THREE.AmbientLight(0x404060, 0.6); scene.add(amb);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(5, 5, 5); scene.add(dir);
-  gridHelper = new THREE.GridHelper(10, 20, 0x111828, 0x0a1020); scene.add(gridHelper);
-  const axes = new THREE.AxesHelper(1); scene.add(axes);
-
-  // Orbit controls (manual)
-  let isDragging = false, prevX, prevY;
-  canvas.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
-  canvas.addEventListener('mousemove', e => { if (!isDragging) return; const dx = e.clientX - prevX, dy = e.clientY - prevY; const spherical = new THREE.Spherical().setFromVector3(camera.position); spherical.theta -= dx * 0.01; spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi + dy * 0.01)); camera.position.setFromSpherical(spherical); camera.lookAt(0,0,0); prevX = e.clientX; prevY = e.clientY; });
-  canvas.addEventListener('mouseup', () => isDragging = false);
-  canvas.addEventListener('mouseleave', () => isDragging = false);
-  canvas.addEventListener('wheel', e => { camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9); });
-
-  animate();
-}
-
-function animate() { requestAnimationFrame(animate); if (renderer) renderer.render(scene, camera); }
-
-async function generate3D() {
+async function generateAsset() {
   const prompt = document.getElementById('genPrompt').value.trim();
   if (!prompt) return;
   const btn = document.getElementById('genBtn');
-  btn.disabled = true; btn.textContent = 'GENERATING...';
+  const status = document.getElementById('genStatus');
+  btn.disabled = true;
+  btn.textContent = 'GENERATING...';
+  status.textContent = 'Sending to AI engine...';
+  status.style.color = 'var(--glow)';
+
   try {
-    const r = await fetch('/api/materialize', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt, engine: selectedEngine, scale: parseFloat(document.getElementById('paramScale').value),
-        detail: parseInt(document.getElementById('paramDetail').value), smooth: parseInt(document.getElementById('paramSmooth').value) }) });
+    const r = await fetch('/api/zivr/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, engine: selectedEngine }),
+    });
     const data = await r.json();
-    if (data.mesh_url || data.file_path) {
-      loadMesh(data.mesh_url || data.file_path);
-      document.getElementById('meshInfo').innerHTML =
-        '<div class="row"><span class="label">Format</span><span class="val">' + (data.format || 'STL') + '</span></div>' +
-        '<div class="row"><span class="label">Engine</span><span class="val">' + selectedEngine + '</span></div>' +
-        '<div class="row"><span class="label">File</span><span class="val" style="word-break:break-all;font-size:8px">' + (data.file_path || '--') + '</span></div>';
-      addHistory(prompt, data);
+    if (data.file) {
+      status.textContent = 'Generated: ' + data.file.split('/').pop();
+      status.style.color = 'var(--green)';
+      toast('Asset generated!');
+      loadGLBIntoScene(data.file, prompt);
+      refreshAssets();
+    } else if (data.status === 'generating') {
+      status.textContent = 'Task submitted: ' + data.task_id;
+      status.style.color = 'var(--yellow)';
+      pollTaskStatus(data.task_id);
     } else {
-      document.getElementById('meshInfo').innerHTML = '<div style="color:var(--red)">' + (data.error || 'Generation failed') + '</div>';
+      status.textContent = data.error || 'Generation failed';
+      status.style.color = 'var(--red)';
     }
   } catch(e) {
-    document.getElementById('meshInfo').innerHTML = '<div style="color:var(--red)">' + e.message + '</div>';
+    status.textContent = 'Error: ' + e.message;
+    status.style.color = 'var(--red)';
   }
-  btn.disabled = false; btn.textContent = 'GENERATE';
+  btn.disabled = false;
+  btn.textContent = 'GENERATE';
 }
 
-function loadMesh(url) {
-  if (currentMesh) { scene.remove(currentMesh); currentMesh.geometry.dispose(); }
-  const loader = new THREE.STLLoader();
-  loader.load(url, geom => {
-    const mat = new THREE.MeshPhongMaterial({ color: 0x00e5ff, wireframe: wireframeMode });
-    currentMesh = new THREE.Mesh(geom, mat);
-    const box = new THREE.Box3().setFromObject(currentMesh);
-    const center = box.getCenter(new THREE.Vector3());
-    currentMesh.position.sub(center);
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    if (maxDim > 5) currentMesh.scale.multiplyScalar(5 / maxDim);
-    scene.add(currentMesh);
-  });
+async function pollTaskStatus(taskId) {
+  const status = document.getElementById('genStatus');
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 5000));
+    try {
+      const r = await fetch(`/api/zivr/task/${taskId}`);
+      const data = await r.json();
+      if (data.status === 'ok' && data.file) {
+        status.textContent = 'Complete: ' + data.file.split('/').pop();
+        status.style.color = 'var(--green)';
+        loadGLBIntoScene(data.file, 'AI Generated');
+        refreshAssets();
+        return;
+      } else if (data.status === 'error') {
+        status.textContent = data.error || 'Failed';
+        status.style.color = 'var(--red)';
+        return;
+      }
+      status.textContent = `Polling... attempt ${i+1}`;
+    } catch(e) {}
+  }
+  status.textContent = 'Timed out';
+  status.style.color = 'var(--red)';
 }
 
-function setMeshColor(c) { if (currentMesh) currentMesh.material.color.set(c); }
-function toggleWireframe() { wireframeMode = !wireframeMode; if (currentMesh) currentMesh.material.wireframe = wireframeMode; }
-function toggleGrid() { if (gridHelper) gridHelper.visible = !gridHelper.visible; }
-function resetCamera() { camera.position.set(3, 2, 3); camera.lookAt(0, 0, 0); }
-
-function addHistory(prompt, data) {
-  const el = document.getElementById('genHistory');
-  if (el.querySelector('div[style]')) el.innerHTML = '';
-  const d = document.createElement('div');
-  d.style.cssText = 'font-size:9px;padding:6px 0;border-bottom:1px solid rgba(0,229,255,0.04);cursor:pointer';
-  d.innerHTML = '<div style="color:var(--glow)">' + prompt.substring(0, 50) + '</div><div style="font-size:7px;color:#607080">' + (data.engine || '') + ' | ' + new Date().toLocaleTimeString() + '</div>';
-  if (data.mesh_url) d.onclick = () => loadMesh(data.mesh_url);
-  el.prepend(d);
-}
-
-async function runSimulation() {
-  if (!currentMesh) return;
-  const checks = [...document.querySelectorAll('.sim-check:checked')].map(c => c.value);
-  if (!checks.length) return;
-  const el = document.getElementById('simResults');
-  el.textContent = 'Running simulation...';
-  try {
-    const r = await fetch('/api/simulate/mesh', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ checks }) });
-    const data = await r.json();
-    let html = '';
-    if (data.structural) html += 'Stress: ' + data.structural.max_stress + ' MPa | Safety: ' + data.structural.safety_factor + '<br>';
-    if (data.aerodynamic) html += 'Cd: ' + data.aerodynamic.drag_coefficient + ' | Lift: ' + data.aerodynamic.lift_coefficient + '<br>';
-    if (data.mass) html += 'Mass: ' + data.mass.total_mass + ' kg | CoG: ' + JSON.stringify(data.mass.center_of_gravity);
-    el.innerHTML = html || 'Simulation complete';
-  } catch(e) { el.textContent = 'Error: ' + e.message; }
-}
-
-// ─── Video Editor ─────────────────────────────────────
-let vidPlaying = false, vidTime = 0, vidInterval;
-function vidAction(action) {
-  if (action === 'play') {
-    vidPlaying = !vidPlaying;
-    document.getElementById('vidPlayBtn').innerHTML = vidPlaying ? '&#9646;&#9646;' : '&#9654;';
-    if (vidPlaying) vidInterval = setInterval(() => { vidTime += 1/30; updateVidTimecode(); }, 1000/30);
-    else clearInterval(vidInterval);
-  } else if (action === 'stop') { vidPlaying = false; vidTime = 0; clearInterval(vidInterval); document.getElementById('vidPlayBtn').innerHTML = '&#9654;'; updateVidTimecode(); }
-  else if (action === 'rew') { vidTime = Math.max(0, vidTime - 5); updateVidTimecode(); }
-  else if (action === 'fwd') { vidTime += 5; updateVidTimecode(); }
-}
-function updateVidTimecode() {
-  const h = Math.floor(vidTime/3600), m = Math.floor((vidTime%3600)/60), s = Math.floor(vidTime%60), f = Math.floor((vidTime%1)*30);
-  document.getElementById('vidTimecode').textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+':'+String(f).padStart(2,'0');
-}
-
-// ─── Audio Engine ─────────────────────────────────────
-const AUD_COLORS = ['#00e5ff','#7c4dff','#00ff88','#ffb86c','#ff5555','#bd93f9'];
-let audTracks = [
-  { name: 'Track 1', color: '#00e5ff', muted: false, volume: 80, pan: 0 },
-  { name: 'Track 2', color: '#7c4dff', muted: false, volume: 65, pan: -20 },
-  { name: 'Track 3', color: '#00ff88', muted: true, volume: 50, pan: 10 },
-];
-let audPlaying = false, audTime = 0, audInterval, audRec = false;
-
-function renderAudTracks() {
-  const list = document.getElementById('audTrackList');
-  const tracks = document.getElementById('audTracks');
-  list.innerHTML = '';
-  tracks.innerHTML = '';
-  audTracks.forEach((t, i) => {
-    const item = document.createElement('div');
-    item.className = 'track-item' + (i === 0 ? ' active' : '');
-    item.innerHTML = '<span class="track-color" style="background:' + t.color + '"></span><span class="track-name">' + t.name + '</span>' +
-      '<div class="track-controls"><span class="track-ctrl' + (t.muted ? ' muted' : '') + '" onclick="toggleMute(' + i + ')">M</span><span class="track-ctrl" onclick="toggleSolo(' + i + ')">S</span></div>';
-    list.appendChild(item);
-
-    const row = document.createElement('div');
-    row.className = 'aud-track-row';
-    const regions = [{start:20,width:200,color:t.color,label:'region_1'},{start:250,width:150,color:t.color,label:'region_2'}];
-    regions.forEach(r => {
-      const region = document.createElement('div');
-      region.className = 'aud-region';
-      region.style.cssText = 'left:' + r.start + 'px;width:' + r.width + 'px;background:' + r.color + '33;border:1px solid ' + r.color + '66';
-      region.textContent = r.label;
-      row.appendChild(region);
+function loadGLBIntoScene(url, name) {
+  if (!babylonScene) return;
+  BABYLON.SceneLoader.ImportMesh('', '', url, babylonScene, (meshes) => {
+    meshes.forEach(mesh => {
+      mesh.position = new BABYLON.Vector3(
+        (Math.random()-0.5)*6,
+        mesh.getBoundingInfo().boundingBox.extendSize.y,
+        (Math.random()-0.5)*6
+      );
+      mesh.scaling = new BABYLON.Vector3(1, 1, 1);
+      if (babylonScene._shadowGen) babylonScene._shadowGen.addShadowCaster(mesh);
+      sceneObjects.push({ name: name || 'AI Object', mesh: mesh, type: 'ai_generated' });
     });
-    tracks.appendChild(row);
-  });
-
-  const mixer = document.getElementById('audMixer');
-  mixer.innerHTML = '';
-  audTracks.forEach(t => {
-    const ch = document.createElement('div');
-    ch.className = 'mixer-channel';
-    ch.innerHTML = '<div class="mixer-db">' + t.volume + '%</div><div class="mixer-fader"><div class="mixer-fill" style="height:' + t.volume + '%;background:' + t.color + '"></div></div><div class="mixer-label">' + t.name.replace('Track ','T') + '</div>';
-    mixer.appendChild(ch);
+    updateAssetList();
+    toast('Object loaded into scene');
+  }, undefined, (scene, message) => {
+    console.warn('GLB load error:', message);
+    toast('Failed to load 3D model');
   });
 }
 
-function toggleMute(i) { audTracks[i].muted = !audTracks[i].muted; renderAudTracks(); }
-function toggleSolo(i) { audTracks.forEach((t,j) => t.muted = j !== i); renderAudTracks(); }
-function addAudTrack() { const n = audTracks.length + 1; audTracks.push({ name:'Track '+n, color:AUD_COLORS[n%AUD_COLORS.length], muted:false, volume:70, pan:0 }); renderAudTracks(); }
-function exportAudio() { toast('Export dialog coming soon'); }
-
-function audAction(action) {
-  if (action === 'play') {
-    audPlaying = !audPlaying;
-    document.getElementById('audPlayBtn').innerHTML = audPlaying ? '&#9646;&#9646;' : '&#9654;';
-    if (audPlaying) audInterval = setInterval(() => { audTime += 1/60; updateAudTimecode(); }, 1000/60);
-    else clearInterval(audInterval);
-  } else if (action === 'stop') { audPlaying = false; audRec = false; audTime = 0; clearInterval(audInterval); document.getElementById('audPlayBtn').innerHTML = '&#9654;'; document.getElementById('audRecBtn').className = 'aud-btn rec'; updateAudTimecode(); }
-  else if (action === 'rec') { audRec = !audRec; document.getElementById('audRecBtn').className = 'aud-btn rec' + (audRec ? ' active' : ''); }
-  else if (action === 'rew') { audTime = Math.max(0, audTime - 5); updateAudTimecode(); }
-}
-function updateAudTimecode() {
-  const m = Math.floor(audTime/60), s = Math.floor(audTime%60), ms = Math.floor((audTime%1)*1000);
-  document.getElementById('audTimecode').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+':'+String(ms).padStart(3,'0');
+// ─── ASSET LIST ────────────────────────────────────────
+function updateAssetList() {
+  const list = document.getElementById('assetList');
+  if (sceneObjects.length === 0) {
+    list.innerHTML = '<div class="asset-item"><div class="asset-icon">📦</div><span class="asset-name">No objects yet</span></div>';
+    return;
+  }
+  list.innerHTML = '';
+  sceneObjects.forEach((obj, i) => {
+    const item = document.createElement('div');
+    item.className = 'asset-item';
+    const icons = { building:'🏢', tree:'🌲', light:'💡', water:'🌊', coral:'🪸', structure:'🏗️', module:'📦', solar:'☀️', wall:'🧱', tower:'🗼', sign:'🟣', vent:'🌋', creature:'🪼', terrain:'🪨', habitat:'🏠', vehicle:'🚗', island:'🏝️', crystal:'💎', portal:'🌀', ai_generated:'🤖' };
+    item.innerHTML = `<div class="asset-icon">${icons[obj.type] || '📦'}</div><span class="asset-name">${obj.name}</span>`;
+    item.onclick = () => focusObject(obj);
+    list.appendChild(item);
+  });
 }
 
-function toast(msg) { const t = document.createElement('div'); t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(8,12,20,0.98);border:1px solid rgba(0,229,255,0.15);border-radius:6px;padding:8px 20px;font-size:10px;color:#00ff88;z-index:300'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+function focusObject(obj) {
+  if (!obj.mesh || !babylonScene) return;
+  const cam = babylonScene._camera;
+  const pos = obj.mesh.position;
+  cam.target = pos.clone();
+  cam.alpha = -Math.PI / 4;
+  cam.beta = Math.PI / 3;
+  cam.radius = 8;
+}
 
-// ─── Init ─────────────────────────────────────────────
-renderAudTracks();
-setTimeout(initThree, 100);
+async function refreshAssets() {
+  try {
+    const r = await fetch('/api/zivr/assets');
+    const data = await r.json();
+    if (data.assets && data.assets.length > 0) {
+      const list = document.getElementById('assetList');
+      data.assets.slice(0, 10).forEach(a => {
+        const item = document.createElement('div');
+        item.className = 'asset-item';
+        item.innerHTML = `<div class="asset-icon">📁</div><span class="asset-name">${a.name}</span><span class="asset-size">${(a.size/1024).toFixed(0)}K</span>`;
+        item.onclick = () => {
+          if (a.path.endsWith('.glb') || a.path.endsWith('.obj')) {
+            loadGLBIntoScene(a.path, a.name);
+          }
+        };
+        list.appendChild(item);
+      });
+    }
+  } catch(e) {}
+}
+
+// ─── CAMERA MODES ──────────────────────────────────────
+function setCameraMode(mode) {
+  document.querySelectorAll('.viewport-overlay .view-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+
+  if (currentMode === 'generated' && babylonScene) {
+    const cam = babylonScene._camera;
+    if (mode === 'orbit') {
+      cam.inputs.removeByType('FreeCameraKeyboardMoveInput');
+      cam.alpha = -Math.PI / 4;
+      cam.beta = Math.PI / 3;
+      cam.radius = 15;
+    } else if (mode === 'walk') {
+      cam.beta = Math.PI / 2.2;
+      cam.radius = 3;
+    } else if (mode === 'fly') {
+      cam.beta = Math.PI / 4;
+      cam.radius = 30;
+    }
+  }
+}
+
+// ─── SCREENSHOT & RECORD ───────────────────────────────
+function takeScreenshot() {
+  const canvas = currentMode === 'realworld'
+    ? document.querySelector('#cesiumContainer canvas')
+    : document.getElementById('babylonCanvas');
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = `zivr_screenshot_${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('Screenshot saved');
+}
+
+function toggleRecord() {
+  const btn = document.getElementById('btnRecord');
+  if (isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    btn.classList.remove('active');
+    btn.textContent = '⏺ REC';
+    toast('Recording saved');
+  } else {
+    const canvas = currentMode === 'realworld'
+      ? document.querySelector('#cesiumContainer canvas')
+      : document.getElementById('babylonCanvas');
+    if (!canvas) return;
+    try {
+      const stream = canvas.captureStream(30);
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+      recordedChunks = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `zivr_recording_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      btn.classList.add('active');
+      btn.textContent = '⏹ STOP';
+      toast('Recording started');
+    } catch(e) {
+      toast('Recording not supported');
+    }
+  }
+}
+
+// ─── INIT ──────────────────────────────────────────────
+window.addEventListener('load', init);
 </script>
 </body>
 </html>

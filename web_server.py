@@ -805,6 +805,13 @@ class SSOAuthMiddleware:
         "/api/zihost/auth",
         "/api/zihost/stats",
         "/api/simulate/",
+        "/api/zivr/config",
+        "/api/zivr/generate",
+        "/api/zivr/task/",
+        "/api/zivr/assets",
+        "/api/zivr/hdri",
+        "/api/zivr/terrain",
+        "/api/zivr/build-world",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -827,6 +834,7 @@ class SSOAuthMiddleware:
         "/shell", # interactive SSH shell terminal
         "/api/shell/", # shell API (servers, sessions, close)
         "/api/zihost/", # ZiHost hosting panel API
+        "/api/zivr/", # ZiVR engine API
     )
 
     def __init__(self, app):
@@ -1172,6 +1180,113 @@ async def serve_zimail():
 @app.get("/zimaterializer")
 async def serve_zimaterializer():
     return FileResponse(str(FRONTEND_DIR / "zimaterializer.html"))
+
+
+# ─── ZiVR Engine API Routes ─────────────────────────────
+@app.get("/api/zivr/config")
+async def zivr_config():
+    try:
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        return JSONResponse(engine.get_config())
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/zivr/generate")
+async def zivr_generate(request: Request):
+    try:
+        body = await request.json()
+        prompt = body.get("prompt", "")
+        eng = body.get("engine", "tripo")
+        if not prompt:
+            return JSONResponse({"error": "No prompt provided"}, status_code=400)
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        if eng == "stability":
+            result = engine.stability.generate_texture(prompt)
+        elif eng == "tripo":
+            result = engine.tripo.generate_from_text(prompt)
+        else:
+            return JSONResponse({"error": f"Engine '{eng}' not available via API yet"}, status_code=400)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/zivr/task/{task_id}")
+async def zivr_task_status(task_id: str):
+    try:
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        result = engine.tripo._request(f"task/{task_id}", method="GET")
+        state = result.get("data", {}).get("status", "")
+        if state == "success":
+            output = result.get("data", {}).get("output", {})
+            model_url = output.get("model", "")
+            if model_url:
+                dl = engine.tripo._download(model_url, task_id)
+                return JSONResponse(dl)
+        elif state in ("failed", "cancelled"):
+            return JSONResponse({"status": "error", "error": f"Task {state}"})
+        return JSONResponse({"status": "pending", "state": state})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/zivr/assets")
+async def zivr_assets():
+    try:
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        return JSONResponse({"assets": engine.list_assets()})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/zivr/hdri")
+async def zivr_hdri_list(category: str = "sky"):
+    try:
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        return JSONResponse({"hdris": engine.get_hdri_list(category)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/zivr/hdri/{name}/url")
+async def zivr_hdri_url(name: str, resolution: int = 2048):
+    try:
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        url = engine.get_hdri_url(name, resolution)
+        return JSONResponse({"url": url})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/zivr/terrain")
+async def zivr_terrain(lat: float, lng: float, radius: float = 5):
+    try:
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        result = engine.get_terrain_data(lat, lng)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/zivr/build-world")
+async def zivr_build_world(request: Request):
+    try:
+        body = await request.json()
+        prompt = body.get("prompt", "")
+        from zicore.zivr_engine import ZiVREngine
+        engine = ZiVREngine()
+        world_config = engine.build_world(prompt)
+        return JSONResponse(world_config)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.get("/audio-engine")
