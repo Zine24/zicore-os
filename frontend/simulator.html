@@ -3,570 +3,1480 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE — Vehicle Simulator</title>
+<title>ZICORE — Aerospace Simulator</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+:root{--glow:#00e5ff;--glow2:#7c4dff;--green:#00ff88;--warn:#ff9800;--danger:#f44;--bg:rgba(6,8,14,0.96);--panel:rgba(10,14,22,0.92);--border:rgba(0,229,255,0.08)}
 
 body{display:flex;flex-direction:column}
 
-.top-bar{
-  height:36px;background:rgba(6,8,14,0.96);
-  border-bottom:1px solid rgba(0,229,255,0.08);
-  display:flex;align-items:center;padding:0 12px;gap:12px;
-  flex-shrink:0;
+/* TOP BAR */
+#topBar{
+  height:36px;min-height:36px;background:var(--bg);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:8px;z-index:100;
 }
-.top-bar .logo{font-size:11px;letter-spacing:4px;font-weight:700;color:#00e5ff}
-.top-bar .logo span{color:#7c4dff}
-.back-btn{
-  background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12);
-  color:#00e5ff;padding:3px 10px;border-radius:3px;cursor:pointer;
-  font-size:8px;letter-spacing:2px;transition:all 0.2s;
+#topBar .logo{font-size:10px;letter-spacing:4px;font-weight:700;color:var(--glow)}
+#topBar .logo span{color:var(--glow2)}
+.tb-btn{
+  font-size:7px;letter-spacing:2px;padding:3px 10px;
+  border:1px solid rgba(0,229,255,0.12);background:rgba(0,229,255,0.03);
+  color:var(--glow);cursor:pointer;transition:all .2s;
 }
-.back-btn:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.1)}
-.vehicle-select{
-  background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);
-  color:#00e5ff;padding:3px 8px;font-size:9px;font-family:inherit;
+.tb-btn:hover{background:rgba(0,229,255,0.1)}
+.tb-btn.active{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
+.tb-btn.green{color:var(--green);border-color:rgba(0,255,136,0.15)}
+.tb-btn.green:hover{background:rgba(0,255,136,0.1)}
+.tb-btn.danger{color:var(--danger);border-color:rgba(255,68,68,0.15)}
+.tb-btn.danger:hover{background:rgba(255,68,68,0.1)}
+.tb-select{
+  font-size:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:3px 6px;font-family:inherit;
 }
-.status-badge{
+.tb-badge{
   font-size:7px;letter-spacing:2px;padding:2px 8px;
-  border:1px solid rgba(0,255,136,0.15);border-radius:3px;
-  color:#00ff88;
+  border:1px solid rgba(0,255,136,0.15);border-radius:3px;color:var(--green);
 }
+.tb-badge.warn{border-color:rgba(255,152,0,0.15);color:var(--warn)}
+.tb-badge.err{border-color:rgba(255,68,68,0.15);color:var(--danger)}
 
-.main-area{flex:1;display:flex;overflow:hidden}
+/* MAIN LAYOUT */
+#mainArea{flex:1;display:flex;overflow:hidden;position:relative}
 
-.sim-viewport{
-  flex:1;position:relative;background:#000;overflow:hidden;
+/* LEFT PANEL */
+#leftPanel{
+  width:210px;min-width:210px;background:var(--bg);
+  border-right:1px solid var(--border);overflow-y:auto;
+  display:flex;flex-direction:column;z-index:10;
 }
-#simCanvas{width:100%;height:100%}
+.panel{border-bottom:1px solid var(--border);padding:8px}
+.panel-title{font-size:7px;letter-spacing:2px;color:#4a5a6a;margin-bottom:6px;text-transform:uppercase}
+.panel-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.plbl{font-size:8px;color:#506070}
+.pval{font-size:9px;color:var(--glow);font-family:'Courier New',monospace}
+.pval.warn{color:var(--warn)}.pval.danger{color:var(--danger)}.pval.green{color:var(--green)}
 
-.hud-overlay{
-  position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;
+.veh-card{
+  padding:5px;margin-bottom:3px;border:1px solid rgba(0,229,255,0.06);
+  background:rgba(0,229,255,0.02);cursor:pointer;transition:all .15s;
 }
-.hud-top{
-  position:absolute;top:8px;left:50%;transform:translateX(-50%);
-  display:flex;gap:16px;
+.veh-card:hover{border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.06)}
+.veh-card.active{border-color:var(--glow);background:rgba(0,229,255,0.08)}
+.veh-name{font-size:8px;color:var(--glow);font-weight:600}
+.veh-type{font-size:7px;color:#4a5a6a;margin-top:1px}
+
+.slider-row{margin-top:4px}
+.slider-row input[type=range]{
+  width:100%;height:3px;-webkit-appearance:none;
+  background:rgba(0,229,255,0.1);border-radius:2px;
 }
-.hud-item{text-align:center}
+.slider-row input::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;
+  background:var(--glow);border-radius:50%;cursor:pointer;
+}
+.slider-label{font-size:7px;color:#4a5a6a;display:flex;justify-content:space-between}
+
+.pbtn{
+  width:100%;padding:4px;margin-top:3px;
+  background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.12);
+  color:var(--glow);font-size:7px;letter-spacing:2px;cursor:pointer;
+  transition:all .15s;text-align:center;
+}
+.pbtn:hover{background:rgba(0,229,255,0.12)}
+.pbtn.active{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.3);color:var(--green)}
+.pbtn.danger{color:var(--danger);border-color:rgba(255,68,68,0.15)}
+.pbtn.danger:hover{background:rgba(255,68,68,0.08)}
+
+/* 3D VIEWPORT */
+#viewport{flex:1;position:relative;background:#000;overflow:hidden}
+#viewport canvas{width:100%;height:100%;display:block}
+
+/* HUD OVERLAY */
+.hud{position:absolute;pointer-events:none;z-index:5}
+.hud-tl{top:8px;left:8px}
+.hud-tr{top:8px;right:8px}
+.hud-bl{bottom:8px;left:8px}
+.hud-br{bottom:8px;right:8px}
+.hud-ct{top:8px;left:50%;transform:translateX(-50%)}
+.hud-cb{bottom:8px;left:50%;transform:translateX(-50%)}
+
+.hud-box{
+  background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.12);
+  padding:4px 8px;border-radius:2px;
+}
 .hud-label{font-size:6px;letter-spacing:2px;color:#4a5a6a}
-.hud-value{font-size:14px;font-weight:700;color:#00e5ff;font-family:'Courier New',monospace}
-.hud-value.warn{color:#ff9800}
-.hud-value.danger{color:#f44}
+.hud-val{font-size:14px;font-weight:700;color:var(--glow);font-family:'Courier New',monospace}
+.hud-val.sm{font-size:10px}
+.hud-val.warn{color:var(--warn)}
+.hud-val.danger{color:var(--danger)}
+.hud-val.green{color:var(--green)}
 
-.hud-left{
-  position:absolute;top:50%;left:12px;transform:translateY(-50%);
-}
-.hud-right{
-  position:absolute;top:50%;right:12px;transform:translateY(-50%);
-}
-
-.attitude-indicator{
-  width:80px;height:80px;border-radius:50%;
+/* ATTITUDE INDICATOR */
+.ai-box{
+  width:70px;height:70px;border-radius:50%;
   border:1px solid rgba(0,229,255,0.2);
   background:rgba(0,0,0,0.5);position:relative;overflow:hidden;
 }
-.attitude-horizon{
-  position:absolute;width:200%;height:200%;
-  left:-50%;top:-50%;
+.ai-horizon{
+  position:absolute;width:200%;height:200%;left:-50%;top:-50%;
   background:linear-gradient(to bottom,#1a3a5a 50%,#3a2a1a 50%);
   transform-origin:center center;
 }
-.attitude-cross{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:40px;height:2px;background:#f44;
-}
-.attitude-center{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:6px;height:6px;border:1px solid #f44;border-radius:50%;
+.ai-cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:2px;background:var(--danger)}
+.ai-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border:1px solid var(--danger);border-radius:50%}
+.ai-wing{position:absolute;top:50%;height:2px;width:16px;background:var(--glow)}
+.ai-wing.l{right:50%;margin-right:2px}.ai-wing.r{left:50%;margin-left:2px}
+
+/* COMPASS */
+.compass{width:70px;height:18px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.12);border-radius:2px;position:relative;overflow:hidden}
+.compass-inner{position:absolute;top:0;height:100%;white-space:nowrap;transition:transform 0.1s}
+.compass-mark{position:absolute;top:50%;transform:translateY(-50%);font-size:7px;color:rgba(0,229,255,0.4);font-family:'Courier New',monospace}
+.compass-mark.dir{color:var(--glow);font-size:8px;font-weight:700}
+.compass-needle{position:absolute;top:0;left:50%;transform:translateX(-50%);width:1px;height:100%;background:var(--danger)}
+
+/* RIGHT PANEL */
+#rightPanel{
+  width:200px;min-width:200px;background:var(--bg);
+  border-left:1px solid var(--border);overflow-y:auto;
+  display:flex;flex-direction:column;z-index:10;
 }
 
-.compass-strip{
-  width:80px;height:24px;background:rgba(0,0,0,0.5);
-  border:1px solid rgba(0,229,255,0.15);border-radius:3px;
-  overflow:hidden;position:relative;
-}
-.compass-label{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  font-size:10px;font-weight:700;color:#00e5ff;
-}
-
-.hud-bottom{
-  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
-  display:flex;gap:12px;
-}
-
-.side-panel{
-  width:220px;background:rgba(6,8,14,0.96);
-  border-left:1px solid rgba(0,229,255,0.08);
-  display:flex;flex-direction:column;overflow-y:auto;
-  flex-shrink:0;
-}
-.panel-section{
-  padding:8px;border-bottom:1px solid rgba(0,229,255,0.06);
-}
-.panel-title{
-  font-size:7px;letter-spacing:2px;color:#4a5a6a;
-  margin-bottom:6px;text-transform:uppercase;
-}
-.panel-row{
-  display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:4px;
-}
-.panel-label{font-size:8px;color:#506070}
-.panel-val{font-size:9px;color:#00e5ff;font-family:'Courier New',monospace}
-
-.ctrl-slider{
-  width:100%;height:3px;-webkit-appearance:none;
-  background:rgba(0,229,255,0.1);border-radius:2px;margin-top:2px;
-}
-.ctrl-slider::-webkit-slider-thumb{
-  -webkit-appearance:none;width:10px;height:10px;
-  background:#00e5ff;border-radius:50%;cursor:pointer;
-}
-
-.ctrl-btn{
-  width:100%;padding:5px;background:rgba(0,229,255,0.06);
-  border:1px solid rgba(0,229,255,0.12);color:#00e5ff;
-  font-size:8px;letter-spacing:2px;cursor:pointer;
-  border-radius:3px;margin-top:4px;transition:all 0.2s;
-}
-.ctrl-btn:hover{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
-.ctrl-btn.active{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.3);color:#00ff88}
-.ctrl-btn.danger{border-color:rgba(244,68,68,0.2);color:#f44}
-.ctrl-btn.danger:hover{background:rgba(244,68,68,0.1)}
-
-.log-area{
-  flex:1;padding:8px;overflow-y:auto;
+/* LOG */
+#simLog{
+  flex:1;padding:6px;overflow-y:auto;
   font-size:7px;font-family:'Courier New',monospace;color:#3a5a6a;
+  max-height:120px;
 }
-.log-entry{margin-bottom:2px}
-.log-entry .ts{color:#2a3a4a}
-.log-entry .ok{color:#0f6}
-.log-entry .warn{color:#ff9800}
-.log-entry .err{color:#f44}
+.log-e{margin-bottom:1px}
+.log-e .ts{color:#2a3a4a}.log-e .ok{color:#0f6}.log-e .warn{color:var(--warn)}.log-e .err{color:var(--danger)}
 
-.controls-bar{
-  height:48px;background:rgba(6,8,14,0.96);
-  border-top:1px solid rgba(0,229,255,0.08);
-  display:flex;align-items:center;padding:0 12px;gap:12px;
-  flex-shrink:0;
+/* BOTTOM BAR */
+#bottomBar{
+  height:40px;min-height:40px;background:var(--bg);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:10px;
 }
-.ctrl-group{display:flex;align-items:center;gap:4px}
-.ctrl-label{font-size:7px;color:#4a5a6a;letter-spacing:1px}
+.bb-group{display:flex;align-items:center;gap:3px}
+.bb-label{font-size:7px;color:#4a5a6a;letter-spacing:1px}
+.bb-val{font-size:8px;color:var(--glow);font-family:'Courier New',monospace}
+
+/* PROMPT MODAL */
+#promptModal{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7);z-index:200;
+  align-items:center;justify-content:center;
+}
+#promptModal.show{display:flex}
+#promptBox{
+  width:500px;max-width:90%;background:var(--panel);border:1px solid rgba(0,229,255,0.15);
+  border-radius:4px;padding:16px;
+}
+#promptBox h3{font-size:11px;letter-spacing:3px;color:var(--glow);margin-bottom:10px}
+#promptInput{
+  width:100%;height:60px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);
+  color:#c8d0dc;padding:8px;font-size:9px;font-family:inherit;resize:none;
+}
+#promptInput::placeholder{color:#3a4a5a}
+#promptBtns{display:flex;gap:6px;margin-top:10px;justify-content:flex-end}
+#promptResult{
+  margin-top:8px;font-size:8px;color:#506070;max-height:100px;overflow-y:auto;
+  display:none;
+}
+#promptResult.show{display:block}
+
+/* SCENE BROWSER */
+#sceneBrowser{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7);z-index:200;
+  align-items:center;justify-content:center;
+}
+#sceneBrowser.show{display:flex}
+#sceneBox{
+  width:600px;max-width:90%;max-height:70vh;background:var(--panel);
+  border:1px solid rgba(0,229,255,0.15);border-radius:4px;padding:16px;overflow-y:auto;
+}
+#sceneBox h3{font-size:11px;letter-spacing:3px;color:var(--glow);margin-bottom:10px}
+.scene-card{
+  padding:8px;margin-bottom:6px;border:1px solid rgba(0,229,255,0.08);
+  background:rgba(0,229,255,0.02);cursor:pointer;transition:all .15s;
+}
+.scene-card:hover{border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.06)}
+.scene-id{font-size:8px;color:var(--glow);font-family:'Courier New',monospace}
+.scene-info{font-size:7px;color:#506070;margin-top:2px}
+
+/* STARS */
+#viewport.stars canvas{background:radial-gradient(ellipse at center,#0a1030 0%,#04060c 70%)}
+
+/* LOADING */
+#loadingOverlay{
+  display:none;position:absolute;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.6);z-index:150;
+  align-items:center;justify-content:center;flex-direction:column;gap:8px;
+}
+#loadingOverlay.show{display:flex}
+.spinner{
+  width:30px;height:30px;border:2px solid rgba(0,229,255,0.1);
+  border-top-color:var(--glow);border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-text{font-size:8px;letter-spacing:2px;color:var(--glow)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
 </style>
 </head>
 <body>
 
-<div class="top-bar">
-  <button class="back-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else if(parent!==window&&parent.showMenu){parent.showMenu();}else{window.location='/';}">&#9664; PORTAL</button>
-  <div class="logo"><span>Z</span>ICORE FLIGHT SIM</div>
-  <select class="vehicle-select" id="vehicleSelect">
-    <option value="obsidiana">OBSIDIANA — Stealth Interceptor</option>
-    <option value="blackvanta">BLACKVANTA — Heavy Transport</option>
-    <option value="ziron_sigma">ZIRON SIGMA — Orbital Maneuver</option>
-    <option value="zi_voyager">ZI VOYAGER — Deep Space</option>
+<!-- TOP BAR -->
+<div id="topBar">
+  <button class="tb-btn" onclick="if(parent!==window&&parent.zicorePortal){parent.zicorePortal.back();}else{window.location='/';}">&#9664; PORTAL</button>
+  <div class="logo"><span>Z</span>ICORE SIM</div>
+  <div style="width:1px;height:18px;background:rgba(0,229,255,0.1)"></div>
+  <select class="tb-select" id="bodySelect">
+    <option value="earth">EARTH</option>
+    <option value="moon" selected>MOON</option>
+    <option value="mars">MARS</option>
+    <option value="europa">EUROPA</option>
+    <option value="titan">TITAN</option>
+    <option value="venus">VENUS</option>
   </select>
-  <div class="status-badge" id="simStatus">STANDBY</div>
+  <select class="tb-select" id="vehicleSelect">
+    <option value="spacecraft">SPACECRAFT</option>
+    <option value="rover">ROVER</option>
+    <option value="drone">DRONE</option>
+    <option value="orbiter">ORBITER</option>
+    <option value="station">STATION</option>
+    <option value="lander">LANDER</option>
+  </select>
+  <div style="width:1px;height:18px;background:rgba(0,229,255,0.1)"></div>
+  <button class="tb-btn green" id="btnPrompt" onclick="showPrompt()">PROMPT SIM</button>
+  <button class="tb-btn" id="btnScenes" onclick="showScenes()">SCENES</button>
   <div style="flex:1"></div>
+  <span class="tb-badge" id="simStatus">STANDBY</span>
   <span style="font-size:8px;color:#3a4a5a" id="simTime">T+ 00:00:00</span>
 </div>
 
-<div class="main-area">
-  <div class="sim-viewport">
-    <canvas id="simCanvas"></canvas>
-    <div class="hud-overlay">
-      <div class="hud-top">
-        <div class="hud-item"><div class="hud-label">ALTITUDE</div><div class="hud-value" id="hudAlt">0</div></div>
-        <div class="hud-item"><div class="hud-label">VELOCITY</div><div class="hud-value" id="hudVel">0</div></div>
-        <div class="hud-item"><div class="hud-label">HEADING</div><div class="hud-value" id="hudHdg">000</div></div>
-        <div class="hud-item"><div class="hud-label">VERT SPD</div><div class="hud-value" id="hudVsp">0</div></div>
-      </div>
-      <div class="hud-left">
-        <div class="attitude-indicator" id="attInd">
-          <div class="attitude-horizon" id="attHorizon"></div>
-          <div class="attitude-cross"></div>
-          <div class="attitude-center"></div>
-        </div>
-      </div>
-      <div class="hud-right">
-        <div class="compass-strip">
-          <div class="compass-label" id="compassLabel">N</div>
-        </div>
-      </div>
-      <div class="hud-bottom">
-        <div class="hud-item"><div class="hud-label">G-FORCE</div><div class="hud-value" id="hudGforce">1.0</div></div>
-        <div class="hud-item"><div class="hud-label">MACH</div><div class="hud-value" id="hudMach">0.00</div></div>
-        <div class="hud-item"><div class="hud-label">FUEL</div><div class="hud-value" id="hudFuel">100%</div></div>
-      </div>
+<!-- MAIN -->
+<div id="mainArea">
+  <!-- LEFT PANEL -->
+  <div id="leftPanel">
+    <div class="panel">
+      <div class="panel-title">CELESTIAL BODY</div>
+      <div class="panel-row"><span class="plbl">Body</span><span class="pval" id="infBody">Moon</span></div>
+      <div class="panel-row"><span class="plbl">Gravity</span><span class="pval" id="infGravity">1.625 m/s²</span></div>
+      <div class="panel-row"><span class="plbl">Radius</span><span class="pval" id="infRadius">1,737 km</span></div>
+      <div class="panel-row"><span class="plbl">Atmosphere</span><span class="pval" id="infAtmo">None</span></div>
+      <div class="panel-row"><span class="plbl">Temperature</span><span class="pval" id="infTemp">220 K</span></div>
     </div>
-  </div>
-
-  <div class="side-panel">
-    <div class="panel-section">
+    <div class="panel">
+      <div class="panel-title">VEHICLE</div>
+      <div class="panel-row"><span class="plbl">Type</span><span class="pval" id="infVehType">Spacecraft</span></div>
+      <div class="panel-row"><span class="plbl">Mass</span><span class="pval" id="infVehMass">12,400 kg</span></div>
+      <div class="panel-row"><span class="plbl">Thrust</span><span class="pval" id="infVehThrust">245 kN</span></div>
+      <div class="panel-row"><span class="plbl">ISP</span><span class="pval" id="infVehISP">320 s</span></div>
+    </div>
+    <div class="panel">
       <div class="panel-title">PROPULSION</div>
-      <div class="panel-row"><span class="panel-label">Thrust</span><span class="panel-val" id="spThrust">0 kN</span></div>
-      <div class="panel-row"><span class="panel-label">Engine Temp</span><span class="panel-val" id="spEngTemp">22°C</span></div>
-      <div class="panel-row"><span class="panel-label">RPM</span><span class="panel-val" id="spRPM">0</span></div>
-      <input type="range" class="ctrl-slider" id="throttleSlider" min="0" max="100" value="0">
-      <div style="text-align:center;font-size:7px;color:#3a4a5a;margin-top:2px">THROTTLE: <span id="throttleVal" style="color:#00e5ff">0%</span></div>
+      <div class="panel-row"><span class="plbl">Thrust</span><span class="pval" id="pThrust">0 kN</span></div>
+      <div class="panel-row"><span class="plbl">Fuel</span><span class="pval" id="pFuel">100%</span></div>
+      <div class="slider-row">
+        <div class="slider-label"><span>THROTTLE</span><span id="pThrottleVal" class="pval">0%</span></div>
+        <input type="range" id="throttleSlider" min="0" max="100" value="0">
+      </div>
     </div>
-    <div class="panel-section">
-      <div class="panel-title">NAVIGATION</div>
-      <div class="panel-row"><span class="panel-label">LAT</span><span class="panel-val" id="spLat">0.0000</span></div>
-      <div class="panel-row"><span class="panel-label">LON</span><span class="panel-val" id="spLon">0.0000</span></div>
-      <div class="panel-row"><span class="panel-label">ALT</span><span class="panel-val" id="spAlt">0 m</span></div>
-      <div class="panel-row"><span class="panel-label">Waypoint</span><span class="panel-val" id="spWpt">—</span></div>
-    </div>
-    <div class="panel-section">
-      <div class="panel-title">POWER</div>
-      <div class="panel-row"><span class="panel-label">Battery</span><span class="panel-val" id="spBattery">100%</span></div>
-      <div class="panel-row"><span class="panel-label">Solar</span><span class="panel-val" id="spSolar">0 kW</span></div>
-      <div class="panel-row"><span class="panel-label">Draw</span><span class="panel-val" id="spDraw">0 kW</span></div>
-    </div>
-    <div class="panel-section">
+    <div class="panel">
       <div class="panel-title">CONTROLS</div>
-      <button class="ctrl-btn" id="btnStartEngine">START ENGINE</button>
-      <button class="ctrl-btn" id="btnTakeoff">TAKEOFF</button>
-      <button class="ctrl-btn" id="btnLand">LAND</button>
-      <button class="ctrl-btn danger" id="btnEmergency">EMERGENCY STOP</button>
+      <button class="pbtn" id="btnEngine" onclick="toggleEngine()">START ENGINE</button>
+      <button class="pbtn" id="btnLaunch" onclick="doLaunch()">LAUNCH</button>
+      <button class="pbtn" id="btnLand" onclick="doLand()">LAND</button>
+      <button class="pbtn danger" onclick="doEmergency()">EMERGENCY STOP</button>
+      <div style="margin-top:4px">
+        <button class="pbtn" id="btnOrbit" onclick="doOrbit()">CIRCULARIZE</button>
+        <button class="pbtn" id="btnDeorbit" onclick="doDeorbit()">DEORBIT</button>
+      </div>
     </div>
-    <div class="panel-section">
-      <div class="panel-title">VEHICLE INFO</div>
-      <div class="panel-row"><span class="panel-label">Type</span><span class="panel-val" id="viType">—</span></div>
-      <div class="panel-row"><span class="panel-label">Mass</span><span class="panel-val" id="viMass">—</span></div>
-      <div class="panel-row"><span class="panel-label">Max Thrust</span><span class="panel-val" id="viThrust">—</span></div>
-      <div class="panel-row"><span class="panel-label">Max Speed</span><span class="panel-val" id="viSpeed">—</span></div>
+    <div class="panel">
+      <div class="panel-title">CAMERA</div>
+      <button class="pbtn active" id="camChase" onclick="setCam('chase')">CHASE</button>
+      <button class="pbtn" id="camOrbit" onclick="setCam('orbit')">ORBIT</button>
+      <button class="pbtn" id="camFree" onclick="setCam('free')">FREE CAM</button>
+      <button class="pbtn" id="camCockpit" onclick="setCam('cockpit')">COCKPIT</button>
     </div>
-    <div class="log-area" id="simLog">
-      <div class="log-entry"><span class="ts">[00:00:00]</span> <span class="ok">SIM online</span></div>
+    <div class="panel">
+      <div class="panel-title">VIEW</div>
+      <button class="pbtn" id="btnWireframe" onclick="toggleWireframe()">WIREFRAME</button>
+      <button class="pbtn" id="btnGrid" onclick="toggleGrid()">GRID</button>
+      <button class="pbtn" id="btnLabels" onclick="toggleLabels()">LABELS</button>
+    </div>
+  </div>
+
+  <!-- VIEWPORT -->
+  <div id="viewport" class="stars">
+    <canvas id="threeCanvas"></canvas>
+
+    <!-- HUD TOP CENTER -->
+    <div class="hud hud-ct" style="display:flex;gap:12px">
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">ALTITUDE</div>
+        <div class="hud-val" id="hudAlt">0</div>
+        <div class="hud-label">m</div>
+      </div>
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">VELOCITY</div>
+        <div class="hud-val" id="hudVel">0</div>
+        <div class="hud-label">m/s</div>
+      </div>
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">HEADING</div>
+        <div class="hud-val" id="hudHdg">000</div>
+        <div class="hud-label">°</div>
+      </div>
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">VERT SPD</div>
+        <div class="hud-val" id="hudVsp">0</div>
+        <div class="hud-label">m/s</div>
+      </div>
+    </div>
+
+    <!-- HUD TOP LEFT - ATTITUDE -->
+    <div class="hud hud-tl">
+      <div class="ai-box" id="attInd">
+        <div class="ai-horizon" id="attHorizon"></div>
+        <div class="ai-wing l"></div>
+        <div class="ai-wing r"></div>
+        <div class="ai-cross"></div>
+        <div class="ai-center"></div>
+      </div>
+      <div class="compass" style="margin-top:4px" id="compassBox">
+        <div class="compass-needle"></div>
+        <div class="compass-inner" id="compassInner"></div>
+      </div>
+    </div>
+
+    <!-- HUD TOP RIGHT -->
+    <div class="hud hud-tr" style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+      <div class="hud-box">
+        <div class="hud-label">G-FORCE</div>
+        <div class="hud-val sm" id="hudG">1.0</div>
+      </div>
+      <div class="hud-box">
+        <div class="hud-label">MACH</div>
+        <div class="hud-val sm" id="hudMach">0.00</div>
+      </div>
+      <div class="hud-box">
+        <div class="hud-label">APOAPSIS</div>
+        <div class="hud-val sm" id="hudApo">—</div>
+      </div>
+      <div class="hud-box">
+        <div class="hud-label">PERIAPSIS</div>
+        <div class="hud-val sm" id="hudPeri">—</div>
+      </div>
+    </div>
+
+    <!-- HUD BOTTOM CENTER -->
+    <div class="hud hud-cb" style="display:flex;gap:10px">
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">FUEL</div>
+        <div class="hud-val sm" id="hudFuel">100%</div>
+      </div>
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">BATTERY</div>
+        <div class="hud-val sm" id="hudBatt">100%</div>
+      </div>
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">MASS</div>
+        <div class="hud-val sm" id="hudMass">12.4 t</div>
+      </div>
+      <div class="hud-box" style="text-align:center">
+        <div class="hud-label">DRAG</div>
+        <div class="hud-val sm" id="hudDrag">0 N</div>
+      </div>
+    </div>
+
+    <!-- HUD BOTTOM LEFT -->
+    <div class="hud hud-bl">
+      <div class="hud-box">
+        <div class="hud-label">LAT</div><div class="hud-val sm" id="hudLat">0.0000</div>
+        <div class="hud-label">LON</div><div class="hud-val sm" id="hudLon">0.0000</div>
+      </div>
+    </div>
+
+    <!-- HUD BOTTOM RIGHT -->
+    <div class="hud hud-br">
+      <div class="hud-box" style="text-align:right">
+        <div class="hud-label">MISSION TIME</div>
+        <div class="hud-val sm" id="hudMisTime">00:00:00</div>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loadingOverlay">
+      <div class="spinner"></div>
+      <div class="load-text" id="loadText">GENERATING SIMULATION...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rightPanel">
+    <div class="panel">
+      <div class="panel-title">NAVIGATION</div>
+      <div class="panel-row"><span class="plbl">LAT</span><span class="pval" id="rLat">0.0000</span></div>
+      <div class="panel-row"><span class="plbl">LON</span><span class="pval" id="rLon">0.0000</span></div>
+      <div class="panel-row"><span class="plbl">ALT (AGL)</span><span class="pval" id="rAltAgl">0 m</span></div>
+      <div class="panel-row"><span class="plbl">ALT (ASL)</span><span class="pval" id="rAltAsl">0 m</span></div>
+      <div class="panel-row"><span class="plbl">SPEED</span><span class="pval" id="rSpeed">0 m/s</span></div>
+      <div class="panel-row"><span class="plbl">ORBITAL</span><span class="pval" id="rOrbital">—</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">POWER</div>
+      <div class="panel-row"><span class="plbl">Battery</span><span class="pval" id="rBatt">100%</span></div>
+      <div class="panel-row"><span class="plbl">Solar</span><span class="pval" id="rSolar">0 kW</span></div>
+      <div class="panel-row"><span class="plbl">Draw</span><span class="pval" id="rDraw">0 kW</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">ENGINE</div>
+      <div class="panel-row"><span class="plbl">Status</span><span class="pval" id="rEngStat">OFF</span></div>
+      <div class="panel-row"><span class="plbl">Temp</span><span class="pval" id="rEngTemp">22°C</span></div>
+      <div class="panel-row"><span class="plbl">ISP</span><span class="pval" id="rEngISP">—</span></div>
+      <div class="panel-row"><span class="plbl">Delta-V</span><span class="pval" id="rDeltaV">—</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">ENVIRONMENT</div>
+      <div class="panel-row"><span class="plbl">Gravity</span><span class="pval" id="rGrav">1.625 m/s²</span></div>
+      <div class="panel-row"><span class="plbl">Atmo</span><span class="pval" id="rAtmo">Vacuum</span></div>
+      <div class="panel-row"><span class="plbl">Temp</span><span class="pval" id="rTempSurf">-53°C</span></div>
+    </div>
+    <div class="panel" style="flex:1;min-height:0">
+      <div class="panel-title">SIMULATION LOG</div>
+      <div id="simLog">
+        <div class="log-e"><span class="ts">[00:00:00]</span> <span class="ok">SIM online</span></div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="controls-bar">
-  <div class="ctrl-group">
-    <span class="ctrl-label">PITCH</span>
-    <input type="range" class="ctrl-slider" id="pitchCtrl" min="-100" max="100" value="0" style="width:80px">
-  </div>
-  <div class="ctrl-group">
-    <span class="ctrl-label">ROLL</span>
-    <input type="range" class="ctrl-slider" id="rollCtrl" min="-100" max="100" value="0" style="width:80px">
-  </div>
-  <div class="ctrl-group">
-    <span class="ctrl-label">YAW</span>
-    <input type="range" class="ctrl-slider" id="yawCtrl" min="-100" max="100" value="0" style="width:80px">
-  </div>
-  <div class="ctrl-group">
-    <span class="ctrl-label">FLAPS</span>
-    <input type="range" class="ctrl-slider" id="flapsCtrl" min="0" max="100" value="0" style="width:60px">
-  </div>
-  <div class="ctrl-group">
-    <span class="ctrl-label">GEAR</span>
-    <button class="ctrl-btn" id="btnGear" style="width:auto;padding:3px 10px;margin:0">UP</button>
-  </div>
+<!-- BOTTOM BAR -->
+<div id="bottomBar">
+  <div class="bb-group"><span class="bb-label">KEYS</span><span class="bb-val">W/S PITCH · A/D ROLL · Q/E YAW · SPACE BRAKE · SHIFT THROTTLE+ · CTRL THROTTLE-</span></div>
   <div style="flex:1"></div>
-  <span style="font-size:7px;color:#2a3a4a">KEYBOARD: W/S PITCH · A/D ROLL · Q/E YAW · SPACE BRAKE</span>
+  <div class="bb-group"><span class="bb-label">FPS</span><span class="bb-val" id="bbFps">60</span></div>
+  <div class="bb-group"><span class="bb-label">ENTITIES</span><span class="bb-val" id="bbEnt">0</span></div>
+  <div class="bb-group"><span class="bb-label">TRIANGLES</span><span class="bb-val" id="bbTri">0</span></div>
 </div>
 
-<script>
-(function(){
-  var vehicles={
-    obsidiana:{name:'OBSIDIANA',type:'Stealth Interceptor',mass:'12,400 kg',maxThrust:'245 kN',maxSpeed:'Mach 3.2',fuelMax:100,dragCoeff:0.02,liftCoeff:0.8},
-    blackvanta:{name:'BLACKVANTA',type:'Heavy Transport',mass:'48,200 kg',maxThrust:'890 kN',maxSpeed:'Mach 1.8',fuelMax:100,dragCoeff:0.04,liftCoeff:1.2},
-    ziron_sigma:{name:'ZIRON SIGMA',type:'Orbital Maneuver',mass:'8,600 kg',maxThrust:'120 kN',maxSpeed:'Mach 6.0',fuelMax:100,dragCoeff:0.01,liftCoeff:0.5},
-    zi_voyager:{name:'ZI VOYAGER',type:'Deep Space',mass:'124,000 kg',maxThrust:'2,400 kN',maxSpeed:'Mach 12.0',fuelMax:100,dragCoeff:0.005,liftCoeff:0.3}
-  };
+<!-- PROMPT MODAL -->
+<div id="promptModal">
+  <div id="promptBox">
+    <h3>PROMPT-TO-SIMULATION</h3>
+    <textarea id="promptInput" placeholder="Describe a simulation scenario...&#10;&#10;Examples:&#10;• Lunar mining base with habitat dome, cargo rover, and ISRU unit&#10;• Mars colony with solar arrays, pressurized rover, and communication dish&#10;• Earth orbit space station with docked spacecraft&#10;• Europa subsurface probe with ice drill"></textarea>
+    <div id="promptResult"></div>
+    <div id="promptBtns">
+      <button class="tb-btn" onclick="hidePrompt()">CANCEL</button>
+      <button class="tb-btn green" id="btnGenSim" onclick="generateSimulation()">GENERATE</button>
+    </div>
+  </div>
+</div>
 
-  var canvas=document.getElementById('simCanvas');
-  var ctx=canvas.getContext('2d');
-  var sim={
-    running:false,engineOn:false,altitude:0,velocity:0,heading:0,
-    pitch:0,roll:0,yaw:0,vertSpd:0,gforce:1.0,fuel:100,
-    throttle:0,flaps:0,gearUp:true,lat:0,lon:0,
-    vehicle:'obsidiana',time:0,battery:100
-  };
+<!-- SCENE BROWSER -->
+<div id="sceneBrowser">
+  <div id="sceneBox">
+    <h3>SAVED SIMULATIONS</h3>
+    <div id="sceneList"><div style="font-size:8px;color:#4a5a6a">Loading...</div></div>
+    <div style="margin-top:10px;text-align:right">
+      <button class="tb-btn" onclick="hideScenes()">CLOSE</button>
+    </div>
+  </div>
+</div>
 
-  var keys={};
-  document.addEventListener('keydown',function(e){keys[e.key.toLowerCase()]=true;});
-  document.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;});
-
-  function resize(){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight;}
-  resize();
-  window.addEventListener('resize',resize);
-
-  function updateVehicleInfo(){
-    var v=vehicles[sim.vehicle];
-    document.getElementById('viType').textContent=v.type;
-    document.getElementById('viMass').textContent=v.mass;
-    document.getElementById('viThrust').textContent=v.maxThrust;
-    document.getElementById('viSpeed').textContent=v.maxSpeed;
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
   }
+}
+</script>
 
-  function addLog(msg,type){
-    var el=document.getElementById('simLog');
-    var t=String(Math.floor(sim.time/3600)).padStart(2,'0')+':'+
-          String(Math.floor((sim.time%3600)/60)).padStart(2,'0')+':'+
-          String(Math.floor(sim.time%60)).padStart(2,'0');
-    el.innerHTML+='<div class="log-entry"><span class="ts">['+t+']</span> <span class="'+type+'">'+msg+'</span></div>';
-    el.scrollTop=el.scrollHeight;
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* ─── CONSTANTS ─── */
+const DEG = Math.PI / 180;
+const G0 = 9.80665;
+
+/* ─── BODIES ─── */
+const BODIES = {
+  earth: { name:'Earth', radius:6371000, gravity:9.807, atmo:true, atmoRadius:6471000, tempK:288,
+    skyTop:0x1a3a6a, skyBot:0x4a6a8a, groundColor:0x2a5a2a, fogColor:0x4a6a8a },
+  moon:  { name:'Moon', radius:1737400, gravity:1.625, atmo:false, atmoRadius:0, tempK:220,
+    skyTop:0x000008, skyBot:0x0a0a20, groundColor:0x4a4a4a, fogColor:0x1a1a1a },
+  mars:  { name:'Mars', radius:3389500, gravity:3.721, atmo:true, atmoRadius:3589500, tempK:210,
+    skyTop:0x3a1a0a, skyBot:0x8a4a2a, groundColor:0x8a4a2a, fogColor:0x6a3a1a },
+  europa:{ name:'Europa', radius:1560800, gravity:1.315, atmo:false, atmoRadius:0, tempK:102,
+    skyTop:0x000008, skyBot:0x0a0a18, groundColor:0x8a8a7a, fogColor:0x2a2a2a },
+  titan: { name:'Titan', radius:2574700, gravity:1.352, atmo:true, atmoRadius:2874700, tempK:94,
+    skyTop:0x3a2a0a, skyBot:0x6a5a2a, groundColor:0x5a4a2a, fogColor:0x4a3a1a },
+  venus: { name:'Venus', radius:6051800, gravity:8.87, atmo:true, atmoRadius:6651800, tempK:737,
+    skyTop:0x5a3a0a, skyBot:0xaa7a2a, groundColor:0xaa8a4a, fogColor:0x8a6a2a },
+};
+
+/* ─── VEHICLES ─── */
+const VEHICLES = {
+  spacecraft: { name:'Spacecraft', mass:12400, thrust:245000, isp:320, fuelMax:8000, drag:0.02, lift:0.8,
+    color:0x00e5ff, maxSpeed:1000, parts:[
+      {type:'cylinder',r:1.2,h:8,y:0, color:0x333333},
+      {type:'cone',r:1.5,h:3,y:-5.5, color:0x222222},
+      {type:'cylinder',r:0.3,h:2,y:4, color:0x00e5ff},
+      {type:'box',w:6,h:0.2,d:3,y:0, color:0x1a3a5a}
+    ]},
+  rover:    { name:'Rover', mass:850, thrust:5000, isp:280, fuelMax:200, drag:0.15, lift:0,
+    color:0x00ff88, maxSpeed:5, parts:[
+      {type:'box',w:3,h:1.2,d:4,y:1, color:0x555555},
+      {type:'cylinder',r:0.5,h:0.3,y:0.3, color:0x222222, copies:[[1.2,0.3,1.5],[1.2,0.3,-1.5],[-1.2,0.3,1.5],[-1.2,0.3,-1.5]]},
+      {type:'box',w:1,h:0.8,d:1.5,y:1.9, color:0x666666}
+    ]},
+  drone:    { name:'Drone', mass:2.5, thrust:800, isp:0, fuelMax:0.5, drag:0.1, lift:1.2,
+    color:0x00ff88, maxSpeed:30, parts:[
+      {type:'box',w:0.6,h:0.15,d:0.6,y:0, color:0x333333},
+      {type:'cylinder',r:0.08,h:0.05,y:0.2, color:0x555555, copies:[[0.3,0.2,0.3],[0.3,0.2,-0.3],[-0.3,0.2,0.3],[-0.3,0.2,-0.3]]}
+    ]},
+  orbiter:  { name:'Orbiter', mass:3200, thrust:45000, isp:310, fuelMax:1500, drag:0.01, lift:0.3,
+    color:0x7c4dff, maxSpeed:7800, parts:[
+      {type:'box',w:2,h:1.5,d:4,y:0, color:0x444444},
+      {type:'box',w:10,h:0.1,d:2,y:0, color:0x2244aa},
+      {type:'cylinder',r:0.4,h:1.5,y:-2.5, color:0x333333}
+    ]},
+  station:  { name:'Station', mass:420000, thrust:0, isp:0, fuelMax:0, drag:0.001, lift:0,
+    color:0xc8d0dc, maxSpeed:0, parts:[
+      {type:'box',w:3,h:3,d:12,y:0, color:0x555555},
+      {type:'cylinder',r:2,h:8,y:0, color:0x444444, rotX:90},
+      {type:'box',w:16,h:0.1,d:4,y:0, color:0x2244aa, rotZ:0}
+    ]},
+  lander:   { name:'Lander', mass:5600, thrust:60000, isp:310, fuelMax:2000, drag:0.05, lift:0,
+    color:0xff9800, maxSpeed:100, parts:[
+      {type:'box',w:2.5,h:2,d:2.5,y:1, color:0x666666},
+      {type:'cylinder',r:0.6,h:1.5,y:2.5, color:0x333333},
+      {type:'box',w:0.3,h:1.5,d:0.3,y:-0.5, color:0x888888, copies:[[1.2,-0.5,1.2],[1.2,-0.5,-1.2],[-1.2,-0.5,1.2],[-1.2,-0.5,-1.2]]}
+    ]}
+};
+
+/* ─── STATE ─── */
+const S = {
+  running: false, engineOn: false, time: 0,
+  throttle: 0, fuel: 100, fuelMax: 8000, battery: 100,
+  pos: new THREE.Vector3(0, 50, 0),
+  vel: new THREE.Vector3(0, 0, 0),
+  rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+  heading: 0, pitch: 0, roll: 0,
+  altitude: 50, groundAlt: 0,
+  gforce: 1, mach: 0,
+  lat: 0, lon: 0,
+  body: 'moon', vehicleType: 'spacecraft',
+  apoapsis: null, periapsis: null,
+  camMode: 'chase', wireframe: false, showGrid: true, showLabels: true,
+  entities: [],
+  simId: null,
+};
+
+/* ─── THREE.JS SETUP ─── */
+const canvas = document.getElementById('threeCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000000);
+camera.position.set(0, 50, 80);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.maxDistance = 500000;
+controls.minDistance = 1;
+controls.enabled = false;
+
+/* ─── LIGHTING ─── */
+const ambientLight = new THREE.AmbientLight(0x334455, 0.4);
+scene.add(ambientLight);
+
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+sunLight.position.set(100, 80, 60);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.near = 0.1;
+sunLight.shadow.camera.far = 500;
+sunLight.shadow.camera.left = -200;
+sunLight.shadow.camera.right = 200;
+sunLight.shadow.camera.top = 200;
+sunLight.shadow.camera.bottom = -200;
+scene.add(sunLight);
+
+const hemiLight = new THREE.HemisphereLight(0x88aacc, 0x443322, 0.3);
+scene.add(hemiLight);
+
+/* ─── GROUND ─── */
+let ground = null;
+let gridHelper = null;
+let terrainSegments = 256;
+
+function createGround() {
+  if (ground) scene.remove(ground);
+  if (gridHelper) scene.remove(gridHelper);
+
+  const b = BODIES[S.body];
+  const R = b.radius / 1000;
+  const size = R * 0.02;
+  const segs = terrainSegments;
+
+  const geo = new THREE.PlaneGeometry(size, size, segs, segs);
+  geo.rotateX(-Math.PI / 2);
+
+  const posAttr = geo.getAttribute('position');
+  const verts = posAttr.count;
+  for (let i = 0; i < verts; i++) {
+    const x = posAttr.getX(i);
+    const z = posAttr.getZ(i);
+    const h = terrainHeight(x, z);
+    posAttr.setY(i, h);
   }
+  geo.computeVertexNormals();
 
-  function formatTime(s){
-    return String(Math.floor(s/3600)).padStart(2,'0')+':'+
-           String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+
-           String(Math.floor(s%60)).padStart(2,'0');
+  const colors = new Float32Array(verts * 3);
+  const c = new THREE.Color(b.groundColor);
+  for (let i = 0; i < verts; i++) {
+    const h = posAttr.getY(i);
+    const n = Math.max(0, Math.min(1, (h + 2) / 4));
+    const vc = c.clone().multiplyScalar(0.5 + n * 0.5);
+    colors[i * 3] = vc.r;
+    colors[i * 3 + 1] = vc.g;
+    colors[i * 3 + 2] = vc.b;
   }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  function drawSim(){
-    canvas.width=canvas.clientWidth;
-    canvas.height=canvas.clientHeight;
-    var w=canvas.width,h=canvas.height;
+  const mat = new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.9, metalness: 0.05,
+    wireframe: S.wireframe,
+  });
+  ground = new THREE.Mesh(geo, mat);
+  ground.receiveShadow = true;
+  ground.position.set(S.pos.x, 0, S.pos.z);
+  scene.add(ground);
 
-    var skyGrad=ctx.createLinearGradient(0,0,0,h);
-    if(sim.altitude>50000){
-      skyGrad.addColorStop(0,'#000008');
-      skyGrad.addColorStop(1,'#0a0a20');
-    }else if(sim.altitude>10000){
-      skyGrad.addColorStop(0,'#0a1030');
-      skyGrad.addColorStop(1,'#1a2a4a');
-    }else{
-      skyGrad.addColorStop(0,'#1a3a6a');
-      skyGrad.addColorStop(1,'#4a6a8a');
-    }
-    ctx.fillStyle=skyGrad;
-    ctx.fillRect(0,0,w,h);
+  if (S.showGrid) {
+    gridHelper = new THREE.GridHelper(size, 40, 0x00e5ff, 0x0a2040);
+    gridHelper.position.set(S.pos.x, 0.1, S.pos.z);
+    scene.add(gridHelper);
+  }
+}
 
-    if(sim.altitude>5000){
-      for(var i=0;i<60;i++){
-        var sx=(i*137+sim.heading*0.5)%w;
-        var sy=(i*97)%((h*0.6));
-        ctx.fillStyle='rgba(255,255,255,'+(0.3+Math.random()*0.4)+')';
-        ctx.fillRect(sx,sy,1,1);
+function terrainHeight(x, z) {
+  let h = 0;
+  h += Math.sin(x * 0.05) * Math.cos(z * 0.07) * 2;
+  h += Math.sin(x * 0.15 + 1.3) * Math.cos(z * 0.12 + 0.7) * 1;
+  h += Math.sin(x * 0.3 + 2.1) * Math.cos(z * 0.28 + 1.4) * 0.5;
+  h += Math.sin(x * 0.6 + 0.5) * Math.cos(z * 0.55 + 2.1) * 0.2;
+  const cr = Math.sqrt(x * x + z * z);
+  h -= cr * 0.01;
+  return h;
+}
+
+/* ─── SKY ─── */
+let skyMesh = null;
+function createSky() {
+  if (skyMesh) scene.remove(skyMesh);
+  const b = BODIES[S.body];
+  const skyGeo = new THREE.SphereGeometry(1000000, 32, 32);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {
+      topColor: { value: new THREE.Color(b.skyTop) },
+      botColor: { value: new THREE.Color(b.skyBot) },
+    },
+    vertexShader: `
+      varying vec3 vWorldPos;
+      void main(){
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
       }
-    }
-
-    var horizonY=h*0.5+sim.pitch*2;
-    ctx.save();
-    ctx.translate(w/2,horizonY);
-    ctx.rotate(sim.roll*Math.PI/180);
-
-    if(sim.altitude<50000){
-      var groundGrad=ctx.createLinearGradient(0,0,0,h);
-      if(sim.altitude<5000){
-        groundGrad.addColorStop(0,'#2a5a2a');
-        groundGrad.addColorStop(1,'#1a3a1a');
-      }else{
-        groundGrad.addColorStop(0,'#3a5a7a');
-        groundGrad.addColorStop(1,'#1a2a3a');
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 botColor;
+      varying vec3 vWorldPos;
+      void main(){
+        float h = normalize(vWorldPos).y;
+        float t = clamp(h * 0.5 + 0.5, 0.0, 1.0);
+        gl_FragColor = vec4(mix(botColor, topColor, t), 1.0);
       }
-      ctx.fillStyle=groundGrad;
-      ctx.fillRect(-w,h*0.3,w,h*2);
+    `,
+  });
+  skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
+}
 
-      ctx.strokeStyle='rgba(0,229,255,0.15)';
-      ctx.lineWidth=1;
-      for(var gy=-5;gy<10;gy++){
-        var gyPos=gy*80+h*0.3;
-        ctx.beginPath();ctx.moveTo(-w,gyPos);ctx.lineTo(w,gyPos);ctx.stroke();
-      }
-      for(var gx=-10;gx<20;gx++){
-        var gxPos=gx*80;
-        ctx.beginPath();ctx.moveTo(gxPos,h*0.3);ctx.lineTo(gxPos,h*2);ctx.stroke();
-      }
-    }
-    ctx.restore();
+/* ─── STARS ─── */
+let starsMesh = null;
+function createStars() {
+  if (starsMesh) scene.remove(starsMesh);
+  const geo = new THREE.BufferGeometry();
+  const verts = [];
+  const colors = [];
+  for (let i = 0; i < 3000; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const r = 900000;
+    verts.push(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.sin(phi) * Math.sin(theta),
+      r * Math.cos(phi)
+    );
+    const c = 0.5 + Math.random() * 0.5;
+    const tint = Math.random();
+    colors.push(c, c + tint * 0.1, c + (1 - tint) * 0.1);
+  }
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const mat = new THREE.PointsMaterial({ size: 800, vertexColors: true, sizeAttenuation: true });
+  starsMesh = new THREE.Points(geo, mat);
+  scene.add(starsMesh);
+}
 
-    ctx.strokeStyle='rgba(0,229,255,0.3)';
-    ctx.lineWidth=1;
-    ctx.beginPath();
-    ctx.moveTo(w/2-40,h/2);ctx.lineTo(w/2-15,h/2);
-    ctx.moveTo(w/2+15,h/2);ctx.lineTo(w/2+40,h/2);
-    ctx.moveTo(w/2,h/2-15);ctx.lineTo(w/2,h/2-5);
-    ctx.moveTo(w/2,h/2+5);ctx.lineTo(w/2,h/2+15);
-    ctx.stroke();
+/* ─── VEHICLE MESH ─── */
+let vehicleGroup = new THREE.Group();
+let vehicleParts = [];
+scene.add(vehicleGroup);
 
-    ctx.beginPath();
-    ctx.arc(w/2,h/2,3,0,Math.PI*2);
-    ctx.fillStyle='#f44';ctx.fill();
+function createVehicle() {
+  while (vehicleGroup.children.length) vehicleGroup.remove(vehicleGroup.children[0]);
+  vehicleParts = [];
 
-    var pitchLines=[-20,-10,10,20];
-    pitchLines.forEach(function(p){
-      var py=h/2+p*3+sim.pitch*2;
-      ctx.strokeStyle='rgba(0,229,255,0.2)';
-      ctx.beginPath();ctx.moveTo(w/2-20,py);ctx.lineTo(w/2+20,py);ctx.stroke();
-      ctx.fillStyle='rgba(0,229,255,0.3)';
-      ctx.font='7px monospace';
-      ctx.fillText(Math.abs(p)+'°',w/2+22,py+3);
+  const v = VEHICLES[S.vehicleType];
+  v.parts.forEach(part => {
+    let geo;
+    const w = part.w || 1, h = part.h || 1, d = part.d || 1;
+    const r = part.r || 0.5;
+
+    if (part.type === 'box') geo = new THREE.BoxGeometry(w, h, d);
+    else if (part.type === 'cylinder') geo = new THREE.CylinderGeometry(r, r, h, 16);
+    else if (part.type === 'cone') geo = new THREE.ConeGeometry(r, h, 16);
+    else if (part.type === 'sphere') geo = new THREE.SphereGeometry(r, 16, 16);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: part.color || v.color, roughness: 0.6, metalness: 0.3,
+      wireframe: S.wireframe,
     });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(part.x || 0, part.y || 0, part.z || 0);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
 
-    ctx.fillStyle='rgba(0,229,255,0.15)';
-    ctx.font='10px monospace';
-    ctx.fillText('ALT '+Math.round(sim.altitude)+'m',12,20);
-    ctx.fillText('SPD '+Math.round(sim.velocity)+'m/s',12,34);
-    ctx.fillText('HDG '+String(Math.round(sim.heading)).padStart(3,'0')+'°',12,48);
+    if (part.rotX) mesh.rotation.x = part.rotX * DEG;
+    if (part.rotZ) mesh.rotation.z = part.rotZ * DEG;
 
-    if(sim.engineOn&&sim.throttle>0){
-      var flameY=h/2+25;
-      var flameH=10+sim.throttle*0.3;
-      var flameGrad=ctx.createRadialGradient(w/2,flameY,0,w/2,flameY+flameH,flameH);
-      flameGrad.addColorStop(0,'rgba(0,200,255,0.6)');
-      flameGrad.addColorStop(0.5,'rgba(0,100,255,0.3)');
-      flameGrad.addColorStop(1,'rgba(0,50,255,0)');
-      ctx.fillStyle=flameGrad;
-      ctx.beginPath();
-      ctx.moveTo(w/2-8,flameY);
-      ctx.lineTo(w/2+8,flameY);
-      ctx.lineTo(w/2+Math.random()*4-2,flameY+flameH);
-      ctx.lineTo(w/2+Math.random()*4-2,flameY+flameH);
-      ctx.fill();
+    vehicleGroup.add(mesh);
+    vehicleParts.push(mesh);
+
+    if (part.copies) {
+      part.copies.forEach(c => {
+        const clone = mesh.clone();
+        clone.position.set(c[0], c[1], c[2]);
+        vehicleGroup.add(clone);
+        vehicleParts.push(clone);
+      });
+    }
+  });
+}
+
+/* ─── ENTITY MESHES ─── */
+const entityGroup = new THREE.Group();
+scene.add(entityGroup);
+
+function addEntityAt(name, x, y, z, color) {
+  const c = color || 0x555555;
+  const g = new THREE.Group();
+
+  if (name.includes('habitat') || name.includes('dome')) {
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(5, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0x667788, roughness: 0.5, metalness: 0.2, transparent: true, opacity: 0.8 })
+    );
+    g.add(dome);
+  } else if (name.includes('rover')) {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 4), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+    body.position.y = 1;
+    g.add(body);
+    [[1.2, 0.3, 1.5], [1.2, 0.3, -1.5], [-1.2, 0.3, 1.5], [-1.2, 0.3, -1.5]].forEach(p => {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+      w.position.set(p[0], p[1], p[2]);
+      g.add(w);
+    });
+  } else if (name.includes('solar')) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(6, 0.1, 3), new THREE.MeshStandardMaterial({ color: 0x2244aa }));
+    panel.position.y = 3;
+    g.add(panel);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3), new THREE.MeshStandardMaterial({ color: 0x666666 }));
+    pole.position.y = 1.5;
+    g.add(pole);
+  } else if (name.includes('dish') || name.includes('antenna')) {
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0x888888 }));
+    dish.rotation.x = -Math.PI / 2;
+    dish.position.y = 4;
+    g.add(dish);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 4), new THREE.MeshStandardMaterial({ color: 0x666666 }));
+    pole.position.y = 2;
+    g.add(pole);
+  } else if (name.includes('isru') || name.includes('mining')) {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 4), new THREE.MeshStandardMaterial({ color: 0x777777 }));
+    base.position.y = 1;
+    g.add(base);
+    const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 5), new THREE.MeshStandardMaterial({ color: 0x444444 }));
+    chimney.position.set(1.5, 4, 0);
+    g.add(chimney);
+  } else if (name.includes('station') || name.includes('module')) {
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 6, 12), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+    core.rotation.x = Math.PI / 2;
+    g.add(core);
+    for (let i = 0; i < 4; i++) {
+      const ang = i * Math.PI / 2;
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 4), new THREE.MeshStandardMaterial({ color: 0x444444 }));
+      arm.position.set(Math.cos(ang) * 4, 0, Math.sin(ang) * 4);
+      arm.rotation.z = Math.PI / 2;
+      g.add(arm);
+    }
+  } else {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({ color: c }));
+    box.position.y = 1;
+    box.castShadow = true;
+    g.add(box);
+  }
+
+  g.position.set(x, y, z);
+  g.userData.entityName = name;
+  entityGroup.add(g);
+  S.entities.push(g);
+}
+
+/* ─── LABELS ─── */
+const labelGroup = new THREE.Group();
+scene.add(labelGroup);
+
+function createLabel(text, x, y, z) {
+  const cnv = document.createElement('canvas');
+  cnv.width = 256; cnv.height = 64;
+  const ctx = cnv.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+  ctx.strokeRect(0, 0, 256, 64);
+  ctx.fillStyle = '#00e5ff';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 40);
+
+  const tex = new THREE.CanvasTexture(cnv);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.8 });
+  const sprite = new THREE.Sprite(mat);
+  sprite.position.set(x, y + 5, z);
+  sprite.scale.set(10, 2.5, 1);
+  labelGroup.add(sprite);
+}
+
+/* ─── SCENE GENERATION ─── */
+function setupScene() {
+  S.pos.set(0, 50, 0);
+  S.vel.set(0, 0, 0);
+  S.heading = 0; S.pitch = 0; S.roll = 0;
+  S.throttle = 0; S.fuel = 100; S.battery = 100;
+  S.time = 0; S.running = false; S.engineOn = false;
+  S.gforce = 1; S.mach = 0; S.lat = 0; S.lon = 0;
+  S.apoapsis = null; S.periapsis = null;
+
+  S.fuelMax = VEHICLES[S.vehicleType].fuelMax;
+  S.fuel = 100;
+
+  createSky();
+  createStars();
+  createGround();
+  createVehicle();
+
+  entityGroup.clear();
+  labelGroup.clear();
+  S.entities = [];
+
+  /* Default entities for body */
+  const entityConfigs = {
+    moon: [
+      { name:'Habitat Dome', x:20, z:15 },
+      { name:'Rover', x:-10, z:25 },
+      { name:'Solar Array', x:-25, z:-10 },
+      { name:'ISRU Unit', x:35, z:-20 },
+      { name:'Comm Dish', x:-30, z:20 },
+    ],
+    earth: [
+      { name:'Space Station', x:0, z:0 },
+      { name:'Solar Array', x:15, z:-5 },
+    ],
+    mars: [
+      { name:'Habitat Dome', x:15, z:10 },
+      { name:'ISRU Unit', x:-20, z:15 },
+      { name:'Rover', x:25, z:-15 },
+      { name:'Solar Array', x:-15, z:-20 },
+      { name:'Comm Dish', x:30, z:25 },
+      { name:'Mining Module', x:-30, z:-10 },
+    ],
+  };
+  const defs = entityConfigs[S.body] || entityConfigs.moon;
+  defs.forEach(e => {
+    const y = terrainHeight(e.x, e.z);
+    addEntityAt(e.name, e.x, y, e.z);
+    if (S.showLabels) createLabel(e.name, e.x, y, e.z);
+  });
+
+  S.pos.set(0, terrainHeight(0, 0) + 50, 0);
+  S.altitude = 50;
+  S.groundAlt = terrainHeight(0, 0);
+
+  const b = BODIES[S.body];
+  document.getElementById('infBody').textContent = b.name;
+  document.getElementById('infGravity').textContent = b.gravity + ' m/s²';
+  document.getElementById('infRadius').textContent = (b.radius / 1000).toLocaleString() + ' km';
+  document.getElementById('infAtmo').textContent = b.atmo ? 'Yes' : 'Vacuum';
+  document.getElementById('infTemp').textContent = b.tempK + ' K';
+  document.getElementById('rGrav').textContent = b.gravity + ' m/s²';
+  document.getElementById('rAtmo').textContent = b.atmo ? 'Thin' : 'Vacuum';
+  document.getElementById('rTempSurf').textContent = (b.tempK - 273).toFixed(0) + '°C';
+
+  const v = VEHICLES[S.vehicleType];
+  document.getElementById('infVehType').textContent = v.name;
+  document.getElementById('infVehMass').textContent = v.mass.toLocaleString() + ' kg';
+  document.getElementById('infVehThrust').textContent = v.thrust > 0 ? (v.thrust / 1000).toFixed(0) + ' kN' : 'N/A';
+  document.getElementById('infVehISP').textContent = v.isp > 0 ? v.isp + ' s' : 'N/A';
+  document.getElementById('rEngISP').textContent = v.isp > 0 ? v.isp + ' s' : '—';
+
+  updateCam();
+}
+
+/* ─── PHYSICS ─── */
+function physicsStep(dt) {
+  if (!S.running) return;
+  S.time += dt;
+
+  const v = VEHICLES[S.vehicleType];
+  const b = BODIES[S.body];
+
+  /* Keyboard */
+  if (keys['w']) S.pitch = Math.max(-60, S.pitch - dt * 30);
+  if (keys['s']) S.pitch = Math.min(60, S.pitch + dt * 30);
+  if (keys['a']) S.roll = Math.max(-45, S.roll - dt * 25);
+  if (keys['d']) S.roll = Math.min(45, S.roll + dt * 25);
+  if (keys['q']) S.heading = (S.heading - dt * 15 + 360) % 360;
+  if (keys['e']) S.heading = (S.heading + dt * 15) % 360;
+  if (keys[' ']) S.throttle = Math.max(0, S.throttle - dt * 50);
+  if (keys['shift']) S.throttle = Math.min(100, S.throttle + dt * 50);
+  if (keys['control']) S.throttle = Math.max(0, S.throttle - dt * 30);
+  document.getElementById('throttleSlider').value = S.throttle;
+  document.getElementById('pThrottleVal').textContent = Math.round(S.throttle) + '%';
+
+  /* Thrust */
+  if (S.engineOn && S.fuel > 0 && v.thrust > 0) {
+    const thrustFrac = S.throttle / 100;
+    const thrustN = thrustFrac * v.thrust;
+    const thrustAccel = thrustN / (v.mass * (S.fuel / 100));
+
+    const pitchR = S.pitch * DEG;
+    const hdgR = S.heading * DEG;
+    const fx = -Math.sin(hdgR) * Math.cos(pitchR) * thrustAccel;
+    const fy = Math.sin(pitchR) * thrustAccel;
+    const fz = -Math.cos(hdgR) * Math.cos(pitchR) * thrustAccel;
+    S.vel.x += fx * dt;
+    S.vel.y += fy * dt;
+    S.vel.z += fz * dt;
+
+    const fuelRate = thrustFrac * (v.fuelMax > 0 ? 0.015 : 0) * dt;
+    S.fuel = Math.max(0, S.fuel - fuelRate);
+    S.battery = Math.max(0, S.battery - thrustFrac * 0.002 * dt);
+  }
+
+  /* Gravity */
+  const distFromCenter = Math.sqrt(S.pos.x * S.pos.x + S.pos.y * S.pos.y + S.pos.z * S.pos.z);
+  const altM = Math.max(0, distFromCenter - b.radius / 1000);
+  const gravAccel = b.gravity * Math.pow(1 + altM / (b.radius / 1000), -2);
+  const gravDir = new THREE.Vector3(-S.pos.x, -S.pos.y, -S.pos.z).normalize();
+  S.vel.add(gravDir.clone().multiplyScalar(gravAccel * dt));
+
+  /* Drag (if atmosphere) */
+  if (b.atmo) {
+    const density = Math.exp(-altM / 8500) * 1.225;
+    const speed = S.vel.length();
+    const dragF = 0.5 * density * speed * speed * v.drag * 0.1;
+    if (speed > 0.01) {
+      const dragDecel = dragF / v.mass;
+      S.vel.add(S.vel.clone().normalize().multiplyScalar(-dragDecel * dt));
     }
   }
 
-  function updateHUD(){
-    document.getElementById('hudAlt').textContent=Math.round(sim.altitude);
-    document.getElementById('hudVel').textContent=Math.round(sim.velocity);
-    document.getElementById('hudHdg').textContent=String(Math.round(sim.heading)%360).padStart(3,'0');
-    document.getElementById('hudVsp').textContent=Math.round(sim.vertSpd);
-    document.getElementById('hudGforce').textContent=sim.gforce.toFixed(1);
-    document.getElementById('hudMach').textContent=(sim.velocity/343).toFixed(2);
-    document.getElementById('hudFuel').textContent=Math.round(sim.fuel)+'%';
+  /* Position update */
+  S.pos.add(S.vel.clone().multiplyScalar(dt));
 
-    var fuelEl=document.getElementById('hudFuel');
-    fuelEl.className='hud-value'+(sim.fuel<20?' danger':sim.fuel<40?' warn':'');
-
-    document.getElementById('attHorizon').style.transform='rotate('+(sim.roll)+'deg) translateY('+(sim.pitch*0.5)+'px)';
-
-    var dirs=['N','NE','E','SE','S','SW','W','NW'];
-    var dirIdx=Math.round(sim.heading/45)%8;
-    document.getElementById('compassLabel').textContent=dirs[dirIdx];
-
-    document.getElementById('spThrust').textContent=Math.round(sim.throttle*2.45)+' kN';
-    document.getElementById('spEngTemp').textContent=Math.round(22+sim.throttle*8.5+sim.velocity*0.02)+'°C';
-    document.getElementById('spRPM').textContent=Math.round(sim.throttle*280);
-    document.getElementById('spLat').textContent=(sim.lat).toFixed(4);
-    document.getElementById('spLon').textContent=(sim.lon).toFixed(4);
-    document.getElementById('spAlt').textContent=Math.round(sim.altitude)+' m';
-    document.getElementById('spBattery').textContent=Math.round(sim.battery)+'%';
-    document.getElementById('spSolar').textContent=sim.altitude>10000?'4.2 kW':'0 kW';
-    document.getElementById('spDraw').textContent=Math.round(1.5+sim.throttle*3)+' kW';
-
-    document.getElementById('simTime').textContent='T+ '+formatTime(sim.time);
+  /* Ground collision */
+  S.groundAlt = terrainHeight(S.pos.x, S.pos.z);
+  S.altitude = Math.max(0, S.pos.y - S.groundAlt);
+  if (S.pos.y < S.groundAlt + 0.5) {
+    S.pos.y = S.groundAlt + 0.5;
+    const impactSpeed = -S.vel.y;
+    if (impactSpeed > 10) addLog('HARD LANDING! Impact: ' + impactSpeed.toFixed(1) + ' m/s', 'err');
+    else if (impactSpeed > 2) addLog('Landing: ' + impactSpeed.toFixed(1) + ' m/s', 'warn');
+    S.vel.y = Math.max(0, S.vel.y * -0.1);
+    S.vel.x *= 0.9;
+    S.vel.z *= 0.9;
   }
 
-  function simStep(dt){
-    if(!sim.running)return;
-    sim.time+=dt;
+  /* Derived */
+  S.gforce = 1 + (S.vel.y / (b.gravity || 1)) * 0.1;
+  const speed = S.vel.length();
+  const soundSpeed = b.atmo ? 343 * Math.sqrt(b.tempK / 288) : 10000;
+  S.mach = speed / soundSpeed;
 
-    if(keys['w'])sim.pitch=Math.max(-30,sim.pitch-dt*20);
-    if(keys['s'])sim.pitch=Math.min(30,sim.pitch+dt*20);
-    if(keys['a'])sim.roll=Math.max(-45,sim.roll-dt*25);
-    if(keys['d'])sim.roll=Math.min(45,sim.roll+dt*25);
-    if(keys['q'])sim.heading=(sim.heading-dt*15+360)%360;
-    if(keys['e'])sim.heading=(sim.heading+dt*15)%360;
-    if(keys[' '])sim.throttle=Math.max(0,sim.throttle-dt*50);
-
-    if(sim.engineOn&&sim.fuel>0){
-      var thrustForce=sim.throttle*0.0245*vehicles[sim.vehicle].dragCoeff*100;
-      sim.velocity+=thrustForce*dt;
-      sim.fuel=Math.max(0,sim.fuel-sim.throttle*0.001*dt);
-      sim.battery=Math.max(0,sim.battery-sim.throttle*0.0005*dt);
+  /* Orbital parameters (simplified) */
+  const mu = b.gravity * Math.pow(b.radius / 1000, 2) * 1e6;
+  const r = distFromCenter * 1000;
+  const v2 = speed * speed;
+  if (r > 0 && speed > 10) {
+    const energy = v2 / 2 - mu / r;
+    const a = -mu / (2 * energy);
+    const h = S.pos.x * S.vel.z - S.pos.z * S.vel.x;
+    const e = Math.sqrt(Math.max(0, 1 + 2 * energy * h * h / (mu * mu)));
+    if (!isNaN(a) && a > 0) {
+      S.apoapsis = a * (1 + e) - b.radius / 1000;
+      S.periapsis = Math.max(0, a * (1 - e) - b.radius / 1000);
     }
+  }
 
-    var drag=vehicles[sim.vehicle].dragCoeff*sim.velocity*sim.velocity*0.0001;
-    sim.velocity=Math.max(0,sim.velocity-drag*dt);
+  /* Lat/Lon */
+  S.lat += S.vel.z * dt * 0.000001;
+  S.lon += S.vel.x * dt * 0.000001;
 
-    var lift=vehicles[sim.vehicle].liftCoeff*sim.velocity*0.01;
-    sim.vertSpd=lift-sim.pitch*0.5-9.81*(sim.altitude<100?1:0.1);
-    sim.altitude=Math.max(0,sim.altitude+sim.vertSpd*dt);
+  /* Fuel check */
+  if (S.fuel <= 0 && S.engineOn) {
+    addLog('FUEL DEPLETED', 'err');
+    S.engineOn = false;
+    document.getElementById('btnEngine').textContent = 'ENGINE OFF';
+    document.getElementById('btnEngine').classList.remove('active');
+  }
+}
 
-    if(sim.altitude<=0){
-      sim.altitude=0;sim.vertSpd=0;
-      if(sim.velocity>50)addLog('HARD LANDING','err');
-      else if(sim.velocity>10)addLog('Landing...','warn');
+/* ─── INPUT ─── */
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+/* ─── UI CONTROLS ─── */
+window.toggleEngine = function() {
+  S.engineOn = !S.engineOn;
+  const btn = document.getElementById('btnEngine');
+  btn.textContent = S.engineOn ? 'ENGINE ON' : 'START ENGINE';
+  btn.classList.toggle('active', S.engineOn);
+  document.getElementById('rEngStat').textContent = S.engineOn ? 'RUNNING' : 'OFF';
+  document.getElementById('rEngStat').className = 'pval ' + (S.engineOn ? 'green' : '');
+  addLog(S.engineOn ? 'Engine started' : 'Engine stopped', S.engineOn ? 'ok' : 'warn');
+  if (S.engineOn && !S.running) {
+    S.running = true;
+    document.getElementById('simStatus').textContent = 'ACTIVE';
+    document.getElementById('simStatus').className = 'tb-badge';
+  }
+};
+
+window.doLaunch = function() {
+  if (!S.engineOn) { addLog('Start engine first', 'warn'); return; }
+  S.running = true;
+  S.throttle = 80;
+  document.getElementById('throttleSlider').value = 80;
+  document.getElementById('pThrottleVal').textContent = '80%';
+  document.getElementById('simStatus').textContent = 'LAUNCH';
+  document.getElementById('simStatus').className = 'tb-badge warn';
+  addLog('Launch initiated', 'ok');
+};
+
+window.doLand = function() {
+  S.running = true;
+  S.throttle = 15;
+  document.getElementById('throttleSlider').value = 15;
+  document.getElementById('pThrottleVal').textContent = '15%';
+  document.getElementById('simStatus').textContent = 'LANDING';
+  document.getElementById('simStatus').className = 'tb-badge warn';
+  addLog('Landing sequence', 'warn');
+};
+
+window.doEmergency = function() {
+  S.throttle = 0; S.engineOn = false; S.running = false;
+  S.vel.set(0, 0, 0);
+  document.getElementById('throttleSlider').value = 0;
+  document.getElementById('pThrottleVal').textContent = '0%';
+  document.getElementById('btnEngine').textContent = 'START ENGINE';
+  document.getElementById('btnEngine').classList.remove('active');
+  document.getElementById('simStatus').textContent = 'EMERGENCY';
+  document.getElementById('simStatus').className = 'tb-badge err';
+  document.getElementById('rEngStat').textContent = 'OFF';
+  document.getElementById('rEngStat').className = 'pval';
+  addLog('EMERGENCY STOP', 'err');
+};
+
+window.doOrbit = function() {
+  if (!S.engineOn || S.fuel <= 0) { addLog('No propulsion', 'warn'); return; }
+  addLog('Circularizing orbit...', 'ok');
+  S.throttle = 60;
+  document.getElementById('throttleSlider').value = 60;
+  setTimeout(() => { S.throttle = 0; document.getElementById('throttleSlider').value = 0; addLog('Circularization complete', 'ok'); }, 3000);
+};
+
+window.doDeorbit = function() {
+  if (!S.engineOn || S.fuel <= 0) { addLog('No propulsion', 'warn'); return; }
+  addLog('Deorbit burn...', 'warn');
+  S.throttle = 40;
+  document.getElementById('throttleSlider').value = 40;
+  setTimeout(() => { S.throttle = 0; document.getElementById('throttleSlider').value = 0; addLog('Deorbit complete', 'ok'); }, 2000);
+};
+
+document.getElementById('throttleSlider').addEventListener('input', function() {
+  S.throttle = parseInt(this.value);
+  document.getElementById('pThrottleVal').textContent = this.value + '%';
+});
+
+/* Camera */
+window.setCam = function(mode) {
+  S.camMode = mode;
+  ['camChase', 'camOrbit', 'camFree', 'camCockpit'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('cam' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  controls.enabled = (mode === 'orbit');
+  updateCam();
+};
+
+function updateCam() {
+  if (S.camMode === 'chase') {
+    const hdgR = S.heading * DEG;
+    const dist = 30;
+    const height = 15;
+    camera.position.set(
+      S.pos.x + Math.sin(hdgR) * dist,
+      S.pos.y + height,
+      S.pos.z + Math.cos(hdgR) * dist
+    );
+    camera.lookAt(S.pos.x, S.pos.y, S.pos.z);
+  } else if (S.camMode === 'cockpit') {
+    const hdgR = S.heading * DEG;
+    camera.position.set(
+      S.pos.x + Math.sin(hdgR) * 2,
+      S.pos.y + 2,
+      S.pos.z + Math.cos(hdgR) * 2
+    );
+    camera.lookAt(
+      S.pos.x - Math.sin(hdgR) * 20,
+      S.pos.y - Math.sin(S.pitch * DEG) * 20,
+      S.pos.z - Math.cos(hdgR) * 20
+    );
+  } else if (S.camMode === 'free') {
+    /* OrbitControls handles this */
+  } else if (S.camMode === 'orbit') {
+    controls.target.copy(S.pos);
+  }
+}
+
+/* View toggles */
+window.toggleWireframe = function() {
+  S.wireframe = !S.wireframe;
+  document.getElementById('btnWireframe').classList.toggle('active', S.wireframe);
+  scene.traverse(c => { if (c.material) c.material.wireframe = S.wireframe; });
+};
+
+window.toggleGrid = function() {
+  S.showGrid = !S.showGrid;
+  document.getElementById('btnGrid').classList.toggle('active', S.showGrid);
+  if (gridHelper) { scene.remove(gridHelper); gridHelper = null; }
+  if (S.showGrid) {
+    gridHelper = new THREE.GridHelper(1000, 40, 0x00e5ff, 0x0a2040);
+    gridHelper.position.set(S.pos.x, S.groundAlt + 0.1, S.pos.z);
+    scene.add(gridHelper);
+  }
+};
+
+window.toggleLabels = function() {
+  S.showLabels = !S.showLabels;
+  document.getElementById('btnLabels').classList.toggle('active', S.showLabels);
+  labelGroup.visible = S.showLabels;
+};
+
+/* ─── HUD UPDATE ─── */
+function updateHUD() {
+  document.getElementById('hudAlt').textContent = Math.round(S.altitude);
+  document.getElementById('hudVel').textContent = Math.round(S.vel.length());
+  document.getElementById('hudHdg').textContent = String(Math.round(S.heading) % 360).padStart(3, '0');
+  document.getElementById('hudVsp').textContent = S.vel.y > 0 ? '+' + Math.round(S.vel.y) : String(Math.round(S.vel.y));
+
+  const gEl = document.getElementById('hudG');
+  gEl.textContent = S.gforce.toFixed(1);
+  gEl.className = 'hud-val sm' + (S.gforce > 4 ? ' danger' : S.gforce > 2 ? ' warn' : '');
+
+  document.getElementById('hudMach').textContent = S.mach.toFixed(2);
+
+  const fuelEl = document.getElementById('hudFuel');
+  fuelEl.textContent = Math.round(S.fuel) + '%';
+  fuelEl.className = 'hud-val sm' + (S.fuel < 20 ? ' danger' : S.fuel < 40 ? ' warn' : '');
+
+  document.getElementById('hudBatt').textContent = Math.round(S.battery) + '%';
+  document.getElementById('hudMass').textContent = ((VEHICLES[S.vehicleType].mass * S.fuel / 100) / 1000).toFixed(1) + ' t';
+
+  const speed = S.vel.length();
+  const dragN = BODIES[S.body].atmo ? (0.5 * Math.exp(-S.altitude / 8500) * 1.225 * speed * speed * VEHICLES[S.vehicleType].drag * 0.1) : 0;
+  document.getElementById('hudDrag').textContent = dragN > 1000 ? (dragN / 1000).toFixed(1) + ' kN' : Math.round(dragN) + ' N';
+
+  if (S.apoapsis !== null && S.apoapsis > 0) {
+    document.getElementById('hudApo').textContent = Math.round(S.apoapsis) + ' km';
+    document.getElementById('hudApo').className = 'hud-val sm';
+  } else {
+    document.getElementById('hudApo').textContent = '—';
+    document.getElementById('hudApo').className = 'hud-val sm';
+  }
+  if (S.periapsis !== null && S.periapsis > 0) {
+    document.getElementById('hudPeri').textContent = Math.round(S.periapsis) + ' km';
+    document.getElementById('hudPeri').className = 'hud-val sm';
+  } else {
+    document.getElementById('hudPeri').textContent = '—';
+    document.getElementById('hudPeri').className = 'hud-val sm';
+  }
+
+  document.getElementById('attHorizon').style.transform = 'rotate(' + S.roll + 'deg) translateY(' + (S.pitch * 0.5) + 'px)';
+
+  document.getElementById('hudLat').textContent = S.lat.toFixed(4);
+  document.getElementById('hudLon').textContent = S.lon.toFixed(4);
+
+  document.getElementById('pThrust').textContent = S.engineOn ? Math.round(S.throttle * VEHICLES[S.vehicleType].thrust / 100 / 1000) + ' kN' : '0 kN';
+  document.getElementById('pFuel').textContent = Math.round(S.fuel) + '%';
+
+  document.getElementById('rLat').textContent = S.lat.toFixed(4);
+  document.getElementById('rLon').textContent = S.lon.toFixed(4);
+  document.getElementById('rAltAgl').textContent = Math.round(S.altitude) + ' m';
+  document.getElementById('rAltAsl').textContent = Math.round(S.pos.y) + ' m';
+  document.getElementById('rSpeed').textContent = speed.toFixed(1) + ' m/s';
+  document.getElementById('rBatt').textContent = Math.round(S.battery) + '%';
+  document.getElementById('rSolar').textContent = S.altitude > 100 ? '4.2 kW' : '0 kW';
+  document.getElementById('rDraw').textContent = (1.5 + S.throttle * 0.03).toFixed(1) + ' kW';
+
+  const engTemp = 22 + S.throttle * 5 + speed * 0.01;
+  document.getElementById('rEngTemp').textContent = Math.round(engTemp) + '°C';
+  document.getElementById('rEngTemp').className = 'pval' + (engTemp > 500 ? ' danger' : engTemp > 200 ? ' warn' : '');
+
+  const dv = S.fuel > 0 ? (VEHICLES[S.vehicleType].isp * G0 * Math.log(1)) : 0;
+  document.getElementById('rDeltaV').textContent = S.fuel > 0 ? '~' + Math.round(VEHICLES[S.vehicleType].isp * G0 * 0.001) + ' m/s' : '0';
+
+  document.getElementById('simTime').textContent = 'T+ ' + fmtTime(S.time);
+  document.getElementById('hudMisTime').textContent = fmtTime(S.time);
+}
+
+function fmtTime(s) {
+  return String(Math.floor(s / 3600)).padStart(2, '0') + ':' +
+    String(Math.floor((s % 3600) / 60)).padStart(2, '0') + ':' +
+    String(Math.floor(s % 60)).padStart(2, '0');
+}
+
+/* ─── LOG ─── */
+function addLog(msg, type) {
+  const el = document.getElementById('simLog');
+  const t = fmtTime(S.time);
+  el.innerHTML += '<div class="log-e"><span class="ts">[' + t + ']</span> <span class="' + (type || '') + '">' + msg + '</span></div>';
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ─── PROMPT SIMULATION ─── */
+window.showPrompt = function() { document.getElementById('promptModal').classList.add('show'); };
+window.hidePrompt = function() { document.getElementById('promptModal').classList.remove('show'); };
+window.showScenes = function() {
+  document.getElementById('sceneBrowser').classList.add('show');
+  loadScenes();
+};
+window.hideScenes = function() { document.getElementById('sceneBrowser').classList.remove('show'); };
+
+window.generateSimulation = async function() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) return;
+
+  const btn = document.getElementById('btnGenSim');
+  btn.textContent = 'GENERATING...';
+  btn.disabled = true;
+  const result = document.getElementById('promptResult');
+  result.classList.add('show');
+  result.textContent = 'Generating simulation from prompt...';
+
+  try {
+    const resp = await fetch('/api/simulate/full', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'ZICORE/5.0' },
+      body: JSON.stringify({ prompt, resolution: 512 })
+    });
+    const data = await resp.json();
+    if (data.status === 'ok' && data.result) {
+      S.simId = data.result.simulation_id;
+      result.innerHTML = '<span style="color:#0f6">✓ Simulation generated: ' + S.simId + '</span>';
+      addLog('Prompt simulation: ' + S.simId, 'ok');
+
+      if (data.result.config && data.result.config.entities) {
+        data.result.config.entities.forEach(ent => {
+          const pos = ent.position || [0, 0, 0];
+          addEntityAt(ent.template_name, pos[0], pos[1], pos[2]);
+          if (S.showLabels) createLabel(ent.template_name, pos[0], pos[1], pos[2]);
+        });
+        document.getElementById('bbEnt').textContent = S.entities.length;
+      }
+
+      if (data.result.config && data.result.config.body) {
+        const bodyName = data.result.config.body.name?.toLowerCase();
+        if (bodyName && BODIES[bodyName]) {
+          S.body = bodyName;
+          document.getElementById('bodySelect').value = bodyName;
+          createSky();
+        }
+      }
+
+      setTimeout(hidePrompt, 1500);
+    } else {
+      result.innerHTML = '<span style="color:#f44">✗ Error: ' + (data.error || 'Unknown') + '</span>';
     }
+  } catch (e) {
+    result.innerHTML = '<span style="color:#f44">✗ Network error: ' + e.message + '</span>';
+  }
+  btn.textContent = 'GENERATE';
+  btn.disabled = false;
+};
 
-    sim.gforce=1+sim.vertSpd*0.01+sim.pitch*0.005;
-    sim.lat+=Math.cos(sim.heading*Math.PI/180)*sim.velocity*0.00001*dt;
-    sim.lon+=Math.sin(sim.heading*Math.PI/180)*sim.velocity*0.00001*dt;
+async function loadScenes() {
+  const el = document.getElementById('sceneList');
+  try {
+    const resp = await fetch('/api/simulate/list', { headers: { 'User-Agent': 'ZICORE/5.0' } });
+    const data = await resp.json();
+    if (data.status === 'ok' && data.simulations && data.simulations.length > 0) {
+      el.innerHTML = data.simulations.map(s =>
+        `<div class="scene-card" onclick="loadScene('${s.simulation_id}')">
+          <div class="scene-id">${s.simulation_id}</div>
+          <div class="scene-info">${s.prompt || 'No prompt'} — ${s.status}</div>
+        </div>`
+      ).join('');
+    } else {
+      el.innerHTML = '<div style="font-size:8px;color:#4a5a6a">No saved simulations. Use PROMPT SIM to create one.</div>';
+    }
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:8px;color:#f44">Failed to load scenes</div>';
+  }
+}
 
-    if(sim.fuel<=0){sim.throttle=0;addLog('FUEL DEPLETED','err');}
+window.loadScene = async function(simId) {
+  try {
+    const resp = await fetch('/api/simulate/scene/' + simId, { headers: { 'User-Agent': 'ZICORE/5.0' } });
+    const data = await resp.json();
+    if (data.entities) {
+      entityGroup.clear();
+      labelGroup.clear();
+      S.entities = [];
+      data.entities.forEach(ent => {
+        const pos = ent.position || [0, 0, 0];
+        addEntityAt(ent.template_name, pos[0], pos[1], pos[2]);
+        if (S.showLabels) createLabel(ent.template_name, pos[0], pos[1], pos[2]);
+      });
+      document.getElementById('bbEnt').textContent = S.entities.length;
+      addLog('Loaded scene: ' + simId, 'ok');
+    }
+  } catch (e) {
+    addLog('Failed to load scene: ' + e.message, 'err');
+  }
+  hideScenes();
+};
+
+/* ─── BODY / VEHICLE SELECT ─── */
+document.getElementById('bodySelect').addEventListener('change', function() {
+  S.body = this.value;
+  setupScene();
+  addLog('Body: ' + BODIES[S.body].name, 'ok');
+});
+
+document.getElementById('vehicleSelect').addEventListener('change', function() {
+  S.vehicleType = this.value;
+  setupScene();
+  addLog('Vehicle: ' + VEHICLES[S.vehicleType].name, 'ok');
+});
+
+/* ─── RESIZE ─── */
+function onResize() {
+  const vp = document.getElementById('viewport');
+  const w = vp.clientWidth;
+  const h = vp.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
+
+/* ─── RENDER LOOP ─── */
+let lastTime = 0;
+let frameCount = 0;
+let lastFpsUpdate = 0;
+
+function animate(timestamp) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  frameCount++;
+  if (timestamp - lastFpsUpdate > 1000) {
+    document.getElementById('bbFps').textContent = frameCount;
+    frameCount = 0;
+    lastFpsUpdate = timestamp;
   }
 
-  var lastTime=0;
-  function gameLoop(timestamp){
-    var dt=Math.min((timestamp-lastTime)/1000,0.05);
-    lastTime=timestamp;
-    simStep(dt);
-    drawSim();
-    updateHUD();
-    requestAnimationFrame(gameLoop);
+  physicsStep(dt);
+  updateHUD();
+
+  vehicleGroup.position.copy(S.pos);
+  vehicleGroup.rotation.set(S.pitch * DEG, S.heading * DEG, S.roll * DEG, 'YXZ');
+
+  if (S.camMode === 'chase') updateCam();
+  if (S.camMode === 'orbit') { controls.target.copy(S.pos); controls.update(); }
+
+  if (ground) {
+    ground.position.x = S.pos.x;
+    ground.position.z = S.pos.z;
+  }
+  if (gridHelper) {
+    gridHelper.position.x = S.pos.x;
+    gridHelper.position.z = S.pos.z;
+    gridHelper.position.y = S.groundAlt + 0.1;
   }
 
-  document.getElementById('vehicleSelect').addEventListener('change',function(){
-    sim.vehicle=this.value;
-    updateVehicleInfo();
-    addLog('Vehicle: '+vehicles[sim.vehicle].name,'ok');
-  });
+  if (skyMesh) skyMesh.position.copy(S.pos);
+  if (starsMesh) starsMesh.position.copy(S.pos);
 
-  document.getElementById('throttleSlider').addEventListener('input',function(){
-    sim.throttle=parseInt(this.value);
-    document.getElementById('throttleVal').textContent=this.value+'%';
-  });
+  document.getElementById('bbTri').textContent = renderer.info.render.triangles;
 
-  document.getElementById('pitchCtrl').addEventListener('input',function(){sim.pitch=parseInt(this.value)/100*30;});
-  document.getElementById('rollCtrl').addEventListener('input',function(){sim.roll=parseInt(this.value)/100*45;});
-  document.getElementById('yawCtrl').addEventListener('input',function(){sim.heading=(sim.heading+parseInt(this.value)*0.1+360)%360;});
+  renderer.render(scene, camera);
+}
 
-  document.getElementById('btnStartEngine').addEventListener('click',function(){
-    sim.engineOn=!sim.engineOn;
-    this.textContent=sim.engineOn?'ENGINE ON':'START ENGINE';
-    this.classList.toggle('active',sim.engineOn);
-    document.getElementById('simStatus').textContent=sim.engineOn?'ENGINE RUNNING':'STANDBY';
-    addLog(sim.engineOn?'Engine started':'Engine stopped',sim.engineOn?'ok':'warn');
-  });
-
-  document.getElementById('btnTakeoff').addEventListener('click',function(){
-    if(!sim.engineOn){addLog('Start engine first','warn');return;}
-    sim.running=true;
-    sim.throttle=80;
-    document.getElementById('throttleSlider').value=80;
-    document.getElementById('throttleVal').textContent='80%';
-    document.getElementById('simStatus').textContent='TAKEOFF';
-    document.getElementById('simStatus').style.color='#ff9800';
-    addLog('Takeoff initiated','ok');
-  });
-
-  document.getElementById('btnLand').addEventListener('click',function(){
-    sim.running=true;
-    sim.throttle=20;
-    document.getElementById('throttleSlider').value=20;
-    document.getElementById('throttleVal').textContent='20%';
-    document.getElementById('simStatus').textContent='LANDING';
-    document.getElementById('simStatus').style.color='#ff9800';
-    addLog('Landing sequence','warn');
-  });
-
-  document.getElementById('btnEmergency').addEventListener('click',function(){
-    sim.throttle=0;sim.engineOn=false;sim.running=false;
-    document.getElementById('throttleSlider').value=0;
-    document.getElementById('throttleVal').textContent='0%';
-    document.getElementById('btnStartEngine').textContent='START ENGINE';
-    document.getElementById('btnStartEngine').classList.remove('active');
-    document.getElementById('simStatus').textContent='EMERGENCY';
-    document.getElementById('simStatus').style.color='#f44';
-    addLog('EMERGENCY STOP','err');
-  });
-
-  document.getElementById('btnGear').addEventListener('click',function(){
-    sim.gearUp=!sim.gearUp;
-    this.textContent=sim.gearUp?'UP':'DOWN';
-    this.classList.toggle('active',!sim.gearUp);
-    addLog('Gear: '+(sim.gearUp?'UP':'DOWN'),'ok');
-  });
-
-  updateVehicleInfo();
-  requestAnimationFrame(gameLoop);
-})();
+/* ─── INIT ─── */
+onResize();
+setupScene();
+requestAnimationFrame(animate);
+addLog('Aerospace Simulator initialized', 'ok');
+addLog('Body: Moon | Vehicle: Spacecraft', 'ok');
+addLog('Press START ENGINE → LAUNCH to fly', 'ok');
 </script>
 </body>
 </html>

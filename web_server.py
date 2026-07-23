@@ -799,9 +799,12 @@ class SSOAuthMiddleware:
         "/zihost",
         "/zimail",
         "/zimaterializer",
+        "/simulator",
+        "/flight-sim",
         "/api/zihost/create",
         "/api/zihost/auth",
         "/api/zihost/stats",
+        "/api/simulate/",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -1263,7 +1266,7 @@ async def serve_zio():
     return FileResponse(str(FRONTEND_DIR / "zio.html"))
 
 
-@app.get("/sim")
+@app.get("/simulator")
 async def serve_simulator():
     return FileResponse(str(FRONTEND_DIR / "simulator.html"))
 
