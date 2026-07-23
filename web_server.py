@@ -6630,8 +6630,8 @@ async def sso_register(request: Request):
 
         if not email or not _validate_email(email):
             return {"status": "error", "error": "Invalid email format"}
-        if not password or len(password) < 6:
-            return {"status": "error", "error": "Password must be at least 6 characters"}
+        if not password or len(password) < 8:
+            return {"status": "error", "error": "Password must be at least 8 characters"}
         if not name or len(name) < 2:
             return {"status": "error", "error": "Name must be at least 2 characters"}
 
@@ -6656,7 +6656,16 @@ async def sso_register(request: Request):
 
         if login_result.get("success"):
             return {"status": "ok", "token": login_result["token"], "expires_at": login_result["expires_at"], "user": login_result["user"]}
-        return {"status": "ok", "user": user}
+
+        # Fallback: create token directly if login() fails
+        try:
+            token_data = sso.create_sso_token(username, service="zicore-web")
+            if token_data.get("success"):
+                return {"status": "ok", "token": token_data["token"], "expires_at": token_data.get("expires_at"), "user": user}
+        except Exception:
+            pass
+
+        return {"status": "error", "error": "Registration succeeded but login failed. Please log in manually."}
     except Exception as e:
         logger.error(f"SSO register error: {e}")
         return {"status": "error", "error": str(e)}

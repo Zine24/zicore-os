@@ -230,6 +230,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
             <div class="bar" id="str4"></div>
           </div>
           <div class="strength-label" id="strengthLabel"></div>
+          <div style="font-size:9px;color:var(--text2);margin-top:2px">Min 8 chars, 1 uppercase, 1 lowercase, 1 number</div>
           <div class="error-msg" id="regPasswordError"></div>
         </div>
 
@@ -335,13 +336,16 @@ function checkPasswordStrength() {
 
 function calcStrength(pw) {
   if (!pw) return 0;
-  if (pw.length < 8) return 1;
   const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
   const hasNum = /[0-9]/.test(pw);
   const hasSpecial = /[^A-Za-z0-9]/.test(pw);
-  if (pw.length >= 12 && hasUpper && hasNum && hasSpecial) return 4;
-  if (pw.length >= 8 && hasUpper && hasNum) return 3;
-  return 2;
+  const checks = [pw.length >= 8, hasUpper, hasLower, hasNum];
+  const passed = checks.filter(Boolean).length;
+  if (passed < 3) return 1;
+  if (passed === 3) return 2;
+  if (pw.length >= 12 && hasSpecial) return 4;
+  return 3;
 }
 
 /* ── Clear Errors ──────────────────────────── */
@@ -435,6 +439,9 @@ async function handleRegister(e) {
   else if (!/^[a-zA-Z0-9._-]+$/.test(prefix)) { showError('regEmailError', 'Only letters, numbers, dots, dashes, underscores'); valid = false; }
   if (!password) { showError('regPasswordError', 'Password is required'); valid = false; }
   else if (password.length < 8) { showError('regPasswordError', 'Password must be at least 8 characters'); valid = false; }
+  else if (!/[A-Z]/.test(password)) { showError('regPasswordError', 'Password must contain at least one uppercase letter'); valid = false; }
+  else if (!/[a-z]/.test(password)) { showError('regPasswordError', 'Password must contain at least one lowercase letter'); valid = false; }
+  else if (!/[0-9]/.test(password)) { showError('regPasswordError', 'Password must contain at least one number'); valid = false; }
   if (password !== confirm) { showError('regConfirmError', 'Passwords do not match'); valid = false; }
   if (!document.getElementById('acceptTerms').checked) { showToast('You must accept the Terms of Use', 'error'); valid = false; }
   if (!document.getElementById('acceptPrivacy').checked) { showToast('You must accept the Privacy Notice', 'error'); valid = false; }
@@ -470,6 +477,10 @@ async function handleRegister(e) {
 
 /* ── Auth Success ──────────────────────────── */
 function handleAuthSuccess(token, user) {
+  if (!token || token === 'undefined' || token === 'null') {
+    showToast('Login failed: no token received. Please try again.', 'error');
+    return;
+  }
   localStorage.setItem(SSO_TOKEN_KEY, token);
   if (user) localStorage.setItem(SSO_USER_KEY, JSON.stringify(user));
   // Set cookie so server middleware can read it on page loads
