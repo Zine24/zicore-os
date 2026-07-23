@@ -104,10 +104,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:
 .session-tab:hover .tab-close{opacity:0.5}
 .session-tab .tab-close:hover{opacity:1;background:rgba(255,68,68,0.2);color:#f44}
 
-/* TERMINAL */
+/* TERMINAL + COMMAND BAR */
 #terminalContainer{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
 #terminalWrap{flex:1;overflow:hidden;padding:2px}
 #xterm-container{width:100%;height:100%}
+
+/* COMMAND INPUT BAR */
+#cmdBar{
+  height:34px;background:rgba(6,8,14,0.98);border-top:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;
+}
+#cmdBar .prompt{font-size:10px;color:var(--purple);font-family:'Cascadia Code','Fira Code',monospace;flex-shrink:0}
+#cmdInput{
+  flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);color:#c8d0dc;
+  padding:4px 8px;font-size:11px;font-family:'Cascadia Code','Fira Code',monospace;
+  outline:none;caret-color:var(--glow);
+}
+#cmdInput:focus{border-color:rgba(0,229,255,0.3)}
+#cmdInput::placeholder{color:#303848}
+#cmdInput:disabled{opacity:0.3}
+#cmdSend{
+  padding:4px 12px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);
+  color:var(--glow);font-size:7px;letter-spacing:2px;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+#cmdSend:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
+#cmdSend:disabled{opacity:0.3;cursor:not-allowed}
+.cmd-hint{font-size:6px;color:#303848;letter-spacing:1px;flex-shrink:0}
 
 /* CUSTOM CONNECT MODAL */
 #customModal{
@@ -140,13 +162,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:
 }
 .connect-btn:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
 .connect-btn:disabled{opacity:0.4;cursor:not-allowed}
-.form-hint{margin-top:10px;font-size:7px;letter-spacing:1px;color:#303848;text-align:center}
 .form-error{margin-top:8px;font-size:8px;color:#f44;text-align:center;display:none}
 .form-btns{display:flex;gap:6px;margin-top:8px}
 .form-cancel{
   flex:1;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
   color:#607080;font-size:9px;letter-spacing:2px;cursor:pointer;font-family:inherit;
 }
+.form-hint{margin-top:10px;font-size:7px;letter-spacing:1px;color:#303848;text-align:center}
 
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
@@ -168,9 +190,9 @@ body{display:flex;flex-direction:column}
 
 <div id="toolbar">
   <button class="action-btn" onclick="showCustom()">+ CUSTOM</button>
-  <button class="action-btn" id="btnDisconnect" onclick="disconnectActive()" style="display:none">DISCONNECT</button>
+  <button class="action-btn danger" id="btnDisconnect" onclick="disconnectActive()" style="display:none">DISCONNECT</button>
   <button class="action-btn" onclick="refreshServers()">REFRESH</button>
-  <span id="statusText">Ready</span>
+  <span id="statusText">Select a server to connect</span>
 </div>
 
 <div id="sessionBar"></div>
@@ -178,6 +200,12 @@ body{display:flex;flex-direction:column}
 <div id="terminalContainer">
   <div id="terminalWrap">
     <div id="xterm-container"></div>
+  </div>
+  <div id="cmdBar">
+    <span class="prompt" id="cmdPrompt">$</span>
+    <input id="cmdInput" placeholder="Select a server or type a command..." disabled autocomplete="off" spellcheck="false">
+    <button id="cmdSend" onclick="sendCmd()" disabled>SEND</button>
+    <span class="cmd-hint">Enter to send</span>
   </div>
 </div>
 
@@ -200,12 +228,12 @@ body{display:flex;flex-direction:column}
       <label>Password</label>
       <input id="inpPass" type="password" placeholder="***">
     </div>
-    <button class="connect-btn" id="connectBtn" onclick="doCustomConnect()">CONNECT</button>
+    <button class="connect-btn" onclick="doCustomConnect()">CONNECT</button>
     <div class="form-error" id="connectError"></div>
     <div class="form-btns">
       <button class="form-cancel" onclick="hideCustom()">CANCEL</button>
     </div>
-    <div class="form-hint">Ctrl+Shift+C copy · Ctrl+Shift+V paste</div>
+    <div class="form-hint">Ctrl+Shift+C copy | Ctrl+Shift+V paste</div>
   </div>
 </div>
 
@@ -214,9 +242,24 @@ body{display:flex;flex-direction:column}
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
 <script>
 const SERVERS = {
-  '.85': { name: '.85 Primary', role: 'Web Server + Materializer', ip: '192.168.1.85', port: 22, user: 'z', pass: 'Jilo1981', color: 'var(--green)', css: '' },
-  '.68': { name: '.68 Ollama', role: 'Ollama Server + Zichat', ip: '192.168.1.68', port: 22, user: 'zinemotion', pass: 'Jilo1981', color: 'var(--purple)', css: '' },
-  'vps': { name: 'VPS Oracle', role: 'ARM64 + Ollama', ip: '160.34.209.208', port: 22, user: 'oracle-admin', pass: 'zicore2026', color: 'var(--glow)', css: 'vps' }
+  '.85': {
+    name: '.85 Primary', role: 'Web Server', ip: '192.168.1.85', port: 22,
+    user: 'z', pass: 'Jilo1981', css: '',
+    wsHost: null,
+    sshHost: '192.168.1.85'
+  },
+  '.68': {
+    name: '.68 Ollama', role: 'Ollama Server', ip: '192.168.1.68', port: 22,
+    user: 'zinemotion', pass: 'Jilo1981', css: '',
+    wsHost: null,
+    sshHost: '192.168.1.68'
+  },
+  'vps': {
+    name: 'VPS Oracle', role: 'ARM64 Remote', ip: '160.34.209.208', port: 22,
+    user: 'oracle-admin', pass: 'zicore2026', css: 'vps',
+    wsHost: 'vps.zicore.space',
+    sshHost: '127.0.0.1'
+  }
 };
 
 let term = null;
@@ -224,13 +267,15 @@ let fitAddon = null;
 let sessions = {};
 let activeSession = null;
 let serverData = {};
-let serverStatuses = {};
+let cmdHistory = [];
+let cmdHistIdx = -1;
 
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC';
 }, 1000);
 
-// Server Cards
+// ─── Server Cards ───────────────────────────────────────
+
 function renderServerCards() {
   const grid = document.getElementById('serverCards');
   grid.innerHTML = '';
@@ -247,42 +292,41 @@ function renderServerCards() {
     const connState = getServerConnState(key);
     const card = document.createElement('div');
     card.className = 'srv-card' + (info.css ? ' ' + info.css : '') + (activeSession && sessions[activeSession] && sessions[activeSession].serverKey === key ? ' active' : '');
-    card.innerHTML = `
-      <div class="srv-header">
-        <div class="srv-dot ${online ? 'on' : 'off'}"></div>
-        <div class="srv-name">${info.name}</div>
-        <div class="srv-role">${info.role}</div>
-      </div>
-      <div class="srv-stats">
-        <div class="srv-stat"><div class="label">CPU</div><div class="value">${cpu}</div></div>
-        <div class="srv-stat"><div class="label">RAM</div><div class="value ${ramPct > 85 ? 'danger' : ramPct > 60 ? 'warn' : ''}">${ram}</div></div>
-        <div class="srv-stat"><div class="label">DISK</div><div class="value ${diskPct > 85 ? 'danger' : ''}">${disk}</div></div>
-      </div>
-      <div class="srv-bar"><div class="fill ${barClass}" style="width:${ramPct}%"></div></div>
-      <div class="srv-footer">
-        <span class="srv-uptime">UP: ${uptime}</span>
-        <button class="srv-connect ${connState}" onclick="event.stopPropagation();connectServer('${key}')" id="srvBtn-${key}">${connState === 'connected' ? 'OPEN' : connState === 'connecting' ? '...' : 'CONNECT'}</button>
-      </div>`;
-    card.onclick = () => {
-      const sid = findSessionForServer(key);
+    card.innerHTML =
+      '<div class="srv-header">' +
+        '<div class="srv-dot ' + (online ? 'on' : 'off') + '"></div>' +
+        '<div class="srv-name">' + info.name + '</div>' +
+        '<div class="srv-role">' + info.role + '</div>' +
+      '</div>' +
+      '<div class="srv-stats">' +
+        '<div class="srv-stat"><div class="label">CPU</div><div class="value">' + cpu + '</div></div>' +
+        '<div class="srv-stat"><div class="label">RAM</div><div class="value ' + (ramPct > 85 ? 'danger' : ramPct > 60 ? 'warn' : '') + '">' + ram + '</div></div>' +
+        '<div class="srv-stat"><div class="label">DISK</div><div class="value ' + (diskPct > 85 ? 'danger' : '') + '">' + disk + '</div></div>' +
+      '</div>' +
+      '<div class="srv-bar"><div class="fill ' + barClass + '" style="width:' + ramPct + '%"></div></div>' +
+      '<div class="srv-footer">' +
+        '<span class="srv-uptime">UP: ' + uptime + '</span>' +
+        '<button class="srv-connect ' + connState + '" onclick="event.stopPropagation();connectServer(\'' + key + '\')" id="srvBtn-' + key + '">' +
+          (connState === 'connected' ? 'OPEN' : connState === 'connecting' ? '...' : 'CONNECT') +
+        '</button>' +
+      '</div>';
+    card.onclick = function(k) { return function() {
+      var sid = findSessionForServer(k);
       if (sid) switchSession(sid);
-    };
+    }}(key);
     grid.appendChild(card);
   }
 }
 
 function getServerConnState(key) {
-  for (const sid in sessions) {
+  for (var sid in sessions) {
     if (sessions[sid].serverKey === key && sessions[sid].connected) return 'connected';
-  }
-  for (const sid in sessions) {
-    if (sessions[sid].serverKey === key && !sessions[sid].connected) return '';
   }
   return '';
 }
 
 function findSessionForServer(key) {
-  for (const sid in sessions) {
+  for (var sid in sessions) {
     if (sessions[sid].serverKey === key) return sid;
   }
   return null;
@@ -290,54 +334,63 @@ function findSessionForServer(key) {
 
 async function refreshServers() {
   try {
-    const r = await fetch('/api/admin/servers');
-    if (r.ok) {
-      serverData = await r.json();
-    }
+    var r = await fetch('/api/admin/servers');
+    if (r.ok) serverData = await r.json();
   } catch(e) {}
   renderServerCards();
 }
 
-async function connectServer(key) {
-  const existing = findSessionForServer(key);
-  if (existing) {
-    switchSession(existing);
-    return;
+// ─── Connect ────────────────────────────────────────────
+
+function getWsUrl(serverKey) {
+  var info = SERVERS[serverKey];
+  var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  if (info.wsHost) {
+    return wsProto + '//' + info.wsHost + '/ws/shell';
   }
-  const info = SERVERS[key];
+  return wsProto + '//' + location.host + '/ws/shell';
+}
+
+async function connectServer(key) {
+  var existing = findSessionForServer(key);
+  if (existing) { switchSession(existing); return; }
+
+  var info = SERVERS[key];
   initTerminal();
-  setStatus('Connecting to ' + info.user + '@' + info.ip + '...', 'connecting');
+  setStatus('Connecting to ' + info.user + '@' + info.sshHost + '...', 'connecting');
 
-  const btn = document.getElementById('srvBtn-' + key);
-  if (btn) btn.className = 'srv-connect connecting';
-  if (btn) btn.textContent = '...';
+  var btn = document.getElementById('srvBtn-' + key);
+  if (btn) { btn.className = 'srv-connect connecting'; btn.textContent = '...'; }
 
-  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const ws = new WebSocket(wsProto + '//' + location.host + '/ws/shell');
+  var wsUrl = getWsUrl(key);
+  var ws = new WebSocket(wsUrl);
+  var sessionId = null;
 
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'connect', host: info.ip, port: info.port, user: info.user, password: info.pass }));
+  ws.onopen = function() {
+    ws.send(JSON.stringify({ type: 'connect', host: info.sshHost, port: info.port, user: info.user, password: info.pass }));
   };
 
-  let sessionId = null;
-
-  ws.onmessage = (evt) => {
+  ws.onmessage = function(evt) {
     try {
-      const msg = JSON.parse(evt.data);
+      var msg = JSON.parse(evt.data);
 
       if (msg.type === 'connected') {
         sessionId = msg.session_id;
-        sessions[sessionId] = { ws, host: info.ip, port: info.port, user: info.user, connected: true, serverKey: key, label: info.name };
+        sessions[sessionId] = { ws: ws, host: info.sshHost, port: info.port, user: info.user, connected: true, serverKey: key, label: info.name };
         activeSession = sessionId;
 
         document.getElementById('btnDisconnect').style.display = '';
+        document.getElementById('cmdInput').disabled = false;
+        document.getElementById('cmdSend').disabled = false;
+        document.getElementById('cmdPrompt').textContent = info.user + '@' + key + ' $';
+        document.getElementById('cmdInput').placeholder = 'Type command...';
         term.focus();
         fitAddon.fit();
         renderSessionBar();
         renderServerCards();
-        setStatus('Connected: ' + info.user + '@' + info.ip, 'connected');
+        setStatus('Connected: ' + info.user + '@' + info.sshHost, 'connected');
 
-        const dims = fitAddon.proposeDimensions();
+        var dims = fitAddon.proposeDimensions();
         if (dims) ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
       }
 
@@ -351,12 +404,15 @@ async function connectServer(key) {
         renderServerCards();
         if (activeSession === sessionId) {
           term.writeln('\r\n\x1b[33m[Session ended]\x1b[0m');
+          document.getElementById('cmdInput').disabled = true;
+          document.getElementById('cmdSend').disabled = true;
+          document.getElementById('cmdPrompt').textContent = '$';
         }
         setStatus('Disconnected', 'disconnected');
       }
 
       if (msg.type === 'error') {
-        const ce = document.getElementById('connectError');
+        var ce = document.getElementById('connectError');
         ce.textContent = msg.message || 'Connection failed';
         ce.style.display = 'block';
         setStatus('Error: ' + msg.message, 'disconnected');
@@ -365,122 +421,126 @@ async function connectServer(key) {
     } catch(e) {}
   };
 
-  ws.onclose = () => {
+  ws.onclose = function() {
     if (!sessionId || !sessions[sessionId]) {
       setStatus('Connection closed', 'disconnected');
       renderServerCards();
     }
   };
 
-  ws.onerror = () => {
+  ws.onerror = function() {
     setStatus('WebSocket error', 'disconnected');
     renderServerCards();
   };
 }
 
-// Custom connect modal
-function showCustom() {
-  document.getElementById('customModal').classList.add('show');
-  document.getElementById('inpHost').focus();
-}
-function hideCustom() {
-  document.getElementById('customModal').classList.remove('show');
-}
+// ─── Custom Connect Modal ───────────────────────────────
+
+function showCustom() { document.getElementById('customModal').classList.add('show'); document.getElementById('inpHost').focus(); }
+function hideCustom() { document.getElementById('customModal').classList.remove('show'); }
 
 function doCustomConnect() {
-  const host = document.getElementById('inpHost').value.trim();
-  const port = parseInt(document.getElementById('inpPort').value) || 22;
-  const user = document.getElementById('inpUser').value.trim();
-  const pass = document.getElementById('inpPass').value;
-  const errEl = document.getElementById('connectError');
-  const btn = document.getElementById('connectBtn');
+  var host = document.getElementById('inpHost').value.trim();
+  var port = parseInt(document.getElementById('inpPort').value) || 22;
+  var user = document.getElementById('inpUser').value.trim();
+  var pass = document.getElementById('inpPass').value;
+  var errEl = document.getElementById('connectError');
 
   if (!host || !user) {
-    errEl.textContent = 'Host and User are required';
+    errEl.textContent = 'Host and User required';
     errEl.style.display = 'block';
     return;
   }
 
   errEl.style.display = 'none';
-  btn.disabled = true;
-  btn.textContent = 'CONNECTING...';
-  setStatus('Connecting to ' + user + '@' + host + ':' + port + '...', 'connecting');
   hideCustom();
   initTerminal();
+  setStatus('Connecting to ' + user + '@' + host + '...', 'connecting');
 
-  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const ws = new WebSocket(wsProto + '//' + location.host + '/ws/shell');
+  var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var ws = new WebSocket(wsProto + '//' + location.host + '/ws/shell');
+  var sessionId = null;
 
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'connect', host, port, user, password: pass }));
+  ws.onopen = function() {
+    ws.send(JSON.stringify({ type: 'connect', host: host, port: port, user: user, password: pass }));
   };
 
-  let sessionId = null;
-
-  ws.onmessage = (evt) => {
+  ws.onmessage = function(evt) {
     try {
-      const msg = JSON.parse(evt.data);
-
+      var msg = JSON.parse(evt.data);
       if (msg.type === 'connected') {
         sessionId = msg.session_id;
-        sessions[sessionId] = { ws, host, port, user, connected: true, label: user + '@' + host };
+        sessions[sessionId] = { ws: ws, host: host, port: port, user: user, connected: true, label: user + '@' + host };
         activeSession = sessionId;
-
         document.getElementById('btnDisconnect').style.display = '';
+        document.getElementById('cmdInput').disabled = false;
+        document.getElementById('cmdSend').disabled = false;
+        document.getElementById('cmdPrompt').textContent = user + '@custom $';
+        document.getElementById('cmdInput').placeholder = 'Type command...';
         term.focus();
         fitAddon.fit();
         renderSessionBar();
+        renderServerCards();
         setStatus('Connected: ' + user + '@' + host, 'connected');
-
-        const dims = fitAddon.proposeDimensions();
+        var dims = fitAddon.proposeDimensions();
         if (dims) ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
-
-        btn.disabled = false;
-        btn.textContent = 'CONNECT';
       }
-
-      if (msg.type === 'output' && activeSession === sessionId) {
-        term.write(msg.data);
-      }
-
+      if (msg.type === 'output' && activeSession === sessionId) term.write(msg.data);
       if (msg.type === 'disconnected') {
         if (sessions[sessionId]) sessions[sessionId].connected = false;
-        renderSessionBar();
-        renderServerCards();
+        renderSessionBar(); renderServerCards();
         if (activeSession === sessionId) {
           term.writeln('\r\n\x1b[33m[Session ended]\x1b[0m');
+          document.getElementById('cmdInput').disabled = true;
+          document.getElementById('cmdSend').disabled = true;
         }
         setStatus('Disconnected', 'disconnected');
       }
-
       if (msg.type === 'error') {
-        errEl.textContent = msg.message || 'Connection failed';
+        errEl.textContent = msg.message || 'Failed';
         errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = 'CONNECT';
         setStatus('Error: ' + msg.message, 'disconnected');
+        renderServerCards();
       }
     } catch(e) {}
   };
-
-  ws.onclose = () => {
-    btn.disabled = false;
-    btn.textContent = 'CONNECT';
-    if (!sessionId || !sessions[sessionId]) {
-      setStatus('Connection closed', 'disconnected');
-    }
-  };
-
-  ws.onerror = () => {
-    errEl.textContent = 'WebSocket error';
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'CONNECT';
-    setStatus('Connection failed', 'disconnected');
-  };
+  ws.onclose = function() { if (!sessionId || !sessions[sessionId]) setStatus('Closed', 'disconnected'); };
+  ws.onerror = function() { setStatus('Error', 'disconnected'); };
 }
 
-// Terminal
+// ─── Command Bar ────────────────────────────────────────
+
+function sendCmd() {
+  var input = document.getElementById('cmdInput');
+  var cmd = input.value.trim();
+  if (!cmd || !activeSession || !sessions[activeSession]) return;
+  var s = sessions[activeSession];
+  if (!s.ws || s.ws.readyState !== WebSocket.OPEN) return;
+
+  cmdHistory.push(cmd);
+  cmdHistIdx = -1;
+  s.ws.send(JSON.stringify({ type: 'input', data: cmd + '\n' }));
+  input.value = '';
+}
+
+document.getElementById('cmdInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { sendCmd(); return; }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (cmdHistIdx < cmdHistory.length - 1) {
+      cmdHistIdx++;
+      e.target.value = cmdHistory[cmdHistory.length - 1 - cmdHistIdx];
+    }
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (cmdHistIdx > 0) { cmdHistIdx--; e.target.value = cmdHistory[cmdHistory.length - 1 - cmdHistIdx]; }
+    else { cmdHistIdx = -1; e.target.value = ''; }
+  }
+});
+
+// ─── Terminal ───────────────────────────────────────────
+
 function initTerminal() {
   if (term) return;
   term = new Terminal({
@@ -508,42 +568,50 @@ function initTerminal() {
 
   fitAddon = new FitAddon.FitAddon();
   term.loadAddon(fitAddon);
-
   try { term.loadAddon(new WebLinksAddon.WebLinksAddon()); } catch(e) {}
 
   term.open(document.getElementById('xterm-container'));
   fitAddon.fit();
 
-  term.onData(data => {
+  // Show welcome message in terminal
+  term.writeln('\x1b[38;2;0;229;255m  ╔══════════════════════════════════════════╗\x1b[0m');
+  term.writeln('\x1b[38;2;0;229;255m  ║  \x1b[38;2;124;77;255mZI\x1b[38;2;0;229;255mCORE\x1b[38;2;0;229;255m  SHELL TERMINAL              ║\x1b[0m');
+  term.writeln('\x1b[38;2;0;229;255m  ╚══════════════════════════════════════════╝\x1b[0m');
+  term.writeln('');
+  term.writeln('\x1b[38;2;96;112;128m  Click a server above to connect, or use + CUSTOM\x1b[0m');
+  term.writeln('\x1b[38;2;96;112;255m  .85\x1b[0m \x1b[38;2;96;112;128mPrimary  \x1b[38;2;124;77;255m.68\x1b[0m \x1b[38;2;96;112;128mOllama  \x1b[38;2;0;229;255mVPS\x1b[0m \x1b[38;2;96;112;128mOracle ARM64\x1b[0m');
+  term.writeln('');
+
+  term.onData(function(data) {
     if (activeSession && sessions[activeSession]) {
-      const s = sessions[activeSession];
+      var s = sessions[activeSession];
       if (s.ws && s.ws.readyState === WebSocket.OPEN) {
-        s.ws.send(JSON.stringify({ type: 'input', data }));
+        s.ws.send(JSON.stringify({ type: 'input', data: data }));
       }
     }
   });
 
-  term.onResize(({ cols, rows }) => {
-    for (const sid in sessions) {
-      const s = sessions[sid];
+  term.onResize(function(dims) {
+    for (var sid in sessions) {
+      var s = sessions[sid];
       if (s.ws && s.ws.readyState === WebSocket.OPEN) {
-        s.ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+        s.ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
       }
     }
   });
 
-  window.addEventListener('resize', () => { if (fitAddon) fitAddon.fit(); });
+  window.addEventListener('resize', function() { if (fitAddon) fitAddon.fit(); });
 
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'C') {
-      const sel = term.getSelection();
+      var sel = term.getSelection();
       if (sel) navigator.clipboard.writeText(sel);
       e.preventDefault();
     }
     if (e.ctrlKey && e.shiftKey && e.key === 'V') {
-      navigator.clipboard.readText().then(text => {
+      navigator.clipboard.readText().then(function(text) {
         if (activeSession && sessions[activeSession]) {
-          const s = sessions[activeSession];
+          var s = sessions[activeSession];
           if (s.ws && s.ws.readyState === WebSocket.OPEN) {
             s.ws.send(JSON.stringify({ type: 'input', data: text }));
           }
@@ -553,23 +621,24 @@ function initTerminal() {
     }
   });
 
-  new ResizeObserver(() => { if (fitAddon) fitAddon.fit(); }).observe(document.getElementById('terminalWrap'));
+  new ResizeObserver(function() { if (fitAddon) fitAddon.fit(); }).observe(document.getElementById('terminalWrap'));
 }
 
-// Session management
+// ─── Session Management ─────────────────────────────────
+
 function renderSessionBar() {
-  const bar = document.getElementById('sessionBar');
+  var bar = document.getElementById('sessionBar');
   bar.innerHTML = '';
-  for (const sid in sessions) {
-    const s = sessions[sid];
-    const tab = document.createElement('div');
+  for (var sid in sessions) {
+    var s = sessions[sid];
+    var tab = document.createElement('div');
     tab.className = 'session-tab' + (sid === activeSession ? ' active' : '');
-    const label = s.label || s.user + '@' + s.host;
+    var label = s.label || s.user + '@' + s.host;
     tab.innerHTML =
       '<span class="tab-dot" style="background:' + (s.connected ? 'var(--green)' : '#f44') + '"></span>' +
       label +
       '<span class="tab-close" onclick="event.stopPropagation();closeSession(\'' + sid + '\')">&times;</span>';
-    tab.onclick = () => switchSession(sid);
+    tab.onclick = function(ssid) { return function() { switchSession(ssid); }; }(sid);
     bar.appendChild(tab);
   }
 }
@@ -577,8 +646,14 @@ function renderSessionBar() {
 function switchSession(sid) {
   if (!sessions[sid]) return;
   activeSession = sid;
-  const s = sessions[sid];
+  var s = sessions[sid];
   document.getElementById('btnDisconnect').style.display = s.connected ? '' : 'none';
+  document.getElementById('cmdInput').disabled = !s.connected;
+  document.getElementById('cmdSend').disabled = !s.connected;
+  if (s.connected) {
+    var info = SERVERS[s.serverKey];
+    document.getElementById('cmdPrompt').textContent = s.user + '@' + (info ? s.serverKey : 'custom') + ' $';
+  }
   renderSessionBar();
   renderServerCards();
   term.clear();
@@ -600,12 +675,17 @@ function closeSession(sid) {
   }
   if (activeSession === sid) {
     activeSession = null;
-    const remaining = Object.keys(sessions);
+    var remaining = Object.keys(sessions);
     if (remaining.length > 0) switchSession(remaining[remaining.length - 1]);
     else {
       document.getElementById('btnDisconnect').style.display = 'none';
+      document.getElementById('cmdInput').disabled = true;
+      document.getElementById('cmdSend').disabled = true;
+      document.getElementById('cmdPrompt').textContent = '$';
+      document.getElementById('cmdInput').placeholder = 'Select a server or type a command...';
       if (term) term.clear();
-      setStatus('Ready', '');
+      initTerminal();
+      setStatus('Select a server to connect', '');
     }
   }
   renderSessionBar();
@@ -617,29 +697,24 @@ function disconnectActive() {
 }
 
 function setStatus(text, state) {
-  const el = document.getElementById('statusText');
-  el.innerHTML = '<span class="' + state + '">' + text + '</span>';
+  document.getElementById('statusText').innerHTML = '<span class="' + state + '">' + text + '</span>';
 }
 
-// Enter to connect in modal
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('customModal').classList.contains('show')) {
-    doCustomConnect();
-  }
+// ─── Init ───────────────────────────────────────────────
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('customModal').classList.contains('show')) doCustomConnect();
   if (e.key === 'Escape') hideCustom();
 });
 
-// Keepalive ping
-setInterval(() => {
-  for (const sid in sessions) {
-    const s = sessions[sid];
-    if (s.ws && s.ws.readyState === WebSocket.OPEN) {
-      s.ws.send(JSON.stringify({ type: 'ping' }));
-    }
+setInterval(function() {
+  for (var sid in sessions) {
+    var s = sessions[sid];
+    if (s.ws && s.ws.readyState === WebSocket.OPEN) s.ws.send(JSON.stringify({ type: 'ping' }));
   }
 }, 30000);
 
-// Init
+initTerminal();
 renderServerCards();
 refreshServers();
 setInterval(refreshServers, 15000);
