@@ -761,6 +761,8 @@ class SSOAuthMiddleware:
         "/download/apk",
         "/terms-of-service",
         "/privacy-policy",
+        "/aviso-privacidad",
+        "/condiciones-uso",
         "/mail",
         "/mail-portal",
         "/mail-accounts",
@@ -1307,6 +1309,16 @@ async def serve_terms():
 @app.get("/privacy-policy")
 async def serve_privacy():
     return FileResponse(str(FRONTEND_DIR / "privacy-policy.html"))
+
+
+@app.get("/aviso-privacidad")
+async def serve_aviso_privacidad():
+    return FileResponse(str(FRONTEND_DIR / "aviso-privacidad.html"))
+
+
+@app.get("/condiciones-uso")
+async def serve_condiciones_uso():
+    return FileResponse(str(FRONTEND_DIR / "condiciones-uso.html"))
 
 
 @app.get("/disclaimer")

@@ -239,10 +239,22 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
           <div class="error-msg" id="regConfirmError"></div>
         </div>
 
-        <button type="submit" class="btn btn-register" id="registerBtn">Create Account</button>
+        <button type="submit" class="btn btn-register" id="registerBtn" disabled>Create Account</button>
 
         <div class="terms">
-          By registering you agree to <a href="/terms-of-service" target="_blank">ZICORE Terms of Service</a> and <a href="/privacy-policy" target="_blank">Privacy Policy</a>
+          <label class="checkbox-wrap" style="margin-bottom:8px">
+            <input type="checkbox" id="acceptTerms" onchange="checkRegisterConsent()">
+            <span class="checkbox-mark"></span>
+            <span class="label-text">He le&iacute; y acepto los <a href="/condiciones-uso" target="_blank">T&eacute;rminos y Condiciones de Uso</a></span>
+          </label>
+          <label class="checkbox-wrap">
+            <input type="checkbox" id="acceptPrivacy" onchange="checkRegisterConsent()">
+            <span class="checkbox-mark"></span>
+            <span class="label-text">He le&iacute; y acepto el <a href="/aviso-privacidad" target="_blank">Aviso de Privacidad</a></span>
+          </label>
+          <div style="margin-top:8px;font-size:10px;color:var(--text2)">
+            Al crear tu cuenta, aceptas nuestros <a href="/terms-of-service" target="_blank">T&eacute;rminos de Servicio</a> y <a href="/privacy-policy" target="_blank">Pol&iacute;tica de Privacidad</a> (EN).
+          </div>
         </div>
 
         <div class="links">
@@ -400,6 +412,12 @@ async function handleLogin(e) {
 }
 
 /* ── Register ──────────────────────────────── */
+function checkRegisterConsent() {
+  const terms = document.getElementById('acceptTerms').checked;
+  const privacy = document.getElementById('acceptPrivacy').checked;
+  document.getElementById('registerBtn').disabled = !(terms && privacy);
+}
+
 async function handleRegister(e) {
   e.preventDefault();
   if (isLoading) return;
@@ -418,6 +436,8 @@ async function handleRegister(e) {
   if (!password) { showError('regPasswordError', 'Password is required'); valid = false; }
   else if (password.length < 8) { showError('regPasswordError', 'Password must be at least 8 characters'); valid = false; }
   if (password !== confirm) { showError('regConfirmError', 'Passwords do not match'); valid = false; }
+  if (!document.getElementById('acceptTerms').checked) { showToast('You must accept the Terms of Use', 'error'); valid = false; }
+  if (!document.getElementById('acceptPrivacy').checked) { showToast('You must accept the Privacy Notice', 'error'); valid = false; }
   if (!valid) return;
 
   setLoading('registerBtn', true, 'Create Account');
