@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiHost — Free Hosting</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;min-height:100vh;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+:root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff5555;--yellow:#ffb86c;--bg:#04060c;--panel:rgba(8,12,20,0.98);--border:rgba(0,229,255,0.1)}
+
+#topBar{
+  height:36px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
+}
+#topBar .logo{font-size:10px;letter-spacing:5px;color:var(--glow);font-weight:700}
+#topBar .logo span{color:var(--purple)}
+#topBar .sep{width:1px;height:18px;background:rgba(0,229,255,0.08)}
+#topBar .subtitle{font-size:8px;letter-spacing:3px;color:#607080;text-transform:uppercase}
+.nav-btn{
+  font-size:8px;letter-spacing:2px;padding:4px 12px;border:1px solid rgba(0,229,255,0.12);
+  background:rgba(0,229,255,0.03);color:#607080;cursor:pointer;text-decoration:none;transition:all .2s;
+}
+.nav-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
+
+.hero{
+  text-align:center;padding:50px 20px 30px;
+  background:linear-gradient(180deg, rgba(0,229,255,0.03) 0%, transparent 100%);
+}
+.hero h1{font-size:28px;font-weight:300;letter-spacing:8px;color:var(--glow)}
+.hero h1 span{color:var(--purple);font-weight:600}
+.hero p{font-size:12px;letter-spacing:3px;color:#607080;margin-top:10px}
+.hero .badge{
+  display:inline-block;margin-top:14px;padding:4px 14px;
+  border:1px solid rgba(0,255,136,0.2);background:rgba(0,255,136,0.05);
+  color:var(--green);font-size:9px;letter-spacing:3px;
+}
+
+.plans{
+  display:flex;justify-content:center;gap:16px;padding:10px 20px 40px;flex-wrap:wrap;
+}
+.plan-card{
+  width:280px;background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:24px;text-align:center;position:relative;overflow:hidden;
+}
+.plan-card.featured{border-color:rgba(0,229,255,0.3)}
+.plan-card.featured::before{
+  content:'INCLUDED';position:absolute;top:10px;right:-30px;
+  background:var(--glow);color:#04060c;font-size:7px;letter-spacing:2px;
+  padding:2px 40px;transform:rotate(45deg);font-weight:700;
+}
+.plan-name{font-size:9px;letter-spacing:4px;color:var(--purple);text-transform:uppercase;margin-bottom:6px}
+.plan-price{font-size:32px;font-weight:200;color:var(--glow);margin-bottom:4px}
+.plan-price span{font-size:12px;color:#607080}
+.plan-desc{font-size:10px;color:#607080;margin-bottom:16px}
+.plan-features{text-align:left;margin-bottom:20px}
+.plan-features div{
+  font-size:10px;color:#8090a0;padding:6px 0;border-bottom:1px solid rgba(0,229,255,0.04);
+  display:flex;align-items:center;gap:8px;
+}
+.plan-features div::before{content:'◆';color:var(--glow);font-size:6px}
+.plan-btn{
+  width:100%;padding:10px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.2);
+  color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+.plan-btn:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
+
+/* DASHBOARD (hidden until logged in) */
+#dashboard{display:none;padding:20px;max-width:900px;margin:0 auto}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.dash-title{font-size:10px;letter-spacing:3px;color:var(--purple)}
+.dash-user{font-size:10px;color:#607080}
+.dash-logout{
+  padding:4px 12px;border:1px solid rgba(255,68,68,0.2);background:rgba(255,68,68,0.05);
+  color:var(--red);font-size:8px;letter-spacing:2px;cursor:pointer;font-family:inherit;
+}
+.quota-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.quota-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;
+}
+.quota-label{font-size:7px;letter-spacing:2px;color:#607080;text-transform:uppercase;margin-bottom:6px}
+.quota-value{font-size:18px;font-weight:600;color:var(--glow)}
+.quota-bar{height:4px;background:rgba(0,229,255,0.08);border-radius:2px;margin-top:8px;overflow:hidden}
+.quota-bar .fill{height:100%;border-radius:2px;transition:width .5s}
+.quota-bar .fill.ok{background:var(--green)}
+.quota-bar .fill.warn{background:var(--yellow)}
+.quota-bar .fill.danger{background:var(--red)}
+.quota-detail{font-size:8px;color:#607080;margin-top:4px}
+
+.files-section{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:16px}
+.files-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.files-title{font-size:8px;letter-spacing:2px;color:var(--purple);text-transform:uppercase}
+.file-actions{display:flex;gap:4px}
+.file-btn{
+  padding:3px 8px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.03);
+  color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+.file-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
+.file-row{
+  display:flex;align-items:center;padding:6px 8px;border-bottom:1px solid rgba(0,229,255,0.04);
+  font-size:10px;
+}
+.file-row:hover{background:rgba(0,229,255,0.03)}
+.file-name{flex:1;color:var(--glow)}
+.file-size{width:80px;text-align:right;color:#607080;font-variant-numeric:tabular-nums}
+.file-date{width:140px;text-align:right;color:#607080;font-size:9px}
+.file-del{padding:2px 6px;color:var(--red);cursor:pointer;font-size:9px;opacity:0.4}
+.file-del:hover{opacity:1}
+
+/* MODALS */
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);
+  display:none;align-items:center;justify-content:center;z-index:200;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;width:380px;max-width:90vw;
+}
+.modal .title{font-size:9px;letter-spacing:3px;color:var(--glow);margin-bottom:14px;text-transform:uppercase;
+  padding-bottom:8px;border-bottom:1px solid rgba(0,229,255,0.08)}
+.form-row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.form-row label{font-size:8px;letter-spacing:1.5px;color:#607080;text-transform:uppercase;width:60px;flex-shrink:0}
+.form-row input{
+  flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;
+  padding:6px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+.form-row input:focus{border-color:var(--glow)}
+.form-row input::placeholder{color:#303848}
+.form-btn{
+  width:100%;padding:8px;margin-top:4px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);
+  color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+.form-btn:hover{background:rgba(0,229,255,0.15)}
+.form-error{margin-top:8px;font-size:8px;color:var(--red);text-align:center;display:none}
+.form-btns{display:flex;gap:6px;margin-top:10px}
+.form-cancel{
+  flex:1;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+  color:#607080;font-size:9px;letter-spacing:2px;cursor:pointer;font-family:inherit;
+}
+
+/* FILE UPLOAD */
+.upload-zone{
+  border:2px dashed rgba(0,229,255,0.15);border-radius:6px;padding:20px;text-align:center;
+  cursor:pointer;transition:all .2s;margin-top:10px;
+}
+.upload-zone:hover{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.03)}
+.upload-zone p{font-size:9px;color:#607080;letter-spacing:1px}
+.upload-zone .hint{font-size:7px;color:#303848;margin-top:4px}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <div class="logo">ZI<span>HOST</span></div>
+  <div class="sep"></div>
+  <div class="subtitle">Free Hosting</div>
+  <a class="nav-btn" href="/shell">SHELL</a>
+  <a class="nav-btn" href="/console">CONSOLE</a>
+  <a class="nav-btn" href="https://zicore.space">ZICORE</a>
+</div>
+
+<!-- LANDING -->
+<div id="landing">
+  <div class="hero">
+    <h1>ZI<span>HOST</span></h1>
+    <p>Free hosting powered by ZICORE</p>
+    <div class="badge">FREE TIER — NO CREDIT CARD</div>
+  </div>
+  <div class="plans">
+    <div class="plan-card">
+      <div class="plan-name">Basic</div>
+      <div class="plan-price">$0 <span>/mo</span></div>
+      <div class="plan-desc">Static hosting + ZICORE instance</div>
+      <div class="plan-features">
+        <div>2GB disk space</div>
+        <div>512MB upload/generation storage</div>
+        <div>10GB bandwidth/month</div>
+        <div>1 ZICORE instance</div>
+        <div>SSL included</div>
+        <div>Custom subdomain</div>
+      </div>
+      <button class="plan-btn" onclick="showSignup()">GET STARTED</button>
+    </div>
+    <div class="plan-card featured">
+      <div class="plan-name">ZiHost Free</div>
+      <div class="plan-price">$0 <span>/mo</span></div>
+      <div class="plan-desc">Full ZICORE + hosting + AI generation</div>
+      <div class="plan-features">
+        <div>2GB disk (ZICORE + 512MB data)</div>
+        <div>AI 3D generation storage</div>
+        <div>10GB bandwidth/month</div>
+        <div>Interactive shell access</div>
+        <div>File manager</div>
+        <div>vps.zicore.space subdomain</div>
+      </div>
+      <button class="plan-btn" onclick="showSignup()">DEPLOY NOW</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="dash-header">
+    <span class="dash-title">Dashboard</span>
+    <span class="dash-user" id="dashUser"></span>
+    <button class="dash-logout" onclick="logout()">LOGOUT</button>
+  </div>
+
+  <div class="quota-grid">
+    <div class="quota-card">
+      <div class="quota-label">Disk Usage</div>
+      <div class="quota-value" id="qDiskVal">--</div>
+      <div class="quota-bar"><div class="fill ok" id="qDiskBar" style="width:0"></div></div>
+      <div class="quota-detail" id="qDiskDetail"></div>
+    </div>
+    <div class="quota-card">
+      <div class="quota-label">Uploads + Generation</div>
+      <div class="quota-value" id="qUploadVal">--</div>
+      <div class="quota-bar"><div class="fill ok" id="qUploadBar" style="width:0"></div></div>
+      <div class="quota-detail" id="qUploadDetail"></div>
+    </div>
+  </div>
+
+  <div class="files-section">
+    <div class="files-header">
+      <span class="files-title">Site Files</span>
+      <div class="file-actions">
+        <button class="file-btn" onclick="switchDir('html')">HTML</button>
+        <button class="file-btn" onclick="switchDir('data/uploads')">UPLOADS</button>
+        <button class="file-btn" onclick="switchDir('data/generation')">GENERATION</button>
+        <button class="file-btn" onclick="showUpload()">+ UPLOAD</button>
+      </div>
+    </div>
+    <div id="fileList"></div>
+  </div>
+
+  <div class="files-section">
+    <div class="files-header">
+      <span class="files-title">ZICORE Instance</span>
+    </div>
+    <div style="font-size:10px;color:#607080;padding:10px 0" id="zicoreStatus">Loading...</div>
+  </div>
+</div>
+
+<!-- SIGNUP MODAL -->
+<div class="modal-overlay" id="signupModal">
+  <div class="modal">
+    <div class="title">Create Account</div>
+    <div class="form-row"><label>Username</label><input id="suUser" placeholder="myproject"></div>
+    <div class="form-row"><label>Email</label><input id="suEmail" placeholder="me@email.com" type="email"></div>
+    <div class="form-row"><label>Password</label><input id="suPass" type="password" placeholder="(auto-generated if empty)"></div>
+    <button class="form-btn" onclick="doSignup()">CREATE ACCOUNT</button>
+    <div class="form-error" id="suError"></div>
+    <div class="form-btns"><button class="form-cancel" onclick="hideModal('signupModal')">CANCEL</button></div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <div class="title">Login</div>
+    <div class="form-row"><label>User</label><input id="liUser" placeholder="username"></div>
+    <div class="form-row"><label>Pass</label><input id="liPass" type="password" placeholder="password"></div>
+    <button class="form-btn" onclick="doLogin()">LOGIN</button>
+    <div class="form-error" id="liError"></div>
+    <div class="form-btns">
+      <button class="form-cancel" onclick="hideModal('loginModal')">CANCEL</button>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <span style="font-size:8px;color:#607080;cursor:pointer" onclick="hideModal('loginModal');showSignup()">Create account</span>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <div class="title">Upload File</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('uploadFile').click()">
+      <p>Click or drag file here</p>
+      <div class="hint">Max 512MB per file (upload quota)</div>
+    </div>
+    <input type="file" id="uploadFile" style="display:none" onchange="doUpload(this.files[0])">
+    <div id="uploadProgress" style="display:none;margin-top:10px">
+      <div class="quota-bar"><div class="fill ok" id="uploadBar" style="width:0"></div></div>
+      <div style="font-size:8px;color:#607080;margin-top:4px" id="uploadStatus"></div>
+    </div>
+    <div class="form-btns" style="margin-top:10px"><button class="form-cancel" onclick="hideModal('uploadModal')">CLOSE</button></div>
+  </div>
+</div>
+
+<script>
+let currentUser = null;
+let currentApiKey = '';
+let currentDir = 'html';
+
+function showSignup() { document.getElementById('signupModal').classList.add('show'); document.getElementById('suUser').focus(); }
+function showLogin() { document.getElementById('loginModal').classList.add('show'); document.getElementById('liUser').focus(); }
+function showUpload() { document.getElementById('uploadModal').classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+async function api(path, opts) {
+  try {
+    const r = await fetch(path, opts);
+    return await r.json();
+  } catch(e) { return {error: e.message}; }
+}
+
+// ─── Auth ───────────────────────────────────────────────
+
+async function doSignup() {
+  const user = document.getElementById('suUser').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const pass = document.getElementById('suPass').value;
+  const err = document.getElementById('suError');
+  if (!user || !email) { err.textContent = 'Username and email required'; err.style.display = 'block'; return; }
+  const data = await api('/api/zihost/create', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username: user, email: email, password: pass || undefined})
+  });
+  if (!data.success) { err.textContent = data.error || 'Failed'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  currentApiKey = data.api_key;
+  currentUser = {username: data.username, email: email};
+  hideModal('signupModal');
+  enterDashboard();
+}
+
+async function doLogin() {
+  const user = document.getElementById('liUser').value.trim();
+  const pass = document.getElementById('liPass').value;
+  const err = document.getElementById('liError');
+  if (!user || !pass) { err.textContent = 'All fields required'; err.style.display = 'block'; return; }
+  const data = await api('/api/zihost/auth', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username: user, password: pass})
+  });
+  if (!data.success) { err.textContent = data.error || 'Failed'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  currentUser = data.account;
+  currentApiKey = data.account.api_key;
+  hideModal('loginModal');
+  enterDashboard();
+}
+
+function logout() {
+  currentUser = null;
+  currentApiKey = '';
+  document.getElementById('landing').style.display = '';
+  document.getElementById('dashboard').style.display = 'none';
+}
+
+function enterDashboard() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('dashboard').style.display = '';
+  document.getElementById('dashUser').textContent = currentUser.username + ' — ' + (currentUser.email || '');
+  loadQuota();
+  loadFiles();
+}
+
+// ─── Quota ──────────────────────────────────────────────
+
+async function loadQuota() {
+  if (!currentUser) return;
+  const data = await api('/api/zihost/quota?user=' + currentUser.username + '&key=' + currentApiKey);
+  if (!data.disk) return;
+  const d = data.disk;
+  const u = data.upload;
+  document.getElementById('qDiskVal').textContent = d.used_mb + ' MB';
+  document.getElementById('qDiskDetail').textContent = d.used_mb + ' / ' + d.limit_mb + ' MB (' + d.percent + '%)';
+  const dBar = document.getElementById('qDiskBar');
+  dBar.style.width = Math.min(d.percent, 100) + '%';
+  dBar.className = 'fill ' + (d.percent > 85 ? 'danger' : d.percent > 60 ? 'warn' : 'ok');
+
+  document.getElementById('qUploadVal').textContent = u.used_mb + ' MB';
+  document.getElementById('qUploadDetail').textContent = u.used_mb + ' / ' + u.limit_mb + ' MB (' + u.percent + '%)';
+  const uBar = document.getElementById('qUploadBar');
+  uBar.style.width = Math.min(u.percent, 100) + '%';
+  uBar.className = 'fill ' + (u.percent > 85 ? 'danger' : u.percent > 60 ? 'warn' : 'ok');
+}
+
+// ─── Files ──────────────────────────────────────────────
+
+function switchDir(dir) {
+  currentDir = dir;
+  loadFiles();
+}
+
+async function loadFiles() {
+  if (!currentUser) return;
+  const data = await api('/api/zihost/files?user=' + currentUser.username + '&key=' + currentApiKey + '&path=' + encodeURIComponent(currentDir));
+  const el = document.getElementById('fileList');
+  if (!data.success || !data.files) { el.innerHTML = '<div style="font-size:9px;color:#607080;padding:8px">No files</div>'; return; }
+  if (data.files.length === 0) { el.innerHTML = '<div style="font-size:9px;color:#607080;padding:8px">Empty directory</div>'; return; }
+  el.innerHTML = '';
+  for (const f of data.files) {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    const size = f.is_dir ? '--' : formatSize(f.size);
+    const date = new Date(f.modified).toLocaleDateString();
+    row.innerHTML =
+      '<span class="file-name">' + (f.is_dir ? '&#128193; ' : '&#128196; ') + esc(f.name) + '</span>' +
+      '<span class="file-size">' + size + '</span>' +
+      '<span class="file-date">' + date + '</span>' +
+      '<span class="file-del" onclick="deleteFile(\'' + esc(f.name) + '\')" title="Delete">&times;</span>';
+    el.appendChild(row);
+  }
+}
+
+async function deleteFile(name) {
+  if (!confirm('Delete ' + name + '?')) return;
+  await api('/api/zihost/file?user=' + currentUser.username + '&key=' + currentApiKey + '&path=' + encodeURIComponent(currentDir) + '&name=' + encodeURIComponent(name), {method: 'DELETE'});
+  loadFiles();
+  loadQuota();
+}
+
+async function doUpload(file) {
+  if (!file || !currentUser) return;
+  const quota = await api('/api/zihost/quota?user=' + currentUser.username + '&key=' + currentApiKey);
+  if (quota.upload && quota.upload.percent > 95) {
+    alert('Upload quota almost full');
+    return;
+  }
+  const progress = document.getElementById('uploadProgress');
+  const bar = document.getElementById('uploadBar');
+  const status = document.getElementById('uploadStatus');
+  progress.style.display = '';
+  bar.style.width = '30%';
+  status.textContent = 'Uploading ' + file.name + '...';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  const r = await fetch('/api/zihost/upload?user=' + currentUser.username + '&key=' + currentApiKey + '&path=' + encodeURIComponent(currentDir), {
+    method: 'POST', body: fd
+  });
+  const data = await r.json();
+  if (data.success) {
+    bar.style.width = '100%';
+    status.textContent = 'Uploaded ' + formatSize(file.size);
+    loadFiles();
+    loadQuota();
+  } else {
+    bar.style.width = '0%';
+    status.textContent = 'Error: ' + (data.error || 'Failed');
+  }
+}
+
+// Drag & drop
+document.addEventListener('DOMContentLoaded', function() {
+  const zone = document.getElementById('uploadZone');
+  if (!zone) return;
+  zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor = 'var(--glow)'; });
+  zone.addEventListener('dragleave', function() { zone.style.borderColor = ''; });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault(); zone.style.borderColor = '';
+    if (e.dataTransfer.files.length) doUpload(e.dataTransfer.files[0]);
+  });
+});
+
+// ─── Helpers ────────────────────────────────────────────
+
+function formatSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024, sizes = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+}
+function esc(s) { return s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Enter key handlers
+document.getElementById('suUser')?.addEventListener('keydown', e => { if (e.key === 'Enter') doSignup(); });
+document.getElementById('suPass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doSignup(); });
+document.getElementById('liPass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// Check if already logged in
+(async function() {
+  const data = await api('/api/zihost/stats');
+  if (data.total_accounts !== undefined) {
+    // Show login link
+  }
+})();
+</script>
+</body>
+</html>

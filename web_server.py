@@ -4918,7 +4918,7 @@ async def _ssh_exec(server: str, command: str, timeout: int = 30) -> dict:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(info["ip"], username=info["user"], password=info["password"],
-                       timeout=10, allow_agent=False, look_for_keys=False)
+                       timeout=5, allow_agent=False, look_for_keys=False)
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
         out = stdout.read().decode("utf-8", errors="replace")
         err = stderr.read().decode("utf-8", errors="replace")
@@ -4953,13 +4953,13 @@ async def _ssh_exec(server: str, command: str, timeout: int = 30) -> dict:
 
 
 async def _get_server_stats(server: str) -> dict:
-    """Get basic stats from a server."""
+    """Get basic stats from a server (fast timeout)."""
     result = await _ssh_exec(server,
         "echo CPU:$(top -bn1 | grep 'Cpu(s)' | awk '{print $2}')% "
         "RAM:$(free -m | awk '/Mem:/{printf \"%d/%d\", $3, $2}') "
         "RAM_PCT:$(free | awk '/Mem:/{printf \"%.0f\", $3/$2*100}') "
         "DISK:$(df -h / | awk 'NR==2{print $5}') "
-        "UPTIME:$(uptime -p)", timeout=10)
+        "UPTIME:$(uptime -p)", timeout=5)
     stats = {"online": result.get("success", False), "cpu": "--", "ram": "--",
              "ram_pct": 0, "disk": "--", "disk_pct": 0, "uptime": "--"}
     if result.get("stdout"):
@@ -4980,10 +4980,19 @@ async def _get_server_stats(server: str) -> dict:
     return stats
 
 
+_admin_stats_cache = {"data": None, "ts": 0}
+_admin_cache_lock = asyncio.Lock() if hasattr(asyncio, 'Lock') else None
+
+
 @app.get("/api/admin/servers")
 async def admin_servers():
-    """Get status of all servers."""
-    import asyncio
+    """Get status of all servers (cached 10s to prevent event-loop blocking)."""
+    import asyncio as _aio
+    import time as _time
+    now = _time.time()
+    # Return cached if <10s old
+    if _admin_stats_cache["data"] and (now - _admin_stats_cache["ts"]) < 10:
+        return JSONResponse(content=_admin_stats_cache["data"])
     tasks = {}
     for key in ADMIN_SERVERS:
         if key == ".85":
@@ -5027,6 +5036,9 @@ async def admin_servers():
             except Exception:
                 results[key] = {"online": False, "cpu": "--", "ram": "--", "ram_pct": 0,
                                 "disk": "--", "disk_pct": 0, "uptime": "--"}
+    # Update cache
+    _admin_stats_cache["data"] = results
+    _admin_stats_cache["ts"] = __import__("time").time()
     return JSONResponse(content=results)
 
 
@@ -5209,6 +5221,237 @@ async def shell_websocket(websocket: WebSocket):
             await websocket.close()
         except Exception:
             pass
+
+
+# --- ZICORE Server Console: Logs / Errors / Processes ---
+
+@app.get("/api/admin/logs")
+async def admin_logs(request: Request):
+    """Get recent logs from a server.
+    Query params: server (.85|vps), lines (default 80), filter (grep pattern), service (systemd unit).
+    """
+    server = request.query_params.get("server", ".85")
+    lines = int(request.query_params.get("lines", "80"))
+    filt = request.query_params.get("filter", "")
+    service = request.query_params.get("service", "zicore-materializer")
+    if server == ".85":
+        import subprocess as _sp
+        try:
+            cmd = f"sudo journalctl -u {service} --no-pager -n {lines}"
+            if filt:
+                cmd += f" | grep -i '{filt}'"
+            r = _sp.run(["bash", "-c", cmd], capture_output=True, text=True, timeout=10)
+            return {"success": True, "logs": r.stdout, "server": server}
+        except Exception as e:
+            return {"success": False, "error": str(e), "server": server}
+    else:
+        result = await _ssh_exec(server,
+            f"sudo journalctl -u {service} --no-pager -n {lines}"
+            + (f" | grep -i '{filt}'" if filt else ""),
+            timeout=10)
+        return {"success": result.get("success", False), "logs": result.get("stdout", ""),
+                "stderr": result.get("stderr", ""), "server": server}
+
+
+@app.get("/api/admin/errors")
+async def admin_errors(request: Request):
+    """Get error/warning lines from logs. Query: server, lines (default 200)."""
+    server = request.query_params.get("server", ".85")
+    lines = int(request.query_params.get("lines", "200"))
+    service = request.query_params.get("service", "zicore-materializer")
+    err_grep = "grep -iE 'error|exception|fail|critical|traceback|killed|oom|segfault|panic'"
+    cmd = f"sudo journalctl -u {service} --no-pager -n {lines} {err_grep}"
+    if server == ".85":
+        import subprocess as _sp
+        try:
+            r = _sp.run(["bash", "-c", cmd], capture_output=True, text=True, timeout=10)
+            return {"success": True, "errors": r.stdout, "server": server}
+        except Exception as e:
+            return {"success": False, "error": str(e), "server": server}
+    else:
+        result = await _ssh_exec(server, cmd, timeout=15)
+        return {"success": result.get("success", False), "errors": result.get("stdout", ""),
+                "stderr": result.get("stderr", ""), "server": server}
+
+
+@app.get("/api/admin/processes")
+async def admin_processes(request: Request):
+    """Get running processes. Query: server, filter (name pattern)."""
+    server = request.query_params.get("server", ".85")
+    filt = request.query_params.get("filter", "python")
+    cmd = f"ps aux --sort=-%cpu | head -30"
+    if filt:
+        cmd = f"ps aux | grep -i '{filt}' | grep -v grep | head -30"
+    if server == ".85":
+        import subprocess as _sp
+        try:
+            r = _sp.run(["bash", "-c", cmd], capture_output=True, text=True, timeout=10)
+            return {"success": True, "processes": r.stdout, "server": server}
+        except Exception as e:
+            return {"success": False, "error": str(e), "server": server}
+    else:
+        result = await _ssh_exec(server, cmd, timeout=10)
+        return {"success": result.get("success", False), "processes": result.get("stdout", ""),
+                "server": server}
+
+
+@app.get("/api/admin/service-status")
+async def admin_service_status(request: Request):
+    """Get systemd service status. Query: server, service."""
+    server = request.query_params.get("server", ".85")
+    service = request.query_params.get("service", "zicore-materializer")
+    cmd = f"systemctl is-active {service} 2>/dev/null; echo ---; systemctl status {service} --no-pager -l 2>&1 | head -15"
+    if server == ".85":
+        import subprocess as _sp
+        try:
+            r = _sp.run(["bash", "-c", cmd], capture_output=True, text=True, timeout=10)
+            return {"success": True, "status": r.stdout, "server": server, "service": service}
+        except Exception as e:
+            return {"success": False, "error": str(e), "server": server}
+    else:
+        result = await _ssh_exec(server, cmd, timeout=10)
+        return {"success": result.get("success", False), "status": result.get("stdout", ""),
+                "server": server, "service": service}
+
+
+@app.get("/console")
+async def console_page():
+    from fastapi.responses import FileResponse
+    html_path = FRONTEND_DIR / "server-console.html"
+    if html_path.exists():
+        return FileResponse(str(html_path), media_type="text/html")
+    return JSONResponse(content={"error": "Console not found"}, status_code=404)
+
+
+# --- ZiHost: Free Hosting Panel ---
+
+try:
+    from zicore.zihost import zihost
+except ImportError:
+    zihost = None
+
+
+@app.get("/zihost")
+async def zihost_page():
+    from fastapi.responses import FileResponse
+    html_path = FRONTEND_DIR / "zihost.html"
+    if html_path.exists():
+        return FileResponse(str(html_path), media_type="text/html")
+    return JSONResponse(content={"error": "ZiHost not found"}, status_code=404)
+
+
+@app.get("/api/zihost/stats")
+async def zihost_stats():
+    if zihost is None:
+        return {"error": "ZiHost not available"}
+    return zihost.get_stats()
+
+
+@app.get("/api/zihost/accounts")
+async def zihost_accounts():
+    if zihost is None:
+        return {"error": "ZiHost not available"}
+    return {"accounts": zihost.list_all()}
+
+
+@app.post("/api/zihost/create")
+async def zihost_create(request: Request):
+    if zihost is None:
+        return JSONResponse(content={"error": "ZiHost not available"}, status_code=503)
+    data = await request.json()
+    result = zihost.create_account(
+        username=data.get("username", ""),
+        email=data.get("email", ""),
+        password=data.get("password"),
+    )
+    return result
+
+
+@app.post("/api/zihost/auth")
+async def zihost_auth(request: Request):
+    if zihost is None:
+        return JSONResponse(content={"error": "ZiHost not available"}, status_code=503)
+    data = await request.json()
+    result = zihost.authenticate(
+        username=data.get("username", ""),
+        password=data.get("password", ""),
+    )
+    return result
+
+
+@app.get("/api/zihost/quota")
+async def zihost_quota(request: Request):
+    if zihost is None:
+        return {"error": "ZiHost not available"}
+    user = request.query_params.get("user", "")
+    key = request.query_params.get("key", "")
+    # Simple API key check
+    for acct in zihost.list_all():
+        if acct.get("username") == user and acct.get("api_key") == key:
+            return zihost.check_quota(user)
+    return {"error": "Unauthorized"}
+
+
+@app.get("/api/zihost/files")
+async def zihost_files(request: Request):
+    if zihost is None:
+        return {"error": "ZiHost not available"}
+    user = request.query_params.get("user", "")
+    key = request.query_params.get("key", "")
+    path = request.query_params.get("path", "html")
+    for acct in zihost.list_all():
+        if acct.get("username") == user and acct.get("api_key") == key:
+            return zihost.list_files(user, path)
+    return {"error": "Unauthorized"}
+
+
+@app.post("/api/zihost/upload")
+async def zihost_upload(request: Request):
+    if zihost is None:
+        return JSONResponse(content={"error": "ZiHost not available"}, status_code=503)
+    user = request.query_params.get("user", "")
+    key = request.query_params.get("key", "")
+    path = request.query_params.get("path", "html")
+    valid = False
+    for acct in zihost.list_all():
+        if acct.get("username") == user and acct.get("api_key") == key:
+            valid = True
+            break
+    if not valid:
+        return JSONResponse(content={"error": "Unauthorized"}, status_code=403)
+    form = await request.form()
+    upload = form.get("file")
+    if not upload:
+        return {"error": "No file"}
+    content = await upload.read()
+    filename = upload.filename or "upload.bin"
+    return zihost.write_file(user, path, filename, content)
+
+
+@app.delete("/api/zihost/file")
+async def zihost_delete_file(request: Request):
+    if zihost is None:
+        return JSONResponse(content={"error": "ZiHost not available"}, status_code=503)
+    user = request.query_params.get("user", "")
+    key = request.query_params.get("key", "")
+    path = request.query_params.get("path", "html")
+    name = request.query_params.get("name", "")
+    valid = False
+    for acct in zihost.list_all():
+        if acct.get("username") == user and acct.get("api_key") == key:
+            valid = True
+            break
+    if not valid:
+        return JSONResponse(content={"error": "Unauthorized"}, status_code=403)
+    return zihost.delete_file(user, path, name)
+
+
+@app.delete("/api/zihost/account")
+async def zihost_delete_account(request: Request):
+    if zihost is None:
+        return JSONResponse(content={"error": "ZiHost not available"}, status_code=503)
+    data = await request.json()
+    return zihost.delete_account(data.get("username", ""))
 
 
 # --- ZICORE Mail Server ---

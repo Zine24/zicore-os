@@ -160,6 +160,8 @@ class ShellSession:
 class ShellManager:
     """Manages all active shell sessions."""
 
+    MAX_SESSIONS = 8
+
     def __init__(self):
         self._sessions: dict[str, ShellSession] = {}
         self._lock = threading.Lock()
@@ -167,6 +169,18 @@ class ShellManager:
     def create_session(self, host: str, port: int, user: str, password: str,
                        cols: int = 120, rows: int = 40,
                        output_callback=None, loop=None) -> dict:
+        with self._lock:
+            if len(self._sessions) >= self.MAX_SESSIONS:
+                oldest_idle = None
+                for sid, s in self._sessions.items():
+                    if s.is_idle():
+                        oldest_idle = sid
+                        break
+                if oldest_idle:
+                    old = self._sessions.pop(oldest_idle)
+                    old.disconnect()
+                else:
+                    return {"success": False, "error": f"Max {self.MAX_SESSIONS} sessions. Close one first."}
         session = ShellSession(host, port, user, password)
         session._output_callback = output_callback
         session._loop = loop
