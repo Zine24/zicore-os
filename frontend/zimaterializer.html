@@ -307,7 +307,6 @@ let isRecording = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 let ctxTarget = null;
-let cameraMode = 'orbit';
 
 const NEON_COLORS = [[0,0.9,1],[0.5,0,1],[1,0,0.5],[0,1,0.5],[1,0.3,0]];
 
@@ -1433,7 +1432,7 @@ function generateBuiltinAsset(prompt) {
     const bm = new BABYLON.PBRMaterial('baseMat', s);
     bm.albedoColor = new BABYLON.Color3(0.35, 0.3, 0.25); bm.roughness = 0.85;
     base.material = bm;
-    const roof = BABYLON.MeshBuilder.CreateCylinder('roof', { height:0, diameterTop:0, diameterBottom:2.5, tessellation:4 }, s);
+    const roof = BABYLON.MeshBuilder.CreateCylinder('roof', { height:1, diameterTop:0, diameterBottom:3, tessellation:4 }, s);
     roof.position.y = 2;
     roof.scaling.y = 0.8;
     roof.rotation.y = Math.PI/4;
@@ -1610,8 +1609,13 @@ function toggleRecord() {
 // ─── CONTEXT MENU ──────────────────────────────────────
 function onCanvasContext(e) {
   if (!babylonScene || currentMode !== 'generated') return;
+  const canvas = document.getElementById('babylonCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
   e.preventDefault();
-  const pick = babylonScene.pick(e.offsetX, e.offsetY);
+  const pick = babylonScene.pick(x, y);
   if (pick.hit && pick.pickedMesh) {
     const obj = sceneObjects.find(o => o.mesh === pick.pickedMesh);
     if (obj) showContextMenu(e, obj);
