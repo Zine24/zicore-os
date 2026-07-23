@@ -266,25 +266,29 @@ class WorldBuilder:
     """Build world configs from natural language prompts."""
 
     WORLD_KEYWORDS = {
-        "city": ["city", "urban", "building", "street", "downtown", "metropolis", "skyscraper"],
+        "space_station": ["space station", "orbital station", "airlock", "space module"],
+        "underwater": ["underwater", "abyss", "deep sea", "submarine", "trench", "jellyfish", "hydrothermal"],
+        "lunar": ["moon", "lunar", "crater", "mars", "rover", "colony"],
+        "medieval": ["medieval", "castle", "kingdom", "knight", "fortress", "sword"],
+        "cyberpunk": ["cyberpunk", "neon", "hologram", "dystopia", "synth"],
+        "fantasy": ["fantasy", "magic", "floating island", "crystal", "portal", "wizard"],
         "forest": ["forest", "tree", "woods", "jungle", "nature", "glade", "oak", "pine"],
-        "ocean": ["ocean", "sea", "water", "beach", "island", "coral", "underwater", "marine"],
-        "space_station": ["space", "station", "orbital", "airlock", "corridor", "module", "habitat"],
-        "medieval": ["medieval", "castle", "kingdom", "knight", "dragon", "fortress", "sword"],
-        "cyberpunk": ["cyberpunk", "neon", "futuristic", "hologram", "dystopia", "tech", "synth"],
-        "underwater": ["underwater", "abyss", "deep sea", "submarine", "trench", "jellyfish", "vent"],
-        "lunar": ["moon", "lunar", "crater", "regolith", "colony", "mars", "planet", "rover"],
-        "fantasy": ["fantasy", "magic", "floating", "island", "crystal", "portal", "wizard", "dragon"],
+        "ocean": ["ocean", "sea", "water", "beach", "coral", "marine"],
+        "city": ["city", "urban", "building", "street", "downtown", "metropolis", "skyscraper"],
     }
 
     def parse_prompt(self, prompt: str) -> Dict[str, Any]:
         prompt_lower = prompt.lower()
         detected_world = "city"
+        found = False
         for world_type, keywords in self.WORLD_KEYWORDS.items():
             for kw in keywords:
                 if kw in prompt_lower:
                     detected_world = world_type
+                    found = True
                     break
+            if found:
+                break
 
         objects = []
         object_keywords = {
