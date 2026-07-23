@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiMail — Unified Mail</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+:root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff5555;--yellow:#ffb86c;--bg:#04060c;--panel:rgba(8,12,20,0.98);--border:rgba(0,229,255,0.1)}
+
+/* ─── TOP BAR ──────────────────────────────────────── */
+#topBar{height:34px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.08);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+.logo{font-size:10px;letter-spacing:4px;font-weight:700}.logo b{color:var(--purple)}.logo em{color:var(--glow);font-style:normal}
+.sep{width:1px;height:16px;background:rgba(0,229,255,0.08)}
+.subtitle{font-size:8px;letter-spacing:2px;color:#607080;text-transform:uppercase}
+#clock{margin-left:auto;font-size:9px;color:#607080;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.nav-btn{font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;text-decoration:none;transition:all .2s}
+.nav-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
+
+/* ─── LAYOUT ───────────────────────────────────────── */
+#app{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#loginView{flex:1;display:flex;align-items:center;justify-content:center}
+#mainView{flex:1;display:none;flex-direction:column;overflow:hidden}
+
+/* ─── LOGIN ────────────────────────────────────────── */
+.login-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:30px;width:340px;text-align:center}
+.login-box h2{font-size:14px;font-weight:300;letter-spacing:4px;color:var(--glow);margin-bottom:4px}
+.login-box p{font-size:9px;color:#607080;margin-bottom:20px}
+.login-box .logo-mark{font-size:24px;margin-bottom:12px}
+.login-row{display:flex;gap:6px;margin-bottom:10px;align-items:center}
+.login-row label{font-size:8px;letter-spacing:1px;color:#607080;width:55px;text-transform:uppercase;flex-shrink:0}
+.login-row input{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:7px 10px;font-size:11px;outline:none;font-family:inherit}
+.login-row input:focus{border-color:var(--glow)}
+.login-btn{width:100%;padding:9px;margin-top:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s}
+.login-btn:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
+.login-btn:disabled{opacity:0.4;cursor:not-allowed}
+.login-register{margin-top:12px;font-size:8px;color:#607080}
+.login-register a{color:var(--glow);cursor:pointer;text-decoration:none}
+.login-register a:hover{text-decoration:underline}
+.login-error{margin-top:8px;font-size:8px;color:var(--red);display:none}
+.login-tabs{display:flex;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.login-tab{flex:1;padding:6px;font-size:8px;letter-spacing:2px;color:#607080;cursor:pointer;text-align:center;border-bottom:2px solid transparent;transition:all .2s}
+.login-tab.active{color:var(--glow);border-bottom-color:var(--glow)}
+.login-tab:hover{color:var(--glow)}
+.register-form{display:none}
+
+/* ─── MAIL LAYOUT ──────────────────────────────────── */
+.mail-body{flex:1;display:flex;overflow:hidden}
+.mail-sidebar{width:180px;background:rgba(6,8,14,0.99);border-right:1px solid rgba(0,229,255,0.06);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-section{padding:6px 0}
+.sidebar-title{font-size:7px;letter-spacing:2px;color:#607080;padding:4px 12px;text-transform:uppercase}
+.sidebar-item{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:10px;color:#8090a0;transition:all .15s;border-left:2px solid transparent;
+}
+.sidebar-item:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
+.sidebar-item.active{color:var(--glow);border-left-color:var(--glow);background:rgba(0,229,255,0.06)}
+.sidebar-item .icon{width:16px;text-align:center;font-size:12px}
+.sidebar-item .badge{margin-left:auto;font-size:8px;padding:1px 5px;border-radius:8px;background:rgba(0,229,255,0.12);color:var(--glow)}
+.sidebar-sep{height:1px;background:rgba(0,229,255,0.04);margin:4px 12px}
+.sidebar-user{margin-top:auto;padding:10px 12px;border-top:1px solid rgba(0,229,255,0.06);font-size:8px;color:#607080}
+.sidebar-user .email{color:var(--glow);font-size:9px}
+.sidebar-user .logout{color:var(--red);cursor:pointer;margin-top:4px;font-size:7px;letter-spacing:2px}
+
+/* ─── CONTENT PANELS ───────────────────────────────── */
+.mail-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.panel-view{flex:1;display:none;flex-direction:column;overflow:hidden}
+.panel-view.active{display:flex}
+
+/* TOOLBAR */
+.toolbar{height:32px;background:rgba(8,10,18,0.99);border-bottom:1px solid rgba(0,229,255,0.04);display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0}
+.tbtn{font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,229,255,0.08);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;font-family:inherit;transition:all .2s}
+.tbtn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
+.tbtn.primary{color:var(--glow);border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.06)}
+.search-box{flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.06);color:#c8d0dc;padding:3px 8px;font-size:9px;font-family:inherit;outline:none;max-width:200px}
+.search-box:focus{border-color:rgba(0,229,255,0.2)}
+.search-box::placeholder{color:#303848}
+
+/* EMAIL LIST */
+.email-list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,0.1) transparent}
+.email-list::-webkit-scrollbar{width:4px}
+.email-list::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15)}
+.email-item{
+  display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:background .1s;gap:8px;
+}
+.email-item:hover{background:rgba(0,229,255,0.03)}
+.email-item.active{background:rgba(0,229,255,0.06);border-left:2px solid var(--glow)}
+.email-item.unread{background:rgba(0,229,255,0.02)}
+.email-item .checkbox{accent-color:var(--glow)}
+.email-from{width:120px;font-size:10px;color:var(--glow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.email-subject{flex:1;font-size:10px;color:#c8d0dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.email-date{width:80px;font-size:8px;color:#607080;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* EMAIL DETAIL */
+.email-detail{flex:1;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,0.1) transparent}
+.email-detail::-webkit-scrollbar{width:4px}
+.email-detail::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15)}
+.detail-header{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(0,229,255,0.06)}
+.detail-subject{font-size:16px;color:var(--glow);font-weight:300;margin-bottom:8px}
+.detail-meta{font-size:9px;color:#607080}
+.detail-meta b{color:#8090a0}
+.detail-body{font-size:12px;line-height:1.7;color:#c8d0dc;white-space:pre-wrap}
+
+/* COMPOSE */
+.compose{flex:1;display:flex;flex-direction:column;padding:16px;gap:10px;overflow-y:auto}
+.compose-row{display:flex;gap:8px;align-items:center}
+.compose-row label{font-size:8px;letter-spacing:1.5px;color:#607080;text-transform:uppercase;width:55px;flex-shrink:0}
+.compose-input{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:7px 10px;font-size:11px;font-family:inherit;outline:none}
+.compose-input:focus{border-color:var(--glow)}
+.compose-textarea{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:10px;font-size:11px;font-family:inherit;outline:none;resize:none;min-height:200px;line-height:1.6}
+.compose-textarea:focus{border-color:var(--glow)}
+
+/* ACCOUNTS LIST */
+.accounts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding:12px;overflow-y:auto}
+.account-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px;position:relative}
+.account-card .provider{font-size:8px;letter-spacing:2px;color:var(--purple);text-transform:uppercase;margin-bottom:4px}
+.account-card .addr{font-size:11px;color:var(--glow);margin-bottom:8px}
+.account-card .status{font-size:8px;display:flex;align-items:center;gap:4px}
+.account-card .status .dot{width:6px;height:6px;border-radius:50%}
+.account-card .status .dot.on{background:var(--green)}
+.account-card .status .dot.off{background:var(--red)}
+.account-card .actions{margin-top:8px;display:flex;gap:4px}
+.account-card .del-btn{margin-left:auto;padding:2px 8px;border:1px solid rgba(255,68,68,0.2);background:rgba(255,68,68,0.05);color:var(--red);font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit}
+
+/* INCOMING */
+.incoming-list{padding:12px;overflow-y:auto}
+.incoming-item{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .2s}
+.incoming-item:hover{border-color:rgba(0,229,255,0.3)}
+.incoming-item .from{font-size:10px;color:var(--glow);margin-bottom:2px}
+.incoming-item .subj{font-size:10px;color:#c8d0dc;margin-bottom:4px}
+.incoming-item .meta{font-size:8px;color:#607080}
+
+/* ADMIN */
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;overflow-y:auto}
+.admin-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px}
+.admin-card .title{font-size:8px;letter-spacing:2px;color:var(--purple);text-transform:uppercase;margin-bottom:8px}
+.admin-stat{font-size:20px;font-weight:600;color:var(--glow);margin-bottom:2px}
+.admin-label{font-size:8px;color:#607080}
+.user-list{max-height:200px;overflow-y:auto}
+.user-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,229,255,0.04);font-size:9px}
+.user-row .email{flex:1;color:var(--glow)}
+.user-row .role{color:#607080;width:50px;text-align:center}
+.user-row .del{color:var(--red);cursor:pointer;opacity:0.4;padding:0 6px}
+.user-row .del:hover{opacity:1}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 20px;font-size:10px;color:var(--green);z-index:300;display:none;transition:opacity .3s}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+body{display:flex;flex-direction:column}
+.empty-state{display:flex;align-items:center;justify-content:center;height:100%;color:#303848;font-size:10px;letter-spacing:2px}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <div class="logo"><b>ZI</b><em>MAIL</em></div>
+  <div class="sep"></div>
+  <div class="subtitle">Unified Mail</div>
+  <a class="nav-btn" href="/console">CONSOLE</a>
+  <a class="nav-btn" href="/shell">SHELL</a>
+  <a class="nav-btn" href="https://zicore.space">ZICORE</a>
+  <div id="clock"></div>
+</div>
+
+<div id="app">
+  <!-- LOGIN VIEW -->
+  <div id="loginView">
+    <div class="login-box">
+      <div class="logo-mark">&#9993;</div>
+      <h2>ZI<em>MAIL</em></h2>
+      <p>Unified email client</p>
+      <div class="login-tabs">
+        <div class="login-tab active" onclick="showLoginTab('login')">Login</div>
+        <div class="login-tab" onclick="showLoginTab('register')">Register</div>
+      </div>
+      <div id="loginForm">
+        <div class="login-row"><label>Email</label><input id="liEmail" placeholder="user@zinemotion.com.mx"></div>
+        <div class="login-row"><label>Password</label><input id="liPass" type="password" placeholder="password"></div>
+        <button class="login-btn" onclick="doLogin()">LOGIN</button>
+        <div class="login-error" id="liError"></div>
+      </div>
+      <div id="registerForm" class="register-form">
+        <div class="login-row"><label>Username</label><input id="reUser" placeholder="username"></div>
+        <div class="login-row"><label>Password</label><input id="rePass" type="password" placeholder="min 8 chars"></div>
+        <button class="login-btn" onclick="doRegister()">REGISTER</button>
+        <div class="login-error" id="reError"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <div id="mainView">
+    <div class="mail-body">
+      <!-- SIDEBAR -->
+      <div class="mail-sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Mail</div>
+          <div class="sidebar-item active" onclick="switchView('inbox')"><span class="icon">&#9993;</span>Inbox<span class="badge" id="inboxCount">0</span></div>
+          <div class="sidebar-item" onclick="switchView('compose')"><span class="icon">&#9998;</span>Compose</div>
+        </div>
+        <div class="sidebar-sep"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-title">Accounts</div>
+          <div class="sidebar-item" onclick="switchView('accounts')"><span class="icon">&#9881;</span>External</div>
+          <div class="sidebar-item" onclick="switchView('incoming')"><span class="icon">&#128229;</span>Incoming</div>
+        </div>
+        <div class="sidebar-sep"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-title">Admin</div>
+          <div class="sidebar-item" onclick="switchView('admin')"><span class="icon">&#9881;</span>Panel</div>
+        </div>
+        <div class="sidebar-user">
+          <div class="email" id="userEmail">--</div>
+          <div class="logout" onclick="doLogout()">LOGOUT</div>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="mail-content">
+        <!-- INBOX -->
+        <div class="panel-view active" id="view-inbox">
+          <div class="toolbar">
+            <button class="tbtn primary" onclick="switchView('compose')">&#9998; COMPOSE</button>
+            <button class="tbtn" onclick="refreshInbox()">REFRESH</button>
+            <input class="search-box" placeholder="Search emails..." oninput="filterInbox(this.value)">
+          </div>
+          <div class="email-list" id="emailList"><div class="empty-state">Loading inbox...</div></div>
+        </div>
+
+        <!-- EMAIL DETAIL -->
+        <div class="panel-view" id="view-detail">
+          <div class="toolbar">
+            <button class="tbtn" onclick="switchView('inbox')">&#8592; BACK</button>
+            <button class="tbtn" onclick="replyEmail()">REPLY</button>
+            <button class="tbtn" onclick="forwardEmail()">FORWARD</button>
+            <button class="tbtn" style="color:var(--red)" onclick="deleteEmail()">DELETE</button>
+          </div>
+          <div class="email-detail" id="emailDetail"></div>
+        </div>
+
+        <!-- COMPOSE -->
+        <div class="panel-view" id="view-compose">
+          <div class="toolbar">
+            <button class="tbtn primary" onclick="sendEmail()">SEND</button>
+            <button class="tbtn" onclick="switchView('inbox')">DISCARD</button>
+          </div>
+          <div class="compose">
+            <div class="compose-row"><label>To</label><input class="compose-input" id="compTo" placeholder="recipient@email.com"></div>
+            <div class="compose-row"><label>Subject</label><input class="compose-input" id="compSubj" placeholder="Subject"></div>
+            <textarea class="compose-textarea" id="compBody" placeholder="Write your message..."></textarea>
+          </div>
+        </div>
+
+        <!-- ACCOUNTS -->
+        <div class="panel-view" id="view-accounts">
+          <div class="toolbar">
+            <button class="tbtn primary" onclick="showAddAccount()">+ ADD ACCOUNT</button>
+            <button class="tbtn" onclick="refreshAccounts()">REFRESH</button>
+          </div>
+          <div class="accounts-grid" id="accountsGrid"><div class="empty-state">No external accounts</div></div>
+        </div>
+
+        <!-- INCOMING -->
+        <div class="panel-view" id="view-incoming">
+          <div class="toolbar">
+            <button class="tbtn" onclick="refreshIncoming()">REFRESH</button>
+          </div>
+          <div class="incoming-list" id="incomingList"><div class="empty-state">Loading incoming mail...</div></div>
+        </div>
+
+        <!-- ADMIN -->
+        <div class="panel-view" id="view-admin">
+          <div class="toolbar">
+            <button class="tbtn" onclick="refreshAdmin()">REFRESH</button>
+            <button class="tbtn" onclick="addMailUser()">+ ADD USER</button>
+          </div>
+          <div class="admin-grid" id="adminGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ADD ACCOUNT MODAL -->
+<div class="modal-overlay" id="addAccountModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:200">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;width:380px">
+    <div style="font-size:9px;letter-spacing:3px;color:var(--glow);margin-bottom:14px;text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid rgba(0,229,255,0.08)">Add External Account</div>
+    <div class="login-row"><label>Server</label><input id="accServer" placeholder="imap.gmail.com"></div>
+    <div class="login-row"><label>Port</label><input id="accPort" type="number" value="993" style="width:60px;flex:none"></div>
+    <div class="login-row"><label>Email</label><input id="accEmail" placeholder="user@gmail.com"></div>
+    <div class="login-row"><label>Password</label><input id="accPass" type="password" placeholder="app password"></div>
+    <button class="login-btn" onclick="doAddAccount()">ADD</button>
+    <button class="login-btn" style="background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);color:#607080;margin-top:6px" onclick="hideModal('addAccountModal')">CANCEL</button>
+  </div>
+</div>
+
+<script>
+let currentUser = null;
+let emails = [];
+let currentEmail = null;
+let allEmails = [];
+
+// Clock
+setInterval(() => { document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC'; }, 1000);
+
+// ─── Helpers ──────────────────────────────────────────
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function hideModal(id) { document.getElementById(id).style.display = 'none'; }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.display = ''; setTimeout(() => t.style.display = 'none', 3000); }
+async function api(path, opts) { try { const r = await fetch(path, opts); return await r.json(); } catch(e) { return {error: e.message}; } }
+function showLoginTab(tab) {
+  document.querySelectorAll('.login-tab').forEach((t,i) => t.className = 'login-tab' + (i === (tab==='login'?0:1) ? ' active' : ''));
+  document.getElementById('loginForm').style.display = tab==='login' ? '' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? '' : 'none';
+}
+
+// ─── Auth ─────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('liEmail').value.trim();
+  const pass = document.getElementById('liPass').value;
+  const err = document.getElementById('liError');
+  if (!email || !pass) { err.textContent = 'All fields required'; err.style.display = ''; return; }
+  const data = await api('/api/mail/inbox?user=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(pass) + '&limit=1');
+  if (data.error && !data.emails) { err.textContent = data.error || 'Login failed'; err.style.display = ''; return; }
+  err.style.display = 'none';
+  currentUser = { email, password: pass };
+  document.getElementById('userEmail').textContent = email;
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'flex';
+  refreshInbox();
+}
+
+async function doRegister() {
+  const user = document.getElementById('reUser').value.trim();
+  const pass = document.getElementById('rePass').value;
+  const err = document.getElementById('reError');
+  if (!user || !pass) { err.textContent = 'All fields required'; err.style.display = ''; return; }
+  const data = await api('/api/mail/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:user, password:pass, plan:'free'}) });
+  if (!data.success) { err.textContent = data.error || 'Registration failed'; err.style.display = ''; return; }
+  err.style.display = 'none';
+  toast('Account created! You can now login.');
+  showLoginTab('login');
+  document.getElementById('liEmail').value = user + '@zinemotion.com.mx';
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('loginView').style.display = '';
+  document.getElementById('mainView').style.display = 'none';
+}
+
+// ─── Views ────────────────────────────────────────────
+function switchView(view) {
+  document.querySelectorAll('.panel-view').forEach(p => p.className = 'panel-view');
+  document.getElementById('view-' + view).className = 'panel-view active';
+  document.querySelectorAll('.sidebar-item').forEach(s => s.className = 'sidebar-item');
+  const items = document.querySelectorAll('.sidebar-item');
+  const map = { inbox:0, compose:1, accounts:2, incoming:3, admin:4 };
+  if (items[map[view]]) items[map[view]].className = 'sidebar-item active';
+  if (view === 'accounts') refreshAccounts();
+  if (view === 'incoming') refreshIncoming();
+  if (view === 'admin') refreshAdmin();
+}
+
+// ─── Inbox ────────────────────────────────────────────
+async function refreshInbox() {
+  if (!currentUser) return;
+  const el = document.getElementById('emailList');
+  el.innerHTML = '<div class="empty-state">Loading...</div>';
+  const data = await api('/api/mail/inbox?user=' + encodeURIComponent(currentUser.email) + '&password=' + encodeURIComponent(currentUser.password) + '&limit=50');
+  if (data.error) { el.innerHTML = '<div class="empty-state">' + esc(data.error) + '</div>'; return; }
+  allEmails = data.emails || [];
+  emails = allEmails;
+  renderEmails();
+  document.getElementById('inboxCount').textContent = emails.length;
+}
+
+function renderEmails(list) {
+  const el = document.getElementById('emailList');
+  const arr = list || emails;
+  if (!arr.length) { el.innerHTML = '<div class="empty-state">No emails</div>'; return; }
+  el.innerHTML = '';
+  arr.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'email-item';
+    div.innerHTML =
+      '<span class="email-from">' + esc(e.from || e.sender || '--') + '</span>' +
+      '<span class="email-subject">' + esc(e.subject || '(no subject)') + '</span>' +
+      '<span class="email-date">' + esc(e.date || '') + '</span>';
+    div.onclick = () => openEmail(e);
+    el.appendChild(div);
+  });
+}
+
+function filterInbox(q) {
+  if (!q) { emails = allEmails; renderEmails(); return; }
+  const lq = q.toLowerCase();
+  emails = allEmails.filter(e => (e.from||'').toLowerCase().includes(lq) || (e.subject||'').toLowerCase().includes(lq) || (e.body||'').toLowerCase().includes(lq));
+  renderEmails();
+}
+
+function openEmail(e) {
+  currentEmail = e;
+  document.getElementById('emailDetail').innerHTML =
+    '<div class="detail-header">' +
+      '<div class="detail-subject">' + esc(e.subject || '(no subject)') + '</div>' +
+      '<div class="detail-meta"><b>From:</b> ' + esc(e.from || '') + ' &nbsp; <b>Date:</b> ' + esc(e.date || '') + '</div>' +
+    '</div>' +
+    '<div class="detail-body">' + esc(e.body || e.text || '(empty)') + '</div>';
+  switchView('detail');
+}
+
+function replyEmail() {
+  if (!currentEmail) return;
+  switchView('compose');
+  document.getElementById('compTo').value = currentEmail.from || '';
+  document.getElementById('compSubj').value = 'Re: ' + (currentEmail.subject || '');
+  document.getElementById('compBody').value = '\n\n--- Original message ---\n' + (currentEmail.body || '');
+}
+
+function forwardEmail() {
+  if (!currentEmail) return;
+  switchView('compose');
+  document.getElementById('compTo').value = '';
+  document.getElementById('compSubj').value = 'Fwd: ' + (currentEmail.subject || '');
+  document.getElementById('compBody').value = '\n\n--- Forwarded message ---\nFrom: ' + (currentEmail.from||'') + '\nSubject: ' + (currentEmail.subject||'') + '\n\n' + (currentEmail.body || '');
+}
+
+async function sendEmail() {
+  if (!currentUser) return;
+  const to = document.getElementById('compTo').value.trim();
+  const subj = document.getElementById('compSubj').value.trim();
+  const body = document.getElementById('compBody').value;
+  if (!to || !body) { toast('To and body required'); return; }
+  const data = await api('/api/mail/send', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ from: currentUser.email, to, subject: subj, body, user: currentUser.email, password: currentUser.password }) });
+  if (data.success || data.message_id) { toast('Email sent!'); switchView('inbox'); refreshInbox(); }
+  else toast('Send failed: ' + (data.error || ''));
+}
+
+function deleteEmail() { toast('Moved to trash'); switchView('inbox'); }
+
+// ─── Accounts ─────────────────────────────────────────
+async function refreshAccounts() {
+  const data = await api('/api/mail/accounts');
+  const list = data.accounts || data || [];
+  const el = document.getElementById('accountsGrid');
+  if (!Array.isArray(list) || !list.length) { el.innerHTML = '<div class="empty-state">No external accounts configured</div>'; return; }
+  el.innerHTML = '';
+  list.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'account-card';
+    const provider = (a.imap_host || '').includes('gmail') ? 'Gmail' : (a.imap_host || '').includes('outlook') ? 'Outlook' : 'IMAP';
+    card.innerHTML =
+      '<div class="provider">' + esc(provider) + '</div>' +
+      '<div class="addr">' + esc(a.email || '') + '</div>' +
+      '<div class="status"><span class="dot ' + (a.status==='active'?'on':'off') + '"></span>' + esc(a.status || 'configured') + '</div>' +
+      '<div class="actions"><button class="tbtn" onclick="testAccount(\'' + a.id + '\')">TEST</button>' +
+      '<button class="tbtn" onclick="syncAccount(\'' + a.id + '\')">SYNC</button>' +
+      '<button class="del-btn" onclick="deleteAccount(\'' + a.id + '\')">DELETE</button></div>';
+    el.appendChild(card);
+  });
+}
+
+function showAddAccount() { showModal('addAccountModal'); }
+
+async function doAddAccount() {
+  const data = await api('/api/mail/accounts', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      imap_host: document.getElementById('accServer').value,
+      imap_port: parseInt(document.getElementById('accPort').value) || 993,
+      email: document.getElementById('accEmail').value,
+      password: document.getElementById('accPass').value,
+    })});
+  hideModal('addAccountModal');
+  if (data.id) { toast('Account added!'); refreshAccounts(); }
+  else toast('Failed: ' + (data.error || ''));
+}
+
+async function testAccount(id) { const d = await api('/api/mail/accounts/' + id + '/test', {method:'POST'}); toast(d.success ? 'Connection OK' : 'Test failed: ' + (d.error||'')); }
+async function syncAccount(id) { const d = await api('/api/mail/accounts/' + id + '/sync', {method:'POST'}); toast(d.success ? 'Sync started' : 'Sync failed'); }
+async function deleteAccount(id) { if (!confirm('Delete this account?')) return; await api('/api/mail/accounts/' + id, {method:'DELETE'}); toast('Deleted'); refreshAccounts(); }
+
+// ─── Incoming ─────────────────────────────────────────
+async function refreshIncoming() {
+  const data = await api('/api/mail/incoming');
+  const list = data.emails || data || [];
+  const el = document.getElementById('incomingList');
+  if (!Array.isArray(list) || !list.length) { el.innerHTML = '<div class="empty-state">No incoming emails</div>'; return; }
+  el.innerHTML = '';
+  list.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'incoming-item';
+    div.innerHTML =
+      '<div class="from">' + esc(e.from || '') + '</div>' +
+      '<div class="subj">' + esc(e.subject || '') + '</div>' +
+      '<div class="meta">' + esc(e.date || e.received_at || '') + '</div>';
+    div.onclick = () => { openEmail(e); };
+    el.appendChild(div);
+  });
+}
+
+// ─── Admin ────────────────────────────────────────────
+async function refreshAdmin() {
+  const el = document.getElementById('adminGrid');
+  el.innerHTML = '';
+  const [stats, users] = await Promise.all([api('/api/mail/stats'), api('/api/mail/users')]);
+  const userArr = users.users || users || [];
+
+  // Stats card
+  el.innerHTML =
+    '<div class="admin-card"><div class="title">Server Stats</div>' +
+    '<div class="admin-stat">' + (stats.total_users || 0) + '</div><div class="admin-label">Total Users</div></div>' +
+    '<div class="admin-card"><div class="title">Services</div><div class="user-list" id="svcList"></div></div>' +
+    '<div class="admin-card" style="grid-column:1/-1"><div class="title">Users (' + (Array.isArray(userArr) ? userArr.length : 0) + ')</div><div class="user-list" id="userListAdmin"></div></div>';
+
+  // Users
+  const ul = document.getElementById('userListAdmin');
+  if (Array.isArray(userArr)) userArr.forEach(u => {
+    const row = document.createElement('div');
+    row.className = 'user-row';
+    row.innerHTML = '<span class="email">' + esc(u.email || '') + '</span><span class="role">' + esc(u.role || 'user') + '</span><span class="del" onclick="delUser(\'' + esc(u.email || '') + '\')">&times;</span>';
+    ul.appendChild(row);
+  });
+
+  // Service status
+  const svc = document.getElementById('svcList');
+  ['postfix','dovecot','rspamd'].forEach(svc_name => {
+    const row = document.createElement('div');
+    row.className = 'user-row';
+    row.innerHTML = '<span class="email">' + svc_name + '</span><span class="tbtn" style="margin-left:auto" onclick="restartService(\'' + svc_name + '\')">RESTART</span>';
+    svc.appendChild(row);
+  });
+}
+
+async function addMailUser() {
+  const email = prompt('Email address (user@zinemotion.com.mx):');
+  if (!email) return;
+  const pass = prompt('Password:');
+  if (!pass) return;
+  const d = await api('/api/mail/users', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+  d.success ? toast('User created') : toast('Failed: ' + (d.error||''));
+  refreshAdmin();
+}
+
+async function delUser(email) {
+  if (!confirm('Delete ' + email + '?')) return;
+  await api('/api/mail/users/' + encodeURIComponent(email), { method:'DELETE' });
+  toast('Deleted'); refreshAdmin();
+}
+
+async function restartService(name) {
+  const d = await api('/api/mail/restart/' + name, { method:'POST' });
+  toast(d.success ? name + ' restarted' : 'Failed');
+}
+
+// ─── Init ─────────────────────────────────────────────
+document.getElementById('liPass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('liEmail')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('rePass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiMaterializer — 3D / Video / Audio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+:root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff5555;--yellow:#ffb86c;--bg:#04060c;--panel:rgba(8,12,20,0.98);--border:rgba(0,229,255,0.1)}
+
+#topBar{height:34px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.08);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+.logo{font-size:10px;letter-spacing:4px;font-weight:700}.logo b{color:var(--purple)}.logo em{color:var(--glow);font-style:normal}
+.sep{width:1px;height:16px;background:rgba(0,229,255,0.08)}
+.nav-btn{font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;text-decoration:none;transition:all .2s}
+.nav-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
+#clock{margin-left:auto;font-size:9px;color:#607080;letter-spacing:1px;font-variant-numeric:tabular-nums}
+
+/* MODULE TABS */
+#moduleTabs{display:flex;background:rgba(4,6,12,0.99);border-bottom:1px solid rgba(0,229,255,0.06);flex-shrink:0}
+.mod-tab{padding:6px 16px;font-size:8px;letter-spacing:2px;color:#607080;cursor:pointer;border-right:1px solid rgba(0,229,255,0.04);transition:all .2s;position:relative;display:flex;align-items:center;gap:6px}
+.mod-tab:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
+.mod-tab.active{color:var(--glow);background:rgba(0,229,255,0.06)}
+.mod-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--glow)}
+.mod-tab .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* MODULE PANELS */
+#moduleContent{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.module-view{flex:1;display:none;flex-direction:column;overflow:hidden}
+.module-view.active{display:flex}
+
+/* ─── 3D MATERIALIZER ──────────────────────────────── */
+.mat-layout{flex:1;display:flex;overflow:hidden}
+.mat-left{width:280px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.mat-center{flex:1;display:flex;flex-direction:column;position:relative;min-width:0}
+.mat-right{width:220px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+
+.section-title{font-size:7px;letter-spacing:2px;color:var(--purple);text-transform:uppercase;padding:8px 12px 4px;border-bottom:1px solid rgba(0,229,255,0.04)}
+.section-pad{padding:10px 12px}
+
+.gen-prompt{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:8px 10px;font-size:11px;font-family:inherit;outline:none;resize:none;min-height:60px}
+.gen-prompt:focus{border-color:var(--glow)}
+.gen-prompt::placeholder{color:#303848}
+
+.param-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.param-row label{font-size:8px;letter-spacing:1px;color:#607080;width:55px;text-transform:uppercase;flex-shrink:0}
+.param-slider{flex:1;accent-color:var(--glow);height:3px}
+.param-val{font-size:9px;color:var(--glow);width:30px;text-align:right;font-variant-numeric:tabular-nums}
+
+.engine-select{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.engine-btn{padding:3px 8px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
+.engine-btn.active{color:var(--glow);border-color:var(--glow);background:rgba(0,229,255,0.08)}
+
+.gen-btn{width:100%;padding:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--glow);font-size:9px;letter-spacing:3px;cursor:pointer;font-family:inherit;transition:all .2s}
+.gen-btn:hover{background:rgba(0,229,255,0.15);border-color:var(--glow)}
+.gen-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+#threeCanvas{width:100%;height:100%;background:#080c14}
+.viewport-controls{position:absolute;bottom:10px;left:10px;display:flex;gap:4px;z-index:10}
+.view-btn{padding:3px 8px;background:rgba(6,8,14,0.9);border:1px solid rgba(0,229,255,0.1);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit}
+
+.mesh-info{font-size:9px;line-height:1.6}
+.mesh-info .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,229,255,0.03)}
+.mesh-info .label{color:#607080}.mesh-info .val{color:var(--glow)}
+
+/* ─── VIDEO EDITOR ─────────────────────────────────── */
+.vid-layout{flex:1;display:flex;flex-direction:column}
+.vid-top{flex:1;display:flex;overflow:hidden;min-height:0}
+.vid-preview{flex:1;display:flex;align-items:center;justify-content:center;background:#080c14;position:relative}
+.vid-preview canvas{max-width:100%;max-height:100%}
+.vid-tools{width:200px;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:10px}
+
+.vid-transport{height:36px;background:rgba(6,8,14,0.99);border-top:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
+.transport-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;font-size:14px;border-radius:50%;transition:all .2s}
+.transport-btn:hover{color:var(--glow);border-color:var(--glow)}
+.transport-btn.active{background:rgba(0,229,255,0.1);color:var(--glow)}
+.timecode{font-size:11px;color:var(--glow);font-variant-numeric:tabular-nums;letter-spacing:2px}
+
+.vid-timeline{height:150px;background:var(--panel);border-top:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.timeline-ruler{height:18px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04);position:relative;overflow:hidden}
+.timeline-tracks{flex:1;overflow-y:auto}
+.timeline-track{height:36px;border-bottom:1px solid rgba(0,229,255,0.03);position:relative;display:flex;align-items:center;padding-left:60px}
+.track-label{position:absolute;left:0;width:60px;font-size:7px;letter-spacing:1px;color:#607080;text-transform:uppercase;padding-left:6px}
+.track-clip{height:28px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.15);border-radius:3px;position:absolute;top:4px;min-width:40px;display:flex;align-items:center;padding:0 6px;font-size:7px;color:var(--glow)}
+
+/* ─── AUDIO ENGINE ─────────────────────────────────── */
+.aud-layout{flex:1;display:flex;flex-direction:column}
+.aud-top{height:100px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0}
+.aud-transport{display:flex;gap:6px;align-items:center}
+.aud-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;font-size:12px;border-radius:50%;transition:all .2s}
+.aud-btn:hover{color:var(--glow);border-color:var(--glow)}
+.aud-btn.rec{color:var(--red)}
+.aud-btn.rec.active{background:rgba(255,68,68,0.15);animation:pulse 1s infinite}
+.aud-bpm{display:flex;align-items:center;gap:4px;font-size:9px;color:#607080}
+.aud-bpm input{width:40px;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--glow);padding:2px 4px;font-size:10px;text-align:center;outline:none;font-family:inherit}
+
+.aud-main{flex:1;display:flex;overflow:hidden;min-height:0}
+.aud-sidebar{width:160px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.track-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;font-size:9px}
+.track-item:hover{background:rgba(0,229,255,0.03)}
+.track-item.active{background:rgba(0,229,255,0.06)}
+.track-color{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.track-name{flex:1;color:#c8d0dc}
+.track-controls{display:flex;gap:2px}
+.track-ctrl{font-size:7px;padding:1px 4px;color:#607080;cursor:pointer;border:1px solid transparent}
+.track-ctrl:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
+.track-ctrl.muted{color:var(--red)}
+
+.aud-timeline{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.aud-ruler{height:20px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04)}
+.aud-tracks{flex:1;overflow-y:auto}
+.aud-track-row{height:48px;border-bottom:1px solid rgba(0,229,255,0.03);position:relative}
+.aud-region{position:absolute;height:36px;top:6px;border-radius:3px;display:flex;align-items:center;padding:0 6px;font-size:7px;color:#fff;cursor:pointer;transition:opacity .2s}
+.aud-region:hover{opacity:0.8}
+
+.aud-mixer{height:80px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;overflow-x:auto}
+.mixer-channel{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:40px}
+.mixer-fader{width:4px;height:40px;background:rgba(0,229,255,0.08);border-radius:2px;position:relative}
+.mixer-fill{position:absolute;bottom:0;width:100%;background:var(--glow);border-radius:2px}
+.mixer-label{font-size:6px;color:#607080;letter-spacing:1px}
+.mixer-db{font-size:7px;color:var(--glow);font-variant-numeric:tabular-nums}
+
+.aud-effects{height:30px;background:rgba(6,8,14,0.99);border-top:1px solid rgba(0,229,255,0.04);display:flex;align-items:center;padding:0 12px;gap:4px;flex-shrink:0}
+.fx-btn{padding:2px 8px;border:1px solid rgba(0,229,255,0.08);background:rgba(0,229,255,0.02);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
+.fx-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
+.fx-btn.active{color:var(--glow);border-color:var(--glow);background:rgba(0,229,255,0.06)}
+
+/* SHARED */
+.prop-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.prop-row label{font-size:7px;letter-spacing:1px;color:#607080;width:50px;text-transform:uppercase;flex-shrink:0}
+.prop-input{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#c8d0dc;padding:3px 6px;font-size:9px;font-family:inherit;outline:none}
+.prop-input:focus{border-color:var(--glow)}
+.tbtn{padding:3px 8px;border:1px solid rgba(0,229,255,0.08);background:rgba(0,229,255,0.02);color:#607080;font-size:7px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
+.tbtn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
+.tbtn.primary{color:var(--glow);border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.06)}
+.empty-state{display:flex;align-items:center;justify-content:center;height:100%;color:#303848;font-size:10px;letter-spacing:2px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+body{display:flex;flex-direction:column}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <div class="logo"><b>ZI</b><em>MATERIALIZER</em></div>
+  <div class="sep"></div>
+  <a class="nav-btn" href="/shell">SHELL</a>
+  <a class="nav-btn" href="/console">CONSOLE</a>
+  <a class="nav-btn" href="/zimail">MAIL</a>
+  <a class="nav-btn" href="https://zicore.space">ZICORE</a>
+  <div id="clock"></div>
+</div>
+
+<div id="moduleTabs">
+  <div class="mod-tab active" onclick="switchModule('3d')"><span class="dot"></span>3D GENERATOR</div>
+  <div class="mod-tab" onclick="switchModule('video')"><span class="dot"></span>VIDEO EDITOR</div>
+  <div class="mod-tab" onclick="switchModule('audio')"><span class="dot"></span>AUDIO ENGINE</div>
+</div>
+
+<div id="moduleContent">
+  <!-- 3D MATERIALIZER -->
+  <div class="module-view active" id="mod-3d">
+    <div class="mat-layout">
+      <div class="mat-left">
+        <div class="section-title">Generate</div>
+        <div class="section-pad">
+          <textarea class="gen-prompt" id="genPrompt" placeholder="Describe what to generate...&#10;e.g. rocket nozzle, gear, bracket"></textarea>
+          <div style="margin-top:8px">
+            <div class="section-title">Engine</div>
+            <div class="engine-select" id="engineSelect">
+              <button class="engine-btn active" onclick="selectEngine(this,'trimesh')">Trimesh</button>
+              <button class="engine-btn" onclick="selectEngine(this,'openscad')">OpenSCAD</button>
+              <button class="engine-btn" onclick="selectEngine(this,'cadquery')">CadQuery</button>
+              <button class="engine-btn" onclick="selectEngine(this,'build123d')">Build123d</button>
+              <button class="engine-btn" onclick="selectEngine(this,'picogk')">PicoGK</button>
+            </div>
+          </div>
+          <div class="param-row"><label>Scale</label><input type="range" class="param-slider" id="paramScale" min="0.1" max="5" step="0.1" value="1"><span class="param-val" id="valScale">1.0</span></div>
+          <div class="param-row"><label>Detail</label><input type="range" class="param-slider" id="paramDetail" min="8" max="128" step="8" value="32"><span class="param-val" id="valDetail">32</span></div>
+          <div class="param-row"><label>Smooth</label><input type="range" class="param-slider" id="paramSmooth" min="0" max="5" step="1" value="0"><span class="param-val" id="valSmooth">0</span></div>
+          <button class="gen-btn" id="genBtn" onclick="generate3D()">GENERATE</button>
+        </div>
+        <div class="section-title">Output</div>
+        <div class="section-pad mesh-info" id="meshInfo">
+          <div class="row"><span class="label">Format</span><span class="val">--</span></div>
+          <div class="row"><span class="label">Triangles</span><span class="val">--</span></div>
+          <div class="row"><span class="label">Vertices</span><span class="val">--</span></div>
+          <div class="row"><span class="label">Volume</span><span class="val">--</span></div>
+          <div class="row"><span class="label">Watertight</span><span class="val">--</span></div>
+        </div>
+        <div class="section-title">History</div>
+        <div class="section-pad" id="genHistory" style="flex:1;overflow-y:auto"><div style="font-size:8px;color:#303848">No generations yet</div></div>
+      </div>
+      <div class="mat-center">
+        <canvas id="threeCanvas"></canvas>
+        <div class="viewport-controls">
+          <button class="view-btn" onclick="resetCamera()">RESET</button>
+          <button class="view-btn" onclick="toggleWireframe()">WIRE</button>
+          <button class="view-btn" onclick="toggleGrid()">GRID</button>
+        </div>
+      </div>
+      <div class="mat-right">
+        <div class="section-title">Properties</div>
+        <div class="section-pad">
+          <div class="prop-row"><label>Name</label><input class="prop-input" id="meshName" value="--"></div>
+          <div class="prop-row"><label>Color</label><input class="prop-input" type="color" id="meshColor" value="#00e5ff" onchange="setMeshColor(this.value)"></div>
+        </div>
+        <div class="section-title">Simulation</div>
+        <div class="section-pad" style="font-size:8px;color:#607080">
+          <label style="display:flex;gap:4px;margin-bottom:4px;cursor:pointer"><input type="checkbox" class="sim-check" value="structural"> Structural Analysis</label>
+          <label style="display:flex;gap:4px;margin-bottom:4px;cursor:pointer"><input type="checkbox" class="sim-check" value="aerodynamic"> Aerodynamics</label>
+          <label style="display:flex;gap:4px;margin-bottom:4px;cursor:pointer"><input type="checkbox" class="sim-check" value="mass"> Mass Properties</label>
+          <button class="tbtn" style="width:100%;margin-top:6px" onclick="runSimulation()">RUN SIMULATION</button>
+          <div id="simResults" style="margin-top:8px;color:var(--green);font-size:9px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO EDITOR -->
+  <div class="module-view" id="mod-video">
+    <div class="vid-layout">
+      <div class="vid-top">
+        <div class="vid-preview"><canvas id="vidCanvas" width="640" height="360"></canvas></div>
+        <div class="vid-tools">
+          <div class="section-title">Properties</div>
+          <div style="padding:8px">
+            <div class="prop-row"><label>Width</label><input class="prop-input" value="1920"></div>
+            <div class="prop-row"><label>Height</label><input class="prop-input" value="1080"></div>
+            <div class="prop-row"><label>FPS</label><input class="prop-input" value="30"></div>
+          </div>
+          <div class="section-title">Effects</div>
+          <div style="padding:8px;display:flex;flex-wrap:wrap;gap:4px">
+            <button class="tbtn">Blur</button><button class="tbtn">Sharpen</button>
+            <button class="tbtn">Brightness</button><button class="tbtn">Contrast</button>
+            <button class="tbtn">Saturation</button><button class="tbtn">Vignette</button>
+          </div>
+          <div class="section-title">Transitions</div>
+          <div style="padding:8px;display:flex;flex-wrap:wrap;gap:4px">
+            <button class="tbtn">Cut</button><button class="tbtn">Dissolve</button>
+            <button class="tbtn">Wipe</button><button class="tbtn">Slide</button>
+            <button class="tbtn">Fade</button>
+          </div>
+        </div>
+      </div>
+      <div class="vid-transport">
+        <button class="transport-btn" onclick="vidAction('rew')">&#9198;</button>
+        <button class="transport-btn" onclick="vidAction('play')" id="vidPlayBtn">&#9654;</button>
+        <button class="transport-btn" onclick="vidAction('stop')">&#9632;</button>
+        <button class="transport-btn" onclick="vidAction('fwd')">&#9197;</button>
+        <span class="timecode" id="vidTimecode">00:00:00:00</span>
+      </div>
+      <div class="vid-timeline">
+        <div class="timeline-ruler"></div>
+        <div class="timeline-tracks">
+          <div class="timeline-track"><span class="track-label">Video</span><div class="track-clip" style="left:60px;width:300px">clip_01.mp4</div></div>
+          <div class="timeline-track"><span class="track-label">Audio</span><div class="track-clip" style="left:60px;width:250px;background:rgba(124,77,255,0.1);border-color:rgba(124,77,255,0.2);color:var(--purple)">audio_01.wav</div></div>
+          <div class="timeline-track"><span class="track-label">Text</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIO ENGINE -->
+  <div class="module-view" id="mod-audio">
+    <div class="aud-layout">
+      <div class="aud-top">
+        <div class="aud-transport">
+          <button class="aud-btn" onclick="audAction('rew')">&#9198;</button>
+          <button class="aud-btn" onclick="audAction('play')" id="audPlayBtn">&#9654;</button>
+          <button class="aud-btn rec" id="audRecBtn" onclick="audAction('rec')">&#9679;</button>
+          <button class="aud-btn" onclick="audAction('stop')">&#9632;</button>
+        </div>
+        <span class="timecode" id="audTimecode">00:00:00</span>
+        <div class="aud-bpm">BPM <input type="number" id="audBpm" value="120" min="40" max="300"></div>
+        <div class="aud-bpm"><input type="checkbox" id="audLoop" style="accent-color:var(--glow)"> LOOP</div>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="tbtn" onclick="addAudTrack()">+ TRACK</button>
+          <button class="tbtn" onclick="exportAudio()">EXPORT</button>
+        </div>
+      </div>
+      <div class="aud-main">
+        <div class="aud-sidebar" id="audTrackList"></div>
+        <div class="aud-timeline">
+          <div class="aud-ruler"></div>
+          <div class="aud-tracks" id="audTracks"></div>
+        </div>
+      </div>
+      <div class="aud-mixer" id="audMixer"></div>
+      <div class="aud-effects">
+        <span style="font-size:7px;color:#607080;letter-spacing:2px;margin-right:6px">FX:</span>
+        <button class="fx-btn">Reverb</button><button class="fx-btn">Delay</button>
+        <button class="fx-btn">EQ</button><button class="fx-btn">Compressor</button>
+        <button class="fx-btn">Limiter</button><button class="fx-btn">Chorus</button>
+        <button class="fx-btn">Filter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+setInterval(() => { document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC'; }, 1000);
+
+// ─── Module Switching ─────────────────────────────────
+function switchModule(mod) {
+  document.querySelectorAll('.module-view').forEach(v => v.className = 'module-view');
+  document.getElementById('mod-' + mod).className = 'module-view active';
+  document.querySelectorAll('.tab-mod').forEach(t => t.className = 'tab-mod');
+  document.querySelectorAll('.mod-tab').forEach(t => t.className = 'mod-tab');
+  const idx = {'3d':0,'video':1,'audio':2}[mod];
+  document.querySelectorAll('.mod-tab')[idx].className = 'mod-tab active';
+  if (mod === '3d') initThree();
+}
+
+// ─── 3D Materializer ──────────────────────────────────
+let scene, camera, renderer, currentMesh, gridHelper, wireframeMode = false;
+let selectedEngine = 'trimesh';
+
+function selectEngine(btn, engine) {
+  document.querySelectorAll('.engine-btn').forEach(b => b.className = 'engine-btn');
+  btn.className = 'engine-btn active';
+  selectedEngine = engine;
+}
+
+['paramScale','paramDetail','paramSmooth'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', function() {
+    document.getElementById('val' + id.replace('param','')).textContent = this.value;
+  });
+});
+
+function initThree() {
+  const canvas = document.getElementById('threeCanvas');
+  if (renderer) return;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080c14);
+  camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+  camera.position.set(3, 2, 3);
+  camera.lookAt(0, 0, 0);
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  const amb = new THREE.AmbientLight(0x404060, 0.6); scene.add(amb);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(5, 5, 5); scene.add(dir);
+  gridHelper = new THREE.GridHelper(10, 20, 0x111828, 0x0a1020); scene.add(gridHelper);
+  const axes = new THREE.AxesHelper(1); scene.add(axes);
+
+  // Orbit controls (manual)
+  let isDragging = false, prevX, prevY;
+  canvas.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+  canvas.addEventListener('mousemove', e => { if (!isDragging) return; const dx = e.clientX - prevX, dy = e.clientY - prevY; const spherical = new THREE.Spherical().setFromVector3(camera.position); spherical.theta -= dx * 0.01; spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi + dy * 0.01)); camera.position.setFromSpherical(spherical); camera.lookAt(0,0,0); prevX = e.clientX; prevY = e.clientY; });
+  canvas.addEventListener('mouseup', () => isDragging = false);
+  canvas.addEventListener('mouseleave', () => isDragging = false);
+  canvas.addEventListener('wheel', e => { camera.position.multiplyScalar(e.deltaY > 0 ? 1.1 : 0.9); });
+
+  animate();
+}
+
+function animate() { requestAnimationFrame(animate); if (renderer) renderer.render(scene, camera); }
+
+async function generate3D() {
+  const prompt = document.getElementById('genPrompt').value.trim();
+  if (!prompt) return;
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.textContent = 'GENERATING...';
+  try {
+    const r = await fetch('/api/materialize', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt, engine: selectedEngine, scale: parseFloat(document.getElementById('paramScale').value),
+        detail: parseInt(document.getElementById('paramDetail').value), smooth: parseInt(document.getElementById('paramSmooth').value) }) });
+    const data = await r.json();
+    if (data.mesh_url || data.file_path) {
+      loadMesh(data.mesh_url || data.file_path);
+      document.getElementById('meshInfo').innerHTML =
+        '<div class="row"><span class="label">Format</span><span class="val">' + (data.format || 'STL') + '</span></div>' +
+        '<div class="row"><span class="label">Engine</span><span class="val">' + selectedEngine + '</span></div>' +
+        '<div class="row"><span class="label">File</span><span class="val" style="word-break:break-all;font-size:8px">' + (data.file_path || '--') + '</span></div>';
+      addHistory(prompt, data);
+    } else {
+      document.getElementById('meshInfo').innerHTML = '<div style="color:var(--red)">' + (data.error || 'Generation failed') + '</div>';
+    }
+  } catch(e) {
+    document.getElementById('meshInfo').innerHTML = '<div style="color:var(--red)">' + e.message + '</div>';
+  }
+  btn.disabled = false; btn.textContent = 'GENERATE';
+}
+
+function loadMesh(url) {
+  if (currentMesh) { scene.remove(currentMesh); currentMesh.geometry.dispose(); }
+  const loader = new THREE.STLLoader();
+  loader.load(url, geom => {
+    const mat = new THREE.MeshPhongMaterial({ color: 0x00e5ff, wireframe: wireframeMode });
+    currentMesh = new THREE.Mesh(geom, mat);
+    const box = new THREE.Box3().setFromObject(currentMesh);
+    const center = box.getCenter(new THREE.Vector3());
+    currentMesh.position.sub(center);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 5) currentMesh.scale.multiplyScalar(5 / maxDim);
+    scene.add(currentMesh);
+  });
+}
+
+function setMeshColor(c) { if (currentMesh) currentMesh.material.color.set(c); }
+function toggleWireframe() { wireframeMode = !wireframeMode; if (currentMesh) currentMesh.material.wireframe = wireframeMode; }
+function toggleGrid() { if (gridHelper) gridHelper.visible = !gridHelper.visible; }
+function resetCamera() { camera.position.set(3, 2, 3); camera.lookAt(0, 0, 0); }
+
+function addHistory(prompt, data) {
+  const el = document.getElementById('genHistory');
+  if (el.querySelector('div[style]')) el.innerHTML = '';
+  const d = document.createElement('div');
+  d.style.cssText = 'font-size:9px;padding:6px 0;border-bottom:1px solid rgba(0,229,255,0.04);cursor:pointer';
+  d.innerHTML = '<div style="color:var(--glow)">' + prompt.substring(0, 50) + '</div><div style="font-size:7px;color:#607080">' + (data.engine || '') + ' | ' + new Date().toLocaleTimeString() + '</div>';
+  if (data.mesh_url) d.onclick = () => loadMesh(data.mesh_url);
+  el.prepend(d);
+}
+
+async function runSimulation() {
+  if (!currentMesh) return;
+  const checks = [...document.querySelectorAll('.sim-check:checked')].map(c => c.value);
+  if (!checks.length) return;
+  const el = document.getElementById('simResults');
+  el.textContent = 'Running simulation...';
+  try {
+    const r = await fetch('/api/simulate/mesh', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ checks }) });
+    const data = await r.json();
+    let html = '';
+    if (data.structural) html += 'Stress: ' + data.structural.max_stress + ' MPa | Safety: ' + data.structural.safety_factor + '<br>';
+    if (data.aerodynamic) html += 'Cd: ' + data.aerodynamic.drag_coefficient + ' | Lift: ' + data.aerodynamic.lift_coefficient + '<br>';
+    if (data.mass) html += 'Mass: ' + data.mass.total_mass + ' kg | CoG: ' + JSON.stringify(data.mass.center_of_gravity);
+    el.innerHTML = html || 'Simulation complete';
+  } catch(e) { el.textContent = 'Error: ' + e.message; }
+}
+
+// ─── Video Editor ─────────────────────────────────────
+let vidPlaying = false, vidTime = 0, vidInterval;
+function vidAction(action) {
+  if (action === 'play') {
+    vidPlaying = !vidPlaying;
+    document.getElementById('vidPlayBtn').innerHTML = vidPlaying ? '&#9646;&#9646;' : '&#9654;';
+    if (vidPlaying) vidInterval = setInterval(() => { vidTime += 1/30; updateVidTimecode(); }, 1000/30);
+    else clearInterval(vidInterval);
+  } else if (action === 'stop') { vidPlaying = false; vidTime = 0; clearInterval(vidInterval); document.getElementById('vidPlayBtn').innerHTML = '&#9654;'; updateVidTimecode(); }
+  else if (action === 'rew') { vidTime = Math.max(0, vidTime - 5); updateVidTimecode(); }
+  else if (action === 'fwd') { vidTime += 5; updateVidTimecode(); }
+}
+function updateVidTimecode() {
+  const h = Math.floor(vidTime/3600), m = Math.floor((vidTime%3600)/60), s = Math.floor(vidTime%60), f = Math.floor((vidTime%1)*30);
+  document.getElementById('vidTimecode').textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+':'+String(f).padStart(2,'0');
+}
+
+// ─── Audio Engine ─────────────────────────────────────
+const AUD_COLORS = ['#00e5ff','#7c4dff','#00ff88','#ffb86c','#ff5555','#bd93f9'];
+let audTracks = [
+  { name: 'Track 1', color: '#00e5ff', muted: false, volume: 80, pan: 0 },
+  { name: 'Track 2', color: '#7c4dff', muted: false, volume: 65, pan: -20 },
+  { name: 'Track 3', color: '#00ff88', muted: true, volume: 50, pan: 10 },
+];
+let audPlaying = false, audTime = 0, audInterval, audRec = false;
+
+function renderAudTracks() {
+  const list = document.getElementById('audTrackList');
+  const tracks = document.getElementById('audTracks');
+  list.innerHTML = '';
+  tracks.innerHTML = '';
+  audTracks.forEach((t, i) => {
+    const item = document.createElement('div');
+    item.className = 'track-item' + (i === 0 ? ' active' : '');
+    item.innerHTML = '<span class="track-color" style="background:' + t.color + '"></span><span class="track-name">' + t.name + '</span>' +
+      '<div class="track-controls"><span class="track-ctrl' + (t.muted ? ' muted' : '') + '" onclick="toggleMute(' + i + ')">M</span><span class="track-ctrl" onclick="toggleSolo(' + i + ')">S</span></div>';
+    list.appendChild(item);
+
+    const row = document.createElement('div');
+    row.className = 'aud-track-row';
+    const regions = [{start:20,width:200,color:t.color,label:'region_1'},{start:250,width:150,color:t.color,label:'region_2'}];
+    regions.forEach(r => {
+      const region = document.createElement('div');
+      region.className = 'aud-region';
+      region.style.cssText = 'left:' + r.start + 'px;width:' + r.width + 'px;background:' + r.color + '33;border:1px solid ' + r.color + '66';
+      region.textContent = r.label;
+      row.appendChild(region);
+    });
+    tracks.appendChild(row);
+  });
+
+  const mixer = document.getElementById('audMixer');
+  mixer.innerHTML = '';
+  audTracks.forEach(t => {
+    const ch = document.createElement('div');
+    ch.className = 'mixer-channel';
+    ch.innerHTML = '<div class="mixer-db">' + t.volume + '%</div><div class="mixer-fader"><div class="mixer-fill" style="height:' + t.volume + '%;background:' + t.color + '"></div></div><div class="mixer-label">' + t.name.replace('Track ','T') + '</div>';
+    mixer.appendChild(ch);
+  });
+}
+
+function toggleMute(i) { audTracks[i].muted = !audTracks[i].muted; renderAudTracks(); }
+function toggleSolo(i) { audTracks.forEach((t,j) => t.muted = j !== i); renderAudTracks(); }
+function addAudTrack() { const n = audTracks.length + 1; audTracks.push({ name:'Track '+n, color:AUD_COLORS[n%AUD_COLORS.length], muted:false, volume:70, pan:0 }); renderAudTracks(); }
+function exportAudio() { toast('Export dialog coming soon'); }
+
+function audAction(action) {
+  if (action === 'play') {
+    audPlaying = !audPlaying;
+    document.getElementById('audPlayBtn').innerHTML = audPlaying ? '&#9646;&#9646;' : '&#9654;';
+    if (audPlaying) audInterval = setInterval(() => { audTime += 1/60; updateAudTimecode(); }, 1000/60);
+    else clearInterval(audInterval);
+  } else if (action === 'stop') { audPlaying = false; audRec = false; audTime = 0; clearInterval(audInterval); document.getElementById('audPlayBtn').innerHTML = '&#9654;'; document.getElementById('audRecBtn').className = 'aud-btn rec'; updateAudTimecode(); }
+  else if (action === 'rec') { audRec = !audRec; document.getElementById('audRecBtn').className = 'aud-btn rec' + (audRec ? ' active' : ''); }
+  else if (action === 'rew') { audTime = Math.max(0, audTime - 5); updateAudTimecode(); }
+}
+function updateAudTimecode() {
+  const m = Math.floor(audTime/60), s = Math.floor(audTime%60), ms = Math.floor((audTime%1)*1000);
+  document.getElementById('audTimecode').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+':'+String(ms).padStart(3,'0');
+}
+
+function toast(msg) { const t = document.createElement('div'); t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(8,12,20,0.98);border:1px solid rgba(0,229,255,0.15);border-radius:6px;padding:8px 20px;font-size:10px;color:#00ff88;z-index:300'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+
+// ─── Init ─────────────────────────────────────────────
+renderAudTracks();
+setTimeout(initThree, 100);
+</script>
+</body>
+</html>

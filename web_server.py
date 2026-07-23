@@ -795,6 +795,13 @@ class SSOAuthMiddleware:
         "/api/contact/submissions",
         "/admin",
         "/server-admin",
+        "/console",
+        "/zihost",
+        "/zimail",
+        "/zimaterializer",
+        "/api/zihost/create",
+        "/api/zihost/auth",
+        "/api/zihost/stats",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -816,6 +823,7 @@ class SSOAuthMiddleware:
         "/ollama/", # Ollama reverse proxy (VPS → local:11434)
         "/shell", # interactive SSH shell terminal
         "/api/shell/", # shell API (servers, sessions, close)
+        "/api/zihost/", # ZiHost hosting panel API
     )
 
     def __init__(self, app):
@@ -1151,6 +1159,16 @@ async def serve_visualizer():
 @app.get("/video-editor")
 async def serve_video_editor():
     return FileResponse(str(FRONTEND_DIR / "video-editor.html"))
+
+
+@app.get("/zimail")
+async def serve_zimail():
+    return FileResponse(str(FRONTEND_DIR / "zimail.html"))
+
+
+@app.get("/zimaterializer")
+async def serve_zimaterializer():
+    return FileResponse(str(FRONTEND_DIR / "zimaterializer.html"))
 
 
 @app.get("/audio-engine")
