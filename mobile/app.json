@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "ZICORE",
+    "slug": "zicore-mobile",
+    "version": "5.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "zicore",
+    "splash": {
+      "backgroundColor": "#04060c",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#04060c"
+      },
+      "package": "com.zicore.system",
+      "versionCode": 500,
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE", "USE_BIOMETRIC", "USE_FINGERPRINT"]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zicore.system",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "ZICORE uses Face ID for secure login"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-local-authentication"
+    ],
+    "extra": {
+      "eas": { "projectId": "zicore-mobile" },
+      "apiUrl": "https://vps.zicore.space"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "ZICORE PORTHUB",
+  "short_name": "ZICORE",
+  "description": "ZICORE Aerospace Operating System — Connect & Install",
+  "start_url": "/porthub",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#04060c",
+  "theme_color": "#04060c",
+  "icons": [
+    {
+      "src": "/data/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/data/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
