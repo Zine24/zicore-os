@@ -105,6 +105,11 @@ android/gradlew.bat
 android/app/src/main/res/mipmap-*/
 android/app/src/main/res/xml/file_paths.xml
 
+# Mobile app generated files
+mobile/android/
+mobile/.expo/
+mobile/yarn.lock
+
 # Distribution / APK binaries
 distro/
 installers/*.apk
