@@ -11,12 +11,15 @@ inet_interfaces = all
 inet_protocols = ipv4
 
 # Virtual users
-virtual_mailbox_domains = zinemotion.com.mx
+virtual_mailbox_domains = zinemotion.com.mx zicore.space
 virtual_mailbox_base = /var/mail/vmail
 virtual_mailbox_maps = mysql:/etc/postfix/mysql-virtual-mailbox.cf
 virtual_alias_maps = mysql:/etc/postfix/mysql-virtual-alias.cf
 virtual_uid_maps = static:5000
 virtual_gid_maps = static:5000
+
+# Include MySQL virtual users in local recipient check (fixes 550 reject for virtual users)
+local_recipient_maps = proxy:unix:passwd.byname $alias_maps proxy:mysql:/etc/postfix/mysql-virtual-mailbox.cf
 
 # SASL (via Dovecot)
 smtpd_sasl_type = dovecot

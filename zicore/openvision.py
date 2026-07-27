@@ -186,6 +186,61 @@ class OpenVision:
         except Exception as e:
             return {"error": str(e), "status": "failed"}
 
+    def analyze_media(self, path: str) -> Dict[str, Any]:
+        """Analiza un archivo multimedia (imagen o video) automaticamente."""
+        ext = Path(path).suffix.lower()
+        video_exts = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
+        if ext in video_exts:
+            return self.analyze_video(path)
+        return self.analyze_image(path)
+
+    def capture_webcam(self, device_index: int = 0, width: int = 640, height: int = 480) -> Dict[str, Any]:
+        """Captura un frame de la camara USB local y lo analiza."""
+        if not self.cv2_available:
+            return {"error": "OpenCV (cv2) required for webcam capture", "status": "failed"}
+        try:
+            import cv2
+            cap = cv2.VideoCapture(device_index)
+            if not cap.isOpened():
+                return {"error": f"Cannot open camera device {device_index}", "status": "failed"}
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+            ret, frame = cap.read()
+            cap.release()
+            if not ret or frame is None:
+                return {"error": "Failed to capture frame from camera", "status": "failed"}
+            save_dir = VISION_DIR / "captures"
+            save_dir.mkdir(parents=True, exist_ok=True)
+            fname = f"capture_{int(time.time())}.jpg"
+            save_path = str(save_dir / fname)
+            cv2.imwrite(save_path, frame)
+            analysis = self.analyze_image(save_path)
+            analysis["capture_path"] = save_path
+            analysis["device_index"] = device_index
+            analysis["frame_size"] = f"{frame.shape[1]}x{frame.shape[0]}"
+            return analysis
+        except Exception as e:
+            return {"error": str(e), "status": "failed"}
+
+    def list_cameras(self) -> List[Dict[str, Any]]:
+        """Lista camaras USB disponibles."""
+        cameras = []
+        if not self.cv2_available:
+            return cameras
+        try:
+            import cv2
+            for i in range(4):
+                cap = cv2.VideoCapture(i)
+                if cap.isOpened():
+                    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    name = cap.getBackendName() if hasattr(cap, 'getBackendName') else f"camera_{i}"
+                    cameras.append({"index": i, "name": str(name), "resolution": f"{w}x{h}", "status": "open"})
+                    cap.release()
+        except Exception:
+            pass
+        return cameras
+
     def extract_text(self, image_path: str) -> Dict[str, Any]:
         """Extrae texto de una imagen (OCR basico sin dependencias pesadas)."""
         if not self.pil_available:

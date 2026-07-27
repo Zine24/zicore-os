@@ -22,7 +22,7 @@ import urllib.error
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 
@@ -379,7 +379,8 @@ def get_available_models(provider: str, config: dict = None) -> dict:
         base_url = f"http://{base_url}"
     api_key = prov.get("api_key", "")
     config_models = prov.get("models", [])
-    if provider == "ollama":
+    # Treat all Ollama-compatible providers the same (local, VPS, .68)
+    if provider in ("ollama", "zicore_native", "uncensored_68"):
         try:
             data = _request_json(f"{base_url}/api/tags", timeout=5)
             return {"status": "ok", "provider": provider, "models": _extract_model_ids(provider, data)}
@@ -403,8 +404,19 @@ def get_available_models(provider: str, config: dict = None) -> dict:
     return {"status": "unsupported", "provider": provider, "models": config_models}
 
 
-def build_system_prompt(config: dict, context: str = "") -> str:
+def build_system_prompt(config: dict, context: str = "", sensor_data: dict = None) -> str:
+    import datetime
     prompt = config.get("zio_engine", {}).get("system_prompt") or ZIO_SYSTEM_PROMPT
+    now = datetime.datetime.now()
+    time_ctx = f"[SYSTEM] Current time: {now.strftime('%H:%M:%S')}, Date: {now.strftime('%Y-%m-%d')} ({now.strftime('%A')})"
+    prompt = time_ctx + "\n" + prompt
+    if sensor_data:
+        if "battery_level" in sensor_data:
+            prompt += f"\n[DEVICE] Battery: {sensor_data['battery_level']}%"
+        if "ambient_light" in sensor_data:
+            prompt += f"\n[DEVICE] Ambient light: {sensor_data['ambient_light']} lux"
+        if "device_name" in sensor_data:
+            prompt += f"\n[DEVICE] {sensor_data['device_name']}"
     if context:
         prompt += f"\n\nRelevant knowledge context:\n{context[:1500]}"
     return prompt
@@ -444,7 +456,7 @@ def call_provider_chat(provider: str, message: str, config: dict, context: str =
             },
         }
         result = _request_json(f"{base_url}/api/chat", method="POST",
-                               headers={"Content-Type": "application/json"}, payload=payload, timeout=120)
+                               headers={"Content-Type": "application/json"}, payload=payload, timeout=180)
     else:
         payload = {
             "model": model,
@@ -679,6 +691,9 @@ class RateLimitMiddleware:
             "/api/sso/login": (5, 300),      # 5 attempts per 5 minutes
             "/api/sso/register": (3, 600),   # 3 attempts per 10 minutes
             "/api/sso/reset-password": (3, 600),
+            "/api/chat/stream": (20, 60),    # 20 chat messages per minute per IP
+            "/api/tts": (30, 60),            # 30 TTS requests per minute
+            "/api/stt": (30, 60),            # 30 STT requests per minute
         }
 
     async def __call__(self, scope, receive, send):
@@ -719,6 +734,7 @@ class SSOAuthMiddleware:
         "/login",
         "/api/sso/login",
         "/api/sso/register",
+        "/api/sso/2fa/complete-login",  # 2FA login completion (no auth yet)
         "/api/sso/plans",
         "/api/sso/check-username",
         "/api/mail/check-username",
@@ -797,10 +813,15 @@ class SSOAuthMiddleware:
         "/api/contact/submissions",
         "/admin",
         "/server-admin",
+        "/ziusers",
         "/console",
         "/zihost",
         "/zimail",
         "/zimaterializer",
+        "/porthub",
+        "/frontpage",
+        "/blog",
+        "/zmmx",
         "/simulator",
         "/flight-sim",
         "/api/zihost/create",
@@ -814,6 +835,10 @@ class SSOAuthMiddleware:
         "/api/zivr/hdri",
         "/api/zivr/terrain",
         "/api/zivr/build-world",
+        "/vr-monitor",
+        "/api/vr-monitor/stats",
+        "/api/vr-monitor/telemetry",
+        "/opencode",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -837,6 +862,21 @@ class SSOAuthMiddleware:
         "/api/shell/", # shell API (servers, sessions, close)
         "/api/zihost/", # ZiHost hosting panel API
         "/api/zivr/", # ZiVR engine API
+        "/api/projects", # Projects API (used by ZIO Copilot)
+        "/api/assets", # Imported assets (STL, GLB, images, audio)
+        "/api/tts", # Text-to-speech (mobile + web)
+        "/api/stt", # Speech-to-text (mobile + web)
+        "/api/vision/", # Vision/camera analysis endpoints
+        "/api/mobile/", # Mobile sensor/control endpoints
+        "/app-store", # App download page (public)
+        "/api/jilocomotion/", # Jilocomotion drive catalog (public)
+        "/api/zicodex/", # Zicodex knowledge library (public)
+        "/api/marketplace/", # Marketplace programs/software (public)
+        "/api/zmmx/", # ZMMX multimedia library (public)
+        "/api/capacity", # System capacity monitoring (public)
+        "/api/sso/grant-all-defaults", # Service backfill (admin, checked in handler)
+        "/api/ziusers/", # ZiUsers admin API (admin checked in handler)
+        "/api/opencode/", # OpenCode sessions API (public)
     )
 
     def __init__(self, app):
@@ -960,10 +1000,12 @@ except Exception as _e:
 async def serve_main_menu(request: Request):
     """Main entry point — public landing page."""
     host = request.headers.get("host", "")
+    if "zzz.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "blog.html"))
     if "zinemotion.com.mx" in host:
         return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
     if "zcs.zicore.space" in host or "zicore.space" in host:
-        return FileResponse(str(FRONTEND_DIR / "zicore-portal.html"))
+        return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
@@ -975,6 +1017,31 @@ async def serve_zinemotion():
 @app.get("/zicore")
 async def serve_zicore():
     return FileResponse(str(FRONTEND_DIR / "zicore-portal.html"))
+
+
+@app.get("/frontpage")
+async def serve_frontpage():
+    return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
+
+
+@app.get("/blog")
+async def serve_blog():
+    return FileResponse(str(FRONTEND_DIR / "blog.html"))
+
+
+@app.get("/zmmx")
+async def serve_zmmx():
+    return FileResponse(str(FRONTEND_DIR / "zmmx.html"))
+
+
+@app.get("/ziusers")
+async def serve_ziusers():
+    return FileResponse(str(FRONTEND_DIR / "ziusers.html"))
+
+
+@app.get("/opencode")
+async def serve_opencode():
+    return FileResponse(str(FRONTEND_DIR / "opencode.html"))
 
 
 @app.get("/aerospace")
@@ -1128,6 +1195,14 @@ async def serve_download():
     return RedirectResponse(url="/installers")
 
 
+@app.get("/porthub")
+async def serve_porthub():
+    return FileResponse(str(FRONTEND_DIR / "porthub.html"))
+
+@app.get("/app-store")
+async def serve_app_store():
+    return FileResponse(str(FRONTEND_DIR / "app-store.html"))
+
 @app.get("/installers")
 async def serve_installers():
     return FileResponse(str(FRONTEND_DIR / "installers.html"))
@@ -1182,6 +1257,83 @@ async def serve_zimail():
 @app.get("/zimaterializer")
 async def serve_zimaterializer():
     return FileResponse(str(FRONTEND_DIR / "zimaterializer.html"))
+
+
+@app.get("/vr-monitor")
+async def serve_vr_monitor():
+    """VR Monitor - stereoscopic mirror view for head-mounted display."""
+    return FileResponse(str(FRONTEND_DIR / "vr-monitor.html"))
+
+
+@app.get("/api/vr-monitor/stats")
+async def vr_monitor_stats():
+    """Real-time telemetry optimized for VR rendering (high refresh, minimal payload)."""
+    import time as _time
+    try:
+        import psutil
+        cpu = psutil.cpu_percent(interval=0.05)
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        boot = psutil.boot_time()
+        uptime_s = _time.time() - boot
+        days = int(uptime_s // 86400)
+        hours = int((uptime_s % 86400) // 3600)
+        mins = int((uptime_s % 3600) // 60)
+        uptime_str = f"{days}d {hours}h {mins}m" if days else f"{hours}h {mins}m"
+        ollama_ok = False
+        ollama_models = []
+        active_prov = "zicore_native"
+        try:
+            config = load_config()
+            active_prov = config.get("zio_engine", {}).get("active_provider", "zicore_native")
+            for provider_key in ("ollama", "zicore_native"):
+                pcfg = config.get("providers", {}).get(provider_key, {})
+                if pcfg.get("enabled") and pcfg.get("base_url"):
+                    import urllib.request as _req
+                    try:
+                        url = pcfg["base_url"].rstrip("/")
+                        req = _req.Request(url + "/api/tags", headers={"User-Agent": "ZICORE/5.0"})
+                        resp = _req.urlopen(req, timeout=3)
+                        tags = json.loads(resp.read().decode())
+                        ollama_models = [m.get("name", "") for m in tags.get("models", []) if m.get("name")]
+                        ollama_ok = True
+                        break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+        net = psutil.net_io_counters()
+        return {
+            "cpu": round(cpu, 1),
+            "mem": round(mem.percent, 1),
+            "mem_used_mb": round(mem.used / 1048576),
+            "mem_total_mb": round(mem.total / 1048576),
+            "disk": round(disk.percent, 1),
+            "disk_used_gb": round(disk.used / 1073741824, 1),
+            "disk_total_gb": round(disk.total / 1073741824, 1),
+            "uptime": uptime_str,
+            "ollama": ollama_ok,
+            "ollama_models": ollama_models,
+            "provider": active_prov,
+            "net_sent_mb": round(net.bytes_sent / 1048576, 1),
+            "net_recv_mb": round(net.bytes_recv / 1048576, 1),
+            "ts": int(_time.time() * 1000),
+        }
+    except Exception as e:
+        return {"error": str(e), "ts": int(_time.time() * 1000)}
+
+
+@app.get("/api/vr-monitor/telemetry")
+async def vr_monitor_telemetry():
+    """Full telemetry for VR HUD overlay."""
+    try:
+        from zicore.telemetry_sim import telemetry_sim
+        base = telemetry_sim.get_telemetry()
+        stats = await vr_monitor_stats()
+        base["system"] = stats
+        return base
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ─── ZiVR Engine API Routes ─────────────────────────────
@@ -1390,7 +1542,7 @@ async def contact_submissions():
 
 @app.get("/zio")
 async def serve_zio():
-    return FileResponse(str(FRONTEND_DIR / "zio.html"))
+    return FileResponse(str(FRONTEND_DIR / "opencode.html"))
 
 
 @app.get("/simulator")
@@ -1698,6 +1850,493 @@ async def media_list():
     return result
 
 
+# ─── JILOCOMOTION CATALOG (from .68 drive) ──────────────────────────────────
+JILOCOMOTION_CATALOG = Path(__file__).parent / "data" / "jilocomotion_catalog.json"
+
+def _load_jilocomotion_catalog():
+    if JILOCOMOTION_CATALOG.exists():
+        try:
+            with open(JILOCOMOTION_CATALOG, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"stats": {}, "music": [], "photos": [], "videos": [], "ebooks": [], "programs": [], "courses": [], "other_media": []}
+
+
+@app.get("/api/jilocomotion/catalog")
+async def jilocomotion_catalog():
+    """Full catalog of jilocomotion drive content."""
+    return _load_jilocomotion_catalog()
+
+
+@app.get("/api/jilocomotion/{category}")
+async def jilocomotion_category(category: str):
+    """Content by category: music, photos, videos, ebooks, programs, courses."""
+    cat_map = {
+        "music": "music", "musica": "music",
+        "photos": "photos", "fotos": "photos",
+        "videos": "videos", "peliculas": "videos",
+        "ebooks": "ebooks", "libros": "ebooks", "documents": "ebooks",
+        "programs": "programs", "programas": "programs", "software": "programs",
+        "courses": "cursos", "cursos": "courses",
+        "media": "other_media",
+    }
+    cat = cat_map.get(category.lower(), category)
+    catalog = _load_jilocomotion_catalog()
+    items = catalog.get(cat, [])
+    return {"category": cat, "count": len(items), "items": items[:200]}
+
+
+# ─── ZICODEX — Knowledge base links from jilocomotion ebooks ────────────────
+@app.get("/api/zicodex/library")
+async def zicodex_library():
+    """Ebooks and documents from jilocomotion linked to Zicodex knowledge base."""
+    catalog = _load_jilocomotion_catalog()
+    ebooks = catalog.get("ebooks", [])
+    # Group by category
+    by_cat = {}
+    for e in ebooks:
+        cat = e.get("category", "general")
+        if cat not in by_cat:
+            by_cat[cat] = []
+        by_cat[cat].append({
+            "title": e.get("title", e.get("name", "?")),
+            "file": e.get("file", ""),
+            "ext": e.get("ext", ""),
+            "size_mb": e.get("size_mb", 0),
+            "source": "jilocomotion",
+            "type": "ebook",
+        })
+    return {
+        "total": len(ebooks),
+        "categories": list(by_cat.keys()),
+        "library": by_cat,
+    }
+
+
+@app.get("/api/zicodex/categories")
+async def zicodex_categories():
+    """Zicodex knowledge categories with counts."""
+    catalog = _load_jilocomotion_catalog()
+    ebooks = catalog.get("ebooks", [])
+    courses = catalog.get("courses", [])
+    programs = catalog.get("programs", [])
+    by_cat = {}
+    for e in ebooks:
+        cat = e.get("category", "general")
+        by_cat[cat] = by_cat.get(cat, 0) + 1
+    return {
+        "ebooks": by_cat,
+        "courses": len(courses),
+        "programs": len(programs),
+        "total_documents": len(ebooks),
+    }
+
+
+# ─── MARKETPLACE — Free programs/software from jilocomotion ─────────────────
+@app.get("/api/marketplace/programs")
+async def marketplace_programs():
+    """Free programs and software from jilocomotion drive."""
+    catalog = _load_jilocomotion_catalog()
+    programs = catalog.get("programs", [])
+    # Enhance with metadata
+    enhanced = []
+    for p in programs:
+        name = p.get("name", "?")
+        ext = p.get("ext", "")
+        enhanced.append({
+            "id": hashlib.md5(p.get("file", "").encode()).hexdigest()[:12],
+            "name": name,
+            "description": f"Free software: {name}",
+            "file": p.get("file", ""),
+            "ext": ext,
+            "size_mb": p.get("size_mb", 0),
+            "source": p.get("source", "jilocomotion"),
+            "free": True,
+            "category": "software",
+            "type": "program",
+            "icon": "📦" if ext in (".exe", ".msi") else "💿" if ext == ".iso" else "📦",
+        })
+    return {
+        "total": len(enhanced),
+        "programs": enhanced,
+    }
+
+
+@app.get("/api/marketplace/all")
+async def marketplace_all():
+    """Everything available in the marketplace."""
+    catalog = _load_jilocomotion_catalog()
+    items = []
+    # Programs
+    for p in catalog.get("programs", []):
+        items.append({"type": "program", "name": p.get("name", "?"), "file": p.get("file", ""),
+                      "size_mb": p.get("size_mb", 0), "free": True, "source": "jilocomotion"})
+    # Ebooks
+    for e in catalog.get("ebooks", []):
+        items.append({"type": "ebook", "name": e.get("title", "?"), "file": e.get("file", ""),
+                      "size_mb": e.get("size_mb", 0), "free": True, "source": "jilocomotion",
+                      "category": e.get("category", "general")})
+    # Courses
+    for c in catalog.get("courses", []):
+        items.append({"type": "course", "name": c.get("name", "?"), "file": c.get("file", ""),
+                      "size_mb": c.get("size_mb", 0), "free": True, "source": "jilocomotion"})
+    return {"total": len(items), "items": items}
+
+
+# ─── ZMMX Library — Multimedia connections ──────────────────────────────────
+@app.get("/api/zmmx/library")
+async def zmmx_library():
+    """ZMMX multimedia library — connects local + jilocomotion media."""
+    catalog = _load_jilocomotion_catalog()
+    local_media = {}
+    for cat in ("images", "audio", "video", "3d"):
+        cat_dir = MEDIA_DIR / cat
+        if cat_dir.exists():
+            local_media[cat] = len(list(cat_dir.iterdir()))
+        else:
+            local_media[cat] = 0
+    return {
+        "local": local_media,
+        "jilocomotion": {
+            "music": catalog.get("stats", {}).get("music", 0),
+            "photos": catalog.get("stats", {}).get("photos", 0),
+            "videos": catalog.get("stats", {}).get("videos", 0),
+            "other": catalog.get("stats", {}).get("other_media", 0),
+        },
+        "zicore_fs": str(ZICORE_FS_MEDIA) if ZICORE_FS_MEDIA.exists() else None,
+        "total_combined": sum(local_media.values()) + sum(catalog.get("stats", {}).get(k, 0) for k in ("music", "photos", "videos", "other_media")),
+    }
+
+
+@app.get("/api/zmmx/search")
+async def zmmx_search(request: Request):
+    """Search across all media sources (local, zicore-fs, jilocomotion)."""
+    import mimetypes
+    q = request.query_params.get("q", "").strip().lower()
+    cat = request.query_params.get("category", "")  # images, audio, video, music, 3d, ebooks, all
+    source = request.query_params.get("source", "")  # local, zicore_fs, jilocomotion, all
+    limit = min(int(request.query_params.get("limit", "100")), 500)
+    offset = max(int(request.query_params.get("offset", "0")), 0)
+
+    results = []
+
+    # Search local MEDIA_DIR
+    if not source or source in ("local", "all"):
+        for mcat, exts in MEDIA_CATEGORIES.items():
+            if cat and cat != "all" and cat != mcat:
+                continue
+            cat_dir = MEDIA_DIR / mcat
+            if not cat_dir.exists():
+                continue
+            try:
+                for f in cat_dir.iterdir():
+                    if f.is_file() and f.suffix.lower() in exts:
+                        if q and q not in f.name.lower():
+                            continue
+                        rel = f"{mcat}/{f.name}"
+                        results.append({
+                            "name": f.name, "path": rel,
+                            "url": f"/media/{rel}",
+                            "size": f.stat().st_size, "ext": f.suffix.lower().lstrip("."),
+                            "mime": mimetypes.guess_type(f.name)[0] or "application/octet-stream",
+                            "category": mcat, "source": "local",
+                        })
+            except (OSError, PermissionError):
+                pass
+
+    # Search zicore-fs
+    if ZICORE_FS_MEDIA.exists() and (not source or source in ("zicore_fs", "all")):
+        fs_map = {
+            "audio": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music", "Movies/Media/Music/")],
+            "music": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music", "Movies/Media/Music/")],
+            "video": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Movies", "Movies/Media/Movies/")],
+            "images": [
+                (ZICORE_FS_MEDIA / "Movies" / "Media" / "Photo", "Movies/Media/Photo/"),
+                (ZICORE_FS_MEDIA / "Movies" / "Media" / "Fotos", "Movies/Media/Fotos/"),
+            ],
+        }
+        for mcat, dirs in fs_map.items():
+            if cat and cat != "all" and cat != mcat:
+                continue
+            exts = MEDIA_CATEGORIES.get(mcat, [])
+            for d, prefix in dirs:
+                if not d.exists():
+                    continue
+                try:
+                    items = _scan_media_tree(d, exts, url_prefix=prefix, max_depth=3)
+                    for item in items:
+                        if q and q not in item["name"].lower():
+                            continue
+                        item["category"] = mcat
+                        item["source"] = "zicore_fs"
+                        results.append(item)
+                except (OSError, PermissionError):
+                    pass
+
+    # Search jilocomotion catalog
+    if not source or source in ("jilocomotion", "all"):
+        catalog = _load_jilocomotion_catalog()
+        jilo_map = {"music": "music", "photos": "images", "videos": "video", "ebooks": "ebooks"}
+        for jcat, mcat in jilo_map.items():
+            if cat and cat != "all" and cat != mcat and cat != jcat:
+                continue
+            for item in catalog.get(jcat, []):
+                name = item.get("name", item.get("file", ""))
+                if q and q not in name.lower():
+                    continue
+                results.append({
+                    "name": name,
+                    "path": item.get("file", ""),
+                    "url": item.get("url", ""),
+                    "size": item.get("size", item.get("size_mb", 0) * 1024 * 1024),
+                    "ext": name.rsplit(".", 1)[-1] if "." in name else "",
+                    "mime": "application/octet-stream",
+                    "category": mcat,
+                    "source": "jilocomotion",
+                    "free": item.get("free", True),
+                })
+
+    total = len(results)
+    results = results[offset:offset + limit]
+    return {"total": total, "offset": offset, "limit": limit, "results": results}
+
+
+@app.get("/api/zmmx/categories")
+async def zmmx_categories():
+    """List all media categories with item counts."""
+    import mimetypes
+    categories = {}
+
+    # Local counts
+    for mcat, exts in MEDIA_CATEGORIES.items():
+        cat_dir = MEDIA_DIR / mcat
+        count = 0
+        if cat_dir.exists():
+            try:
+                count = sum(1 for f in cat_dir.iterdir() if f.is_file() and f.suffix.lower() in exts)
+            except (OSError, PermissionError):
+                pass
+        categories.setdefault(mcat, {"local": 0, "zicore_fs": 0, "jilocomotion": 0, "total": 0})
+        categories[mcat]["local"] = count
+
+    # zicore-fs counts
+    if ZICORE_FS_MEDIA.exists():
+        fs_map = {
+            "audio": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music",)],
+            "music": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music",)],
+            "video": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Movies",)],
+            "images": [
+                (ZICORE_FS_MEDIA / "Movies" / "Media" / "Photo",),
+                (ZICORE_FS_MEDIA / "Movies" / "Media" / "Fotos",),
+            ],
+        }
+        for mcat, dirs in fs_map.items():
+            exts = MEDIA_CATEGORIES.get(mcat, [])
+            for (d,) in dirs:
+                if d.exists():
+                    try:
+                        categories.setdefault(mcat, {"local": 0, "zicore_fs": 0, "jilocomotion": 0, "total": 0})
+                        categories[mcat]["zicore_fs"] += sum(1 for _ in _scan_media_tree(d, exts, max_depth=2))
+                    except (OSError, PermissionError):
+                        pass
+
+    # Jilocomotion counts
+    catalog = _load_jilocomotion_catalog()
+    jilo_map = {"music": "music", "photos": "images", "videos": "video", "ebooks": "ebooks"}
+    for jcat, mcat in jilo_map.items():
+        categories.setdefault(mcat, {"local": 0, "zicore_fs": 0, "jilocomotion": 0, "total": 0})
+        categories[mcat]["jilocomotion"] = len(catalog.get(jcat, []))
+
+    # Compute totals
+    for mcat in categories:
+        c = categories[mcat]
+        c["total"] = c["local"] + c["zicore_fs"] + c["jilocomotion"]
+
+    # Grand total
+    grand_total = sum(c["total"] for c in categories.values())
+    return {"categories": categories, "grand_total": grand_total}
+
+
+@app.get("/api/zmmx/browse")
+async def zmmx_browse(request: Request):
+    """Browse media with pagination, sorting, and filtering."""
+    import mimetypes
+    cat = request.query_params.get("category", "images")
+    source = request.query_params.get("source", "all")
+    sort = request.query_params.get("sort", "name")  # name, size, date
+    order = request.query_params.get("order", "asc")
+    limit = min(int(request.query_params.get("limit", "50")), 200)
+    offset = max(int(request.query_params.get("offset", "0")), 0)
+    dir_filter = request.query_params.get("dir", "")  # subfolder filter
+
+    items = []
+
+    # Local media
+    if source in ("local", "all"):
+        exts = MEDIA_CATEGORIES.get(cat, [])
+        cat_dir = MEDIA_DIR / cat
+        if cat_dir.exists():
+            try:
+                for f in cat_dir.iterdir():
+                    if f.is_file() and f.suffix.lower() in exts:
+                        if dir_filter and dir_filter not in f.parent.name.lower():
+                            continue
+                        rel = f"{cat}/{f.name}"
+                        stat = f.stat()
+                        items.append({
+                            "name": f.name, "path": rel,
+                            "url": f"/media/{rel}",
+                            "size": stat.st_size, "ext": f.suffix.lower().lstrip("."),
+                            "mime": mimetypes.guess_type(f.name)[0] or "application/octet-stream",
+                            "category": cat, "source": "local",
+                            "modified": stat.st_mtime,
+                        })
+            except (OSError, PermissionError):
+                pass
+
+    # zicore-fs
+    if ZICORE_FS_MEDIA.exists() and source in ("zicore_fs", "all"):
+        fs_dirs = {
+            "audio": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music", "Movies/Media/Music/")],
+            "music": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music", "Movies/Media/Music/")],
+            "video": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Movies", "Movies/Media/Movies/")],
+            "images": [
+                (ZICORE_FS_MEDIA / "Movies" / "Media" / "Photo", "Movies/Media/Photo/"),
+                (ZICORE_FS_MEDIA / "Movies" / "Media" / "Fotos", "Movies/Media/Fotos/"),
+            ],
+        }
+        exts = MEDIA_CATEGORIES.get(cat, [])
+        for d, prefix in fs_dirs.get(cat, []):
+            if d.exists():
+                try:
+                    for item in _scan_media_tree(d, exts, url_prefix=prefix, max_depth=3):
+                        if dir_filter and dir_filter not in item.get("dir", "").lower():
+                            continue
+                        item["category"] = cat
+                        item["source"] = "zicore_fs"
+                        item["modified"] = 0
+                        items.append(item)
+                except (OSError, PermissionError):
+                    pass
+
+    # Jilocomotion
+    if source in ("jilocomotion", "all"):
+        catalog = _load_jilocomotion_catalog()
+        jilo_map = {"audio": "music", "music": "music", "video": "videos", "images": "photos", "ebooks": "ebooks"}
+        jcat = jilo_map.get(cat, "")
+        if jcat:
+            for item in catalog.get(jcat, []):
+                name = item.get("name", item.get("file", ""))
+                items.append({
+                    "name": name,
+                    "path": item.get("file", ""),
+                    "url": item.get("url", ""),
+                    "size": item.get("size", item.get("size_mb", 0) * 1024 * 1024),
+                    "ext": name.rsplit(".", 1)[-1] if "." in name else "",
+                    "mime": "application/octet-stream",
+                    "category": cat, "source": "jilocomotion",
+                    "modified": 0,
+                    "free": item.get("free", True),
+                })
+
+    # Sort
+    reverse = order == "desc"
+    if sort == "size":
+        items.sort(key=lambda x: x.get("size", 0), reverse=reverse)
+    elif sort == "date":
+        items.sort(key=lambda x: x.get("modified", 0), reverse=reverse)
+    else:
+        items.sort(key=lambda x: x.get("name", "").lower(), reverse=reverse)
+
+    total = len(items)
+    items = items[offset:offset + limit]
+    return {"total": total, "offset": offset, "limit": limit, "category": cat, "source": source, "items": items}
+
+
+# ─── OpenCode Sessions API ────────────────────────────────────────────────────
+
+OPENCODE_EXPORT = Path(__file__).parent / "data" / "opencode_chats.json"
+
+def _load_opencode_export():
+    if OPENCODE_EXPORT.exists():
+        try:
+            with open(OPENCODE_EXPORT, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"sessions": [], "messages": {}, "total_messages": 0}
+
+
+@app.get("/api/opencode/sessions")
+async def opencode_sessions():
+    data = _load_opencode_export()
+    return {
+        "sessions": data.get("sessions", []),
+        "total_messages": data.get("total_messages", 0),
+        "total_sessions": len(data.get("sessions", [])),
+        "exported_at": data.get("exported_at", ""),
+    }
+
+
+@app.get("/api/opencode/sessions/{session_id}/messages")
+async def opencode_session_messages(session_id: str):
+    data = _load_opencode_export()
+    msgs = data.get("messages", {}).get(session_id, [])
+    return {"session_id": session_id, "messages": msgs, "count": len(msgs)}
+
+
+@app.get("/api/opencode/status")
+async def opencode_status():
+    """Check if OpenCode serve is running on .85."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no",
+             "z@192.168.1.85", "pgrep -f 'opencode serve' || echo NONE"],
+            capture_output=True, text=True, timeout=10
+        )
+        running = "NONE" not in result.stdout
+        return {"running": running, "pid": result.stdout.strip() if running else None}
+    except Exception:
+        return {"running": False, "error": "Could not check"}
+
+
+@app.websocket("/api/opencode/ws")
+async def opencode_websocket(websocket):
+    """WebSocket proxy to OpenCode serve on .85."""
+    await websocket.accept()
+    import asyncio, websockets
+    try:
+        async with websockets.connect(
+            "ws://192.168.1.85:4080",
+            open_timeout=5, close_timeout=5
+        ) as remote:
+            async def forward(src, dst):
+                try:
+                    async for msg in src:
+                        if isinstance(msg, str):
+                            await dst.send(msg)
+                        else:
+                            await dst.send(msg)
+                except Exception:
+                    pass
+            await asyncio.gather(
+                forward(websocket, remote),
+                forward(remote, websocket)
+            )
+    except Exception as e:
+        try:
+            await websocket.send(json.dumps({"type": "error", "text": f"ZIO Agent not reachable: {str(e)}"}))
+        except Exception:
+            pass
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
 @app.get("/api/status")
 async def web_status():
     config = load_config()
@@ -1752,6 +2391,114 @@ async def get_provider(provider: str):
 @app.get("/api/provider/models/{provider}")
 async def provider_models(provider: str):
     return get_available_models(provider)
+
+
+# ─── Projects API ────────────────────────────────────────────────────────────
+
+PROJECTS_FILE = Path(__file__).parent / "data" / "projects.json"
+
+def _load_projects() -> dict:
+    if PROJECTS_FILE.exists():
+        try:
+            with open(PROJECTS_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    default_projects = {
+        "active": "zicore-system",
+        "projects": [
+            {"id": "zicore-system", "name": "ZICORE System", "path": str(Path(__file__).parent), "desc": "Core aerospace OS", "badge": "ROOT"},
+        ]
+    }
+    _save_projects(default_projects)
+    return default_projects
+
+def _save_projects(data: dict):
+    PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(PROJECTS_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+@app.get("/api/projects")
+async def get_projects():
+    return _load_projects()
+
+
+@app.post("/api/projects")
+async def create_project(request: Request):
+    body = await request.json()
+    name = body.get("name", "").strip()
+    path = body.get("path", "").strip()
+    desc = body.get("desc", "")
+    badge = body.get("badge", "")
+    if not name:
+        return {"error": "Name required"}
+    data = _load_projects()
+    pid = name.lower().replace(" ", "-").replace("/", "-")[:32]
+    proj = {"id": pid, "name": name, "path": path, "desc": desc, "badge": badge}
+    data["projects"].append(proj)
+    _save_projects(data)
+    return {"status": "ok", "project": proj}
+
+
+@app.post("/api/projects/active")
+async def set_active_project(request: Request):
+    body = await request.json()
+    pid = body.get("id", "")
+    data = _load_projects()
+    data["active"] = pid
+    _save_projects(data)
+    return {"status": "ok", "active": pid}
+
+
+@app.delete("/api/projects/{pid}")
+async def delete_project(pid: str):
+    data = _load_projects()
+    data["projects"] = [p for p in data["projects"] if p.get("id") != pid]
+    if data["active"] == pid:
+        data["active"] = data["projects"][0]["id"] if data["projects"] else ""
+    _save_projects(data)
+    return {"status": "ok"}
+
+
+# ─── Assets API ──────────────────────────────────────────────────────────────
+
+ASSETS_DIR = MEDIA_DIR / "assets"
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.get("/api/assets/list")
+async def list_assets():
+    files = []
+    if ASSETS_DIR.is_dir():
+        for f in sorted(ASSETS_DIR.iterdir()):
+            if f.is_file():
+                files.append({"name": f.name, "size": f.stat().st_size})
+    return {"status": "ok", "files": files}
+
+
+@app.post("/api/assets/upload")
+async def upload_asset(file: UploadFile = File(...)):
+    safe_name = Path(file.filename).name
+    if not safe_name or safe_name.startswith("."):
+        return {"status": "error", "error": "Invalid filename"}
+    dest = ASSETS_DIR / safe_name
+    try:
+        content = await file.read()
+        with open(dest, "wb") as f:
+            f.write(content)
+        return {"status": "ok", "filename": safe_name, "size": len(content)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/assets/{filename}")
+async def serve_asset(filename: str):
+    safe = Path(filename).name
+    target = ASSETS_DIR / safe
+    if not target.exists() or not str(target.resolve()).startswith(str(ASSETS_DIR.resolve())):
+        return {"error": "Not found"}
+    return FileResponse(str(target))
 
 
 @app.get("/api/ollama/status")
@@ -1975,6 +2722,192 @@ async def chat_with_context(body: dict):
         return provider_result
     except Exception as e:
         return {"status": "error", "provider": provider, "error": str(e)}
+
+
+# ─── Streaming Chat (SSE) ────────────────────────────────────────────────────
+
+@app.post("/api/chat/stream")
+async def chat_stream(body: dict):
+    """Server-Sent Events streaming chat endpoint for Ollama models."""
+    message = body.get("message", "")
+    provider = body.get("provider", "ollama")
+    session_id = body.get("session_id", "api")
+    sensor_data = body.get("sensor_data", None)
+
+    if not message:
+        return JSONResponse({"error": "No message"}, status_code=400)
+
+    config = load_config()
+
+    async def event_generator():
+        try:
+            if provider == "zicore_native":
+                result = await _run_native_agent(message, session_id, config, sensor_data=sensor_data)
+                text = result.get("response", result.get("error", "No response"))
+                media_url = result.get("media_url", "")
+                media_type = result.get("media_type", "")
+                generation = result.get("generation")
+                # If generation produced a file, send it first as a generated event
+                if generation:
+                    yield f"data: {json.dumps({'type': 'generated', 'result': generation, 'done': False})}\n\n"
+                yield f"data: {json.dumps({'token': text, 'done': True, 'provider': provider, 'media_url': media_url, 'media_type': media_type})}\n\n"
+            else:
+                prov_config = config.get("providers", {}).get(provider, {})
+                base_url = prov_config.get("base_url", "").rstrip("/")
+                model = prov_config.get("default_model", "gemma3:4b")
+
+                import http.client
+                from urllib.parse import urlparse
+                parsed = urlparse(base_url)
+                conn_cls = http.client.HTTPSConnection if (parsed.scheme == "https") else http.client.HTTPConnection
+                conn = conn_cls(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80), timeout=180)
+
+                system_msg = build_system_prompt(config, "", sensor_data=sensor_data)
+
+                # Build tool-capable models list
+                _tool_models = {"qwen3:8b", "qwen2.5-coder:7b", "qwen2.5:7b", "llama3.1:8b", "llama3.3:70b"}
+                _use_tools = model in _tool_models or any(model.startswith(m) for m in ["qwen3:", "qwen2.5-coder:", "llama3."])
+
+                chat_payload = {
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_msg},
+                        {"role": "user", "content": message},
+                    ],
+                    "stream": True,
+                    "options": {
+                        "temperature": config.get("zio_engine", {}).get("temperature", 0.7),
+                        "top_p": config.get("zio_engine", {}).get("top_p", 0.9),
+                        "num_predict": config.get("zio_engine", {}).get("max_tokens", 4096),
+                    },
+                }
+
+                if _use_tools:
+                    from agent.core import ZIO_NATIVE_TOOLS
+                    chat_payload["tools"] = ZIO_NATIVE_TOOLS
+
+                payload = json.dumps(chat_payload)
+
+                path = (parsed.path.rstrip("/") + "/api/chat") if parsed.path else "/api/chat"
+                headers = {"Content-Type": "application/json"}
+                conn.request("POST", path, body=payload, headers=headers)
+                resp = conn.getresponse()
+
+                full_response = ""
+                buffer = ""
+                _tool_calls = []
+                while True:
+                    chunk = resp.read(512)
+                    if not chunk:
+                        break
+                    buffer += chunk.decode("utf-8", errors="replace")
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                            msg = obj.get("message", {})
+                            token = msg.get("content", "")
+                            done = obj.get("done", False)
+                            if token:
+                                full_response += token
+                                yield f"data: {json.dumps({'token': token, 'done': False})}\n\n"
+                            if msg.get("tool_calls"):
+                                _tool_calls.extend(msg["tool_calls"])
+                            if done:
+                                yield f"data: {json.dumps({'token': '', 'done': True, 'provider': provider, 'model': model})}\n\n"
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+                conn.close()
+
+                # Execute native tool calls and do follow-up
+                if _use_tools and _tool_calls:
+                    tool_context_parts = []
+                    for tc in _tool_calls:
+                        fn = tc.get("function", {})
+                        fname = fn.get("name", "")
+                        fargs = fn.get("arguments", {})
+                        logger.info(f"Streaming tool call: {fname}({fargs})")
+                        try:
+                            from agent.state import ToolRegistry
+                            reg = ToolRegistry()
+                            tool_result = reg.execute(fname, fargs)
+                            tool_context_parts.append(f"[{fname}] {json.dumps(tool_result) if isinstance(tool_result, dict) else str(tool_result)}")
+                        except Exception as e:
+                            tool_context_parts.append(f"[{fname}] Error: {e}")
+                    if tool_context_parts:
+                        tool_ctx = "\n".join(tool_context_parts)
+                        followup_msg = f"--- TOOL RESULTS ---\n{tool_ctx}\n--- END TOOLS ---\nUse these results to answer the user's original question: {message}"
+                        followup_payload = json.dumps({
+                            "model": model,
+                            "messages": [
+                                {"role": "system", "content": system_msg},
+                                {"role": "user", "content": message},
+                                {"role": "assistant", "content": full_response, "tool_calls": _tool_calls},
+                                {"role": "tool", "content": tool_ctx},
+                            ],
+                            "stream": True,
+                            "options": {
+                                "temperature": config.get("zio_engine", {}).get("temperature", 0.7),
+                                "top_p": config.get("zio_engine", {}).get("top_p", 0.9),
+                                "num_predict": config.get("zio_engine", {}).get("max_tokens", 4096),
+                            },
+                        }).encode("utf-8")
+                        conn2 = conn_cls(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80), timeout=180)
+                        conn2.request("POST", path, body=followup_payload, headers={"Content-Type": "application/json"})
+                        resp2 = conn2.getresponse()
+                        _buf2 = ""
+                        while True:
+                            chunk2 = resp2.read(512)
+                            if not chunk2:
+                                break
+                            _buf2 += chunk2.decode("utf-8", errors="replace")
+                            while "\n" in _buf2:
+                                line2, _buf2 = _buf2.split("\n", 1)
+                                line2 = line2.strip()
+                                if not line2:
+                                    continue
+                                try:
+                                    obj2 = json.loads(line2)
+                                    tok2 = obj2.get("message", {}).get("content", "")
+                                    if tok2:
+                                        yield f"data: {json.dumps({'token': tok2, 'done': False})}\n\n"
+                                    if obj2.get("done"):
+                                        yield f"data: {json.dumps({'token': '', 'done': True, 'provider': provider, 'model': model})}\n\n"
+                                        break
+                                except json.JSONDecodeError:
+                                    continue
+                        conn2.close()
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+async def _run_native_agent(message, session_id, config, sensor_data=None):
+    """Run native agent and return result dict."""
+    try:
+        sys.path.insert(0, str(Path(__file__).parent))
+        from agent.core import ZICoreAgent
+        agent = ZICoreAgent(session_id=session_id)
+        ctx = {"source": "api"}
+        if sensor_data:
+            ctx["sensor_data"] = sensor_data
+        result = await agent.process(message, ctx)
+        reply = result.get("outputs", {}).get("text",
+            result.get("outputs", {}).get("zio_msg", ""))
+        generation = result.get("outputs", {}).get("generation")
+        media_url = result.get("outputs", {}).get("media_url", "")
+        media_type = result.get("outputs", {}).get("media_type", "")
+        return {"response": reply, "intent": result.get("intent", "general"),
+                "generation": generation, "media_url": media_url, "media_type": media_type}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ─── OpenAI-Compatible Endpoint for ZIO (Open-WebUI integration) ────────────
@@ -2399,6 +3332,48 @@ async def vision_ocr(data: dict = {}):
         return {"status": "error", "error": str(e)}
 
 
+@app.get("/api/vision/cameras")
+async def vision_list_cameras():
+    try:
+        from zicore.openvision import openvision as ov
+        cameras = ov.list_cameras()
+        return {"status": "ok", "cameras": cameras}
+    except Exception as e:
+        return {"status": "ok", "cameras": [], "error": str(e)}
+
+
+@app.post("/api/vision/capture")
+async def vision_capture(data: dict = {}):
+    device = data.get("device_index", 0)
+    width = data.get("width", 640)
+    height = data.get("height", 480)
+    try:
+        from zicore.openvision import openvision as ov
+        result = ov.capture_webcam(device_index=device, width=width, height=height)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/mobile/sensors")
+async def mobile_sensors(data: dict = {}):
+    """Receive sensor data from mobile app."""
+    session_sensors = getattr(app.state, "session_sensors", {})
+    session_id = data.get("session_id", "default")
+    sensors = {k: v for k, v in data.items() if k != "session_id"}
+    sensors["_timestamp"] = time.time()
+    session_sensors[session_id] = sensors
+    app.state.session_sensors = session_sensors
+    return {"status": "ok"}
+
+
+@app.get("/api/mobile/sensors/{session_id}")
+async def mobile_sensors_get(session_id: str):
+    """Get latest sensor data for a session."""
+    session_sensors = getattr(app.state, "session_sensors", {})
+    return {"status": "ok", "sensors": session_sensors.get(session_id, {})}
+
+
 @app.post("/api/video/cut")
 async def video_cut(data: dict = {}):
     timestamp = data.get("timestamp", 0)
@@ -2551,10 +3526,88 @@ async def knowledge_context(q: str = ""):
 
 @app.post("/api/tts")
 async def text_to_speech(body: dict):
+    """Text-to-speech using gTTS (Google Text-to-Speech). Returns MP3 audio."""
     text = body.get("text", "")
+    lang = body.get("lang", "es")
     if not text:
-        return {"error": "No text provided"}
-    return {"status": "ok", "text": text, "engine": "browser"}
+        return JSONResponse({"error": "No text provided"}, status_code=400)
+    try:
+        from gtts import gTTS
+        import tempfile, os
+        tts = gTTS(text=text, lang=lang)
+        tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False, dir="/tmp")
+        tts.save(tmp.name)
+        size = os.path.getsize(tmp.name)
+        return FileResponse(tmp.name, media_type="audio/mpeg",
+                            filename="zio_speech.mp3",
+                            headers={"X-TTS-Lang": lang, "X-TTS-Size": str(size)})
+    except Exception as e:
+        return JSONResponse({"error": f"TTS failed: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/stt")
+async def speech_to_text(request: Request):
+    """Speech-to-text using speech_recognition + Google STT (with ffmpeg conversion)."""
+    try:
+        form = await request.form()
+        audio_file = form.get("audio")
+        lang = form.get("lang", "es")
+        if not audio_file:
+            return JSONResponse({"error": "No audio file provided"}, status_code=400)
+        content = await audio_file.read()
+        import tempfile, os, subprocess
+        suffix = ".wav"
+        if hasattr(audio_file, "filename") and audio_file.filename:
+            suffix = os.path.splitext(audio_file.filename)[1] or ".wav"
+        tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False, dir="/tmp")
+        tmp.write(content)
+        tmp.close()
+        # Convert non-wav formats to wav via ffmpeg
+        wav_path = tmp.name
+        if suffix.lower() not in (".wav", ".flac", ".aiff"):
+            wav_path = tmp.name.rsplit(".", 1)[0] + ".wav"
+            try:
+                subprocess.run(
+                    ["ffmpeg", "-y", "-i", tmp.name, "-ar", "16000", "-ac", "1", wav_path],
+                    capture_output=True, timeout=15
+                )
+            except Exception:
+                wav_path = tmp.name  # fall back to original
+        # Use speech_recognition + Google Web STT
+        try:
+            import speech_recognition as sr
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_path) as source:
+                audio = recognizer.record(source)
+            lang_map = {"es": "es-MX", "en": "en-US", "fr": "fr-FR", "de": "de-DE"}
+            sr_lang = lang_map.get(lang, lang)
+            text = recognizer.recognize_google(audio, language=sr_lang)
+            os.unlink(tmp.name)
+            if wav_path != tmp.name:
+                os.unlink(wav_path)
+            return {"status": "ok", "text": text, "language": lang}
+        except sr.UnknownValueError:
+            os.unlink(tmp.name)
+            if wav_path != tmp.name:
+                os.unlink(wav_path)
+            return {"status": "ok", "text": "", "language": lang, "note": "No speech detected"}
+        except Exception as e:
+            # Last resort: try whisper if available
+            try:
+                import whisper
+                model = whisper.load_model("tiny")
+                result = model.transcribe(tmp.name, language=lang)
+                os.unlink(tmp.name)
+                if wav_path != tmp.name:
+                    os.unlink(wav_path)
+                return {"status": "ok", "text": result.get("text", ""), "language": result.get("language", lang)}
+            except Exception:
+                os.unlink(tmp.name)
+                if wav_path != tmp.name and os.path.exists(wav_path):
+                    os.unlink(wav_path)
+                return JSONResponse({"error": f"STT failed: {str(e)}"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": f"STT failed: {str(e)}"}, status_code=500)
 
 
 @app.post("/api/audio/process")
@@ -4432,13 +5485,23 @@ async def zio_websocket(websocket: WebSocket):
                         reply = result.get("outputs", {}).get("text",
                             result.get("outputs", {}).get("zio_msg", str(result.get("outputs", ""))))
                         intent = result.get("intent", "general")
+                        generation = result.get("outputs", {}).get("generation")
+                        media_url = result.get("outputs", {}).get("media_url", "")
+                        media_type = result.get("outputs", {}).get("media_type", "")
                     else:
                         chat_result = await asyncio.to_thread(call_provider_chat, provider_name, user_msg, config, context)
                         reply = chat_result.get("response", "")
                         intent = "provider_" + provider_name
+                        generation = None
+                        media_url = ""
+                        media_type = ""
 
                     latency_ms = int((__import__("time").time() - t0) * 1000)
                     knowledge_base.add_message("zio", reply, session_id=session_id, intent=intent)
+
+                    # If generation produced a file, send it as a 'generated' message
+                    if generation:
+                        await websocket.send_json({"type": "generated", "result": generation})
 
                     await websocket.send_json({"type": "stream_start", "message": ""})
                     words = reply.split(" ")
@@ -4448,7 +5511,7 @@ async def zio_websocket(websocket: WebSocket):
                     await websocket.send_json({
                         "type": "stream_end",
                         "intent": intent,
-                        "outputs": {"text": reply},
+                        "outputs": {"text": reply, "media_url": media_url, "media_type": media_type},
                         "latency_ms": latency_ms,
                     })
                 except Exception as e:
@@ -6560,7 +7623,7 @@ SSO_PLANS = {
         "mail_domains": ["zinemotion.com.mx"],
         "zio_daily_messages": 20,
         "storage_mb": 500,
-        "services": ["ZIO AI", "Game Center", "Settings"],
+        "services": ["ZIO AI", "ZICORE Mail", "VHost", "ZiBank", "ZICORE App", "Game Center", "Settings"],
     },
     "basic": {
         "name": "Basic",
@@ -6569,7 +7632,7 @@ SSO_PLANS = {
         "mail_domains": ["zinemotion.com.mx"],
         "zio_daily_messages": 100,
         "storage_mb": 2048,
-        "services": ["ZIO AI", "Materializer", "Game Center", "Settings", "Knowledge Base"],
+        "services": ["ZIO AI", "ZICORE Mail", "VHost", "ZiBank", "ZICORE App", "Materializer", "Game Center", "Settings", "Knowledge Base"],
     },
     "pro": {
         "name": "Pro",
@@ -6578,7 +7641,7 @@ SSO_PLANS = {
         "mail_domains": ["zinemotion.com.mx", "zicore.space"],
         "zio_daily_messages": -1,
         "storage_mb": 10240,
-        "services": ["ZIO AI", "Materializer", "Mission Control", "Flight Simulator", "Engineering", "Game Center", "Settings", "Knowledge Base"],
+        "services": ["ZIO AI", "ZICORE Mail", "VHost", "ZiBank", "ZICORE App", "Materializer", "Mission Control", "Flight Simulator", "Engineering", "Game Center", "Settings", "Knowledge Base"],
     },
     "ultimate": {
         "name": "Ultimate",
@@ -6689,6 +7752,9 @@ async def sso_login(request: Request):
         result = sso.login(username, password, service="zicore-web", ip_address=client_ip, user_agent=ua)
 
         if not result.get("success"):
+            # 2FA required — return pending state (not an error)
+            if result.get("requires_2fa"):
+                return {"status": "ok", "requires_2fa": True, "user_id": result["user_id"], "message": "Two-factor code required"}
             return {"status": "error", "error": result.get("error", "Login failed")}
 
         # Sync plan to mail system
@@ -6810,6 +7876,90 @@ async def sso_confirm_reset(request: Request):
             return {"status": "error", "error": reset_result.get("error", "Reset failed")}
 
         return {"status": "ok", "message": "Password reset successfully"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ─── Two-Factor Authentication (TOTP) ────────────────────────────────────────
+
+@app.post("/api/sso/2fa/setup")
+async def sso_2fa_setup(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+        result = sso.setup_2fa(user["id"])
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error")}
+        return {"status": "ok", "secret": result["secret"], "provisioning_uri": result["provisioning_uri"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/2fa/verify")
+async def sso_2fa_verify(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+        data = await request.json()
+        code = data.get("code", "").strip()
+        if not code or len(code) != 6:
+            return {"status": "error", "error": "Code must be 6 digits"}
+        result = sso.verify_and_enable_2fa(user["id"], code)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error")}
+        return {"status": "ok", "message": result.get("message")}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/2fa/disable")
+async def sso_2fa_disable(request: Request):
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Not authenticated"}, status_code=401)
+        data = await request.json()
+        password = data.get("password", "")
+        if not password:
+            return {"status": "error", "error": "Password is required to disable 2FA"}
+        result = sso.disable_2fa(user["id"], password)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error")}
+        return {"status": "ok", "message": result.get("message")}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/2fa/complete-login")
+async def sso_2fa_complete_login(request: Request):
+    """Complete login after 2FA verification."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        data = await request.json()
+        user_id = data.get("user_id")
+        code = data.get("code", "").strip()
+        if not user_id or not code:
+            return {"status": "error", "error": "user_id and code are required"}
+        # Verify the 2FA code
+        result = sso.verify_2fa_code(int(user_id), code)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error")}
+        # Complete the login
+        client_ip = request.client.host if request.client else "unknown"
+        ua = request.headers.get("User-Agent", "")
+        login_result = sso.login_2fa_complete(int(user_id), service="zicore-web", ip_address=client_ip, user_agent=ua)
+        if not login_result.get("success"):
+            return {"status": "error", "error": login_result.get("error")}
+        return {"status": "ok", "token": login_result["token"], "expires_at": login_result["expires_at"], "user": login_result["user"]}
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -7236,6 +8386,350 @@ async def sso_admin_stats(request: Request):
         }}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/grant-all-defaults")
+async def sso_grant_all_defaults(request: Request):
+    """Grant all default services to one user or all users. Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+
+        data = await request.json()
+        target_user_id = data.get("user_id")  # None = all users
+
+        result = sso.grant_all_defaults(target_user_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+
+        return {"status": "ok", "granted": result["granted"], "skipped": result["skipped"], "users_processed": result["users_processed"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ─── ZiUsers Admin API ────────────────────────────────────────────────────────
+
+PROTECTED_ACCOUNTS = {"zicore", "admin", "zinemotion", "z"}
+
+
+@app.get("/api/ziusers/stats")
+async def ziusers_stats(request: Request):
+    """Return aggregate SSO statistics. Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+        result = sso.stats()
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "stats": result}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/ziusers/services")
+async def ziusers_list_services(request: Request):
+    """List all available services. Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+        result = sso.list_services()
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "services": result["services"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/ziusers/audit")
+async def ziusers_audit_log(request: Request):
+    """Get audit log with optional filters. Query params: user_id, action, limit (default 50). Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+        user_id_param = request.query_params.get("user_id")
+        action_param = request.query_params.get("action")
+        limit_param = request.query_params.get("limit", "50")
+        uid = int(user_id_param) if user_id_param else None
+        limit = int(limit_param) if limit_param else 50
+        result = sso.get_audit_log(user_id=uid, action=action_param, limit=limit)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "entries": result["entries"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/ziusers/list")
+async def ziusers_list(request: Request):
+    """List all users with services and session counts. Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+        result = sso.list_users(include_inactive=True)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        users_enriched = []
+        for u in result["users"]:
+            svc_result = sso.get_user_services(u["id"])
+            sess_result = sso.get_active_sessions(u["id"])
+            u["services"] = svc_result.get("services", []) if svc_result.get("success") else []
+            u["session_count"] = len(sess_result.get("sessions", [])) if sess_result.get("success") else 0
+            users_enriched.append(u)
+        return {"status": "ok", "users": users_enriched}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/ziusers/{user_id}")
+async def ziusers_get(request: Request, user_id: int):
+    """Get single user with full details, services, and active sessions. Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        user = await get_current_user(request)
+        err = _require_admin(user)
+        if err:
+            return err
+        result = sso.get_user(user_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "User not found")}
+        u = result["user"]
+        svc_result = sso.get_user_services(user_id)
+        sess_result = sso.get_active_sessions(user_id)
+        u["services"] = svc_result.get("services", []) if svc_result.get("success") else []
+        u["sessions"] = sess_result.get("sessions", []) if sess_result.get("success") else []
+        return {"status": "ok", "user": u}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.put("/api/ziusers/{user_id}")
+async def ziusers_update(request: Request, user_id: int):
+    """Update user (email, display_name, role). Admin only. Protected accounts cannot have role changed."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        data = await request.json()
+        email = data.get("email")
+        display_name = data.get("display_name")
+        role = data.get("role")
+        if role is not None:
+            target = sso.get_user(user_id)
+            if target.get("success") and target["user"]["username"] in PROTECTED_ACCOUNTS:
+                return JSONResponse({"status": "error", "error": "Cannot change role of a protected account"}, status_code=403)
+        result = sso.update_user(user_id, email=email, display_name=display_name, role=role)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "user": result["user"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/ziusers/{user_id}/grant-service")
+async def ziusers_grant_service(request: Request, user_id: int):
+    """Grant a service to a user. Body: {service_id, role?}. Admin only. Prevent self-demotion."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        data = await request.json()
+        service_id = data.get("service_id")
+        role = data.get("role", "user")
+        if not service_id:
+            return JSONResponse({"status": "error", "error": "service_id is required"}, status_code=400)
+        if admin_user and user_id == admin_user.get("id") and role != "admin":
+            return JSONResponse({"status": "error", "error": "Admin cannot self-demotion"}, status_code=403)
+        result = sso.grant_service(user_id, int(service_id), role)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "message": f"Service {service_id} granted with role '{role}'"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.delete("/api/ziusers/{user_id}/revoke-service")
+async def ziusers_revoke_service(request: Request, user_id: int):
+    """Revoke a service from a user. Body: {service_id}. Admin only. Prevent revoking last admin."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        data = await request.json()
+        service_id = data.get("service_id")
+        if not service_id:
+            return JSONResponse({"status": "error", "error": "service_id is required"}, status_code=400)
+        service_id = int(service_id)
+        svc_info = sso.get_service(service_id)
+        if svc_info.get("success") and svc_info["service"]["name"] == "ZiUsers":
+            target = sso.get_user(user_id)
+            if target.get("success") and target["user"]["username"] in PROTECTED_ACCOUNTS:
+                return JSONResponse({"status": "error", "error": "Cannot revoke ZiUsers from a protected account"}, status_code=403)
+        result = sso.revoke_service(user_id, service_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "message": f"Service {service_id} revoked"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/ziusers/{user_id}/reset-password")
+async def ziusers_reset_password(request: Request, user_id: int):
+    """Admin reset password. Body: {new_password}. Admin only. Protected accounts cannot be reset."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        data = await request.json()
+        new_password = data.get("new_password", "")
+        if not new_password:
+            return JSONResponse({"status": "error", "error": "new_password is required"}, status_code=400)
+        target = sso.get_user(user_id)
+        if target.get("success") and target["user"]["username"] in PROTECTED_ACCOUNTS:
+            return JSONResponse({"status": "error", "error": "Cannot reset password of a protected account"}, status_code=403)
+        result = sso.admin_reset_password(user_id, new_password)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "message": "Password reset successfully"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/ziusers/{user_id}/deactivate")
+async def ziusers_deactivate(request: Request, user_id: int):
+    """Deactivate a user. Admin only. Protected accounts and self-deactivation prevented."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        if admin_user and user_id == admin_user.get("id"):
+            return JSONResponse({"status": "error", "error": "Cannot deactivate yourself"}, status_code=403)
+        target = sso.get_user(user_id)
+        if target.get("success") and target["user"]["username"] in PROTECTED_ACCOUNTS:
+            return JSONResponse({"status": "error", "error": "Cannot deactivate a protected account"}, status_code=403)
+        result = sso.deactivate_user(user_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "message": "User deactivated"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/ziusers/{user_id}/activate")
+async def ziusers_activate(request: Request, user_id: int):
+    """Activate a previously deactivated user. Admin only."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        target = sso.get_user(user_id)
+        if not target.get("success"):
+            return JSONResponse({"status": "error", "error": "User not found"}, status_code=404)
+        if target["user"]["is_active"]:
+            return {"status": "ok", "message": "User is already active"}
+        result = sso.update_user(user_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        sso.conn.execute("UPDATE users SET is_active = 1, updated_at = ? WHERE id = ?", (sso._now(), user_id))
+        sso.conn.commit()
+        sso._log_audit(user_id, "activated")
+        return {"status": "ok", "message": "User activated"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.delete("/api/ziusers/{user_id}")
+async def ziusers_delete(request: Request, user_id: int):
+    """Permanently delete a user. Admin only. Protected accounts cannot be deleted."""
+    try:
+        if sso is None:
+            return JSONResponse({"status": "error", "error": "SSO not available"}, status_code=503)
+        admin_user = await get_current_user(request)
+        err = _require_admin(admin_user)
+        if err:
+            return err
+        target = sso.get_user(user_id)
+        if target.get("success") and target["user"]["username"] in PROTECTED_ACCOUNTS:
+            return JSONResponse({"status": "error", "error": "Cannot delete a protected account"}, status_code=403)
+        result = sso.delete_user(user_id)
+        if not result.get("success"):
+            return {"status": "error", "error": result.get("error", "Failed")}
+        return {"status": "ok", "message": "User deleted"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/capacity")
+async def system_capacity():
+    """Return system capacity analysis for monitoring dashboard."""
+    import psutil
+    cpu_percent = psutil.cpu_percent(interval=1)
+    mem = psutil.virtual_memory()
+    disk = psutil.disk_usage("/")
+
+    # Ollama status
+    ollama_models = 0
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get("http://localhost:11434/api/tags")
+            if r.status_code == 200:
+                ollama_models = len(r.json().get("models", []))
+    except Exception:
+        pass
+
+    return {
+        "status": "ok",
+        "cpu_percent": round(cpu_percent, 1),
+        "cpu_cores": psutil.cpu_count(),
+        "cpu_80_limit": round(psutil.cpu_count() * 0.8, 1),
+        "ram_total_mb": round(mem.total / 1024 / 1024),
+        "ram_used_mb": round(mem.used / 1024 / 1024),
+        "ram_available_mb": round(mem.available / 1024 / 1024),
+        "ram_80_limit_mb": round(mem.total * 0.8 / 1024 / 1024),
+        "disk_total_gb": round(disk.total / 1024 / 1024 / 1024, 1),
+        "disk_used_gb": round(disk.used / 1024 / 1024 / 1024, 1),
+        "disk_free_gb": round(disk.free / 1024 / 1024 / 1024, 1),
+        "disk_80_limit_gb": round(disk.total * 0.8 / 1024 / 1024 / 1024, 1),
+        "ollama_models": ollama_models,
+    }
 
 
 # --- Crypto Payments ---
@@ -8481,7 +9975,8 @@ def _fetch_provider_models(provider: str, prov_config: dict) -> dict:
     api_key = prov_config.get("api_key", "")
     config_models = prov_config.get("models", [])
 
-    if provider == "ollama":
+    # Treat all Ollama-compatible providers the same (local, VPS, .68)
+    if provider in ("ollama", "zicore_native", "uncensored_68"):
         try:
             data = _request_json(f"{base_url}/api/tags", timeout=5)
             models = []
@@ -8898,7 +10393,18 @@ async def agent_chat(body: dict):
     config = load_config()
     active = config.get("zio_engine", {}).get("active_provider", "ollama")
     result = call_provider_chat(active, message, config)
-    return {"status": "ok", "response": result.get("response", ""), "session_id": session_id}
+    resp = result.get("response", "")
+    tools_used = []
+    if "[TOOL:" in resp:
+        import re as _re
+        tools_used = _re.findall(r"\[TOOL:(\w+)\]", resp)
+    return {
+        "status": "ok",
+        "response": resp,
+        "session_id": session_id,
+        "tools_used": tools_used,
+        "mode": body.get("mode", "build"),
+    }
 
 
 @app.get("/api/agent/sessions")
@@ -9598,25 +11104,51 @@ async def ollama_proxy(path: str, request: Request):
         body = await request.body()
         from urllib.parse import urlparse
         parsed = urlparse(target)
-        conn = http.client.HTTPConnection(parsed.hostname, parsed.port or 11434, timeout=120)
+        conn = http.client.HTTPConnection(parsed.hostname, parsed.port or 11434, timeout=180)
         headers = {k: v for k, v in request.headers.items()
                    if k.lower() not in ("host", "transfer-encoding")}
         conn.request(method, parsed.path, body=body, headers=headers)
         resp = conn.getresponse()
-        resp_body = resp.read()
         ct = resp.getheader("content-type", "application/json")
-        return JSONResponse(
-            content=json.loads(resp_body) if "json" in ct else resp_body.decode("utf-8", errors="replace"),
-            status_code=resp.status,
-            media_type=ct,
-        )
+
+        # Check if this is a streaming request
+        is_streaming = False
+        if method == "POST" and body:
+            try:
+                req_data = json.loads(body)
+                is_streaming = req_data.get("stream", False)
+            except Exception:
+                pass
+
+        if is_streaming:
+            def stream_generator():
+                try:
+                    while True:
+                        chunk = resp.read(512)
+                        if not chunk:
+                            break
+                        yield chunk
+                finally:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+
+            return StreamingResponse(
+                stream_generator(),
+                media_type="application/x-ndjson",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+        else:
+            resp_body = resp.read()
+            conn.close()
+            return JSONResponse(
+                content=json.loads(resp_body) if "json" in ct else resp_body.decode("utf-8", errors="replace"),
+                status_code=resp.status,
+                media_type=ct,
+            )
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=502)
-    finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
 
 # Static mounts for new output types
 _AUDIO_DIR = OUTPUT_DIR / "audio"

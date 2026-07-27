@@ -12,6 +12,10 @@ class ZICoreGenerator:
     def __init__(self):
         self.output_dir = Path(__file__).parent.parent / "output"
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        # Media folders for organized storage
+        self.media_dir = Path(__file__).parent.parent / "data" / "media"
+        for cat in ("images", "audio", "video", "3d", "models"):
+            (self.media_dir / cat).mkdir(parents=True, exist_ok=True)
         self._media_engine = None
         self._engine_3d = None
 
@@ -66,10 +70,16 @@ class ZICoreGenerator:
             img = Image.new("RGB", (width, height), (6, 6, 20))
             draw = ImageDraw.Draw(img)
             draw.text((width//4, height//2), f"ZICORE: {prompt[:40]}", fill=(0, 200, 255))
-            save_path = str(self.output_dir / "images" / f"img_{int(time.time())}.png")
+            ts = int(time.time())
+            # Save to media/images/ for organized storage
+            save_path = str(self.media_dir / "images" / f"img_{ts}.png")
             Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             img.save(save_path, "PNG")
-            return {"file": save_path, "prompt": prompt, "status": "fallback"}
+            # Also save to output/ for backward compat
+            fallback = str(self.output_dir / "images" / f"img_{ts}.png")
+            Path(fallback).parent.mkdir(parents=True, exist_ok=True)
+            img.save(fallback, "PNG")
+            return {"file": save_path, "media_url": f"/media/images/img_{ts}.png", "media_type": "image", "prompt": prompt, "status": "fallback"}
         except Exception as e:
             return {"status": "fallback", "message": f"Image generation: {prompt}", "error": str(e)}
 
@@ -91,14 +101,20 @@ class ZICoreGenerator:
                 s = 0.4 * math.sin(2 * math.pi * 440 * t)
                 env = min(1.0, min(t * 5, (duration - t) * 5))
                 samples.append(int(s * env * 32767))
-            save_path = str(self.output_dir / f"sound_{int(time.time())}.wav")
+            ts = int(time.time())
+            # Save to media/audio/
+            save_path = str(self.media_dir / "audio" / f"sound_{ts}.wav")
             with wave.open(save_path, 'w') as wf:
                 wf.setnchannels(1)
                 wf.setsampwidth(2)
                 wf.setframerate(sample_rate)
                 for s in samples:
                     wf.writeframes(struct.pack('<h', max(-32768, min(32767, s))))
-            return {"file": save_path, "duration": duration, "status": "ok"}
+            # Also save to output/ for backward compat
+            fallback = str(self.output_dir / f"sound_{ts}.wav")
+            import shutil
+            shutil.copy2(save_path, fallback)
+            return {"file": save_path, "media_url": f"/media/audio/sound_{ts}.wav", "media_type": "audio", "duration": duration, "status": "ok"}
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
@@ -118,14 +134,32 @@ class ZICoreGenerator:
     def generate_3d(self, prompt: str, mesh_type: str = "auto", **kwargs) -> Dict[str, Any]:
         engine = self._get_engine_3d()
         if engine:
-            return engine.generate_from_prompt(prompt)
+            result = engine.generate_from_prompt(prompt)
+            # Copy to media/3d/ if not already there
+            if result.get("path") and not str(result["path"]).startswith(str(self.media_dir)):
+                import shutil
+                ts = int(time.time())
+                dest = str(self.media_dir / "3d" / f"mesh_{ts}.stl")
+                try:
+                    shutil.copy2(result["path"], dest)
+                    result["media_url"] = f"/media/3d/mesh_{ts}.stl"
+                    result["media_type"] = "3d"
+                except Exception:
+                    pass
+            return result
         try:
             import trimesh
             mesh = trimesh.creation.icosphere(subdivisions=2, radius=1.0)
-            output_path = self.output_dir / "meshes" / f"mesh_{int(time.time())}.stl"
+            ts = int(time.time())
+            # Save to media/3d/
+            output_path = self.media_dir / "3d" / f"mesh_{ts}.stl"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             mesh.export(str(output_path))
-            return {"status": "ok", "path": str(output_path), "vertices": len(mesh.vertices), "faces": len(mesh.faces)}
+            # Also save to output/ for backward compat
+            fallback = self.output_dir / "meshes" / f"mesh_{ts}.stl"
+            fallback.parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(str(fallback))
+            return {"status": "ok", "path": str(output_path), "media_url": f"/media/3d/mesh_{ts}.stl", "media_type": "3d", "vertices": len(mesh.vertices), "faces": len(mesh.faces)}
         except Exception as e:
             return {"status": "error", "error": str(e)}
 

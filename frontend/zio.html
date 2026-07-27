@@ -327,48 +327,70 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 #ollamaBody .loading{color:var(--glow);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
-/* Config Modal */
-#configModal{
-  display:none;position:fixed;inset:0;z-index:5000;
-  background:rgba(0,0,0,0.8);align-items:center;justify-content:center;
+/* Unified Config Box */
+.cfg-unified{display:flex;flex-direction:column;gap:8px}
+.cfg-unified .param-group{margin:0}
+.cfg-unified .param-label{display:flex;justify-content:space-between;align-items:center}
+.cfg-unified .param-val{color:var(--glow);font-weight:600}
+.cfg-unified .model-select{
+  width:100%;padding:5px 8px;background:rgba(0,0,0,0.4);
+  border:1px solid rgba(0,229,255,0.08);color:var(--glow);
+  font-size:10px;font-family:inherit;cursor:pointer;
 }
-#configModal.active{display:flex}
-#configContent{
-  width:600px;max-height:80vh;background:rgba(10,14,22,0.98);
-  border:1px solid rgba(0,229,255,0.15);border-radius:4px;overflow-y:auto;
-}
-#configContent .cfg-header{
-  padding:12px 16px;border-bottom:1px solid rgba(0,229,255,0.1);
-  font-size:10px;letter-spacing:3px;color:var(--glow);display:flex;align-items:center;justify-content:space-between;
-}
-#configContent .cfg-body{padding:16px}
-#configContent .cfg-section{margin-bottom:16px}
-#configContent .cfg-title{font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;text-transform:uppercase}
-#configContent .cfg-row{display:flex;gap:8px;margin:4px 0;align-items:center}
-#configContent .cfg-label{font-size:9px;color:var(--text2);width:100px;flex-shrink:0}
-#configContent .cfg-input{
-  flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);
-  color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;
-}
-#configContent .cfg-input:focus{border-color:rgba(0,229,255,0.25)}
-#configContent .cfg-toggle{
-  width:32px;height:16px;background:rgba(255,255,255,0.1);border-radius:8px;
-  cursor:pointer;position:relative;transition:all .2s;
-}
-#configContent .cfg-toggle.on{background:rgba(0,229,255,0.3)}
-#configContent .cfg-toggle::after{
-  content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;
-  background:#666;border-radius:50%;transition:all .2s;
-}
-#configContent .cfg-toggle.on::after{left:18px;background:var(--glow)}
-#configContent .cfg-close{
-  padding:3px 10px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);
-  color:var(--glow);cursor:pointer;font-size:9px;letter-spacing:1px;
-}
-#configContent .cfg-save{
-  padding:6px 20px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);
-  color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;margin-top:12px;width:100%;
-}
+.cfg-unified .model-select:focus{border-color:rgba(0,229,255,0.25);outline:none}
+
+/* ---- Task Monitor ---- */
+#taskPanel{position:fixed;right:0;top:44px;bottom:0;width:360px;background:#080c14;border-left:1px solid #1e2330;z-index:200;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
+#taskPanel.open{transform:translateX(0)}
+.tp-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #1e2330;flex-shrink:0}
+.tp-head .tp-title{color:var(--glow);font-size:11px;font-weight:bold;letter-spacing:1px}
+.tp-head .tp-close{background:none;border:none;color:#889;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
+.tp-head .tp-close:hover{background:#161b22;color:#e0e0e0}
+.tp-filters{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid #1e2330;flex-shrink:0}
+.tp-filter{background:#161b22;border:1px solid #2a2e3a;color:#889;padding:3px 10px;border-radius:12px;font-size:9px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.tp-filter.active{border-color:var(--glow);color:var(--glow);background:rgba(0,229,255,0.08)}
+.tp-filter:hover{border-color:#3a3e4a;color:#bbb}
+.tp-type-filter{background:none;border:1px solid transparent;color:#5a6070;padding:2px 6px;border-radius:4px;font-size:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;letter-spacing:0.5px}
+.tp-type-filter.active{border-color:rgba(255,255,255,0.15);color:#e0e0e0;background:rgba(255,255,255,0.04)}
+.tp-type-filter:hover{color:#bbb}
+.tp-list{flex:1;overflow-y:auto;padding:8px}
+.tp-empty{text-align:center;color:#4a5060;font-size:11px;padding:40px 16px;line-height:1.6}
+.task-item{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:10px 12px;margin-bottom:6px;transition:border-color 0.3s}
+.task-item:hover{border-color:#2a2e3a}
+.task-item .ti-row{display:flex;align-items:center;justify-content:space-between}
+.task-item .ti-name{color:#e0e0e0;font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-item .ti-status{font-size:8px;padding:2px 8px;border-radius:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;margin-left:8px}
+.ti-status.running{background:rgba(0,229,255,0.12);color:#00e5ff}
+.ti-status.queued{background:rgba(255,170,0,0.12);color:#ffaa00}
+.ti-status.done{background:rgba(0,255,136,0.12);color:#00ff88}
+.ti-status.error{background:rgba(255,68,68,0.12);color:#ff4444}
+.task-item .ti-meta{color:#5a6070;font-size:9px;margin-top:4px;display:flex;align-items:center;gap:8px}
+.task-item .ti-bar{height:3px;background:#1a1e28;border-radius:2px;margin-top:6px;overflow:hidden}
+.task-item .ti-bar-fill{height:100%;border-radius:2px;transition:width 0.4s;background:linear-gradient(90deg,var(--glow),var(--accent))}
+.task-item .ti-result{margin-top:6px;padding:6px 8px;background:#0a0e18;border:1px solid #1a1e28;border-radius:6px;font-size:10px;color:#889;max-height:60px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;font-family:monospace}
+.task-item .ti-cancel{background:none;border:1px solid #333;color:#666;font-size:9px;padding:2px 8px;border-radius:4px;cursor:pointer;margin-top:4px;transition:all 0.2s}
+.task-item .ti-cancel:hover{border-color:#ff4444;color:#ff4444}
+
+/* ---- Project Slider ---- */
+#projectSlider{position:fixed;left:260px;top:44px;bottom:0;width:320px;background:#080c14;border-right:1px solid #1e2330;z-index:190;transform:translateX(calc(-100% - 260px));transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden;box-shadow:4px 0 20px rgba(0,0,0,0.5)}
+#projectSlider.open{transform:translateX(0)}
+.ps-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #1e2330;flex-shrink:0}
+.ps-head .ps-title{color:var(--accent);font-size:11px;font-weight:bold;letter-spacing:1px}
+.ps-head .ps-close{background:none;border:none;color:#889;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
+.ps-head .ps-close:hover{background:#161b22;color:#e0e0e0}
+.ps-list{flex:1;overflow-y:auto;padding:8px}
+.ps-empty{text-align:center;color:#4a5060;font-size:11px;padding:40px 16px;line-height:1.6}
+.project-item{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+.project-item:hover{border-color:var(--accent);background:#0f1320}
+.project-item.active{border-color:var(--accent);background:rgba(124,77,255,0.06)}
+.project-item .pi-row{display:flex;align-items:center;justify-content:space-between}
+.project-item .pi-name{color:#e0e0e0;font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-item .pi-badge{font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,77,255,0.12);color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.project-item .pi-path{color:#5a6070;font-size:9px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace}
+.project-item .pi-desc{color:#6a7080;font-size:10px;margin-top:4px;line-height:1.4}
+.project-item .pi-modified{color:#3a3e4a;font-size:9px;margin-top:3px}
+.ps-create{display:flex;align-items:center;justify-content:center;gap:6px;background:#161b22;border:1px dashed #2a2e3a;color:#889;padding:10px;border-radius:8px;cursor:pointer;font-size:11px;transition:all 0.2s;margin-top:4px;font-family:inherit}
+.ps-create:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,77,255,0.04)}
 </style>
 <link rel="stylesheet" href="/css/zicore-library.css">
 </head>
@@ -385,12 +407,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       <button class="ztn-btn" onclick="window.open('/zicore','_blank')"><svg viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Portal</button>
       <button class="ztn-btn" onclick="window.open('/dashboard','_blank')"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>Visualizer</button>
       <button class="ztn-btn" onclick="window.open('/materializer','_blank')"><svg viewBox="0 0 14 14"><path d="M7 1L12 4v6L7 13L2 10V4L7 1z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M7 7L12 4M7 7L2 4M7 7v6" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>Materializer</button>
-      <button class="ztn-btn" onclick="window.open('/mail-portal','_blank')"><svg viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1"/><path d="M1 3l6 5 6-5" fill="none" stroke="currentColor" stroke-width="1"/></svg>Mail</button>
       <button class="ztn-btn" onclick="window.open('/zivault','_blank')"><svg viewBox="0 0 14 14"><path d="M7 1L2 4v4c0 3 2.2 5.5 5 6 2.8-0.5 5-3 5-6V4L7 1z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>ZiVault</button>
       <button class="ztn-btn" onclick="window.open('/settings','_blank')"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2" fill="none" stroke="currentColor" stroke-width="1"/></svg>Settings</button>
     </div>
     <div class="zio-topnav-right">
       <div class="ztn-status" id="connStatus">CONNECTING...</div>
+      <button id="projectSliderBtn" onclick="toggleProjectSlider()" title="Projects">&#9776;</button>
+      <button id="taskMonitorBtn" onclick="toggleTaskPanel()" title="Task Monitor">
+        <svg viewBox="0 0 14 14" style="width:14px;height:14px"><rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 4h6M4 7h6M4 10h4" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+        <span class="badge" id="taskBadge">0</span>
+      </button>
       <button class="ztn-back" onclick="window.location.href='/'"><svg viewBox="0 0 14 14" style="width:10px;height:10px"><path d="M9 2L4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Portal</button>
     </div>
   </nav>
@@ -398,38 +424,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   <div id="main">
     <div id="sidebar">
       <div class="section">
-        <div class="section-title">ACTIVE PROVIDER</div>
-        <div id="providerList"></div>
-      </div>
-      <div class="section">
-        <div class="section-title">MODEL</div>
-        <div class="model-row">
-          <select class="model-select" id="modelSelect"><option>zicore_native</option></select>
-        </div>
-        <div class="ollama-status" id="ollamaStatus">
-          <div class="dot offline" id="ollamaDot"></div>
-          <span id="ollamaStatusText">Checking...</span>
-        </div>
-        <div class="ollama-btn" id="openOllama">
-          <span>&#9881;</span> Ollama Settings
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-title">PARAMETERS</div>
-        <div class="param-group">
-          <div class="param-label">Temperature</div>
-          <input type="range" class="param-slider" id="tempSlider" min="0" max="200" value="70">
-          <div class="param-val" id="tempVal">0.70</div>
-        </div>
-        <div class="param-group">
-          <div class="param-label">Max Tokens</div>
-          <input type="range" class="param-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256">
-          <div class="param-val" id="maxTokVal">4096</div>
-        </div>
-        <div class="param-group">
-          <div class="param-label">Top P</div>
-          <input type="range" class="param-slider" id="topPSlider" min="0" max="100" value="90">
-          <div class="param-val" id="topPVal">0.90</div>
+        <div class="section-title">CONFIGURATION</div>
+        <div class="cfg-unified">
+          <div class="param-group">
+            <div class="param-label">Provider</div>
+            <select class="model-select" id="providerSelect" onchange="switchProvider(this.value)" style="width:100%"></select>
+          </div>
+          <div class="param-group">
+            <div class="param-label">Model</div>
+            <select class="model-select" id="modelSelect" onchange="switchModel(this.value)" style="width:100%"><option>Loading...</option></select>
+          </div>
+          <div class="ollama-status" id="ollamaStatus">
+            <div class="dot offline" id="ollamaDot"></div>
+            <span id="ollamaStatusText">Checking...</span>
+          </div>
+          <div class="param-group">
+            <div class="param-label">Temperature <span class="param-val" id="tempVal">0.70</span></div>
+            <input type="range" class="param-slider" id="tempSlider" min="0" max="200" value="70" oninput="var v=(this.value/100).toFixed(2);document.getElementById('tempVal').textContent=v;saveParam('temperature',parseFloat(v));">
+          </div>
+          <div class="param-group">
+            <div class="param-label">Max Tokens <span class="param-val" id="maxTokVal">4096</span></div>
+            <input type="range" class="param-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256" oninput="document.getElementById('maxTokVal').textContent=this.value;saveParam('max_tokens',parseInt(this.value));">
+          </div>
+          <div class="param-group">
+            <div class="param-label">Top P <span class="param-val" id="topPVal">0.90</span></div>
+            <input type="range" class="param-slider" id="topPSlider" min="0" max="100" value="90" oninput="var v=(this.value/100).toFixed(2);document.getElementById('topPVal').textContent=v;saveParam('top_p',parseFloat(v));">
+          </div>
         </div>
       </div>
       <div class="section">
@@ -446,8 +466,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         <div class="provider-item" id="btnImportChat">
           <div class="provider-dot disabled"></div>Import Chat
         </div>
-        <div class="provider-item" id="openConfig">
-          <div class="provider-dot enabled"></div>Configuration
+        <div class="provider-item" id="btnImportAssets">
+          <div class="provider-dot enabled" style="background:#00ff88"></div>Import Assets
         </div>
       </div>
     </div>
@@ -476,8 +496,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
           <button class="quick-cmd" onclick="quickCmd('run code: ')">Run Code</button>
         </div>
         <textarea id="chatInput" rows="1" placeholder="Type message... (Enter to send, Shift+Enter for new line)"></textarea>
+        <button id="camBtn" title="Open camera" onclick="toggleCamera()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">📷</button>
+        <button id="voiceBtn" title="Auto-speak responses" onclick="toggleAutoSpeak()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">🔇</button>
         <button id="micBtn" title="Voice input" onclick="toggleMic()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">🎤</button>
         <button id="sendBtn">SEND</button>
+      </div>
+      <div id="cameraPanel" style="display:none;margin-top:8px;position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#000">
+        <video id="cameraFeed" autoplay playsinline style="width:100%;max-height:200px;object-fit:cover"></video>
+        <canvas id="cameraCanvas" style="display:none"></canvas>
+        <div style="position:absolute;top:6px;left:8px;font-size:9px;color:var(--glow);letter-spacing:1px;text-transform:uppercase;background:rgba(0,0,0,0.6);padding:2px 8px;border-radius:4px">📷 ZIO VISION</div>
+        <div style="position:absolute;bottom:6px;right:8px;display:flex;gap:6px">
+          <button onclick="captureAndAnalyze()" style="background:var(--glow);color:#000;border:none;padding:5px 12px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">ANALYZE</button>
+          <button onclick="toggleCamera()" style="background:rgba(255,85,85,0.8);color:#fff;border:none;padding:5px 10px;border-radius:4px;font-size:10px;cursor:pointer">CLOSE</button>
+        </div>
       </div>
     </div>
   </div>
@@ -523,16 +554,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         <div class="pull-status" id="pullStatus"></div>
       </div>
     </div>
-  </div>
-</div>
-
-<div id="configModal">
-  <div id="configContent">
-    <div class="cfg-header">
-      <span>SYSTEM CONFIGURATION</span>
-      <button class="cfg-close" id="closeConfig">CLOSE</button>
-    </div>
-    <div class="cfg-body" id="configBody"></div>
   </div>
 </div>
 
@@ -583,14 +604,50 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   ];
 
   function init(){
-    renderProviders();
-    connectWS();
-    loadConfig();
-    setupInput();
-    setupButtons();
-    setupSliders();
-    setupGenPanel();
-    loadChatHistory();
+    var steps=[renderProviderSelect,connectWS,loadConfig,setupInput,setupButtons,setupSliders,setupGenPanel,loadChatHistory];
+    steps.forEach(function(fn){
+      try{fn();}catch(e){console.error('Init error in '+fn.name+':',e);}
+    });
+  }
+
+  function renderProviderSelect(){
+    var sel=document.getElementById('providerSelect');
+    if(!sel)return;
+    sel.innerHTML='';
+    providers.forEach(function(p){
+      var o=document.createElement('option');
+      o.value=p.id;o.textContent=p.name;
+      if(p.id===activeProvider)o.selected=true;
+      sel.appendChild(o);
+    });
+  }
+
+  function switchProvider(pid){
+    activeProvider=pid;
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine.active_provider=pid;
+    var provCfg=config.providers[pid]||{};
+    if(provCfg.default_model){
+      config.zio_engine.active_model=provCfg.default_model;
+    }
+    fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
+    .then(function(){
+      updateModelSelect();
+      addMsg('system','Switched to provider: '+pid);
+    }).catch(function(){});
+  }
+
+  function switchModel(model){
+    if(!config.providers)config.providers={};
+    if(!config.providers[activeProvider])config.providers[activeProvider]={};
+    config.providers[activeProvider].default_model=model;
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine.active_model=model;
+    fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
+    .then(function(){
+      document.getElementById('footerModel').textContent=model;
+      addMsg('system','Model: '+model);
+    }).catch(function(){});
   }
 
   function setupGenPanel(){
@@ -639,6 +696,59 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       else addMsg('error','Error de voz: '+e.error);
     };
     _micRecognition.start();
+  }
+
+  /* ── Auto-speak mode ─────────────────────────── */
+  var _autoSpeak=false;
+  function toggleAutoSpeak(){
+    _autoSpeak=!_autoSpeak;
+    var btn=document.getElementById('voiceBtn');
+    if(_autoSpeak){btn.textContent='🔊';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';}
+    else{btn.textContent='🔇';btn.style.borderColor='rgba(0,229,255,0.15)';btn.style.color='var(--text2)';}
+  }
+
+  /* ── Camera (Webcam) ─────────────────────────── */
+  var _cameraStream=null;
+  function toggleCamera(){
+    var panel=document.getElementById('cameraPanel');
+    var video=document.getElementById('cameraFeed');
+    var camBtn=document.getElementById('camBtn');
+    if(_cameraStream){
+      _cameraStream.getTracks().forEach(function(t){t.stop();});
+      _cameraStream=null;
+      video.srcObject=null;
+      panel.style.display='none';
+      camBtn.style.borderColor='rgba(0,229,255,0.15)';camBtn.style.color='var(--text2)';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}}).then(function(stream){
+      _cameraStream=stream;
+      video.srcObject=stream;
+      panel.style.display='block';
+      camBtn.style.borderColor='var(--glow)';camBtn.style.color='var(--glow)';
+    }).catch(function(e){
+      addMsg('error','Camera access denied: '+e.message);
+    });
+  }
+
+  function captureAndAnalyze(){
+    var video=document.getElementById('cameraFeed');
+    var canvas=document.getElementById('cameraCanvas');
+    if(!video.srcObject){addMsg('error','Open camera first');return;}
+    canvas.width=video.videoWidth||640;canvas.height=video.videoHeight||480;
+    canvas.getContext('2d').drawImage(video,0,0);
+    var base64=canvas.toDataURL('image/jpeg',0.7);
+    document.getElementById('chatInput').value='Analyze this image';
+    quickCmd('analyze image from camera');
+    fetch(API_BASE+'/api/vision/analyze',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},
+      body:JSON.stringify({image:base64})
+    }).then(function(r){return r.json();}).then(function(d){
+      var result=d.result||d;
+      var labels=(result.labels||[]).join(', ');
+      var desc=result.analysis||result.description||JSON.stringify(result).substring(0,300);
+      addMsg('ai','📷 **Vision Analysis**\nLabels: '+labels+'\n'+desc);
+    }).catch(function(e){addMsg('error','Vision analysis failed: '+e.message);});
   }
 
   function renderProviders(){
@@ -745,47 +855,50 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   function updateModelSelect(){
     var ms=document.getElementById('modelSelect');
     ms.innerHTML='<option>Loading models...</option>';
-    if(activeProvider==='zicore_native'){
-      ms.innerHTML='<option>zicore_native</option>';
-      document.getElementById('footerModel').textContent='zicore_native';
-      return;
-    }
     var provCfg=config.providers[activeProvider];
     if(!provCfg||!provCfg.enabled){
       ms.innerHTML='<option>Provider not enabled</option>';
       document.getElementById('footerModel').textContent='none';
       return;
     }
-    fetch('/api/provider/models/'+activeProvider)
+    var apiProvider=activeProvider;
+    fetch('/api/provider/models/'+apiProvider)
     .then(function(r){return r.json();})
     .then(function(d){
       var models=d.models||[];
-      if(models.length===0){
-        models=provCfg.models||[];
+      if(models.length===0){models=provCfg.models||[];}
+      if(activeProvider==='ollama'){
+        models=models.filter(function(m){return m.indexOf('gemma')===0;});
       }
-      ms.innerHTML='';
-      if(models.length===0){
-        ms.innerHTML='<option>No models available</option>';
-        document.getElementById('footerModel').textContent='none';
-        return;
-      }
-      models.forEach(function(m){
-        var o=document.createElement('option');
-        o.value=m;o.textContent=m;
-        ms.appendChild(o);
-      });
-      document.getElementById('footerModel').textContent=models[0]||activeProvider;
+      _populateModelSelect(ms,models,provCfg);
     })
     .catch(function(){
       var models=provCfg.models||[];
-      ms.innerHTML='';
-      models.forEach(function(m){
-        var o=document.createElement('option');
-        o.value=m;o.textContent=m;
-        ms.appendChild(o);
-      });
-      document.getElementById('footerModel').textContent=models[0]||activeProvider;
+      if(activeProvider==='ollama'){
+        models=models.filter(function(m){return m.indexOf('gemma')===0;});
+      }
+      _populateModelSelect(ms,models,provCfg);
     });
+  }
+
+  function _populateModelSelect(ms,models,provCfg){
+    ms.innerHTML='';
+    if(models.length===0){
+      ms.innerHTML='<option>No models available</option>';
+      document.getElementById('footerModel').textContent='none';
+      return;
+    }
+    var currentDefault=(activeProvider==='zicore_native')
+      ?(config.zio_engine&&config.zio_engine.active_model)
+      :(provCfg.default_model||'');
+    models.forEach(function(m){
+      var o=document.createElement('option');
+      o.value=m;
+      o.textContent=m+(m===currentDefault?' (active)':'');
+      if(m===currentDefault)o.selected=true;
+      ms.appendChild(o);
+    });
+    document.getElementById('footerModel').textContent=currentDefault||models[0]||activeProvider;
   }
 
   function loadConfig(){
@@ -799,6 +912,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         if(te.top_p!=null){document.getElementById('topPSlider').value=te.top_p*100;document.getElementById('topPVal').textContent=te.top_p.toFixed(2);}
       }
       updateModelSelect();
+      renderProviderSelect();
       renderProviders();
     }).catch(function(){});
   }
@@ -850,14 +964,49 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       else reply=JSON.stringify(outputs).substring(0,500);
       addMsg('zio',reply,data.intent,data.latency_ms);
       document.getElementById('footerLatency').textContent=(data.latency_ms||0)+'ms';
+      if(window._activeTaskId){updateTask(window._activeTaskId,{status:'done',progress:100,result:'intent='+(data.intent||'unknown')+' | '+(data.latency_ms||0)+'ms'});window._activeTaskId=null;}
     }else if(data.type==='generating'){
       addMsg('system','Generating '+data.generating_type+'...');
+      var genToolMap={image:'image',sound:'sound',video:'video','3d':'mesh',mesh:'mesh'};
+      window._genTaskId=addTask('Generate: '+data.generating_type,'running','media',genToolMap[data.generating_type]||'system');
     }else if(data.type==='generated'){
       var r=data.result||{};
-      if(r.file){
-        showOutput(r.file,r.filename||'output');
+      var file=r.file||r.path||'';
+      var mediaType=r.media_type||'';
+      var mediaUrl=r.media_url||'';
+      // Add inline media to chat
+      var lastMsg=document.querySelector('.msg.zio:last-child');
+      if(lastMsg){
+        var bubble=lastMsg.querySelector('.bubble');
+        if(bubble&&file){
+          var fname=file.split(/[/\\]/).pop();
+          var ext=(fname.split('.').pop()||'').toLowerCase();
+          var mediaHtml='';
+          if(['png','jpg','jpeg','gif','bmp','webp'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><img src="'+escHtml(mediaUrl||'/output/'+fname)+'" alt="'+escHtml(fname)+'" style="max-width:300px;max-height:200px;border-radius:8px;margin-top:8px;cursor:pointer" onclick="window.open(this.src)"><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp3','wav','ogg','flac','m4a','aac'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><audio controls src="'+escHtml(mediaUrl||'/output/'+fname)+'" style="max-width:100%;margin-top:8px"></audio><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp4','avi','mkv','mov','webm'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><video controls src="'+escHtml(mediaUrl||'/output/'+fname)+'" style="max-width:300px;margin-top:8px"></video><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['stl','obj','glb','gltf'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><div style="background:#1a1a2e;border-radius:8px;padding:8px;margin-top:8px;text-align:center"><canvas id="inlineMesh_'+Date.now()+'" width="280" height="200" style="border-radius:4px"></canvas><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div><button onclick="downloadMesh(\''+escHtml(mediaUrl||'/output/'+fname)+'\',\''+escHtml(fname)+'\')" style="margin-top:4px;padding:4px 12px;background:#00e5ff;color:#000;border:none;border-radius:4px;cursor:pointer;font-size:11px">DOWNLOAD</button></div></div>';
+          }else{
+            mediaHtml='<div class="inline-media"><div style="background:#1a1a2e;border-radius:8px;padding:8px;margin-top:8px"><a href="'+escHtml(mediaUrl||'/output/'+fname)+'" target="_blank" style="color:#00e5ff">'+escHtml(fname)+'</a></div></div>';
+          }
+          bubble.insertAdjacentHTML('beforeend', mediaHtml);
+        }
+      }else{
+        // No previous zio message, create a new one
+        var m=addMsg('zio','');
+        if(m){
+          var bubble=m.querySelector('.bubble');
+          if(bubble&&file){
+            var fname=file.split(/[/\\]/).pop();
+            bubble.innerHTML='<div class="inline-media"><a href="'+escHtml(mediaUrl||'/output/'+fname)+'" target="_blank" style="color:#00e5ff">'+escHtml(fname)+'</a></div>';
+          }
+        }
       }
-      addMsg('zio','Generated: '+(r.filename||r.file||'done'));
+      if(window._genTaskId){updateTask(window._genTaskId,{status:'done',progress:100,result:r.filename||r.file||'done'});window._genTaskId=null;}
     }else if(data.type==='stream_start'){
       var el=addMsg('zio','');
     }else if(data.type==='stream_chunk'){
@@ -872,8 +1021,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         metaEl.textContent='intent='+data.intent+(data.latency_ms?' latency='+data.latency_ms+'ms':'');
         last.appendChild(metaEl);
       }
+      // Add inline media if media_url present
+      if(last&&data.outputs&&data.outputs.media_url){
+        var bubble=last.querySelector('.bubble');
+        if(bubble){
+          var mUrl=data.outputs.media_url;
+          var mType=data.outputs.media_type||'';
+          var fname=mUrl.split('/').pop();
+          var ext=(fname.split('.').pop()||'').toLowerCase();
+          var mediaHtml='';
+          if(['png','jpg','jpeg','gif','bmp','webp'].indexOf(ext)>=0||mType==='image'){
+            mediaHtml='<div class="inline-media"><img src="'+escHtml(mUrl)+'" alt="'+escHtml(fname)+'" style="max-width:300px;max-height:200px;border-radius:8px;margin-top:8px;cursor:pointer" onclick="window.open(this.src)"><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp3','wav','ogg','flac','m4a','aac'].indexOf(ext)>=0||mType==='audio'){
+            mediaHtml='<div class="inline-media"><audio controls src="'+escHtml(mUrl)+'" style="max-width:100%;margin-top:8px"></audio><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp4','avi','mkv','mov','webm'].indexOf(ext)>=0||mType==='video'){
+            mediaHtml='<div class="inline-media"><video controls src="'+escHtml(mUrl)+'" style="max-width:300px;margin-top:8px"></video><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['stl','obj','glb','gltf'].indexOf(ext)>=0||mType==='3d'){
+            mediaHtml='<div class="inline-media"><div style="background:#1a1a2e;border-radius:8px;padding:8px;margin-top:8px;text-align:center"><canvas id="inlineMesh_'+Date.now()+'" width="280" height="200" style="border-radius:4px"></canvas><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div><button onclick="downloadMesh(\''+escHtml(mUrl)+'\',\''+escHtml(fname)+'\')" style="margin-top:4px;padding:4px 12px;background:#00e5ff;color:#000;border:none;border-radius:4px;cursor:pointer;font-size:11px">DOWNLOAD</button></div></div>';
+          }
+          if(mediaHtml) bubble.insertAdjacentHTML('beforeend', mediaHtml);
+        }
+      }
+      if(window._activeTaskId){updateTask(window._activeTaskId,{status:'done',progress:100,result:'stream done | intent='+(data.intent||'unknown')});window._activeTaskId=null;}
     }else if(data.type==='error'){
       addMsg('error',data.message);
+      if(window._activeTaskId){updateTask(window._activeTaskId,{status:'error',result:data.message});window._activeTaskId=null;}
     }else if(data.type==='config'){
       config=data.config;
       updateModelSelect();
@@ -889,11 +1061,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     var meta='';
     if(intent)meta='intent='+intent;
     if(latency)meta+=' latency='+latency+'ms';
-    d.innerHTML='<div class="label">'+label+'</div><div class="bubble">'+escHtml(text)+'</div>'+(meta?'<div class="meta">'+meta+'</div>':'');
+    d.innerHTML='<div class="label">'+label+'</div><div class="bubble">'+((type==='zio'||type==='ai')?renderMd(text):escHtml(text))+'</div>'+(meta?'<div class="meta">'+meta+'</div>':'');
     m.appendChild(d);
     scrollChat();
     msgCount++;
     document.getElementById('footerMsgCount').textContent=msgCount;
+    // Auto-speak AI responses when enabled
+    if(_autoSpeak && (type==='ai'||type==='zio') && text && text.length>2){
+      var clean=text.replace(/[*_`#\[\]]/g,'').replace(/\[.*?\]/g,'').substring(0,500);
+      speakText(clean);
+    }
     return d;
   }
 
@@ -904,6 +1081,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 
   function escHtml(s){
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function renderMd(text){
+    if(!text)return '';
+    var s=escHtml(text);
+    s=s.replace(/^### (.+)$/gm,'<h4>$1</h4>');
+    s=s.replace(/^## (.+)$/gm,'<h3>$1</h3>');
+    s=s.replace(/^# (.+)$/gm,'<h2>$1</h2>');
+    s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    s=s.replace(/\*(.+?)\*/g,'<em>$1</em>');
+    s=s.replace(/`([^`\n]+)`/g,'<code style="background:rgba(0,229,255,0.1);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>');
+    s=s.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre style="background:#0a0a1a;border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:10px;overflow-x:auto;margin:8px 0;font-size:12px"><code>$2</code></pre>');
+    s=s.replace(/^\- (.+)$/gm,'<li>$1</li>');
+    s=s.replace(/(<li>.*<\/li>)/s,'<ul style="margin:4px 0;padding-left:20px">$1</ul>');
+    s=s.replace(/\n/g,'<br>');
+    return s;
   }
 
   function loadChatHistory(){
@@ -938,10 +1130,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     inp.value='';
     inp.style.height='36px';
     addMsg('user',msg);
+    window._activeTaskId=addTask('Chat: '+msg.substring(0,40)+(msg.length>40?'...':''),'running',activeProvider,'chat');
     if(ws&&ws.readyState===WebSocket.OPEN){
       ws.send(JSON.stringify({command:'stream',payload:{message:msg,module:activeProvider,session_id:sessionId}}));
     }else{
       addMsg('error','Not connected to server');
+      updateTask(window._activeTaskId,{status:'error',result:'Not connected'});
     }
   }
 
@@ -1006,16 +1200,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         document.getElementById('pullStatus').innerHTML='<span style="color:#f44">Network error</span>';
       });
     });
-    document.getElementById('openConfig').addEventListener('click',function(){
-      document.getElementById('configModal').classList.add('active');
-      renderConfig();
-    });
-    document.getElementById('closeConfig').addEventListener('click',function(){
-      document.getElementById('configModal').classList.remove('active');
-    });
-    document.getElementById('configModal').addEventListener('click',function(e){
-      if(e.target===this)this.classList.remove('active');
-    });
     document.getElementById('meshModalClose').addEventListener('click',function(){
       document.getElementById('meshModal').classList.remove('active');
     });
@@ -1078,6 +1262,134 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
         document.getElementById('importUploadBtn').disabled=false;
       });
     });
+    document.getElementById('btnImportAssets').addEventListener('click',function(){
+      document.getElementById('importAssetsModal').style.display='flex';
+      document.getElementById('assetPreview').style.display='none';
+      document.getElementById('assetUploadBtn').style.display='none';
+      document.getElementById('assetUploadStatus').textContent='';
+      loadAssetList();
+    });
+    var dropZone=document.getElementById('assetDropZone');
+    var fileInput=document.getElementById('assetFileInput');
+    dropZone.addEventListener('click',function(){fileInput.click();});
+    dropZone.addEventListener('dragover',function(e){e.preventDefault();this.style.borderColor='rgba(0,255,136,0.8)';this.style.background='rgba(0,255,136,0.05)';});
+    dropZone.addEventListener('dragleave',function(){this.style.borderColor='rgba(0,255,136,0.3)';this.style.background='none';});
+    dropZone.addEventListener('drop',function(e){e.preventDefault();this.style.borderColor='rgba(0,255,136,0.3)';this.style.background='none';handleAssetFiles(e.dataTransfer.files);});
+    fileInput.addEventListener('change',function(){if(this.files.length)handleAssetFiles(this.files);});
+    document.getElementById('assetUploadBtn').addEventListener('click',uploadAssets);
+  }
+
+  var _assetFiles=[];
+  function handleAssetFiles(files){
+    _assetFiles=[];
+    var prev=document.getElementById('assetPreview');
+    prev.style.display='block';
+    prev.innerHTML='';
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      _assetFiles.push(f);
+      var ext=f.name.split('.').pop().toLowerCase();
+      var is3d=['stl','glb','obj','fbx'].indexOf(ext)>-1;
+      var isImg=['png','jpg','jpeg'].indexOf(ext)>-1;
+      var isAudio=['mp3','wav','ogg'].indexOf(ext)>-1;
+      var div=document.createElement('div');
+      div.style.cssText='display:inline-block;margin:4px;padding:8px;border:1px solid rgba(0,255,136,0.2);border-radius:6px;text-align:center;min-width:100px;vertical-align:top;background:rgba(0,255,136,0.03);';
+      if(isImg){
+        var img=document.createElement('img');
+        img.src=URL.createObjectURL(f);
+        img.style.cssText='width:90px;height:60px;object-fit:cover;border-radius:4px;';
+        div.appendChild(img);
+      }else if(isAudio){
+        var audio=document.createElement('div');
+        audio.style.cssText='width:90px;height:60px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#ff6b9d;';
+        audio.textContent='\u266B';
+        div.appendChild(audio);
+      }else if(is3d){
+        var mesh3d=document.createElement('div');
+        mesh3d.style.cssText='width:90px;height:60px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#00ff88;';
+        mesh3d.textContent='\u25C6';
+        div.appendChild(mesh3d);
+      }
+      var nameEl=document.createElement('div');
+      nameEl.style.cssText='font-size:9px;color:#889;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;';
+      nameEl.textContent=f.name;
+      div.appendChild(nameEl);
+      var sizeEl=document.createElement('div');
+      sizeEl.style.cssText='font-size:8px;color:#555;';
+      sizeEl.textContent=Math.round(f.size/1024)+'KB';
+      div.appendChild(sizeEl);
+      prev.appendChild(div);
+    }
+    document.getElementById('assetUploadBtn').style.display='block';
+    document.getElementById('assetUploadStatus').textContent=files.length+' file(s) selected';
+  }
+
+  function uploadAssets(){
+    if(!_assetFiles.length)return;
+    var status=document.getElementById('assetUploadStatus');
+    var btn=document.getElementById('assetUploadBtn');
+    btn.disabled=true;btn.textContent='UPLOADING...';
+    var uploaded=0;var total=_assetFiles.length;var errors=0;
+    function uploadNext(){
+      if(uploaded+errors>=total){
+        btn.disabled=false;btn.textContent='UPLOAD';
+        status.innerHTML='<span style="color:'+(errors?'#ff5555':'#00ff88')+'">'+uploaded+' uploaded'+(errors?', '+errors+' failed':'')+'</span>';
+        loadAssetList();_assetFiles=[];
+        return;
+      }
+      var f=_assetFiles[uploaded+errors];
+      var fd=new FormData();
+      fd.append('file',f);
+      status.textContent='Uploading '+(uploaded+errors+1)+'/'+total+': '+f.name+'...';
+      fetch('/api/assets/upload',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+        if(d.status==='ok')uploaded++;else errors++;
+        uploadNext();
+      }).catch(function(){errors++;uploadNext();});
+    }
+    uploadNext();
+  }
+
+  function loadAssetList(){
+    var list=document.getElementById('assetList');
+    list.innerHTML='<div style="font-size:9px;color:#555">Loading assets...</div>';
+    fetch('/api/assets/list').then(function(r){return r.json();}).then(function(d){
+      var files=d.files||[];
+      if(!files.length){list.innerHTML='<div style="font-size:9px;color:#555">No assets imported yet.</div>';return;}
+      var html='';
+      files.forEach(function(f){
+        var ext=f.name.split('.').pop().toLowerCase();
+        var is3d=['stl','glb','obj'].indexOf(ext)>-1;
+        var isImg=['png','jpg','jpeg'].indexOf(ext)>-1;
+        var isAudio=['mp3','wav','ogg'].indexOf(ext)>-1;
+        var icon=is3d?'\u25C6':isImg?'\u25A1':'\u266B';
+        var color=is3d?'#00ff88':isImg?'#7c4dff':'#ff6b9d';
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid rgba(0,255,136,0.08);">';
+        html+='<span style="color:'+color+';font-size:14px;">'+icon+'</span>';
+        html+='<span style="flex:1;font-size:11px;color:#c8d0dc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+f.name+'</span>';
+        html+='<span style="font-size:9px;color:#555;">'+Math.round(f.size/1024)+'KB</span>';
+        if(is3d)html+='<button onclick="previewAsset3D(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);color:#00ff88;border-radius:3px;cursor:pointer;">VIEW</button>';
+        if(isImg)html+='<button onclick="previewAssetImg(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);color:#7c4dff;border-radius:3px;cursor:pointer;">VIEW</button>';
+        if(isAudio)html+='<button onclick="previewAssetAudio(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(255,107,157,0.1);border:1px solid rgba(255,107,157,0.2);color:#ff6b9d;border-radius:3px;cursor:pointer;">PLAY</button>';
+        html+='<button onclick="downloadAsset(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:#00e5ff;border-radius:3px;cursor:pointer;">\u2193</button>';
+        html+='</div>';
+      });
+      list.innerHTML=html;
+    }).catch(function(){list.innerHTML='<div style="font-size:9px;color:#f44">Error loading assets</div>';});
+  }
+
+  function previewAsset3D(name){openMeshFull('/api/assets/'+name);}
+  function previewAssetImg(name){
+    var prev=document.getElementById('assetPreview');
+    prev.style.display='block';
+    prev.innerHTML='<img src="/api/assets/'+name+'" style="max-width:100%;max-height:200px;border-radius:4px;border:1px solid rgba(124,77,255,0.3);">';
+  }
+  function previewAssetAudio(name){
+    var prev=document.getElementById('assetPreview');
+    prev.style.display='block';
+    prev.innerHTML='<audio controls src="/api/assets/'+name+'" style="width:100%;"></audio>';
+  }
+  function downloadAsset(name){
+    var a=document.createElement('a');a.href='/api/assets/'+name;a.download=name;a.click();
   }
 
   function setupSliders(){
@@ -1236,71 +1548,235 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     }catch(e){}
   }
 
-  function renderConfig(){
-    var body=document.getElementById('configBody');
-    var html='<div class="cfg-section"><div class="cfg-title">ZIO Engine</div>';
-    html+='<div class="cfg-row"><div class="cfg-label">Provider</div><select class="cfg-input" id="cfgProvider">';
-    providers.forEach(function(p){
-      html+='<option value="'+p.id+'"'+(p.id===activeProvider?' selected':'')+'>'+p.name+'</option>';
-    });
-    html+='</select></div></div>';
-
-    Object.keys(config.providers||{}).forEach(function(pid){
-      var p=config.providers[pid];
-      html+='<div class="cfg-section"><div class="cfg-title">'+(p.name||pid)+'</div>';
-      html+='<div class="cfg-row"><div class="cfg-label">Enabled</div>';
-      html+='<div class="cfg-toggle '+(p.enabled?'on':'')+'" data-provider="'+pid+'" onclick="this.classList.toggle(\'on\')"></div></div>';
-      html+='<div class="cfg-row"><div class="cfg-label">API Key</div>';
-      html+='<input class="cfg-input" type="password" value="'+(p.api_key||'')+'" data-provider="'+pid+'" data-field="api_key" placeholder="sk-..."></div>';
-      html+='<div class="cfg-row"><div class="cfg-label">Base URL</div>';
-      html+='<input class="cfg-input" value="'+(p.base_url||'')+'" data-provider="'+pid+'" data-field="base_url"></div>';
-      html+='<div class="cfg-row"><div class="cfg-label">Default Model</div>';
-      html+='<input class="cfg-input" value="'+(p.default_model||'')+'" data-provider="'+pid+'" data-field="default_model"></div>';
-      html+='</div>';
-    });
-
-    html+='<div class="cfg-section"><div class="cfg-title">Theme</div>';
-    html+='<div class="cfg-row"><select class="cfg-input" id="cfgTheme">';
-    ['midnight','cyber','matrix','solar','arctic','blood','forest'].forEach(function(t){
-      html+='<option value="'+t+'"'+(config.theme===t?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>';
-    });
-    html+='</select></div></div>';
-
-    html+='<button class="cfg-save" id="cfgSave">SAVE CONFIGURATION</button>';
-    body.innerHTML=html;
-
-    document.getElementById('cfgSave').addEventListener('click',function(){
-      document.querySelectorAll('.cfg-input[data-provider]').forEach(function(el){
-        var pid=el.dataset.provider;
-        var field=el.dataset.field;
-        if(pid&&field&&config.providers[pid]){
-          config.providers[pid][field]=el.value;
-        }
-      });
-      document.querySelectorAll('.cfg-toggle').forEach(function(el){
-        var pid=el.dataset.provider;
-        if(pid&&config.providers[pid]){
-          config.providers[pid].enabled=el.classList.contains('on');
-        }
-      });
-      var newTheme=document.getElementById('cfgTheme').value;
-      config.theme=newTheme;
-      applyTheme(newTheme);
-      var newProvider=document.getElementById('cfgProvider').value;
-      activeProvider=newProvider;
-      renderProviders();
-      updateModelSelect();
-      fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}).then(function(){
-        addMsg('system','Configuration saved.');
-      }).catch(function(){});
-    });
-  }
-
   init();
 })();
 </script>
 
+<script>
+/* ======== TASK MONITOR ======== */
+var _tasks=[];
+var _taskIdSeq=0;
+var _taskFilter='all';
+var _taskTypeFilter='all';
+
+function toggleTaskPanel(){
+  var p=document.getElementById('taskPanel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))renderTasks();
+}
+
+function addTask(name,status,meta,toolType){
+  var id=++_taskIdSeq;
+  var t={id:id,name:name,status:status||'running',meta:meta||'',tool:toolType||'chat',progress:0,result:null,created:Date.now()};
+  _tasks.unshift(t);
+  renderTasks();
+  updateTaskBadge();
+  return id;
+}
+
+function updateTask(id,changes){
+  for(var i=0;i<_tasks.length;i++){
+    if(_tasks[i].id===id){
+      for(var k in changes)_tasks[i][k]=changes[k];
+      break;
+    }
+  }
+  renderTasks();
+  updateTaskBadge();
+}
+
+function removeTask(id){
+  _tasks=_tasks.filter(function(t){return t.id!==id;});
+  renderTasks();
+  updateTaskBadge();
+}
+
+function filterTasks(f,el){
+  _taskFilter=f;
+  document.querySelectorAll('.tp-filter').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderTasks();
+}
+
+function filterTaskType(f,el){
+  _taskTypeFilter=f;
+  document.querySelectorAll('.tp-type-filter').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderTasks();
+}
+
+function updateTaskBadge(){
+  var c=_tasks.filter(function(t){return t.status==='running'||t.status==='queued';}).length;
+  var b=document.getElementById('taskBadge');
+  b.textContent=c;
+  b.classList.toggle('active',c>0);
+}
+
+function formatDuration(ms){
+  if(ms<1000)return ms+'ms';
+  if(ms<60000)return (ms/1000).toFixed(1)+'s';
+  return (ms/60000).toFixed(0)+'m '+((ms%60000)/1000).toFixed(0)+'s';
+}
+
+var TOOL_COLORS={chat:'#00e5ff',image:'#7c4dff',sound:'#ff6b9d',video:'#ffaa00',mesh:'#00ff88',code:'#58a6ff',system:'#889',query:'#f97316'};
+var TOOL_LABELS={chat:'CHAT',image:'IMAGE',sound:'AUDIO',video:'VIDEO',mesh:'3D MESH',code:'CODE',system:'SYS',query:'QUERY'};
+
+function renderTasks(){
+  var list=document.getElementById('taskList');
+  var filtered=_tasks;
+  if(_taskFilter!=='all')filtered=filtered.filter(function(t){return t.status===_taskFilter;});
+  if(_taskTypeFilter!=='all')filtered=filtered.filter(function(t){return t.tool===_taskTypeFilter;});
+  if(!filtered.length){
+    list.innerHTML='<div class="tp-empty">'+(_tasks.length?'No tasks match filter':'No active tasks')+'</div>';
+    return;
+  }
+  var html='';
+  filtered.forEach(function(t){
+    var elapsed=Date.now()-t.created;
+    var statusCls=t.status==='running'?'running':t.status==='queued'?'queued':t.status==='error'?'error':'done';
+    var toolColor=TOOL_COLORS[t.tool]||'#889';
+    var toolLabel=TOOL_LABELS[t.tool]||t.tool.toUpperCase();
+    var barHtml='';
+    if(t.status==='running'&&t.progress>0){
+      barHtml='<div class="ti-bar"><div class="ti-bar-fill" style="width:'+t.progress+'%"></div></div>';
+    }
+    var resultHtml='';
+    if(t.result!==null&&t.result!==undefined){
+      var txt=typeof t.result==='string'?t.result:JSON.stringify(t.result);
+      if(txt.length>200)txt=txt.substring(0,200)+'...';
+      resultHtml='<div class="ti-result">'+txt+'</div>';
+    }
+    var cancelHtml='';
+    if(t.status==='running'||t.status==='queued'){
+      cancelHtml='<button class="ti-cancel" onclick="updateTask('+t.id+',{status:\'error\',result:\'Cancelled\'})">CANCEL</button>';
+    }
+    html+='<div class="task-item" data-id="'+t.id+'">'
+      +'<div class="ti-row"><span class="ti-name">'+t.name+'</span><span class="ti-status '+statusCls+'">'+t.status+'</span></div>'
+      +'<div class="ti-meta"><span style="color:'+toolColor+';font-weight:600">'+toolLabel+'</span><span>'+t.meta+'</span><span>'+formatDuration(elapsed)+'</span></div>'
+      +barHtml+resultHtml+cancelHtml
+      +'</div>';
+  });
+  list.innerHTML=html;
+}
+
+/* ======== PROJECT SLIDER ======== */
+var _projects={active:'zicore-system',projects:[]};
+
+function toggleProjectSlider(){
+  var p=document.getElementById('projectSlider');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))loadProjects();
+}
+
+function loadProjects(){
+  fetch('/api/projects').then(function(r){return r.json();}).then(function(d){
+    _projects=d;
+    renderProjects();
+  }).catch(function(){renderProjects();});
+}
+
+function selectProject(id){
+  _projects.active=id;
+  fetch('/api/projects/active',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).catch(function(){});
+  renderProjects();
+  var p=_projects.projects.find(function(x){return x.id===id;});
+  if(typeof addMsg==='function'&&p){
+    addMsg('system','Project: '+p.name+' ('+p.path+')');
+  }
+}
+
+function createProject(){
+  var name=prompt('Project name:');
+  if(!name)return;
+  var path=prompt('Project path (folder):','');
+  var desc=prompt('Description:','');
+  fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,path:path,desc:desc})}).then(function(r){return r.json();}).then(function(d){
+    if(d.project){
+      _projects.projects.push(d.project);
+      _projects.active=d.project.id;
+      renderProjects();
+    }
+  }).catch(function(){});
+}
+
+function deleteProject(id,event){
+  event.stopPropagation();
+  if(!confirm('Delete this project?'))return;
+  fetch('/api/projects/'+id,{method:'DELETE'}).then(function(){
+    _projects.projects=_projects.projects.filter(function(p){return p.id!==id;});
+    if(_projects.active===id&&_projects.projects.length)_projects.active=_projects.projects[0].id;
+    renderProjects();
+  }).catch(function(){});
+}
+
+function renderProjects(){
+  var list=document.getElementById('projectList');
+  if(!_projects.projects||!_projects.projects.length){
+    list.innerHTML='<div class="ps-empty">No projects yet</div><button class="ps-create" onclick="createProject()">&#43; New Project</button>';
+    return;
+  }
+  var html='';
+  _projects.projects.forEach(function(p){
+    var isActive=p.id===_projects.active;
+    html+='<div class="project-item'+(isActive?' active':'')+'" onclick="selectProject(\''+p.id+'\')">'
+      +'<div class="pi-row"><span class="pi-name">'+p.name+'</span>'
+      +(p.badge?'<span class="pi-badge">'+p.badge+'</span>':'')
+      +(isActive?'':'<span class="pi-delete" onclick="deleteProject(\''+p.id+'\',event)" style="color:#555;cursor:pointer;font-size:12px;margin-left:6px" title="Delete">&#10005;</span>')
+      +'</div>'
+      +'<div class="pi-path">'+p.path+'</div>'
+      +(p.desc?'<div class="pi-desc">'+p.desc+'</div>':'')
+      +'</div>';
+  });
+  html+='<button class="ps-create" onclick="createProject()">&#43; New Project</button>';
+  list.innerHTML=html;
+}
+
+/* Auto-refresh tasks every 2s */
+setInterval(function(){
+  if(document.getElementById('taskPanel').classList.contains('open'))renderTasks();
+},2000);
+
+/* Init */
+loadProjects();
+renderTasks();
+</script>
+
 <input type="file" id="importFileInput" accept=".json,.jsonl,.txt,.csv" style="display:none">
+
+<div id="taskPanel">
+  <div class="tp-head">
+    <span class="tp-title">TASK MONITOR</span>
+    <button class="tp-close" onclick="toggleTaskPanel()">&#10005;</button>
+  </div>
+  <div class="tp-filters">
+    <button class="tp-filter active" onclick="filterTasks('all',this)">All</button>
+    <button class="tp-filter" onclick="filterTasks('running',this)">Running</button>
+    <button class="tp-filter" onclick="filterTasks('done',this)">Done</button>
+    <button class="tp-filter" onclick="filterTasks('error',this)">Error</button>
+  </div>
+  <div class="tp-filters" style="border-bottom:1px solid #1e2330;padding-top:0">
+    <button class="tp-type-filter active" onclick="filterTaskType('all',this)" style="color:#889">ALL</button>
+    <button class="tp-type-filter" onclick="filterTaskType('chat',this)" style="color:#00e5ff">CHAT</button>
+    <button class="tp-type-filter" onclick="filterTaskType('image',this)" style="color:#7c4dff">IMG</button>
+    <button class="tp-type-filter" onclick="filterTaskType('sound',this)" style="color:#ff6b9d">AUDIO</button>
+    <button class="tp-type-filter" onclick="filterTaskType('mesh',this)" style="color:#00ff88">3D</button>
+    <button class="tp-type-filter" onclick="filterTaskType('code',this)" style="color:#58a6ff">CODE</button>
+    <button class="tp-type-filter" onclick="filterTaskType('video',this)" style="color:#ffaa00">VID</button>
+  </div>
+  <div class="tp-list" id="taskList">
+    <div class="tp-empty">No active tasks</div>
+  </div>
+</div>
+
+<div id="projectSlider">
+  <div class="ps-head">
+    <span class="ps-title">PROJECTS</span>
+    <button class="ps-close" onclick="toggleProjectSlider()">&#10005;</button>
+  </div>
+  <div class="ps-list" id="projectList">
+    <div class="ps-empty">Loading projects...</div>
+  </div>
+</div>
 
 <div id="importModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
   <div style="background:#0d1117;border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:24px;max-width:420px;width:90%;color:#e0e0e0;font-family:monospace;">
@@ -1330,6 +1806,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
       <button id="importUploadBtn" style="flex:1;background:#00e5ff;border:none;color:#000;padding:10px;border-radius:6px;cursor:pointer;font-weight:bold;" disabled>UPLOAD</button>
     </div>
     <div id="importResult" style="margin-top:12px;color:#888;font-size:12px;min-height:18px;"></div>
+  </div>
+</div>
+
+<div id="importAssetsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(0,255,136,0.3);border-radius:12px;padding:24px;max-width:640px;width:92%;max-height:80vh;overflow-y:auto;color:#e0e0e0;font-family:monospace;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="color:#00ff88;font-size:14px;font-weight:bold;">IMPORT ASSETS</span>
+      <button onclick="document.getElementById('importAssetsModal').style.display='none'" style="background:none;border:none;color:#ff5555;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div id="assetDropZone" style="border:2px dashed rgba(0,255,136,0.3);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;">
+      <div style="font-size:24px;color:#00ff88;margin-bottom:8px;">+</div>
+      <div style="font-size:12px;color:#889;">Drop files here or click to select</div>
+      <div style="font-size:10px;color:#555;margin-top:4px;">STL, GLB, OBJ, PNG, JPG, MP3, WAV</div>
+      <input type="file" id="assetFileInput" multiple accept=".stl,.glb,.obj,.fbx,.png,.jpg,.jpeg,.mp3,.wav,.ogg" style="display:none">
+    </div>
+    <div id="assetPreview" style="display:none;margin-bottom:16px;"></div>
+    <div id="assetUploadStatus" style="font-size:11px;color:#889;min-height:16px;margin-bottom:12px;"></div>
+    <div id="assetList" style="margin-bottom:12px;"></div>
+    <button id="assetUploadBtn" style="width:100%;background:#00ff88;border:none;color:#000;padding:10px;border-radius:6px;cursor:pointer;font-weight:bold;display:none;">UPLOAD</button>
   </div>
 </div>
 

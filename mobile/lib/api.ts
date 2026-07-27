@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { authStorage } from './auth';
 
-const BASE_URL = 'https://vps.zicore.space';
+const BASE_URL = 'http://192.168.1.85:4000';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -66,6 +66,22 @@ export const chatAPI = {
 
   sendProvider: (provider: string, message: string) =>
     api.post('/api/provider/chat', { provider, message }),
+};
+
+/* ── Voice ─── */
+export const voiceAPI = {
+  tts: (text: string, lang = 'es') =>
+    api.post('/api/tts', { text, lang }, { responseType: 'blob', timeout: 60000 }),
+
+  stt: (audioUri: string, lang = 'es') => {
+    const form = new FormData();
+    form.append('audio', { uri: audioUri, type: 'audio/m4a', name: 'recording.m4a' } as any);
+    form.append('lang', lang);
+    return api.post('/api/stt', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+  },
 };
 
 /* ── Missions ─── */

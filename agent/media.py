@@ -17,6 +17,11 @@ logger = logging.getLogger("zicore.agent.media")
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Media folders
+MEDIA_DIR = Path(__file__).parent.parent / "data" / "media"
+for _cat in ("images", "audio", "video", "3d", "models"):
+    (MEDIA_DIR / _cat).mkdir(parents=True, exist_ok=True)
+
 
 class MediaEngine:
     def __init__(self):
@@ -71,9 +76,13 @@ class MediaEngine:
         except Exception:
             pass
 
-        save_path = str(OUTPUT_DIR / f"image_{int(time.time())}.png")
+        ts = int(time.time())
+        # Save to media/images/ and output/
+        save_path = str(MEDIA_DIR / "images" / f"img_{ts}.png")
         img.save(save_path, "PNG")
-        return {"file": save_path, "prompt": prompt, "dimensions": f"{width}x{height}", "status": "ok"}
+        fallback = str(OUTPUT_DIR / f"image_{ts}.png")
+        img.save(fallback, "PNG")
+        return {"file": save_path, "media_url": f"/media/images/img_{ts}.png", "media_type": "image", "prompt": prompt, "dimensions": f"{width}x{height}", "status": "ok"}
 
     def _draw_rocket(self, draw, w, h):
         cx, cy = w // 2, h // 2
@@ -196,15 +205,19 @@ class MediaEngine:
         else:
             samples = self._gen_tone(duration, sample_rate)
 
-        save_path = str(OUTPUT_DIR / f"sound_{int(time.time())}.wav")
+        ts = int(time.time())
+        save_path = str(MEDIA_DIR / "audio" / f"sound_{ts}.wav")
         with wave.open(save_path, 'w') as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
             wf.setframerate(sample_rate)
             for s in samples:
                 wf.writeframes(struct.pack('<h', max(-32768, min(32767, int(s * 32767)))))
-
-        return {"file": save_path, "prompt": prompt, "duration": duration, "status": "ok"}
+        # Also save to output/ for backward compat
+        fallback = str(OUTPUT_DIR / f"sound_{ts}.wav")
+        import shutil
+        shutil.copy2(save_path, fallback)
+        return {"file": save_path, "media_url": f"/media/audio/sound_{ts}.wav", "media_type": "audio", "prompt": prompt, "duration": duration, "status": "ok"}
 
     def _gen_alarm(self, dur, sr):
         samples = []
