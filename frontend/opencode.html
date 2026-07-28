@@ -139,17 +139,25 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 @keyframes toolPulse{0%,100%{opacity:1}50%{opacity:0.5}}
 .stats-bar .key-hint{padding:1px 5px;border:1px solid var(--border);border-radius:3px;font-size:9px;color:var(--text3);background:var(--bg3)}
 
-/* Agent mode toggle in topbar */
-.mode-toggle{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-left:8px}
-.mode-btn{padding:4px 12px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--text3);border:none;font-family:var(--font);transition:all .2s}
-.mode-btn.active{background:rgba(0,229,255,0.1);color:var(--cyan)}
-.mode-btn:hover:not(.active){color:var(--text2)}
-.mode-btn.plan.active{background:rgba(124,77,255,0.1);color:var(--purple)}
+/* Persistent Prompt Bar */
+.prompt-bar{border-top:1px solid var(--border);background:var(--glass);padding:12px 20px}
+.prompt-input-wrapper{display:flex;align-items:flex-end;gap:10px}
+.prompt-input-wrapper textarea{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;resize:none;min-height:44px;max-height:160px;line-height:1.5;transition:border-color .2s}
+.prompt-input-wrapper textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,0.1)}
+.prompt-input-wrapper textarea::placeholder{color:var(--text3)}
+.prompt-actions{display:flex;align-items:center;gap:8px}
+.prompt-hints{display:flex;gap:8px;margin-top:8px;padding-left:4px}
+.prompt-hints .hint{font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:3px;color:var(--text3);background:var(--bg3);cursor:pointer;transition:all .2s}
+.prompt-hints .hint:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.05)}
 
-/* Tool activity indicator in chat header */
-.tool-indicator{display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--radius-sm);background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.1);font-size:10px;color:var(--green);font-family:var(--mono)}
-.tool-indicator .spinner{width:10px;height:10px;border:2px solid rgba(0,255,136,0.2);border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite}
-.tool-indicator.hidden{display:none}
+/* Live Connection Bar */
+.live-bar{border-top:1px solid var(--border);background:var(--glass);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.live-status{display:flex;align-items:center;gap:8px;color:var(--green);font-size:11px;font-family:var(--mono)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.live-bar input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color .2s}
+.live-bar input:focus{border-color:var(--cyan)}
+.live-bar input::placeholder{color:var(--text3)}
 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-overlay.show{display:flex}
@@ -184,7 +192,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <span>ZICORE</span>
   </div>
   <div class="topbar-sep"></div>
-  <div class="topbar-title">ZIO Agent</div>
+  <div class="topbar-title">ZIO Agent — OpenCode Direct</div>
   <div class="topbar-right">
     <div class="mode-toggle">
       <div class="mode-btn active" id="modeBuild" onclick="switchMode('build')" title="Tab to toggle">BUILD</div>
@@ -245,6 +253,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <div class="sidebar-tab active" onclick="setTab(this,'all')">All</div>
       <div class="sidebar-tab" onclick="setTab(this,'recent')">Recent</div>
       <div class="sidebar-tab" onclick="setTab(this,'large')">Largest</div>
+      <div class="sidebar-tab" onclick="loadImported()" style="color:var(--cyan);font-weight:800;letter-spacing:1px">ZIO</div>
     </div>
     <div class="session-list" id="sessionList"><div class="loading">Loading...</div></div>
     <div class="sidebar-foot">
@@ -267,10 +276,34 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <p>Powered by OpenCode. Browse coding sessions or connect live to a new agent session.</p>
       </div>
     </div>
+    <!-- Persistent Prompt Input (always visible) -->
+    <div class="prompt-bar" id="promptBar">
+      <div class="prompt-input-wrapper">
+        <textarea id="promptInput" placeholder="Ask ZIO Agent anything... (Ctrl+Enter to send, Tab to switch Build/Plan mode)" rows="1" onkeydown="handlePromptKeydown(event)"></textarea>
+        <div class="prompt-actions">
+          <button class="btn btn-ghost" id="promptModeBtn" onclick="toggleAgentMode()" title="Tab: Switch Build/Plan mode">
+            <span id="promptModeIcon">⚡</span> <span id="promptModeText">BUILD</span>
+          </button>
+          <button class="btn btn-cyan" onclick="sendPrompt()" id="sendPromptBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            Send
+          </button>
+        </div>
+      </div>
+      <div class="prompt-hints">
+        <span class="hint">@file</span><span class="hint">@symbol</span><span class="hint">#session</span><span class="hint">/command</span>
+      </div>
+    </div>
+
+    <!-- Live Connection Bar (when connected) -->
     <div class="live-bar" id="liveBar" style="display:none">
+      <div class="live-status">
+        <span class="live-dot"></span>
+        <span>Live connected to OpenCode agent</span>
+      </div>
       <input type="text" id="liveInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendLive()">
       <button class="btn btn-cyan" onclick="sendLive()">Send</button>
-      <button class="btn btn-red" onclick="disconnectLive()">Stop</button>
+      <button class="btn btn-red" onclick="disconnectLive()">Disconnect</button>
     </div>
     <div class="stats-bar">
       <span class="mode-badge build" id="statMode">BUILD</span>
@@ -311,149 +344,175 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 (function(){var c=document.getElementById('starfield'),x=c.getContext('2d');function rz(){c.width=innerWidth;c.height=innerHeight}rz();addEventListener('resize',rz);var S=[];for(var i=0;i<180;i++)S.push({x:Math.random()*2e3,y:Math.random()*2e3,s:Math.random()*1.2+0.3,p:Math.random()*6.28,sp:Math.random()*0.004+0.001});function d(){x.fillStyle='#04060c';x.fillRect(0,0,c.width,c.height);S.forEach(function(s){s.p+=s.sp;if(s.p>6.28)s.p-=6.28;var o=Math.abs(Math.sin(s.p))*0.5;x.fillStyle='rgba(0,229,255,'+(o*0.45)+')';x.fillRect(s.x%c.width,s.y%c.height,s.s,s.s)});requestAnimationFrame(d)}d()})();
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
 
-// ── State ──
-var allSessions=[],filtered=[],selected=null,liveWs=null,liveOn=false,activeTab='all';
-var agentMode='build';
-var config={},activeProvider='opencode',providers=[
-  {id:'opencode',name:'OpenCode Zen'},
-  {id:'ollama',name:'Ollama (Local)'},
-  {id:'zicore_native',name:'ZICORE Native (VPS)'},
-  {id:'openrouter',name:'OpenRouter'},
-  {id:'openai',name:'OpenAI'},
-  {id:'anthropic',name:'Anthropic'},
-  {id:'groq',name:'Groq'},
-  {id:'deepseek',name:'DeepSeek'},
-  {id:'together',name:'Together AI'}
-];
+// ── OpenCode API Config ──
+var OC_HOST='https://opencode.zicore.space';
+function ocFetch(path,opts){
+  opts=opts||{};opts.headers=opts.headers||{};
+  opts.headers['Content-Type']=opts.headers['Content-Type']||'application/json';
+  return fetch(OC_HOST+path,opts);
+}
 
-// ── Provider/Model Config ──
+// ── State ──
+var allSessions=[],filtered=[],selected=null,liveSSE=null,liveOn=false,activeTab='all';
+var agentMode='build',activeSessionId=null,currentModel='';
+var providers=[],allModels={};
+
+// ── Health Check ──
+async function checkHealth(){
+  try{
+    var r=await ocFetch('/global/health');
+    var d=await r.json();
+    var dot=document.getElementById('ollamaDot');
+    var txt=document.getElementById('ollamaStatusText');
+    if(d.healthy){
+      dot.className='cfg-dot on';
+      txt.textContent='OpenCode v'+d.version+' Online';
+    }else{
+      dot.className='cfg-dot off';
+      txt.textContent='OpenCode Unhealthy';
+    }
+  }catch(e){
+    document.getElementById('ollamaDot').className='cfg-dot off';
+    document.getElementById('ollamaStatusText').textContent='OpenCode Offline';
+  }
+}
+
+// ── Load Providers from OpenCode ──
+async function loadProviders(){
+  try{
+    var r=await ocFetch('/provider');
+    var d=await r.json();
+    providers=d.all||[];
+    allModels={};
+    providers.forEach(function(p){allModels[p.id]=p.models||[];});
+    renderProviderSelect();
+    updateProviderStat();
+  }catch(e){
+    providers=[];
+    renderProviderSelect();
+  }
+}
+
 function renderProviderSelect(){
   var sel=document.getElementById('providerSelect');
   sel.innerHTML='';
-  providers.forEach(function(p){
+  var customProviders=[
+    {id:'vps-ollama',name:'VPS Ollama (ZiCore)'},
+    {id:'ollama',name:'Ollama Local (Windows)'},
+    {id:'opencode',name:'OpenCode Zen'}
+  ];
+  var all=customProviders.concat(providers.filter(function(p){
+    return customProviders.every(function(c){return c.id!==p.id});
+  }));
+  all.forEach(function(p){
     var o=document.createElement('option');
-    o.value=p.id;o.textContent=p.name;
-    if(p.id===activeProvider)o.selected=true;
+    o.value=p.id;o.textContent=p.name||p.id;
+    if(p.id===activeSessionProvider())o.selected=true;
     sel.appendChild(o);
   });
 }
 
+function activeSessionProvider(){
+  if(selected&&selected.model)return selected.model.providerID||'opencode';
+  return currentModel?'':'opencode';
+}
+
 function switchProvider(pid){
-  activeProvider=pid;
-  if(!config.zio_engine)config.zio_engine={};
-  config.zio_engine.active_provider=pid;
-  var provCfg=config.providers&&config.providers[pid]||{};
-  if(provCfg.default_model)config.zio_engine.active_model=provCfg.default_model;
-  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
-  .then(function(){updateModelSelect();updateProviderStat();}).catch(function(){});
+  var models=allModels[pid]||[];
+  updateModelSelect(pid,models);
 }
 
-function switchModel(model){
-  if(!config.providers)config.providers={};
-  if(!config.providers[activeProvider])config.providers[activeProvider]={};
-  config.providers[activeProvider].default_model=model;
-  if(!config.zio_engine)config.zio_engine={};
-  config.zio_engine.active_model=model;
-  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
-  .then(function(){
-    document.getElementById('statModel').textContent=model;
-  }).catch(function(){});
-}
-
-function updateModelSelect(){
+function updateModelSelect(pid,models){
   var ms=document.getElementById('modelSelect');
-  ms.innerHTML='<option>Loading...</option>';
-  var provCfg=(config.providers||{})[activeProvider];
-  if(!provCfg||!provCfg.enabled===false){
-    ms.innerHTML='<option>Select provider first</option>';
-    return;
-  }
-  fetch('/api/provider/models/'+activeProvider)
-  .then(function(r){return r.json();})
-  .then(function(d){
-    var models=d.models||[];
-    if(!models.length&&provCfg)models=provCfg.models||[];
-    if(activeProvider==='ollama')models=models.filter(function(m){return m.indexOf&&m.indexOf('gemma')===0||m.indexOf('qwen')===0;});
-    _fillModels(ms,models,provCfg);
-  })
-  .catch(function(){
-    var models=(provCfg&&provCfg.models)||[];
-    _fillModels(ms,models,provCfg);
-  });
-}
-
-function _fillModels(ms,models,provCfg){
   ms.innerHTML='';
-  if(!models.length){ms.innerHTML='<option>No models</option>';return;}
-  var cur=(provCfg&&provCfg.default_model)||((config.zio_engine||{}).active_model)||'';
+  if(!models||!models.length){ms.innerHTML='<option>No models</option>';return;}
   models.forEach(function(m){
     var name=typeof m==='object'?m.name||m.id:m;
     var o=document.createElement('option');
-    o.value=name;o.textContent=name+(name===cur?' (active)':'');
-    if(name===cur)o.selected=true;
+    o.value=name;o.textContent=name;
     ms.appendChild(o);
   });
-  document.getElementById('statModel').textContent=cur||models[0]||'-';
 }
 
-function loadConfig(){
-  fetch('/api/config').then(function(r){return r.json();}).then(function(c){
-    config=c;
-    if(c.zio_engine){
-      var te=c.zio_engine;
-      activeProvider=te.active_provider||'opencode';
-      if(te.temperature!=null){document.getElementById('tempSlider').value=te.temperature*100;document.getElementById('tempVal').textContent=te.temperature.toFixed(2);}
-      if(te.max_tokens!=null){document.getElementById('maxTokSlider').value=te.max_tokens;document.getElementById('maxTokVal').textContent=te.max_tokens;}
-      if(te.top_p!=null){document.getElementById('topPSlider').value=te.top_p*100;document.getElementById('topPVal').textContent=te.top_p.toFixed(2);}
-    }
-    renderProviderSelect();
-    updateModelSelect();
-    updateProviderStat();
-    checkOllama();
-  }).catch(function(){renderProviderSelect();});
+function switchModel(model){
+  currentModel=model;
+  document.getElementById('statModel').textContent=model;
 }
 
-function saveParam(key,val){
-  if(!config.zio_engine)config.zio_engine={};
-  config.zio_engine[key]=val;
-  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}).catch(function(){});
+function updateProviderStat(){
+  document.getElementById('statProvider').textContent=activeSessionProvider()||'opencode';
 }
 
-function checkOllama(){
-  fetch('/api/ollama/status').then(function(r){return r.json();}).then(function(d){
-    var dot=document.getElementById('ollamaDot');
-    var txt=document.getElementById('ollamaStatusText');
-    if(d.running){dot.className='cfg-dot on';txt.textContent='Ollama Online ('+((d.models||[]).length)+' models)';}
-    else{dot.className='cfg-dot off';txt.textContent='Ollama Offline';}
-  }).catch(function(){
-    document.getElementById('ollamaDot').className='cfg-dot off';
-    document.getElementById('ollamaStatusText').textContent='Ollama Offline';
-  });
-}
-
-// ── Model name parser (handles JSON string from DB) ──
-function parseModel(m){
-  if(!m)return'';
-  if(typeof m==='object')return m.name||m.id||JSON.stringify(m);
-  try{var p=JSON.parse(m);return p.name||p.id||m;}catch(e){return m;}
-}
-
-// ── Sessions ──
+// ── Sessions (OpenCode native API) ──
 async function loadSessions(){
   try{
-    var r=await fetch('/api/opencode/sessions');
+    var r=await ocFetch('/session');
     var d=await r.json();
-    allSessions=d.sessions||[];
+    allSessions=(Array.isArray(d)?d:[]).map(function(s){
+      return {
+        id:s.id,
+        title:s.title||s.slug||s.id,
+        slug:s.slug,
+        model:s.model,
+        agent:s.agent||'build',
+        directory:s.directory,
+        tokens:s.tokens||{},
+        cost:s.cost||0,
+        time:s.time||{},
+        created:s.time?s.time.created:0,
+        updated:s.time?s.time.updated:0,
+        version:s.version
+      };
+    });
+    allSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
     document.getElementById('statSess').textContent=allSessions.length;
-    document.getElementById('statMsgs').textContent=d.total_messages||0;
-    document.getElementById('statExp').textContent=d.exported_at?new Date(d.exported_at).toLocaleDateString():'-';
     document.getElementById('sessionCount').textContent=allSessions.length;
-    var models={};allSessions.forEach(function(s){var mn=parseModel(s.model);if(mn)models[mn]=(models[mn]||0)+1;});
+    var totalIn=0,totalOut=0;
+    allSessions.forEach(function(s){totalIn+=(s.tokens.input||0);totalOut+=(s.tokens.output||0);});
+    document.getElementById('statMsgs').textContent=fmtNum(totalIn+totalOut)+' tok';
+    var models={};allSessions.forEach(function(s){
+      var mn=parseModel(s.model);if(mn)models[mn]=(models[mn]||0)+1;
+    });
     var top=Object.entries(models).sort(function(a,b){return b[1]-a[1]})[0];
     document.getElementById('statModel').textContent=top?top[0]:'-';
+    document.getElementById('statExp').textContent=new Date().toLocaleDateString();
     filterSessions();
   }catch(e){
     document.getElementById('sessionList').innerHTML='<div class="loading" style="animation:none">Failed to load sessions</div>';
+  }
+}
+
+var importedSessions=[];
+
+async function loadImported(){
+  try{
+    var r=await ocFetch('/api/opencode/imported');
+    var d=await r.json();
+    importedSessions=(d.sessions||[]).map(function(s){
+      return {
+        id:s.id,
+        title:s.title||s.id,
+        model:s.model,
+        agent:'imported',
+        tokens:s.tokens||{},
+        time:s.time||{},
+        created:s.time?s.time.created:0,
+        updated:s.time?s.time.updated:0,
+        source:'chatgpt',
+        msg_count:s.msg_count||0,
+        _messages:s.messages||[]
+      };
+    });
+    importedSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
+    allSessions=importedSessions;
+    document.getElementById('statSess').textContent=allSessions.length;
+    document.getElementById('sessionCount').textContent=allSessions.length;
+    document.getElementById('statExp').textContent=d.exported_at?new Date(d.exported_at).toLocaleDateString():'-';
+    document.getElementById('statModel').textContent='ChatGPT Import';
+    activeTab='all';
+    filterSessions();
+  }catch(e){
+    document.getElementById('sessionList').innerHTML='<div class="loading" style="animation:none">Failed to load ZIO chats</div>';
   }
 }
 
@@ -468,11 +527,15 @@ function filterSessions(){
   var q=document.getElementById('searchInput').value.toLowerCase();
   filtered=allSessions.filter(function(s){
     var mn=parseModel(s.model).toLowerCase();
-    if(q&&!((s.title||'').toLowerCase().indexOf(q)>=0||mn.indexOf(q)>=0||(s.directory||'').toLowerCase().indexOf(q)>=0))return false;
+    var title=(s.title||'').toLowerCase();
+    if(q&&!(title.indexOf(q)>=0||mn.indexOf(q)>=0))return false;
     return true;
   });
-  if(activeTab==='recent')filtered=filtered.filter(function(s){return s.updated&&s.updated>Date.now()-7*86400000;});
-  else if(activeTab==='large')filtered=filtered.filter(function(s){return s.msg_count>=50;});
+  var now=Date.now();
+  if(activeTab==='recent')filtered=filtered.filter(function(s){return s.updated&&s.updated>now-7*86400000;});
+  else if(activeTab==='large')filtered=filtered.filter(function(s){
+    var tok=(s.tokens.input||0)+(s.tokens.output||0);return tok>100000;
+  });
   renderList();
 }
 
@@ -484,12 +547,14 @@ function renderList(){
     var cls=selected&&selected.id===s.id?'active':'';
     var mn=parseModel(s.model);
     var tok='';
-    if(s.tokens_in||s.tokens_out)tok='<span class="tokens">'+fmtNum(s.tokens_in||0)+'in/'+fmtNum(s.tokens_out||0)+'out</span>';
+    if(s.tokens.input||s.tokens.output)tok='<span class="tokens">'+fmtNum(s.tokens.input||0)+'in/'+fmtNum(s.tokens.output||0)+'out</span>';
+    var badge=s.source==='chatgpt'?'<span style="color:var(--green);font-size:9px;font-weight:800">ZIO </span>':'';
+    var mc=s.msg_count?(s.msg_count+' msgs'):'';
     return '<div class="session-item '+cls+'" onclick="selectSession(\''+s.id+'\')">'
-      +'<div class="session-title">'+esc(s.title)+'</div>'
+      +'<div class="session-title">'+badge+esc(s.title)+'</div>'
       +'<div class="session-meta">'
-      +'<span class="msgs">'+s.msg_count+' msgs</span>'
       +'<span>'+d+'</span>'
+      +(mc?'<span>'+mc+'</span>':'')
       +(mn?'<span class="model">'+esc(mn)+'</span>':'')
       +tok+'</div></div>';
   }).join('');
@@ -500,21 +565,31 @@ function fmtNum(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3
 async function selectSession(id){
   selected=allSessions.find(function(s){return s.id===id});
   if(!selected)return;
+  activeSessionId=id;
   renderList();
   document.getElementById('chatTitle').textContent=selected.title;
   var d=selected.created?new Date(selected.created).toLocaleString():'';
   var mn=parseModel(selected.model);
+  var tok=(selected.tokens.input||0)+(selected.tokens.output||0);
+  var src=selected.source==='chatgpt'?' <span style="color:var(--green);font-size:9px">[CHATGPT]</span>':'';
   document.getElementById('chatMeta').innerHTML=
     '<span><span class="label">Date:</span> <span class="val">'+d+'</span></span>'
-    +'<span><span class="label">Msgs:</span> <span class="val">'+selected.msg_count+'</span></span>'
-    +(mn?'<span><span class="label">Model:</span> <span class="val">'+esc(mn)+'</span></span>':'');
+    +(tok?'<span><span class="label">Tokens:</span> <span class="val">'+fmtNum(tok)+'</span></span>':'')
+    +(mn?'<span><span class="label">Model:</span> <span class="val">'+esc(mn)+'</span></span>':'')
+    +src;
   var area=document.getElementById('chatArea');
   area.innerHTML='<div class="loading">Loading messages...</div>';
-  try{
-    var r=await fetch('/api/opencode/sessions/'+encodeURIComponent(id)+'/messages');
-    var data=await r.json();
-    renderMessages(data.messages||[]);
-  }catch(e){area.innerHTML='<div class="loading" style="animation:none">Failed to load messages</div>';}
+  if(selected._messages&&selected._messages.length){
+    renderMessages(selected._messages);
+  }else{
+    try{
+      var r=await ocFetch('/session/'+encodeURIComponent(id)+'/message');
+      var data=await r.json();
+      renderMessages(Array.isArray(data)?data:data.messages||[]);
+    }catch(e){
+      area.innerHTML='<div class="loading" style="animation:none">Failed to load messages — '+esc(e.message)+'</div>';
+    }
+  }
 }
 
 function renderMessages(msgs){
@@ -524,8 +599,16 @@ function renderMessages(msgs){
     var role=m.role||'unknown';
     var av=role==='user'?'U':role==='assistant'?'AI':'S';
     var cls=role==='user'?'user':role==='assistant'?'assistant':'system';
+    var content=m.content||m.text||'';
+    if(typeof content==='object'){
+      if(Array.isArray(content)){
+        content=content.map(function(p){return typeof p==='object'?(p.text||p.content||JSON.stringify(p)):p;}).join('');
+      }else{
+        content=content.text||content.content||JSON.stringify(content);
+      }
+    }
     var t=m.time?new Date(m.time).toLocaleTimeString():'';
-    var txt=esc(m.text||'');
+    var txt=esc(String(content));
     txt=txt.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>');
     txt=txt.replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
     txt=txt.replace(/`([^`]+)`/g,'<code>$1</code>');
@@ -540,50 +623,102 @@ function renderMessages(msgs){
   area.scrollTop=area.scrollHeight;
 }
 
-// ── Live ──
+// ── Live SSE + Chat (OpenCode /event + /session/{id}/prompt_async) ──
 function connectLive(){
   if(liveOn)return;
-  var proto=location.protocol==='https:'?'wss:':'ws:';
-  liveWs=new WebSocket(proto+'//'+location.host+'/api/opencode/ws');
-  liveWs.onopen=function(){
+  var es=new EventSource(OC_HOST+'/event');
+  liveSSE=es;
+  es.onopen=function(){
     liveOn=true;
     document.getElementById('liveBar').style.display='flex';
     document.getElementById('liveDot').classList.add('online');
-    document.getElementById('liveLabel').textContent='Connected';
+    document.getElementById('liveLabel').textContent='SSE Connected';
   };
-  liveWs.onmessage=function(e){
+  es.onmessage=function(e){
     try{
       var d=JSON.parse(e.data);
-      if(d.type==='tool_start'||d.type==='tool'){
-        showTool(d.name||d.tool||'tool');
+      var type=d.type||d.event||'';
+      if(type.indexOf('tool')>=0||type==='tool_start'){
+        var toolName=d.name||d.tool||(d.properties&&d.properties.tool)||'tool';
+        showTool(toolName);
       }
-      if(d.type==='response'||d.type==='message'){
-        hideTool();
-        var area=document.getElementById('chatArea');
-        var txt=esc(d.text||d.content||JSON.stringify(d));
-        txt=txt.replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
-        txt=txt.replace(/\n/g,'<br>');
-        var div=document.createElement('div');
-        div.className='msg assistant';
-        div.innerHTML='<div class="msg-avatar">AI</div><div class="msg-body"><div class="msg-bubble">'+txt+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
-        area.appendChild(div);
-        area.scrollTop=area.scrollHeight;
+      if(type==='message'||type==='assistant'||type==='response'||type==='chat'||type==='message.updated'){
+        var info=d.properties||d.info||d;
+        var content=info.content||info.text||info.delta||'';
+        if(typeof content==='object'&&content){
+          if(Array.isArray(content)){
+            content=content.map(function(p){return typeof p==='object'?(p.text||p.content||''):p;}).join('');
+          }else{
+            content=content.text||content.content||'';
+          }
+        }
+        if(content&&type!=='message.user'){
+          appendLiveMessage(String(content));
+        }
       }
     }catch(ex){}
   };
-  liveWs.onclose=function(){liveOn=false;document.getElementById('liveBar').style.display='none';document.getElementById('liveDot').classList.remove('online');document.getElementById('liveLabel').textContent='Disconnected';};
-  liveWs.onerror=function(){liveWs.close()};
+  es.onerror=function(){
+    liveOn=false;liveSSE=null;
+    document.getElementById('liveBar').style.display='none';
+    document.getElementById('liveDot').classList.remove('online');
+    document.getElementById('liveLabel').textContent='SSE Disconnected';
+    setTimeout(function(){if(!liveOn)connectLive();},5000);
+  };
 }
-function disconnectLive(){if(liveWs)liveWs.close();liveWs=null;}
-function sendLive(){
-  if(!liveOn||!liveWs)return;
+function disconnectLive(){if(liveSSE)liveSSE.close();liveSSE=null;liveOn=false;}
+
+function appendLiveMessage(text){
+  if(!text)return;
+  var area=document.getElementById('chatArea');
+  var existing=area.querySelector('.msg.live-ai .msg-bubble');
+  if(existing){
+    existing.innerHTML+=esc(text).replace(/\n/g,'<br>');
+  }else{
+    var div=document.createElement('div');
+    div.className='msg assistant live-ai';
+    div.innerHTML='<div class="msg-avatar">AI</div><div class="msg-body"><div class="msg-bubble">'+esc(text).replace(/\n/g,'<br>')+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
+    area.appendChild(div);
+  }
+  area.scrollTop=area.scrollHeight;
+  hideTool();
+}
+
+async function sendLive(){
   var inp=document.getElementById('liveInput');
   var txt=inp.value.trim();if(!txt)return;inp.value='';
+
   var area=document.getElementById('chatArea');
   var div=document.createElement('div');div.className='msg user';
   div.innerHTML='<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-bubble">'+esc(txt)+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
   area.appendChild(div);area.scrollTop=area.scrollHeight;
-  liveWs.send(JSON.stringify({type:'message',content:txt}));
+
+  if(activeSessionId){
+    try{
+      await ocFetch('/session/'+encodeURIComponent(activeSessionId)+'/prompt_async',{
+        method:'POST',
+        body:JSON.stringify({content:txt,agent:agentMode})
+      });
+    }catch(e){
+      appendLiveMessage('[Error sending: '+e.message+']');
+    }
+  }else{
+    try{
+      var r=await ocFetch('/session',{method:'POST',body:JSON.stringify({title:txt.substring(0,80),agent:agentMode})});
+      var s=await r.json();
+      if(s&&s.id){
+        activeSessionId=s.id;
+        appendLiveMessage('[Session created: '+s.id+']');
+        await ocFetch('/session/'+encodeURIComponent(s.id)+'/prompt_async',{
+          method:'POST',
+          body:JSON.stringify({content:txt,agent:agentMode})
+        });
+        await loadSessions();
+      }
+    }catch(e){
+      appendLiveMessage('[Error: '+e.message+']');
+    }
+  }
 }
 
 // ── Import/Export ──
@@ -593,10 +728,10 @@ function handleFile(e){var f=e.target.files[0];if(!f)return;var r=new FileReader
 function doImport(){
   var txt=document.getElementById('importText').value.trim();
   if(!txt){alert('No data');return;}
-  try{var d=JSON.parse(txt);allSessions=d.sessions||[];filtered=allSessions;document.getElementById('statSess').textContent=allSessions.length;document.getElementById('statMsgs').textContent=d.total_messages||0;document.getElementById('sessionCount').textContent=allSessions.length;renderList();hideImport();}catch(e){alert('Invalid JSON: '+e.message);}
+  try{var d=JSON.parse(txt);allSessions=d.sessions||[];filtered=allSessions;document.getElementById('statSess').textContent=allSessions.length;document.getElementById('sessionCount').textContent=allSessions.length;renderList();hideImport();}catch(e){alert('Invalid JSON: '+e.message);}
 }
 function exportChats(){
-  var data={sessions:allSessions,total_messages:allSessions.reduce(function(a,s){return a+s.msg_count},0),exported_at:new Date().toISOString()};
+  var data={sessions:allSessions,total:allSessions.length,exported_at:new Date().toISOString()};
   var blob=new Blob([JSON.stringify(data)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='zio_agent_chats.json';a.click();
 }
@@ -641,12 +776,21 @@ function hideTool(){
 
 // ── Provider stat display ──
 function updateProviderStat(){
-  document.getElementById('statProvider').textContent=activeProvider;
+  document.getElementById('statProvider').textContent=activeSessionProvider()||'opencode';
+}
+
+// ── Model name parser ──
+function parseModel(m){
+  if(!m)return'';
+  if(typeof m==='object')return m.id||m.name||JSON.stringify(m);
+  try{var p=JSON.parse(m);return p.id||p.name||m;}catch(e){return m;}
 }
 
 // ── Init ──
-loadConfig();
+checkHealth();
+loadProviders();
 loadSessions();
+connectLive();
 </script>
 </body>
 </html>

@@ -2268,6 +2268,18 @@ def _load_opencode_export():
     return {"sessions": [], "messages": {}, "total_messages": 0}
 
 
+CHATGPT_IMPORT = Path(__file__).parent / "data" / "chatgpt_import.json"
+
+def _load_chatgpt_import():
+    if CHATGPT_IMPORT.exists():
+        try:
+            with open(CHATGPT_IMPORT, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"sessions": [], "total_messages": 0}
+
+
 @app.get("/api/opencode/sessions")
 async def opencode_sessions():
     data = _load_opencode_export()
@@ -2279,10 +2291,28 @@ async def opencode_sessions():
     }
 
 
+@app.get("/api/opencode/imported")
+async def opencode_imported():
+    data = _load_chatgpt_import()
+    return {
+        "sessions": data.get("sessions", []),
+        "total_messages": data.get("total_messages", 0),
+        "total_sessions": data.get("total_sessions", 0),
+        "exported_at": data.get("exported_at", ""),
+        "source": data.get("source", "chatgpt_import"),
+    }
+
+
 @app.get("/api/opencode/sessions/{session_id}/messages")
 async def opencode_session_messages(session_id: str):
     data = _load_opencode_export()
     msgs = data.get("messages", {}).get(session_id, [])
+    if not msgs:
+        chatgpt = _load_chatgpt_import()
+        for s in chatgpt.get("sessions", []):
+            if s.get("id") == session_id:
+                msgs = s.get("messages", [])
+                break
     return {"session_id": session_id, "messages": msgs, "count": len(msgs)}
 
 
@@ -2304,12 +2334,12 @@ async def opencode_status():
 
 @app.websocket("/api/opencode/ws")
 async def opencode_websocket(websocket):
-    """WebSocket proxy to OpenCode serve on .85."""
+    """WebSocket proxy to OpenCode on .68:4096."""
     await websocket.accept()
     import asyncio, websockets
     try:
         async with websockets.connect(
-            "ws://192.168.1.85:4080",
+            "ws://192.168.1.68:4096",
             open_timeout=5, close_timeout=5
         ) as remote:
             async def forward(src, dst):
