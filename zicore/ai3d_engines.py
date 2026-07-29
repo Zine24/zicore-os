@@ -668,30 +668,236 @@ class ShapEEngine:
             return AI3DEngineResult(error=str(e))
 
     def _shape_from_prompt(self, prompt: str):
-        """Match prompt keywords to a procedural shape."""
+        """Match prompt keywords to a high-quality procedural shape with smoothing."""
         p = prompt.lower()
         tm = self._trimesh
         if any(w in p for w in ["cube", "box", "block"]):
-            return tm.creation.box(extents=(1, 1, 1))
+            mesh = tm.creation.box(extents=(1, 1, 1))
+            mesh = mesh.subdivide()
+            tm.smoothing.filter_laplacian(mesh, iterations=3)
+            return mesh
         elif any(w in p for w in ["sphere", "ball", "round"]):
-            return tm.creation.icosphere(subdivisions=3, radius=1)
+            mesh = tm.creation.icosphere(subdivisions=4, radius=1)
+            tm.smoothing.filter_laplacian(mesh, iterations=2)
+            return mesh
         elif any(w in p for w in ["cylinder", "tube", "pipe"]):
-            return tm.creation.cylinder(radius=0.5, height=2, sections=32)
+            mesh = tm.creation.cylinder(radius=0.5, height=2, sections=48)
+            tm.smoothing.filter_laplacian(mesh, iterations=2)
+            return mesh
         elif any(w in p for w in ["cone", "nose", "tip"]):
-            return tm.creation.cone(radius=0.5, height=2, sections=32)
+            mesh = tm.creation.cone(radius=0.5, height=2, sections=48)
+            tm.smoothing.filter_laplacian(mesh, iterations=2)
+            return mesh
         elif any(w in p for w in ["capsule", "fuselage"]):
-            return tm.creation.capsule(radius=0.4, height=1.5, sections=32)
+            mesh = tm.creation.capsule(radius=0.4, height=1.5, sections=48)
+            tm.smoothing.filter_laplacian(mesh, iterations=3)
+            return mesh
         elif any(w in p for w in ["rocket", "spaceship", "ship"]):
-            body = tm.creation.cylinder(radius=0.5, height=2, sections=32)
-            nose = tm.creation.cone(radius=0.5, height=0.8, sections=32)
+            body = tm.creation.cylinder(radius=0.5, height=2, sections=48)
+            nose = tm.creation.cone(radius=0.5, height=0.8, sections=48)
             nose.apply_translation([0, 0, 1.4])
-            return tm.util.concatenate([body, nose])
+            mesh = tm.util.concatenate([body, nose])
+            tm.smoothing.filter_laplacian(mesh, iterations=2)
+            return mesh
         elif any(w in p for w in ["satellite", "antenna", "solar"]):
             body = tm.creation.box(extents=(0.4, 0.4, 0.6))
             panel = tm.creation.box(extents=(1.5, 0.05, 0.3))
             panel.apply_translation([0.95, 0, 0.15])
-            return tm.util.concatenate([body, panel])
-        return tm.creation.icosphere(subdivisions=2, radius=1)
+            mesh = tm.util.concatenate([body, panel])
+            mesh = mesh.subdivide()
+            return mesh
+        elif any(w in p for w in ["toroidal", "torus", "ring"]):
+            mesh = tm.creation.torus(radius=0.8, tube=0.3, sections=48)
+            return mesh
+        mesh = tm.creation.icosphere(subdivisions=3, radius=1)
+        tm.smoothing.filter_laplacian(mesh, iterations=2)
+        return mesh
+
+
+class TrellisEngine:
+    """TRELLIS/TRELLIS.2 — Microsoft text/image-to-3D via HuggingFace API.
+
+    Uses the HuggingFace Inference API to run TRELLIS.2 remotely.
+    No local GPU needed. Falls back to trimesh procedural generation.
+    """
+
+    def __init__(self):
+        self.api_token = os.environ.get("HF_API_TOKEN", "")
+        self._hf_available = bool(self.api_token)
+        self._trimesh_available = False
+        try:
+            import trimesh
+            self._trimesh = trimesh
+            self._trimesh_available = True
+        except ImportError:
+            pass
+        # TRELLIS.2 HF Space
+        self.hf_url = os.environ.get(
+            "TRELLIS_HF_URL",
+            "https://api-inference.huggingface.co/models/microsoft/TRELLIS.2-4B"
+        )
+
+    @property
+    def name(self):
+        return "TRELLIS.2"
+
+    @property
+    def available(self):
+        return self._hf_available or self._trimesh_available
+
+    @property
+    def capabilities(self):
+        return ["text_to_3d", "image_to_3d"]
+
+    @property
+    def requires(self):
+        return "HF_API_TOKEN env var for cloud; trimesh always fallback"
+
+    def generate_from_text(self, prompt: str) -> AI3DEngineResult:
+        if self._hf_available:
+            try:
+                result = self._hf_infer({"inputs": prompt, "parameters": {"format": "glb"}})
+                if result and result.get("success"):
+                    return result
+            except Exception:
+                pass
+        return self._trimesh_fallback(prompt)
+
+    def generate_from_image(self, image_path: str) -> AI3DEngineResult:
+        if self._hf_available:
+            try:
+                import base64
+                with open(image_path, "rb") as f:
+                    img_b64 = base64.b64encode(f.read()).decode()
+                result = self._hf_infer({
+                    "inputs": img_b64, "parameters": {"format": "glb"}
+                }, is_image=True)
+                if result and result.get("success"):
+                    return result
+            except Exception:
+                pass
+        return self._trimesh_fallback("from_image")
+
+    def _hf_infer(self, payload, is_image=False) -> AI3DEngineResult:
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.api_token}",
+                "Content-Type": "application/json",
+            }
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                self.hf_url, data=data, headers=headers, method="POST"
+            )
+            resp = urllib.request.urlopen(req, timeout=180)
+            content = resp.read()
+            ts = int(time.time())
+            glb_path = OUTPUT_DIR / f"trellis_{ts}.glb"
+            with open(glb_path, "wb") as f:
+                f.write(content)
+            # Try to read mesh stats
+            verts, faces = 0, 0
+            try:
+                mesh = self._trimesh.load(str(glb_path))
+                if hasattr(mesh, 'vertices'):
+                    verts = len(mesh.vertices)
+                    faces = len(mesh.faces)
+            except Exception:
+                pass
+            return AI3DEngineResult(
+                success=True, file_path=str(glb_path),
+                engine="trellis.2", vertices=verts, faces=faces,
+                metadata={"api": "huggingface"},
+            )
+        except urllib.error.HTTPError as e:
+            if e.code == 503:
+                return AI3DEngineResult(
+                    error="TRELLIS.2 model is loading on HF. Try again in 30s."
+                )
+            return AI3DEngineResult(error=f"HF API error {e.code}: {e.reason}")
+        except Exception as e:
+            return AI3DEngineResult(error=str(e))
+
+    def _trimesh_fallback(self, prompt: str) -> AI3DEngineResult:
+        """High-quality procedural mesh with smoothing."""
+        if not self._trimesh_available:
+            return AI3DEngineResult(error="trimesh not available")
+        try:
+            tm = self._trimesh
+            ts = int(time.time())
+            p = prompt.lower()
+
+            # High-subdivision primitives with Laplacian smoothing
+            if any(w in p for w in ["cube", "box", "block"]):
+                mesh = tm.creation.box(extents=(1, 1, 1))
+                mesh = mesh.subdivide()
+                tm.smoothing.filter_laplacian(mesh, iterations=3)
+            elif any(w in p for w in ["sphere", "ball", "round"]):
+                mesh = tm.creation.icosphere(subdivisions=4, radius=1)
+                tm.smoothing.filter_laplacian(mesh, iterations=2)
+            elif any(w in p for w in ["cylinder", "tube", "pipe"]):
+                mesh = tm.creation.cylinder(radius=0.5, height=2, sections=48)
+                tm.smoothing.filter_laplacian(mesh, iterations=2)
+            elif any(w in p for w in ["cone", "nose", "tip"]):
+                mesh = tm.creation.cone(radius=0.5, height=2, sections=48)
+                tm.smoothing.filter_laplacian(mesh, iterations=2)
+            elif any(w in p for w in ["capsule", "fuselage"]):
+                mesh = tm.creation.capsule(radius=0.4, height=1.5, sections=48)
+                tm.smoothing.filter_laplacian(mesh, iterations=3)
+            elif any(w in p for w in ["rocket", "spaceship", "ship"]):
+                body = tm.creation.cylinder(radius=0.5, height=2, sections=48)
+                nose = tm.creation.cone(radius=0.5, height=0.8, sections=48)
+                nose.apply_translation([0, 0, 1.4])
+                mesh = tm.util.concatenate([body, nose])
+                tm.smoothing.filter_laplacian(mesh, iterations=2)
+            elif any(w in p for w in ["gear", "cog", "wheel"]):
+                mesh = self._make_gear(tm)
+            elif any(w in p for w in ["satellite", "antenna", "solar"]):
+                body = tm.creation.box(extents=(0.4, 0.4, 0.6))
+                panel = tm.creation.box(extents=(1.5, 0.05, 0.3))
+                panel.apply_translation([0.95, 0, 0.15])
+                mesh = tm.util.concatenate([body, panel])
+                mesh = mesh.subdivide()
+            elif any(w in p for w in ["toroidal", "torus", "ring", "donut"]):
+                mesh = tm.creation.torus(radius=0.8, tube=0.3, sections=48)
+            else:
+                mesh = tm.creation.icosphere(subdivisions=3, radius=1)
+                tm.smoothing.filter_laplacian(mesh, iterations=2)
+
+            # Ensure watertight
+            if not mesh.is_watertight:
+                try:
+                    mesh.fill_holes()
+                except Exception:
+                    pass
+
+            stl_path = OUTPUT_DIR / f"trellis_{ts}.stl"
+            glb_path = OUTPUT_DIR / f"trellis_{ts}.glb"
+            stl_path.parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(str(stl_path))
+            mesh.export(str(glb_path))
+            return AI3DEngineResult(
+                success=True, file_path=str(stl_path),
+                engine="trellis_fallback", vertices=len(mesh.vertices),
+                faces=len(mesh.faces),
+                metadata={"prompt": prompt, "glb": str(glb_path)},
+            )
+        except Exception as e:
+            return AI3DEngineResult(error=str(e))
+
+    def _make_gear(self, tm, teeth=12, radius=1.0):
+        """Procedural gear with clean topology."""
+        import numpy as np
+        angles = np.linspace(0, 2 * np.pi, teeth * 4, endpoint=False)
+        verts = []
+        for a in angles:
+            r = radius + 0.15 * (1 if int(a / (2 * np.pi / teeth)) % 2 == 0 else -0.3)
+            verts.append([r * np.cos(a), r * np.sin(a), -0.1])
+            verts.append([r * np.cos(a), r * np.sin(a), 0.1])
+        verts.append([0, 0, -0.1])
+        verts.append([0, 0, 0.1])
+        mesh = tm.Trimesh(vertices=verts)
+        tm.smoothing.filter_laplacian(mesh, iterations=5)
+        return mesh
 
 
 class Hunyuan3DAI3DEngine:
@@ -776,6 +982,7 @@ class AI3DEngineManager:
         self._register("solidpython2", SolidPython2Engine())
         self._register("shap_e", ShapEEngine())
         self._register("hunyuan3d", Hunyuan3DAI3DEngine())
+        self._register("trellis", TrellisEngine())
         logger.info(f"[AI3D] Registered {len(self.engines)} engines: {list(self.engines.keys())}")
 
     def _register(self, key: str, engine):

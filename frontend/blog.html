@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE BLOG — News & Updates</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1528;--bg4:#151c35;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d71;
+  --orange:#ff9f43;--yellow:#ffd32a;
+  --text:#e0e6f0;--text2:#8892b0;--text3:#5a6480;
+  --glass:rgba(10,14,26,0.88);--glass2:rgba(15,21,40,0.75);
+  --border:rgba(0,229,255,0.1);--border2:rgba(124,77,255,0.12);
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+  --glow-cyan:0 0 20px rgba(0,229,255,0.25);
+  --glow-purple:0 0 20px rgba(124,77,255,0.25);
+  --radius:12px;--radius-sm:8px;
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.006) 2px,rgba(0,229,255,.006) 4px)}
+
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(4,6,12,0.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:20px}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;cursor:pointer;flex-shrink:0}
+.topbar-logo svg{width:26px;height:26px}
+.topbar-logo span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-nav{display:flex;gap:4px;margin-left:24px}
+.topbar-nav a{padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;color:var(--text2);transition:all .2s;cursor:pointer}
+.topbar-nav a:hover,.topbar-nav a.active{color:var(--text);background:rgba(0,229,255,0.08)}
+.topbar-nav a.active{color:var(--cyan)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.topbar-clock{font-size:12px;color:var(--text3);font-family:'Courier New',monospace;letter-spacing:1px}
+
+/* ── Hero ── */
+.blog-hero{position:relative;z-index:2;margin-top:56px;padding:70px 40px 40px;text-align:center;max-width:900px;margin-left:auto;margin-right:auto}
+.blog-hero .badge{display:inline-block;padding:5px 16px;border:1px solid var(--purple);border-radius:20px;font-size:11px;color:var(--purple);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px}
+.blog-hero h1{font-size:clamp(36px,6vw,56px);font-weight:900;letter-spacing:-1px;line-height:1.1;background:linear-gradient(135deg,var(--cyan),var(--purple),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.blog-hero .sub{font-size:16px;color:var(--text2);font-weight:300;max-width:560px;margin:0 auto}
+
+/* ── Main Layout ── */
+.blog-wrap{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:20px 24px 80px;display:grid;grid-template-columns:1fr 280px;gap:32px;align-items:start}
+@media(max-width:900px){.blog-wrap{grid-template-columns:1fr;}}
+
+/* ── Category Filter ── */
+.cat-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+.cat-btn{padding:7px 18px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .25s;letter-spacing:0.5px}
+.cat-btn:hover{border-color:var(--cyan);color:var(--text)}
+.cat-btn.active{background:rgba(0,229,255,0.12);border-color:var(--cyan);color:var(--cyan)}
+
+/* ── Posts Grid ── */
+.posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+@media(max-width:700px){.posts-grid{grid-template-columns:1fr}}
+
+/* ── Post Card ── */
+.post-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .3s ease;cursor:pointer;position:relative;display:flex;flex-direction:column}
+.post-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--purple));opacity:0;transition:opacity .3s}
+.post-card:hover{border-color:var(--cyan);transform:translateY(-4px);box-shadow:var(--shadow)}
+.post-card:hover::before{opacity:1}
+.post-card.expanded{grid-column:1/-1;border-color:var(--cyan)}
+
+.post-thumb{height:180px;background:var(--bg3);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.post-thumb .thumb-icon{font-size:48px;opacity:.6}
+.post-thumb .thumb-gradient{position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,229,255,0.08),rgba(124,77,255,0.08))}
+.post-thumb .thumb-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,229,255,0.015) 3px,rgba(0,229,255,0.015) 6px);pointer-events:none}
+
+.post-body{padding:20px 22px;flex:1;display:flex;flex-direction:column}
+.post-meta{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.post-tag{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.tag-aerospace{background:rgba(0,229,255,0.1);color:var(--cyan)}
+.tag-ai{background:rgba(124,77,255,0.1);color:var(--purple)}
+.tag-engineering{background:rgba(0,255,136,0.1);color:var(--green)}
+.tag-mobile{background:rgba(255,159,67,0.1);color:var(--orange)}
+.tag-updates{background:rgba(255,61,113,0.1);color:var(--red)}
+.post-date{font-size:11px;color:var(--text3)}
+
+.post-body h3{font-size:17px;font-weight:700;margin-bottom:8px;line-height:1.3}
+.post-body .excerpt{font-size:13px;color:var(--text2);line-height:1.6;flex:1}
+.post-footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.post-author{display:flex;align-items:center;gap:8px}
+.post-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.post-author-name{font-size:12px;color:var(--text2)}
+.read-more{font-size:12px;color:var(--cyan);font-weight:600;display:flex;align-items:center;gap:4px}
+.read-more::after{content:'→';transition:transform .2s}
+.post-card:hover .read-more::after{transform:translateX(3px)}
+
+/* ── Expanded Post Detail ── */
+.post-detail{display:none;padding:28px;border-top:1px solid var(--border);background:rgba(4,6,12,0.6);animation:fadeSlide .3s ease}
+.post-card.expanded .post-detail{display:block}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.post-detail h4{font-size:20px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.post-detail .detail-meta{display:flex;gap:16px;margin-bottom:16px;font-size:12px;color:var(--text3)}
+.post-detail p{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:14px}
+.post-detail ul{margin:0 0 14px 20px;color:var(--text2);font-size:13px;line-height:1.7}
+.post-detail li{margin-bottom:6px}
+.post-detail .detail-tags{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.post-detail .detail-tags span{padding:4px 12px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(0,229,255,0.08);border:1px solid var(--border);color:var(--text3)}
+.post-close{position:absolute;top:16px;right:20px;background:none;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:none;align-items:center;justify-content:center;transition:all .2s}
+.post-card.expanded .post-close{display:flex}
+.post-close:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── Sidebar ── */
+.blog-sidebar{position:sticky;top:80px;display:flex;flex-direction:column;gap:20px}
+@media(max-width:900px){.blog-sidebar{position:static;flex-direction:row;flex-wrap:wrap;gap:16px}.sidebar-card{flex:1;min-width:240px}}
+
+.sidebar-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden}
+.sidebar-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple))}
+.sidebar-card h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--cyan);margin-bottom:16px}
+
+/* Categories */
+.cat-list{list-style:none}
+.cat-list li{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(0,229,255,0.06);cursor:pointer;transition:all .2s}
+.cat-list li:last-child{border-bottom:none}
+.cat-list li:hover{color:var(--cyan)}
+.cat-list li .cat-name{font-size:13px;color:var(--text2);transition:color .2s}
+.cat-list li:hover .cat-name{color:var(--cyan)}
+.cat-list li .cat-count{font-size:11px;padding:2px 8px;border-radius:8px;background:rgba(0,229,255,0.06);color:var(--text3);font-weight:600}
+
+/* Newsletter */
+.nl-input-wrap{display:flex;gap:8px;margin-bottom:10px}
+.nl-input{flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:border .2s}
+.nl-input:focus{border-color:var(--cyan)}
+.nl-input::placeholder{color:var(--text3)}
+.nl-btn{padding:10px 18px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nl-btn:hover{box-shadow:var(--glow-cyan);transform:translateY(-1px)}
+.nl-msg{font-size:11px;color:var(--green);display:none}
+.nl-msg.show{display:block}
+
+/* Tags Cloud */
+.tags-cloud{display:flex;flex-wrap:wrap;gap:6px}
+.tag-pill{padding:4px 12px;border-radius:12px;font-size:11px;border:1px solid var(--border);color:var(--text3);cursor:pointer;transition:all .2s}
+.tag-pill:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.06)}
+
+/* Recent Posts */
+.rp-list{list-style:none}
+.rp-list li{padding:10px 0;border-bottom:1px solid rgba(0,229,255,0.06)}
+.rp-list li:last-child{border-bottom:none}
+.rp-list li .rp-title{font-size:13px;color:var(--text2);cursor:pointer;transition:color .2s;line-height:1.4}
+.rp-list li .rp-title:hover{color:var(--cyan)}
+.rp-list li .rp-date{font-size:10px;color:var(--text3);margin-top:3px}
+
+/* ── Footer ── */
+.blog-footer{text-align:center;padding:40px 20px;color:var(--text3);font-size:12px;border-top:1px solid var(--border);position:relative;z-index:2;max-width:1200px;margin:0 auto}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border)}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="scanline"></div>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <div class="topbar-logo" onclick="location.href='/'">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" stroke="url(#g1)" stroke-width="3" fill="none"/>
+      <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" stroke="url(#g1)" stroke-width="1.5" fill="rgba(0,229,255,0.04)"/>
+      <text x="50" y="55" text-anchor="middle" fill="#00e5ff" font-size="18" font-weight="900" font-family="system-ui">Z</text>
+      <defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs>
+    </svg>
+    <span>ZICORE</span>
+  </div>
+  <div class="topbar-nav">
+    <a href="/">System</a>
+    <a href="/aerospace">Aerospace</a>
+    <a href="/zio">ZIO AI</a>
+    <a href="/blog" class="active">Blog</a>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-clock" id="clock"></div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="blog-hero">
+  <div class="badge">NEWS & UPDATES</div>
+  <h1>ZICORE BLOG</h1>
+  <p class="sub">Dispatches from the frontier — aerospace systems, AI developments, engineering breakthroughs, and the future of digital space operations.</p>
+</header>
+
+<!-- Main Layout -->
+<div class="blog-wrap">
+  <main>
+    <!-- Category Filter -->
+    <div class="cat-bar">
+      <button class="cat-btn active" data-cat="all">All Posts</button>
+      <button class="cat-btn" data-cat="updates">Updates</button>
+      <button class="cat-btn" data-cat="ai">AI</button>
+      <button class="cat-btn" data-cat="engineering">Engineering</button>
+      <button class="cat-btn" data-cat="aerospace">Aerospace</button>
+      <button class="cat-btn" data-cat="mobile">Mobile</button>
+    </div>
+
+    <!-- Posts Grid -->
+    <div class="posts-grid" id="postsGrid"></div>
+  </main>
+
+  <!-- Sidebar -->
+  <aside class="blog-sidebar">
+    <!-- Categories -->
+    <div class="sidebar-card">
+      <h4>Categories</h4>
+      <ul class="cat-list" id="catList"></ul>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="sidebar-card">
+      <h4>Newsletter</h4>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">Get ZICORE updates delivered to your inbox. No spam, only signal.</p>
+      <div class="nl-input-wrap">
+        <input class="nl-input" id="nlEmail" type="email" placeholder="your@email.com">
+        <button class="nl-btn" id="nlBtn">Subscribe</button>
+      </div>
+      <div class="nl-msg" id="nlMsg">✓ Subscribed successfully</div>
+    </div>
+
+    <!-- Tags -->
+    <div class="sidebar-card">
+      <h4>Tags</h4>
+      <div class="tags-cloud">
+        <span class="tag-pill">ZICORE v5</span>
+        <span class="tag-pill">OpenRouter</span>
+        <span class="tag-pill">Ollama</span>
+        <span class="tag-pill">Materializer</span>
+        <span class="tag-pill">Trimesh</span>
+        <span class="tag-pill">React Native</span>
+        <span class="tag-pill">Mission Control</span>
+        <span class="tag-pill">dolphin-phi</span>
+        <span class="tag-pill">3D Printing</span>
+        <span class="tag-pill">OpenSCAD</span>
+        <span class="tag-pill">Orbital Mech</span>
+        <span class="tag-pill">Cloudflare</span>
+      </div>
+    </div>
+
+    <!-- Recent Posts -->
+    <div class="sidebar-card">
+      <h4>Recent</h4>
+      <ul class="rp-list" id="rpList"></ul>
+    </div>
+  </aside>
+</div>
+
+<!-- Footer -->
+<footer class="blog-footer">
+  ZICORE SYSTEM v5.0 — ZiAerospace Division — © 2026 All rights reserved
+</footer>
+
+<script>
+// ── Blog Data ──
+const POSTS = [
+  {
+    id: 1,
+    title: 'ZICORE v5.0 Released — Full Aerospace OS Launch',
+    excerpt: 'The complete digital aerospace operating system is now live. 40+ modules, real-time telemetry, and mission control — all in one platform.',
+    category: 'updates',
+    tag: 'Updates',
+    tagClass: 'tag-updates',
+    icon: '🚀',
+    date: 'Jul 24, 2026',
+    author: 'ZICORE Team',
+    authorInitial: 'Z',
+    detail: {
+      subtitle: 'A New Era for Digital Aerospace',
+      paragraphs: [
+        'After months of intensive development, ZICORE System v5.0 is officially released. This marks the transition from a modular prototype to a fully integrated digital aerospace operating system capable of supporting everything from mission planning to real-time telemetry monitoring.',
+        'The v5.0 release includes over 40 interconnected modules spanning AI copilots, 3D generation engines, orbital mechanics, structural engineering, and a complete mission control dashboard. Every module communicates through the ZICORE Core REST + WebSocket architecture.'
+      ],
+      highlights: [
+        'Mission Control dashboard with real-time telemetry, system status, and alerts',
+        '14 parametric 3D generators in the Materializer engine',
+        'ZIO AI with OpenRouter free models and Ollama local fallback',
+        'Aerospace module with vehicle design, propulsion lab, and orbital mechanics',
+        '11-tab settings system with full configuration control',
+        'Cloudflare tunnel deployment at zcs.zicore.space'
+      ],
+      tags: ['v5.0', 'Release', 'Milestone', 'Mission Control']
+    }
+  },
+  {
+    id: 2,
+    title: 'ZIO AI Copilot — Native Tool Calling',
+    excerpt: 'ZIO now supports native tool calling with context-aware role switching — flight engineer, mission scientist, or pilot copilot on demand.',
+    category: 'ai',
+    tag: 'AI',
+    tagClass: 'tag-ai',
+    icon: '🤖',
+    date: 'Jul 22, 2026',
+    author: 'ZIO Lab',
+    authorInitial: 'Z',
+    detail: {
+      subtitle: 'Intelligent Mission Assistance',
+      paragraphs: [
+        'ZIO, the ZICORE AI copilot, has evolved beyond simple conversation. With native tool calling support, ZIO can now interact directly with system modules — querying telemetry data, running engineering calculations, generating 3D models, and executing mission sequences.',
+        'The dual-engine architecture combines deterministic rule-based processing with ML inference from OpenRouter (nvidia/nemotron-3-super-120b) and local Ollama models (gemma3:1b). Context-aware role switching allows ZIO to adapt its expertise based on the active module.'
+      ],
+      highlights: [
+        'Native tool calling for direct module interaction',
+        'Context-aware role switching: pilot, engineer, scientist',
+        'Chat import from ChatGPT, Grok, Claude, Gemini, DeepSeek',
+        'Session manager with persistent memory',
+        'Knowledge search across ZiCodex documentation'
+      ],
+      tags: ['Tool Calling', 'Dual Engine', 'OpenRouter', 'Ollama']
+    }
+  },
+  {
+    id: 3,
+    title: 'Materializer Engine — 14+ 3D Generators',
+    excerpt: 'Procedural 3D content creation with trimesh, OpenSCAD, CadQuery, and PicoGK. From rocket nozzles to terrain — CPU-compatible.',
+    category: 'engineering',
+    tag: 'Engineering',
+    tagClass: 'tag-engineering',
+    icon: '⚙️',
+    date: 'Jul 20, 2026',
+    author: 'ZiEngineering',
+    authorInitial: 'E',
+    detail: {
+      subtitle: 'Procedural 3D Generation for Aerospace',
+      paragraphs: [
+        'The Materializer engine is ZICORE\'s procedural 3D content creation pipeline. Running entirely on CPU, it supports 14+ generator types from simple primitives to complex aerospace components. No GPU required — every generation runs through the Materializer web server on port 4000.',
+        'The engine integrates multiple backend libraries: trimesh for mesh I/O and primitives, SolidPython2 for OpenSCAD CSG operations, CadQuery and Build123d for parametric CAD, and PicoGK for voxel/level-set modeling with lattices and TPMS structures.'
+      ],
+      highlights: [
+        'Generators: Cube, Sphere, Cylinder, Rocket, Terrain, Gear, Star, Heightmap, and more',
+        'CadQuery + Build123d parametric CAD with OpenCASCADE kernel',
+        'PicoGK voxel modeling for lattices, TPMS, implicit surfaces',
+        'Open3D + PyMeshLab for mesh repair, simplification, reconstruction',
+        'Tripo3D / Meshy cloud AI 3D generation (no local GPU needed)',
+        'Export: STL, OBJ, GLB formats via trimesh'
+      ],
+      tags: ['Materializer', 'Trimesh', 'OpenSCAD', 'CadQuery', 'PicoGK']
+    }
+  },
+  {
+    id: 4,
+    title: 'ZICORE Mobile App — React Native',
+    excerpt: 'Mission control in your pocket. Real-time telemetry, alerts, and ZIO AI access from any iOS or Android device.',
+    category: 'mobile',
+    tag: 'Mobile',
+    tagClass: 'tag-mobile',
+    icon: '📱',
+    date: 'Jul 18, 2026',
+    author: 'ZICORE Team',
+    authorInitial: 'Z',
+    detail: {
+      subtitle: 'Aerospace Operations, Everywhere',
+      paragraphs: [
+        'The ZICORE Mobile App brings core system functionality to iOS and Android through React Native. Monitor mission telemetry in real-time, receive critical alerts, access ZIO AI from the field, and manage vehicle configurations — all from a native mobile interface.',
+        'The app connects to the ZICORE Core API via secure WebSocket for live data streaming and REST endpoints for configuration management. Offline caching ensures critical mission data remains accessible even without network connectivity.'
+      ],
+      highlights: [
+        'React Native cross-platform (iOS + Android)',
+        'Real-time telemetry dashboard with live charts',
+        'Push notifications for mission alerts and system events',
+        'ZIO AI chat with voice input support',
+        'Offline mode with local data caching',
+        'QR code pairing with ZICORE server instances'
+      ],
+      tags: ['React Native', 'Mobile', 'Telemetry', 'Push Notifications']
+    }
+  },
+  {
+    id: 5,
+    title: 'Aerospace Module — Vehicle Design & Propulsion',
+    excerpt: 'Design unlimited vehicle types with full propulsion analysis. Chemical, electric, nuclear — every system modeled from first principles.',
+    category: 'aerospace',
+    tag: 'Aerospace',
+    tagClass: 'tag-aerospace',
+    icon: '🛸',
+    date: 'Jul 15, 2026',
+    author: 'ZiAerospace',
+    authorInitial: 'A',
+    detail: {
+      subtitle: 'Engineering the Future of Flight',
+      paragraphs: [
+        'The Aerospace Module is ZICORE\'s engineering core — a comprehensive suite for designing, analyzing, and simulating space vehicles. With five integrated tabs (Vehicles, Propulsion, Orbital, Engineering, Missions), it covers the full lifecycle from concept to flight.',
+        'Vehicle templates support unlimited types: launch vehicles, crew capsules, cargo transports, lunar landers, Mars habitats, orbital tugs, deep space probes, recon satellites, VTOL vehicles, autonomous drone swarms, and experimental craft.'
+      ],
+      highlights: [
+        'Vehicle Designer with unlimited templates and full property sets',
+        'Propulsion Lab: chemical (LOX/RP1, Methalox, Hypergolic), electric (Ion, Hall, VASIMR), nuclear (NTR, NERVA), advanced (Fusion, Solar Sail)',
+        'Orbital Mechanics: Hohmann transfers, bi-elliptic, gravity assists, Lagrange points',
+        'Structural Analysis: stress, buckling, fatigue, safety factors',
+        'Aerodynamics: lift, drag, Mach number, heating rate, CFD placeholders'
+      ],
+      tags: ['Vehicle Design', 'Propulsion', 'Orbital Mechanics', 'Structural Analysis']
+    }
+  },
+  {
+    id: 6,
+    title: 'Uncensored AI Models — dolphin-phi on VPS',
+    excerpt: 'Deploying uncensored language models locally via Ollama. dolphin-phi running on the .68 server with full system prompt control.',
+    category: 'ai',
+    tag: 'AI',
+    tagClass: 'tag-ai',
+    icon: '🐬',
+    date: 'Jul 12, 2026',
+    author: 'ZIO Lab',
+    authorInitial: 'Z',
+    detail: {
+      subtitle: 'Local AI Without Content Restrictions',
+      paragraphs: [
+        'ZICORE\'s Ollama infrastructure now hosts dolphin-phi, an uncensored language model fine-tuned for unrestricted conversation and reasoning. Running on the .68 server (i3-550, 13GB RAM, Ubuntu), it provides a fully local AI option with no content filtering.',
+        'The deployment leverages Ollama\'s model management with ZICORE\'s provider stack. When the primary OpenRouter API is unavailable or rate-limited, ZIO automatically falls back to local Ollama models — first the .68 server (primary Ollama), then the .85 server (secondary Ollama with 6 models).'
+      ],
+      highlights: [
+        'dolphin-phi running via Ollama on .68 server',
+        'No content filtering — full system prompt control',
+        'Automatic fallback: OpenRouter → Ollama .68 → Ollama .85',
+        '13 Ollama models on .68, 6 on .85',
+        'Heartbeat monitoring between servers',
+        'Future: distributed compute for model parallelism'
+      ],
+      tags: ['Ollama', 'dolphin-phi', 'Uncensored', 'Local AI', 'VPS']
+    }
+  }
+];
+
+const CATEGORIES = [
+  { name: 'Aerospace', key: 'aerospace', count: 0 },
+  { name: 'AI', key: 'ai', count: 0 },
+  { name: 'Engineering', key: 'engineering', count: 0 },
+  { name: 'Mobile', key: 'mobile', count: 0 },
+  { name: 'Updates', key: 'updates', count: 0 }
+];
+
+// ── Count categories ──
+POSTS.forEach(p => {
+  const cat = CATEGORIES.find(c => c.key === p.category);
+  if (cat) cat.count++;
+});
+
+// ── Render Posts ──
+function renderPosts(filter = 'all') {
+  const grid = document.getElementById('postsGrid');
+  const filtered = filter === 'all' ? POSTS : POSTS.filter(p => p.category === filter);
+  grid.innerHTML = filtered.map(p => `
+    <article class="post-card" data-id="${p.id}" data-cat="${p.category}" onclick="togglePost(${p.id})">
+      <div class="post-thumb">
+        <div class="thumb-gradient"></div>
+        <div class="thumb-scan"></div>
+        <div class="thumb-icon">${p.icon}</div>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="post-tag ${p.tagClass}">${p.tag}</span>
+          <span class="post-date">${p.date}</span>
+        </div>
+        <h3>${p.title}</h3>
+        <p class="excerpt">${p.excerpt}</p>
+        <div class="post-footer">
+          <div class="post-author">
+            <div class="post-avatar">${p.authorInitial}</div>
+            <span class="post-author-name">${p.author}</span>
+          </div>
+          <span class="read-more">Read</span>
+        </div>
+      </div>
+      <div class="post-detail">
+        <button class="post-close" onclick="event.stopPropagation();togglePost(${p.id})">✕</button>
+        <h4>${p.detail.subtitle}</h4>
+        <div class="detail-meta">
+          <span>${p.date}</span>
+          <span>·</span>
+          <span>${p.author}</span>
+          <span>·</span>
+          <span>${p.tag}</span>
+        </div>
+        ${p.detail.paragraphs.map(t => `<p>${t}</p>`).join('')}
+        <p style="color:var(--cyan);font-weight:600;font-size:13px;margin-top:8px">Key highlights:</p>
+        <ul>${p.detail.highlights.map(h => `<li>${h}</li>`).join('')}</ul>
+        <div class="detail-tags">
+          ${p.detail.tags.map(t => `<span>${t}</span>`).join('')}
+        </div>
+      </div>
+    </article>
+  `).join('');
+}
+
+// ── Toggle Post Detail ──
+function togglePost(id) {
+  const card = document.querySelector(`.post-card[data-id="${id}"]`);
+  if (!card) return;
+  const wasExpanded = card.classList.contains('expanded');
+  // collapse all
+  document.querySelectorAll('.post-card.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) {
+    card.classList.add('expanded');
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+}
+
+// ── Category Filter ──
+document.querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderPosts(btn.dataset.cat);
+  });
+});
+
+// ── Sidebar Category List ──
+function renderCatList() {
+  const list = document.getElementById('catList');
+  list.innerHTML = CATEGORIES.map(c => `
+    <li onclick="filterByCat('${c.key}')">
+      <span class="cat-name">${c.name}</span>
+      <span class="cat-count">${c.count}</span>
+    </li>
+  `).join('');
+}
+
+function filterByCat(key) {
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === key);
+  });
+  renderPosts(key);
+}
+
+// ── Recent Posts ──
+function renderRecent() {
+  const list = document.getElementById('rpList');
+  list.innerHTML = POSTS.slice(0, 4).map(p => `
+    <li>
+      <div class="rp-title" onclick="filterByCat('${p.category}');setTimeout(()=>togglePost(${p.id}),100)">${p.title}</div>
+      <div class="rp-date">${p.date}</div>
+    </li>
+  `).join('');
+}
+
+// ── Newsletter ──
+document.getElementById('nlBtn').addEventListener('click', () => {
+  const email = document.getElementById('nlEmail').value.trim();
+  if (!email || !email.includes('@')) return;
+  const subs = JSON.parse(localStorage.getItem('zicore_nl_subs') || '[]');
+  if (!subs.includes(email)) {
+    subs.push(email);
+    localStorage.setItem('zicore_nl_subs', JSON.stringify(subs));
+  }
+  document.getElementById('nlMsg').classList.add('show');
+  document.getElementById('nlEmail').value = '';
+  setTimeout(() => document.getElementById('nlMsg').classList.remove('show'), 4000);
+});
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false }) + ' UTC';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Starfield ──
+(function initStars() {
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function resize() {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    stars = Array.from({ length: 120 }, () => ({
+      x: Math.random() * c.width,
+      y: Math.random() * c.height,
+      r: Math.random() * 1.2 + 0.3,
+      a: Math.random() * 0.6 + 0.2,
+      s: Math.random() * 0.0008 + 0.0003
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    const t = Date.now();
+    stars.forEach(st => {
+      const flicker = st.a + Math.sin(t * st.s) * 0.15;
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,229,255,${Math.max(0.05, flicker)})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+// ── Init ──
+renderPosts();
+renderCatList();
+renderRecent();
+</script>
+</body>
+</html>

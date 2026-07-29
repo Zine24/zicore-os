@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ZICORE VR VIEWPORT</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;touch-action:none;position:fixed;top:0;left:0}
+:root{--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--warn:#ffa500;--err:#ff5555;--bg:#04060c;--surface:rgba(4,6,12,0.7);--glass:rgba(4,6,12,0.55)}
+
+/* ── Sunglasses Frame ─────────────────────── */
+#viewport{width:100%;height:100%;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+
+/* Camera background layers */
+#camBg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;filter:brightness(0.7) contrast(1.1)}
+
+/* Sunglasses frame mask */
+.glasses-frame{position:relative;z-index:10;width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.glasses-frame *{pointer-events:auto}
+
+/* Two lens panels */
+.lens-row{display:flex;width:100%;height:100%;position:relative;align-items:center;justify-content:center}
+
+.lens{position:relative;width:50%;height:100%;overflow:hidden;flex-shrink:0}
+.lens video{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0}
+.lens.right video{transform:scaleX(-1)}
+
+/* Center bridge — flight control stabilizer */
+.bridge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;width:180px;height:180px;pointer-events:auto}
+
+/* Bridge decorative arc */
+.bridge-arc{position:absolute;top:50%;left:50%;width:170px;height:170px;border:1px solid rgba(0,229,255,0.2);border-radius:50%;transform:translate(-50%,-50%);animation:bridgeSpin 20s linear infinite}
+@keyframes bridgeSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.bridge-arc::before{content:'';position:absolute;top:-1px;left:50%;width:8px;height:8px;background:var(--cyan);border-radius:50%;transform:translateX(-50%);box-shadow:0 0 8px var(--cyan)}
+
+/* Artificial horizon in bridge */
+.horizon-box{position:absolute;top:50%;left:50%;width:120px;height:120px;border:1px solid rgba(0,229,255,0.3);border-radius:50%;transform:translate(-50%,-50%);overflow:hidden;background:rgba(4,6,12,0.8)}
+#horizonCanvas{width:100%;height:100%}
+
+/* Compass ring around bridge */
+.compass-ring{position:absolute;top:50%;left:50%;width:160px;height:160px;border:1px dashed rgba(124,77,255,0.2);border-radius:50%;transform:translate(-50%,-50%)}
+.compass-tick{position:absolute;width:1px;height:8px;background:rgba(124,77,255,0.4);top:0;left:50%;transform-origin:0 80px}
+.compass-tick.major{height:12px;background:rgba(0,229,255,0.5)}
+.compass-label{position:absolute;font-size:6px;color:var(--purple);letter-spacing:1px;font-weight:700}
+.compass-label.n{top:4px;left:50%;transform:translateX(-50%);color:var(--cyan)}
+.compass-label.s{bottom:4px;left:50%;transform:translateX(-50%)}
+.compass-label.e{right:4px;top:50%;transform:translateY(-50%)}
+.compass-label.w{left:4px;top:50%;transform:translateY(-50%)}
+
+/* Stabilizer crosshair */
+.stab-cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2}
+.stab-h{width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.stab-v{width:1px;height:40px;background:linear-gradient(180deg,transparent,var(--cyan),transparent);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.stab-dot{width:4px;height:4px;border-radius:50%;background:var(--green);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 6px var(--green)}
+
+/* Top bar */
+.top-bar{position:absolute;top:0;left:0;right:0;height:24px;background:linear-gradient(180deg,rgba(4,6,12,0.9),transparent);display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:70;border-bottom:1px solid rgba(0,229,255,0.08)}
+.top-bar .logo{font-size:7px;letter-spacing:3px;color:var(--cyan);font-weight:700}
+.top-bar .logo span{color:var(--purple)}
+.top-bar .info{font-size:7px;color:#607080;display:flex;gap:8px;align-items:center}
+.dot{width:4px;height:4px;border-radius:50%;display:inline-block}
+.dot.on{background:var(--green);box-shadow:0 0 4px var(--green);animation:pulse 2s infinite}
+.dot.off{background:var(--err);box-shadow:0 0 4px var(--err)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Sensor Overlay (sunglasses style) ─── */
+.sensor-overlay{position:absolute;top:0;left:0;width:100%;height:100%;z-index:55;pointer-events:none}
+.sensor-overlay *{pointer-events:auto}
+
+/* Left lens sensors — top-left corner */
+.sl-sensors{position:absolute;top:32px;left:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;width:calc(50% - 100px)}
+.sl-s{background:rgba(4,6,12,0.75);border:1px solid rgba(0,229,255,0.12);border-radius:3px;padding:3px 5px;backdrop-filter:blur(4px)}
+.sl-s .l{font-size:5px;letter-spacing:1px;color:#506070;margin-bottom:1px}
+.sl-s .v{font-size:9px;color:#e0e0e0;font-weight:700;font-variant-numeric:tabular-nums}
+.sl-s .v.warn{color:var(--warn)}
+.sl-s .v.crit{color:var(--err)}
+
+/* Right lens sensors — top-right corner */
+.sr-sensors{position:absolute;top:32px;right:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;width:calc(50% - 100px);justify-items:end}
+
+/* Bottom gauges — across both lenses */
+.gauge-strip{position:absolute;bottom:36px;left:12px;right:12px;display:flex;gap:4px;z-index:56}
+.gauge{flex:1;background:rgba(4,6,12,0.8);border:1px solid rgba(0,229,255,0.1);border-radius:3px;padding:4px 6px;backdrop-filter:blur(4px)}
+.gauge .l{font-size:5px;letter-spacing:1.5px;color:#506070;margin-bottom:2px}
+.gauge .v{font-size:14px;font-weight:900;color:var(--cyan);text-shadow:0 0 6px rgba(0,229,255,0.3)}
+.gauge .v.warn{color:var(--warn);text-shadow:0 0 6px rgba(255,165,0,0.3)}
+.gauge .v.crit{color:var(--err);text-shadow:0 0 6px rgba(255,85,85,0.3)}
+.gauge .bar{height:2px;background:rgba(255,255,255,0.03);border-radius:1px;margin-top:3px;overflow:hidden}
+.gauge .fill{height:100%;border-radius:1px;transition:width .5s;background:linear-gradient(90deg,var(--cyan),var(--green))}
+.gauge .fill.warn{background:linear-gradient(90deg,var(--warn),var(--err))}
+.gauge .fill.crit{background:var(--err)}
+
+/* ZiPort row — bottom center above gauges */
+.ziport-row{position:absolute;bottom:88px;left:50%;transform:translateX(-50%);display:flex;gap:3px;z-index:56}
+.zp{background:rgba(4,6,12,0.75);border:1px solid rgba(124,77,255,0.15);border-radius:3px;padding:2px 6px;backdrop-filter:blur(4px);display:flex;align-items:center;gap:4px}
+.zp .l{font-size:5px;color:#506070;letter-spacing:.5px}
+.zp .v{font-size:7px;font-weight:600}
+.zp .v.ok{color:var(--green)}
+.zp .v.err{color:var(--err)}
+.zp .v.wait{color:var(--warn)}
+
+/* Audio vis — left bottom */
+.audio-strip{position:absolute;bottom:108px;left:12px;width:120px;display:flex;align-items:center;gap:3px;z-index:56}
+.audio-vis{flex:1;height:10px;background:rgba(4,6,12,0.7);border:1px solid rgba(0,255,136,0.12);border-radius:2px;overflow:hidden;display:flex;align-items:flex-end;padding:1px}
+.audio-bar-item{width:2px;background:var(--green);border-radius:1px;transition:height .08s}
+.audio-label{font-size:5px;color:var(--green);letter-spacing:1px;width:18px;text-align:right}
+
+/* Console — right bottom */
+.console-mini{position:absolute;bottom:108px;right:12px;width:160px;height:56px;background:rgba(4,6,12,0.75);border:1px solid rgba(0,229,255,0.08);border-radius:3px;padding:3px;overflow:hidden;z-index:56;backdrop-filter:blur(4px)}
+.console-mini .title{font-size:5px;letter-spacing:1px;color:rgba(0,229,255,0.5);margin-bottom:1px}
+.cline{font-size:5px;color:#506070;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cline .ts{color:#2a3040}
+.cline .ok{color:var(--green)}
+.cline .err{color:var(--err)}
+.cline .sys{color:var(--purple)}
+
+/* 3D Sensor Cube — right of bridge */
+.sensor-cube-wrap{position:absolute;top:50%;right:calc(50% - 140px);transform:translateY(-50%);width:50px;height:50px;border:1px solid rgba(124,77,255,0.2);border-radius:3px;background:rgba(4,6,12,0.7);overflow:hidden;z-index:56;display:none}
+#sensorCanvas{width:100%;height:100%}
+
+/* Bottom bar */
+.bottom-bar{position:absolute;bottom:0;left:0;right:0;height:28px;background:linear-gradient(0deg,rgba(4,6,12,0.9),transparent);border-top:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:70}
+.bottom-bar .brand{font-size:5px;letter-spacing:2px;color:#2a3040}
+.bottom-bar .brand span{color:var(--cyan);opacity:.5}
+.ctrl{display:flex;gap:3px}
+.b{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.2);border-radius:2px;padding:2px 6px;font-size:5px;letter-spacing:1px;color:var(--cyan);cursor:pointer;font-family:inherit}
+.b:active{background:rgba(0,229,255,0.15)}
+.b.on{background:rgba(0,229,255,0.15);border-color:var(--cyan)}
+
+/* Scanlines */
+.scanlines{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.006) 2px,rgba(0,229,255,0.006) 4px);z-index:65;pointer-events:none}
+
+/* Lens edge glow */
+.lens::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;border:1px solid rgba(0,229,255,0.08);pointer-events:none;z-index:5}
+.lens.left::after{border-right:none;border-radius:0}
+.lens.right::after{border-left:none;border-radius:0}
+
+/* Center divider line */
+.center-line{position:absolute;top:0;left:50%;width:1px;height:100%;background:linear-gradient(180deg,transparent 5%,rgba(0,229,255,0.15) 30%,rgba(0,229,255,0.3) 50%,rgba(0,229,255,0.15) 70%,transparent 95%);z-index:50;transform:translateX(-0.5px)}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <video id="camBg" autoplay playsinline muted></video>
+  <div class="center-line"></div>
+  <div class="scanlines"></div>
+
+  <div class="glasses-frame">
+    <div class="lens-row">
+      <!-- Left Lens -->
+      <div class="lens left">
+        <video id="camLeft" autoplay playsinline muted></video>
+      </div>
+      <!-- Right Lens -->
+      <div class="lens right">
+        <video id="camRight" autoplay playsinline muted></video>
+      </div>
+
+      <!-- Center Bridge — Flight Stabilizer -->
+      <div class="bridge">
+        <div class="compass-ring">
+          <div class="compass-tick major" style="transform:rotate(0deg)"></div>
+          <div class="compass-tick" style="transform:rotate(30deg)"></div>
+          <div class="compass-tick" style="transform:rotate(60deg)"></div>
+          <div class="compass-tick major" style="transform:rotate(90deg)"></div>
+          <div class="compass-tick" style="transform:rotate(120deg)"></div>
+          <div class="compass-tick" style="transform:rotate(150deg)"></div>
+          <div class="compass-tick major" style="transform:rotate(180deg)"></div>
+          <div class="compass-tick" style="transform:rotate(210deg)"></div>
+          <div class="compass-tick" style="transform:rotate(240deg)"></div>
+          <div class="compass-tick major" style="transform:rotate(270deg)"></div>
+          <div class="compass-tick" style="transform:rotate(300deg)"></div>
+          <div class="compass-tick" style="transform:rotate(330deg)"></div>
+          <div class="compass-label n">N</div>
+          <div class="compass-label s">S</div>
+          <div class="compass-label e">E</div>
+          <div class="compass-label w">W</div>
+        </div>
+        <div class="horizon-box">
+          <canvas id="horizonCanvas" width="240" height="240"></canvas>
+        </div>
+        <div class="stab-cross">
+          <div class="stab-h"></div>
+          <div class="stab-v"></div>
+          <div class="stab-dot"></div>
+        </div>
+      </div>
+
+      <!-- Sensor Cube -->
+      <div class="sensor-cube-wrap" id="cubeWrap">
+        <canvas id="sensorCanvas" width="100" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sensor Overlays -->
+  <div class="sensor-overlay">
+    <div class="top-bar">
+      <div class="logo"><span>Z</span>ICORE VR</div>
+      <div class="info">
+        <span><span class="dot on" id="connDot"></span></span>
+        <span id="clock">--:--:--</span>
+        <span id="fps">0 FPS</span>
+      </div>
+    </div>
+
+    <!-- Left lens sensors -->
+    <div class="sl-sensors">
+      <div class="sl-s"><div class="l">GYRO X</div><div class="v" id="gyroX">0.00</div></div>
+      <div class="sl-s"><div class="l">GYRO Y</div><div class="v" id="gyroY">0.00</div></div>
+      <div class="sl-s"><div class="l">GYRO Z</div><div class="v" id="gyroZ">0.00</div></div>
+      <div class="sl-s"><div class="l">ACCEL X</div><div class="v" id="accelX">0.00</div></div>
+      <div class="sl-s"><div class="l">ACCEL Y</div><div class="v" id="accelY">0.00</div></div>
+      <div class="sl-s"><div class="l">ACCEL Z</div><div class="v" id="accelZ">0.00</div></div>
+    </div>
+
+    <!-- Right lens sensors -->
+    <div class="sr-sensors">
+      <div class="sl-s"><div class="l">PITCH</div><div class="v" id="pitch">0°</div></div>
+      <div class="sl-s"><div class="l">ROLL</div><div class="v" id="roll">0°</div></div>
+      <div class="sl-s"><div class="l">HEADING</div><div class="v" id="magHead">---°</div></div>
+      <div class="sl-s"><div class="l">ALTITUDE</div><div class="v" id="altitude">--- m</div></div>
+      <div class="sl-s"><div class="l">SPEED</div><div class="v" id="speed">--- km/h</div></div>
+      <div class="sl-s"><div class="l">G-FORCE</div><div class="v" id="gforce">1.00 G</div></div>
+    </div>
+
+    <!-- ZiPort input row -->
+    <div class="ziport-row">
+      <div class="zp"><span class="l">CAM</span><span class="v" id="zpCam">INIT</span></div>
+      <div class="zp"><span class="l">MIC</span><span class="v" id="zpMic">INIT</span></div>
+      <div class="zp"><span class="l">GYRO</span><span class="v" id="zpGyro">INIT</span></div>
+      <div class="zp"><span class="l">ACCEL</span><span class="v" id="zpAccel">INIT</span></div>
+      <div class="zp"><span class="l">MAG</span><span class="v" id="zpMag">INIT</span></div>
+      <div class="zp"><span class="l">GPS</span><span class="v" id="zpGps">INIT</span></div>
+    </div>
+
+    <!-- Audio vis -->
+    <div class="audio-strip">
+      <div class="audio-label">MIC</div>
+      <div class="audio-vis" id="audioVis"></div>
+    </div>
+
+    <!-- Console mini -->
+    <div class="console-mini">
+      <div class="title">SYS LOG</div>
+      <div id="console"></div>
+    </div>
+
+    <!-- Gauge strip -->
+    <div class="gauge-strip">
+      <div class="gauge"><div class="l">CPU</div><div class="v" id="cpu">0%</div><div class="bar"><div class="fill" id="cpuBar" style="width:0%"></div></div></div>
+      <div class="gauge"><div class="l">MEMORY</div><div class="v" id="mem">0%</div><div class="bar"><div class="fill" id="memBar" style="width:0%"></div></div></div>
+      <div class="gauge"><div class="l">DISK</div><div class="v" id="disk">0%</div><div class="bar"><div class="fill" id="diskBar" style="width:0%"></div></div></div>
+      <div class="gauge"><div class="l">OLLAMA</div><div class="v" id="ollama">--</div></div>
+      <div class="gauge"><div class="l">NET I/O</div><div class="v" id="netio" style="font-size:9px">--</div></div>
+      <div class="gauge"><div class="l">UPTIME</div><div class="v" id="uptime" style="font-size:9px">--</div></div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+      <div class="brand"><span>ZICORE</span> VR VIEWPORT v5.0</div>
+      <div class="ctrl">
+        <button class="b" id="btnCam" onclick="toggleCam()">CAM</button>
+        <button class="b on" id="btnMirror" onclick="toggleMirror()">MIRROR</button>
+        <button class="b" id="btnMic" onclick="toggleMic()">MIC</button>
+        <button class="b" id="btnStereo" onclick="toggleStereo()">STEREO</button>
+        <button class="b" onclick="goFullscreen()">FULL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.ZICORE_API || location.origin;
+let token = window.ZICORE_TOKEN || '';
+let camEnabled = true, stereoMode = false, mirrorMode = true, micEnabled = false;
+let camStream = null, micStream = null, audioCtx = null, analyser = null;
+let consoleBuf = [], MAX_LOG = 4;
+let frameCount = 0, lastFpsTime = Date.now(), currentFps = 0;
+let sensors = { gyro:{x:0,y:0,z:0}, accel:{x:0,y:0,z:0}, orient:{alpha:0,beta:0,gamma:0}, mag:{heading:0} };
+
+function log(msg, type='msg') {
+  const ts = new Date().toTimeString().slice(0,8);
+  consoleBuf.push({ts, msg, type});
+  if (consoleBuf.length > MAX_LOG) consoleBuf.shift();
+  document.getElementById('console').innerHTML = consoleBuf.map(l =>
+    `<div class="cline"><span class="ts">[${l.ts}]</span> <span class="${l.type}">${l.msg}</span></div>`
+  ).join('');
+}
+
+function $(id) { return document.getElementById(id); }
+
+function setGauge(id, pct, barId) {
+  const el = $(id), bar = $(barId);
+  if (!el) return;
+  el.textContent = Math.round(pct) + '%';
+  if (bar) bar.style.width = Math.min(pct,100) + '%';
+  el.className = 'v' + (pct > 90 ? ' crit' : pct > 70 ? ' warn' : '');
+  if (bar) bar.className = 'fill' + (pct > 90 ? ' crit' : pct > 70 ? ' warn' : '');
+}
+
+function setZiPort(id, status, ok) {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = status;
+  el.className = 'v ' + (ok ? 'ok' : ok === false ? 'err' : 'wait');
+}
+
+/* ── CAMERA ── */
+async function initCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    $('camBg').srcObject = camStream;
+    $('camLeft').srcObject = camStream;
+    $('camRight').srcObject = camStream;
+    setZiPort('zpCam', 'LIVE', true);
+    log('Camera stream active', 'ok');
+  } catch(e) {
+    setZiPort('zpCam', 'ERR', false);
+    log('Camera: ' + e.message, 'err');
+  }
+}
+
+function toggleCam() {
+  camEnabled = !camEnabled;
+  $('camBg').style.display = camEnabled ? 'block' : 'none';
+  $('camLeft').style.display = camEnabled ? 'block' : 'none';
+  $('camRight').style.display = camEnabled ? 'block' : 'none';
+  $('btnCam').className = 'b' + (camEnabled ? ' on' : '');
+  log('Camera ' + (camEnabled ? 'ON' : 'OFF'));
+}
+
+function toggleMirror() {
+  mirrorMode = !mirrorMode;
+  $('btnMirror').className = 'b' + (mirrorMode ? ' on' : '');
+  if (mirrorMode) {
+    $('camLeft').style.transform = '';
+    $('camRight').style.transform = 'scaleX(-1)';
+  } else {
+    $('camLeft').style.transform = 'scaleX(-1)';
+    $('camRight').style.transform = '';
+  }
+  log('Mirror ' + (mirrorMode ? 'ON' : 'OFF'));
+}
+
+function toggleStereo() {
+  stereoMode = !stereoMode;
+  $('btnStereo').className = 'b' + (stereoMode ? ' on' : '');
+  if (stereoMode) {
+    mirrorMode = false;
+    $('btnMirror').className = 'b';
+  }
+  log('Stereo ' + (stereoMode ? 'ON' : 'OFF'));
+}
+
+/* ── MICROPHONE ── */
+async function initMic() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    setZiPort('zpMic', 'LIVE', true);
+    log('Microphone active', 'ok');
+    initAudioBars();
+  } catch(e) {
+    setZiPort('zpMic', 'ERR', false);
+    log('Mic: ' + e.message, 'err');
+  }
+}
+
+function toggleMic() {
+  micEnabled = !micEnabled;
+  $('btnMic').className = 'b' + (micEnabled ? ' on' : '');
+  if (micEnabled && !micStream) initMic();
+  else if (!micEnabled && micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+    setZiPort('zpMic', 'OFF', false);
+  }
+}
+
+function initAudioBars() {
+  const vis = $('audioVis');
+  vis.innerHTML = '';
+  for (let i = 0; i < 30; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'audio-bar-item';
+    bar.style.height = '1px';
+    vis.appendChild(bar);
+  }
+}
+
+function updateAudioVis() {
+  if (!analyser || !micEnabled) return;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  const bars = $('audioVis').children;
+  const step = Math.floor(data.length / bars.length);
+  for (let i = 0; i < bars.length; i++) {
+    const val = data[i * step] || 0;
+    bars[i].style.height = Math.max(1, (val / 255) * 8) + 'px';
+  }
+}
+
+/* ── SENSORS ── */
+function initSensors() {
+  if ('DeviceOrientationEvent' in window) {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(state => {
+        if (state === 'granted') bindOrientation();
+      }).catch(() => {});
+    } else bindOrientation();
+  }
+  if ('DeviceMotionEvent' in window) {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission().then(state => {
+        if (state === 'granted') bindMotion();
+      }).catch(() => {});
+    } else bindMotion();
+  }
+}
+
+function bindOrientation() {
+  window.addEventListener('deviceorientation', (e) => {
+    sensors.orient = { alpha: e.alpha || 0, beta: e.beta || 0, gamma: e.gamma || 0 };
+  }, true);
+}
+
+function bindMotion() {
+  window.addEventListener('devicemotion', (e) => {
+    const a = e.accelerationIncludingGravity || {};
+    const r = e.rotationRate || {};
+    sensors.accel = { x: a.x||0, y: a.y||0, z: a.z||0 };
+    sensors.gyro = { x: r.alpha||0, y: r.beta||0, z: r.gamma||0 };
+    setZiPort('zpGyro', 'LIVE', true);
+    setZiPort('zpAccel', 'LIVE', true);
+  }, true);
+}
+
+function updateSensors() {
+  $('gyroX').textContent = sensors.gyro.x.toFixed(2);
+  $('gyroY').textContent = sensors.gyro.y.toFixed(2);
+  $('gyroZ').textContent = sensors.gyro.z.toFixed(2);
+  $('accelX').textContent = sensors.accel.x.toFixed(2);
+  $('accelY').textContent = sensors.accel.y.toFixed(2);
+  $('accelZ').textContent = sensors.accel.z.toFixed(2);
+  $('pitch').textContent = Math.round(sensors.orient.beta) + '°';
+  $('roll').textContent = Math.round(sensors.orient.gamma) + '°';
+  const heading = Math.round(360 - sensors.orient.alpha) % 360;
+  $('magHead').textContent = heading + '°';
+  setZiPort('zpMag', heading + '°', true);
+
+  // Derived values
+  const gforce = Math.sqrt(sensors.accel.x**2 + sensors.accel.y**2 + sensors.accel.z**2) / 9.81;
+  $('gforce').textContent = gforce.toFixed(2) + ' G';
+  $('gforce').className = 'v' + (gforce > 2 ? ' crit' : gforce > 1.5 ? ' warn' : '');
+
+  const alt = (sensors.orient.beta * 10).toFixed(0);
+  $('altitude').textContent = alt + ' m';
+
+  const spd = Math.abs(sensors.gyro.z * 3.6).toFixed(0);
+  $('speed').textContent = spd + ' km/h';
+
+  drawHorizon();
+  drawSensorCube();
+}
+
+/* ── ARTIFICIAL HORIZON ── */
+function drawHorizon() {
+  const canvas = $('horizonCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const cx = w/2, cy = h/2;
+  ctx.clearRect(0,0,w,h);
+
+  const pitch = sensors.orient.beta || 0;
+  const roll = sensors.orient.gamma || 0;
+  const pitchPx = (pitch / 90) * (h/2);
+
+  // Sky
+  ctx.fillStyle = 'rgba(0,40,80,0.6)';
+  ctx.fillRect(0, 0, w, cy + pitchPx);
+  // Ground
+  ctx.fillStyle = 'rgba(60,30,0,0.6)';
+  ctx.fillRect(0, cy + pitchPx, w, h);
+
+  // Horizon line
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-roll * Math.PI / 180);
+  ctx.strokeStyle = 'rgba(0,229,255,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-60, pitchPx);
+  ctx.lineTo(60, pitchPx);
+  ctx.stroke();
+
+  // Pitch ladder
+  ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+  ctx.lineWidth = 0.5;
+  for (let p = -30; p <= 30; p += 10) {
+    if (p === 0) continue;
+    const py = pitchPx - (p / 90) * (h/2);
+    ctx.beginPath();
+    ctx.moveTo(-25, py);
+    ctx.lineTo(25, py);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,229,255,0.4)';
+    ctx.font = '7px Courier New';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.abs(p) + '°', -28, py + 3);
+  }
+  ctx.restore();
+
+  // Aircraft symbol (fixed center)
+  ctx.strokeStyle = 'rgba(0,255,136,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx-20, cy); ctx.lineTo(cx-6, cy);
+  ctx.moveTo(cx+6, cy); ctx.lineTo(cx+20, cy);
+  ctx.moveTo(cx-6, cy); ctx.lineTo(cx, cy+6);
+  ctx.moveTo(cx+6, cy); ctx.lineTo(cx, cy+6);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(0,255,136,0.9)';
+  ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI*2); ctx.fill();
+
+  // Bank angle indicator at top
+  ctx.save();
+  ctx.translate(cx, 12);
+  ctx.rotate(-roll * Math.PI / 180);
+  ctx.fillStyle = 'var(--cyan)';
+  ctx.beginPath();
+  ctx.moveTo(0, -3);
+  ctx.lineTo(-3, 3);
+  ctx.lineTo(3, 3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/* ── 3D SENSOR CUBE ── */
+function drawSensorCube() {
+  const canvas = $('sensorCanvas');
+  if (!canvas || canvas.style.display === 'none') return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const cx = w/2, cy = h/2, s = 16;
+  const beta = (sensors.orient.beta || 0) * Math.PI / 180;
+  const gamma = (sensors.orient.gamma || 0) * Math.PI / 180;
+  const alpha = (sensors.orient.alpha || 0) * Math.PI / 180;
+
+  const vertices = [
+    [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+    [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]
+  ];
+  const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+
+  function rotate(v) {
+    let [x,y,z] = v;
+    let y1 = y*Math.cos(beta) - z*Math.sin(beta);
+    let z1 = y*Math.sin(beta) + z*Math.cos(beta);
+    let x1 = x*Math.cos(gamma) + z1*Math.sin(gamma);
+    let z2 = -x*Math.sin(gamma) + z1*Math.cos(gamma);
+    let x2 = x1*Math.cos(alpha) - y1*Math.sin(alpha);
+    let y2 = x1*Math.sin(alpha) + y1*Math.cos(alpha);
+    return [x2, y2, z2];
+  }
+
+  const projected = vertices.map(v => {
+    const [x,y,z] = rotate(v);
+    const scale = 1 / (3 + z * 0.3);
+    return [cx + x * s * scale, cy + y * s * scale];
+  });
+
+  ctx.strokeStyle = 'rgba(124,77,255,0.4)';
+  ctx.lineWidth = 0.8;
+  edges.forEach(([a,b]) => {
+    ctx.beginPath();
+    ctx.moveTo(projected[a][0], projected[a][1]);
+    ctx.lineTo(projected[b][0], projected[b][1]);
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = 'rgba(0,229,255,0.6)';
+  projected.forEach(([x,y]) => {
+    ctx.beginPath(); ctx.arc(x,y,1.2,0,Math.PI*2); ctx.fill();
+  });
+}
+
+/* ── GPS ── */
+function initGPS() {
+  if ('geolocation' in navigator) {
+    navigator.geolocation.watchPosition(
+      (pos) => setZiPort('zpGps', `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, true),
+      (err) => setZiPort('zpGps', 'ERR', false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  } else setZiPort('zpGps', 'N/A', false);
+}
+
+/* ── DATA FETCHING ── */
+async function fetchStats() {
+  try {
+    const h = {};
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(API + '/api/vr-monitor/stats', { headers: h });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    setGauge('cpu', d.cpu, 'cpuBar');
+    setGauge('mem', d.mem, 'memBar');
+    setGauge('disk', d.disk, 'diskBar');
+    $('uptime').textContent = d.uptime || '--';
+    const oEl = $('ollama');
+    oEl.textContent = d.ollama ? 'ON (' + (d.ollama_models||[]).length + ')' : 'OFF';
+    oEl.className = 'v ' + (d.ollama ? 'ok' : 'err');
+    $('netio').textContent = `↓${d.net_recv_mb||0} ↑${d.net_sent_mb||0} MB`;
+    $('connDot').className = 'dot on';
+  } catch(e) {
+    $('connDot').className = 'dot off';
+    log('Telemetry err: ' + e.message, 'err');
+  }
+}
+
+/* ── FULLSCREEN ── */
+function goFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+
+/* ── FPS ── */
+function updateFPS() {
+  frameCount++;
+  const now = Date.now();
+  if (now - lastFpsTime >= 1000) {
+    currentFps = frameCount;
+    frameCount = 0;
+    lastFpsTime = now;
+    $('fps').textContent = currentFps + ' FPS';
+  }
+  requestAnimationFrame(updateFPS);
+}
+
+/* ── CLOCK ── */
+function updateClock() {
+  $('clock').textContent = new Date().toTimeString().slice(0,8);
+}
+
+/* ── INIT ── */
+window.ZICORE_VR = {
+  setToken: (t) => { token = t; },
+  setApi: (url) => { window.ZICORE_API = url; },
+  log: log,
+  refresh: fetchStats,
+};
+
+log('VR Viewport v5.0 initializing...');
+updateClock();
+setInterval(updateClock, 1000);
+requestAnimationFrame(updateFPS);
+initCamera();
+initSensors();
+initGPS();
+fetchStats();
+setInterval(fetchStats, 5000);
+setInterval(updateSensors, 100);
+setInterval(updateAudioVis, 100);
+
+setTimeout(() => {
+  $('cubeWrap').style.display = 'block';
+  log('All subsystems online', 'sys');
+  log('ZICORE AEROSPACE OS', 'sys');
+}, 1500);
+</script>
+</body>
+</html>

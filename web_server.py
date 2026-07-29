@@ -19,6 +19,7 @@ from datetime import datetime, timezone, timedelta
 import uvicorn
 import urllib.request
 import urllib.error
+from urllib.parse import quote
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Request
 from fastapi.staticfiles import StaticFiles
@@ -877,6 +878,8 @@ class SSOAuthMiddleware:
         "/api/sso/grant-all-defaults", # Service backfill (admin, checked in handler)
         "/api/ziusers/", # ZiUsers admin API (admin checked in handler)
         "/api/opencode/", # OpenCode sessions API (public)
+        "/api/aerospace/", # Aerospace AI calculation API (public)
+        "/api/system/", # System auto-update API (public, admin check in handler)
     )
 
     def __init__(self, app):
@@ -1688,6 +1691,138 @@ async def serve_storage():
     return FileResponse(str(FRONTEND_DIR / "storage.html"))
 
 
+# ─── Aerospace AI Endpoints ──────────────────────────────────────────────────
+
+def _ollama_ask(model: str, prompt: str, timeout: int = 60) -> dict:
+    """Send prompt to Ollama (routed through VPS proxy) and return parsed response."""
+    import requests
+    url = f"{OLLAMA_PROXY_URL}/api/generate"
+    payload = {"model": model, "prompt": prompt, "stream": False}
+    try:
+        r = requests.post(url, json=payload, timeout=timeout)
+        if r.status_code == 200:
+            return {"status": "ok", "response": r.json().get("response", "")}
+        else:
+            return {"status": "error", "error": f"Ollama returned {r.status_code}: {r.text[:200]}"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/aerospace/calculate")
+async def aerospace_calculate(data: dict = {}):
+    """Aerospace calculation engine powered by Ollama.
+    
+    Input: { "type": "delta_v|orbital|propulsion|reentry", "params": {...}, "model": "qwen2.5-coder:7b" }
+    """
+    calc_type = data.get("type", "delta_v")
+    params = data.get("params", {})
+    model = data.get("model", "qwen2.5-coder:7b")
+    
+    prompt_templates = {
+        "delta_v": f"""You are ZICORE Aerospace AI. Calculate delta-v requirements.
+Given: {json.dumps(params)}
+Output ONLY a JSON object with: required_delta_v (m/s), fuel_mass_ratio, burn_time (s), 
+stages (list of dicts with: stage, mass, fuel, Isp, thrust, delta_v), and notes.
+Round numbers to 2 decimal places. NO markdown, NO explanation, ONLY JSON.""",
+        
+        "orbital": f"""You are ZICORE Aerospace AI. Perform orbital mechanics calculation.
+Given: {json.dumps(params)}
+Output ONLY JSON with: orbit_type, semi_major_axis (km), eccentricity, period (min), 
+velocity (km/s), energy (MJ/kg), delta_v_for_transfer (m/s), and notes.
+NO markdown, ONLY JSON.""",
+        
+        "propulsion": f"""You are ZICORE Aerospace AI. Analyze propulsion system.
+Given: {json.dumps(params)}
+Output ONLY JSON with: thrust (kN), Isp_sea_level (s), Isp_vacuum (s), 
+mass_flow (kg/s), chamber_pressure (bar), expansion_ratio, TWR,
+and notes. NO markdown, ONLY JSON.""",
+        
+        "reentry": f"""You are ZICORE Aerospace AI. Calculate reentry parameters.
+Given: {json.dumps(params)}
+Output ONLY JSON with: entry_velocity (km/s), peak_deceleration (g), 
+peak_heat_flux (W/cm2), stagnation_temp (K), max_dynamic_pressure (kPa),
+and notes. NO markdown, ONLY JSON.""",
+    }
+    
+    prompt = prompt_templates.get(calc_type, prompt_templates["delta_v"])
+    result = _ollama_ask(model, prompt, timeout=90)
+    
+    if result["status"] == "ok":
+        resp_text = result["response"]
+        # Try to extract JSON
+        try:
+            # Find JSON block
+            if "```json" in resp_text:
+                resp_text = resp_text.split("```json")[1].split("```")[0]
+            elif "```" in resp_text:
+                resp_text = resp_text.split("```")[1].split("```")[0]
+            parsed = json.loads(resp_text.strip())
+            return {"status": "ok", "type": calc_type, "model": model, "data": parsed}
+        except json.JSONDecodeError:
+            # Return raw response if JSON parsing fails
+            return {"status": "ok", "type": calc_type, "model": model, "data": {"raw": resp_text}}
+    else:
+        return result
+
+
+@app.post("/api/aerospace/vehicle-design")
+async def aerospace_vehicle_design(data: dict = {}):
+    """AI-assisted aerospace vehicle design.
+    
+    Input: { "type": "rocket|satellite|drone|spaceplane|lander", "requirements": {...}, "model": "qwen2.5-coder:7b" }
+    """
+    vehicle_type = data.get("type", "rocket")
+    requirements = data.get("requirements", {})
+    model = data.get("model", "qwen2.5-coder:7b")
+    
+    prompt = f"""You are ZICORE Aerospace vehicle designer. Design a {vehicle_type} with these requirements:
+{json.dumps(requirements)}
+
+Output ONLY JSON with:
+- name: string
+- type: string
+- dimensions: {{length_m, diameter_m, wingspan_m (if applicable)}}
+- mass: {{dry_kg, wet_kg, payload_kg}}
+- propulsion: {{engine_type, thrust_kN, Isp_s, fuel_type, fuel_mass_kg}}
+- performance: {{delta_v_ms, TWR, max_accel_g, max_speed_mach}}
+- structure: {{material, tank_material, thermal_protection}}
+- avionics: {{guidance_type, navigation, comms}}
+- crew: {{capacity, life_support_days}}
+- notes: [string]
+NO markdown, ONLY JSON."""
+
+    result = _ollama_ask(model, prompt, timeout=120)
+    
+    if result["status"] == "ok":
+        resp_text = result["response"]
+        try:
+            if "```json" in resp_text:
+                resp_text = resp_text.split("```json")[1].split("```")[0]
+            elif "```" in resp_text:
+                resp_text = resp_text.split("```")[1].split("```")[0]
+            parsed = json.loads(resp_text.strip())
+            return {"status": "ok", "type": vehicle_type, "model": model, "design": parsed}
+        except json.JSONDecodeError:
+            return {"status": "ok", "type": vehicle_type, "model": model, "design": {"raw": resp_text}}
+    else:
+        return result
+
+
+@app.get("/api/aerospace/models")
+async def aerospace_models():
+    """List available Ollama models on VPS for aerospace computation."""
+    try:
+        import requests
+        r = requests.get(f"{OLLAMA_PROXY_URL}/api/tags", timeout=10)
+        if r.status_code == 200:
+            models = [{"name": m["name"], "size_gb": round(m.get("size", 0) / 1e9, 2)} 
+                      for m in r.json().get("models", [])]
+            return {"status": "ok", "models": models}
+        return {"status": "error", "error": f"Ollama returned {r.status_code}"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @app.get("/api/proxy")
 async def proxy_fetch(url: str = "", headers_json: str = ""):
     """Proxy HTTP requests to bypass CORS/iframe restrictions. Uses DoH for DNS."""
@@ -2228,10 +2363,11 @@ async def zmmx_browse(request: Request):
         if jcat:
             for item in catalog.get(jcat, []):
                 name = item.get("name", item.get("file", ""))
+                file_path = item.get("file", "")
                 items.append({
                     "name": name,
-                    "path": item.get("file", ""),
-                    "url": item.get("url", ""),
+                    "path": file_path,
+                    "url": f"/api/jilocomotion/serve?path={quote(file_path)}" if file_path else "",
                     "size": item.get("size", item.get("size_mb", 0) * 1024 * 1024),
                     "ext": name.rsplit(".", 1)[-1] if "." in name else "",
                     "mime": "application/octet-stream",
@@ -3148,6 +3284,147 @@ async def get_system_stats():
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+# ─── SYSTEM AUTO-UPDATE ────────────────────────────────────────────────────
+
+SYSTEM_ROOT = Path(__file__).parent.resolve()
+
+@app.get("/api/system/git-status")
+async def system_git_status():
+    """Get git branch, ahead/behind, modified files."""
+    try:
+        import subprocess
+        r = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "fetch", "--all"], capture_output=True, text=True, timeout=15)
+        r = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "status", "--short", "--branch"], capture_output=True, text=True, timeout=10)
+        lines = r.stdout.strip().split("\n")
+        branch_line = lines[0] if lines else "?"
+        modified = [l for l in lines[1:] if l.strip()] if len(lines) > 1 else []
+        # Count ahead/behind
+        import re
+        ahead = behind = 0
+        m = re.search(r"ahead (\d+)", branch_line)
+        if m: ahead = int(m.group(1))
+        m = re.search(r"behind (\d+)", branch_line)
+        if m: behind = int(m.group(1))
+        # Current branch
+        branch = branch_line.split(" ")[0] if " " in branch_line else branch_line
+
+        # Get recent commits
+        r2 = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "log", "--oneline", "-5"], capture_output=True, text=True, timeout=5)
+        commits = [c.strip() for c in r2.stdout.strip().split("\n") if c.strip()]
+
+        return {
+            "status": "ok",
+            "branch": branch,
+            "ahead": ahead,
+            "behind": behind,
+            "modified_count": len(modified),
+            "modified": modified[:30],
+            "recent_commits": commits,
+            "git_dir": str(SYSTEM_ROOT),
+        }
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "error": "git operation timed out"}
+    except FileNotFoundError:
+        return {"status": "error", "error": "git not installed on this server"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/system/git-pull")
+async def system_git_pull(data: dict = {}):
+    """Pull latest code from git."""
+    try:
+        import subprocess
+        r = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "pull", "--ff-only"], capture_output=True, text=True, timeout=30)
+        success = r.returncode == 0 or "Already up to date" in r.stdout
+        return {
+            "status": "ok" if success else "error",
+            "stdout": r.stdout.strip()[:1000],
+            "stderr": r.stderr.strip()[:500],
+            "returncode": r.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "error": "git pull timed out after 30s"}
+    except FileNotFoundError:
+        return {"status": "error", "error": "git not installed"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/system/write-file")
+async def system_write_file(data: dict = {}):
+    """Write or modify a file on the server. Relative paths are relative to project root."""
+    try:
+        file_path = data.get("path", "")
+        content = data.get("content", "")
+        if not file_path:
+            return {"status": "error", "error": "path required"}
+        # Security: prevent writing outside project
+        abs_path = (SYSTEM_ROOT / file_path).resolve()
+        if not str(abs_path).startswith(str(SYSTEM_ROOT)):
+            return {"status": "error", "error": "path outside project root"}
+        abs_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(abs_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"status": "ok", "path": str(abs_path), "size": len(content)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/system/restart")
+async def system_restart():
+    """Restart the ZICORE systemd service (graceful)."""
+    try:
+        import subprocess
+        r = subprocess.run(["sudo", "systemctl", "restart", "zicore-materializer"], capture_output=True, text=True, timeout=10)
+        return {
+            "status": "restarting",
+            "message": "Service restart initiated",
+            "stdout": r.stdout.strip()[:500],
+            "stderr": r.stderr.strip()[:500],
+        }
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "error": "restart command timed out"}
+    except FileNotFoundError:
+        return {"status": "error", "error": "systemctl not available"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/system/update")
+async def system_full_update(data: dict = {}):
+    """Full update: git pull, then restart service."""
+    try:
+        import subprocess
+        # Step 1: git fetch
+        fetch = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "fetch", "--all"], capture_output=True, text=True, timeout=15)
+        # Step 2: git status to check if update needed
+        status_r = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "status", "--short", "--branch"], capture_output=True, text=True, timeout=10)
+        behind = "behind" in status_r.stdout
+        if not behind and not data.get("force"):
+            return {"status": "ok", "message": "Already up to date. No pull needed.", "stdout": status_r.stdout.strip()[:500]}
+        # Step 3: git pull
+        pull = subprocess.run(["git", "-C", str(SYSTEM_ROOT), "pull", "--ff-only"], capture_output=True, text=True, timeout=30)
+        pull_ok = pull.returncode == 0 or "Already up to date" in pull.stdout
+        # Step 4: restart service
+        if pull_ok:
+            restart = subprocess.run(["sudo", "systemctl", "restart", "zicore-materializer"], capture_output=True, text=True, timeout=10)
+            return {
+                "status": "restarting",
+                "message": "Update pulled, service restarting",
+                "pull_stdout": pull.stdout.strip()[:500],
+                "restart_stdout": restart.stdout.strip()[:200],
+                "restart_stderr": restart.stderr.strip()[:200],
+            }
+        return {"status": "error", "error": f"Pull failed: {pull.stderr[:500]}", "pull_stdout": pull.stdout[:500]}
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "error": "Update timed out"}
+    except FileNotFoundError:
+        return {"status": "error", "error": "git not installed"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 # ─── SIMULATION ENGINE API ROUTES ──────────────────────────────────────────

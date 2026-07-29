@@ -117,3 +117,4 @@ installers/*.apk
 # Data artifacts
 data/camera_test.jpg
 data/thumbnails/
+mobile/zicore-android.apk

@@ -37,26 +37,6 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
 .layout{position:relative;z-index:2;margin-top:52px;height:calc(100vh - 52px);display:flex;overflow:hidden}
 
-/* ── Config Sidebar (left) ── */
-.cfg-sidebar{width:240px;background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
-.cfg-section{padding:12px 14px;border-bottom:1px solid var(--border)}
-.cfg-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px}
-.cfg-select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6480'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-.cfg-select:focus{border-color:var(--cyan)}
-.cfg-select option{background:var(--bg2);color:var(--text)}
-.cfg-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;flex-shrink:0}
-.cfg-dot.on{background:var(--green)}
-.cfg-dot.off{background:var(--red)}
-.cfg-ollama-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);margin-top:6px}
-.cfg-slider-group{margin-bottom:10px}
-.cfg-slider-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px}
-.cfg-slider-label .val{color:var(--cyan);font-family:var(--mono)}
-.cfg-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--bg4);border-radius:2px;outline:none;cursor:pointer}
-.cfg-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg);cursor:pointer}
-.cfg-action{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:11px;color:var(--text2);transition:all .15s;border:1px solid transparent}
-.cfg-action:hover{background:rgba(0,229,255,0.04);border-color:var(--border);color:var(--text)}
-.cfg-action .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
-
 /* ── Sessions Sidebar ── */
 .sidebar{width:320px;background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .sidebar-head{padding:12px 14px 8px;border-bottom:1px solid var(--border)}
@@ -146,6 +126,15 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .prompt-input-wrapper textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,0.1)}
 .prompt-input-wrapper textarea::placeholder{color:var(--text3)}
 .prompt-actions{display:flex;align-items:center;gap:8px}
+/* Inline Provider/Model bar below prompt */
+.prompt-model-bar{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.prompt-model-bar label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700;flex-shrink:0}
+.prompt-model-bar select{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px;font-family:var(--font);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:200px}
+.prompt-model-bar select:focus{border-color:var(--cyan)}
+.prompt-model-bar select option{background:var(--bg2);color:var(--text)}
+.prompt-model-bar .pm-sep{width:1px;height:14px;background:var(--border);flex-shrink:0}
+.prompt-model-bar .pm-info{font-size:9px;color:var(--text3);font-family:var(--mono);margin-left:auto;flex-shrink:0}
+.prompt-model-bar .pm-info .pm-active{color:var(--cyan)}
 .prompt-hints{display:flex;gap:8px;margin-top:8px;padding-left:4px}
 .prompt-hints .hint{font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:3px;color:var(--text3);background:var(--bg3);cursor:pointer;transition:all .2s}
 .prompt-hints .hint:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.05)}
@@ -180,6 +169,78 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 ::-webkit-scrollbar-track{background:var(--bg2)}
 ::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.2)}
+
+/* ── Mode Toggle (topbar) ── */
+.mode-toggle{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.mode-btn{padding:4px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;color:var(--text3);background:transparent;font-family:var(--font)}
+.mode-btn.active{background:rgba(0,229,255,0.12);color:var(--cyan)}
+.mode-btn.plan.active{background:rgba(124,77,255,0.12);color:var(--purple)}
+.mode-btn:hover:not(.active){color:var(--text2)}
+
+/* ── Tool Indicator ── */
+.tool-indicator{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green);font-family:var(--mono)}
+.tool-indicator.hidden{display:none}
+.tool-indicator .spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+
+/* ── Parameter sliders (right panel) ── */
+.cfg-slider-group{margin-bottom:10px}
+.cfg-slider-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px}
+.cfg-slider-label .val{color:var(--cyan);font-family:var(--mono)}
+.cfg-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--bg4);border-radius:2px;outline:none;cursor:pointer}
+.cfg-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg);cursor:pointer}
+
+/* ── Right Tools Panel ── */
+.tools-panel{width:280px;background:var(--glass);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.tools-section{padding:12px 14px;border-bottom:1px solid var(--border)}
+.tools-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.tools-label svg{width:12px;height:12px;stroke:var(--text3);fill:none;stroke-width:2}
+
+/* ── Node Cards ── */
+.node-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;transition:all .2s}
+.node-card:hover{border-color:var(--border2)}
+.node-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.node-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.node-dot.online{background:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.4)}
+.node-dot.offline{background:var(--red)}
+.node-dot.warning{background:var(--orange)}
+.node-name{font-size:11px;font-weight:600;color:var(--text);flex:1}
+.node-tag{font-size:9px;color:var(--text3);font-family:var(--mono);padding:1px 5px;border:1px solid var(--border);border-radius:3px}
+.node-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.node-stat{font-size:10px;color:var(--text3);font-family:var(--mono);display:flex;justify-content:space-between}
+.node-stat .val{color:var(--cyan)}
+.node-stat .val.warn{color:var(--orange)}
+.node-stat .val.danger{color:var(--red)}
+
+/* ── Tool Cards ── */
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tool-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s}
+.tool-card:hover{border-color:var(--cyan);background:rgba(0,229,255,0.04)}
+.tool-card .icon{font-size:18px;margin-bottom:4px}
+.tool-card .name{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.tool-card .status{font-size:8px;color:var(--text3);margin-top:2px}
+.tool-card.active{border-color:var(--green);background:rgba(0,255,136,0.04)}
+.tool-card.active .status{color:var(--green)}
+
+/* ── Quick Models ── */
+.model-chip{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:all .2s;font-size:11px}
+.model-chip:hover{border-color:var(--purple);background:rgba(124,77,255,0.04)}
+.model-chip .mp{color:var(--text3);font-size:9px;font-family:var(--mono);margin-left:auto}
+.model-chip .mn{color:var(--text);font-weight:500}
+.model-chip .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── System Health Bar ── */
+.health-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px}
+.health-row .hicon{font-size:14px}
+.health-row .hlabel{font-size:10px;color:var(--text2);flex:1;font-weight:500}
+.health-row .hval{font-size:10px;font-family:var(--mono);color:var(--cyan)}
+.health-row .hval.warn{color:var(--orange)}
+.health-row .hval.danger{color:var(--red)}
+
+/* ── Quick Actions ── */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qa-btn{padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;transition:all .2s;text-align:center;font-family:var(--font)}
+.qa-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.04)}
+.qa-btn .qa-icon{font-size:16px;display:block;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -192,57 +253,21 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <span>ZICORE</span>
   </div>
   <div class="topbar-sep"></div>
-  <div class="topbar-title">ZIO Agent — OpenCode Direct</div>
+  <div class="topbar-title">ZIO COPILOT</div>
+  <div class="powered-badge">OPENCODE</div>
+  <div class="powered-badge" style="border-color:rgba(0,255,136,0.2);color:var(--green)">VPS</div>
   <div class="topbar-right">
     <div class="mode-toggle">
       <div class="mode-btn active" id="modeBuild" onclick="switchMode('build')" title="Tab to toggle">BUILD</div>
       <div class="mode-btn plan" id="modePlan" onclick="switchMode('plan')" title="Tab to toggle">PLAN</div>
     </div>
     <div class="topbar-status"><div class="dot" id="liveDot"></div><span id="liveLabel">Disconnected</span></div>
+    <div class="topbar-status" id="sysUpdateStatus" style="cursor:pointer;display:none" onclick="showSystemPanel()"><div class="dot" style="background:var(--cyan)"></div><span>Update</span></div>
     <div class="topbar-clock" id="clock"></div>
-    <div class="powered-badge">POWERED BY <span style="color:var(--cyan)">OPENCODE</span></div>
   </div>
 </div>
 
 <div class="layout">
-  <!-- Config Sidebar -->
-  <div class="cfg-sidebar">
-    <div class="cfg-section">
-      <div class="cfg-label">Configuration</div>
-      <div class="cfg-slider-group">
-        <div class="cfg-label" style="margin-bottom:5px">Provider</div>
-        <select class="cfg-select" id="providerSelect" onchange="switchProvider(this.value)"></select>
-      </div>
-      <div class="cfg-slider-group">
-        <div class="cfg-label" style="margin-bottom:5px">Model</div>
-        <select class="cfg-select" id="modelSelect" onchange="switchModel(this.value)"><option>Loading...</option></select>
-      </div>
-      <div class="cfg-ollama-row"><div class="cfg-dot" id="ollamaDot"></div><span id="ollamaStatusText">Checking...</span></div>
-    </div>
-    <div class="cfg-section">
-      <div class="cfg-label">Parameters</div>
-      <div class="cfg-slider-group">
-        <div class="cfg-slider-label"><span>Temperature</span><span class="val" id="tempVal">0.70</span></div>
-        <input type="range" class="cfg-slider" id="tempSlider" min="0" max="200" value="70" oninput="var v=(this.value/100).toFixed(2);document.getElementById('tempVal').textContent=v;saveParam('temperature',parseFloat(v))">
-      </div>
-      <div class="cfg-slider-group">
-        <div class="cfg-slider-label"><span>Max Tokens</span><span class="val" id="maxTokVal">4096</span></div>
-        <input type="range" class="cfg-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256" oninput="document.getElementById('maxTokVal').textContent=this.value;saveParam('max_tokens',parseInt(this.value))">
-      </div>
-      <div class="cfg-slider-group">
-        <div class="cfg-slider-label"><span>Top P</span><span class="val" id="topPVal">0.90</span></div>
-        <input type="range" class="cfg-slider" id="topPSlider" min="0" max="100" value="90" oninput="var v=(this.value/100).toFixed(2);document.getElementById('topPVal').textContent=v;saveParam('top_p',parseFloat(v))">
-      </div>
-    </div>
-    <div class="cfg-section">
-      <div class="cfg-label">Actions</div>
-      <div class="cfg-action" onclick="showImport()"><div class="dot" style="background:var(--cyan)"></div>Import Chats</div>
-      <div class="cfg-action" onclick="exportChats()"><div class="dot" style="background:var(--green)"></div>Export Chats</div>
-      <div class="cfg-action" onclick="connectLive()"><div class="dot" style="background:var(--purple)"></div>Live Connect</div>
-      <div class="cfg-action" onclick="window.open('/settings','_blank')"><div class="dot"></div>Full Settings</div>
-    </div>
-  </div>
-
   <!-- Sessions Sidebar -->
   <div class="sidebar">
     <div class="sidebar-head">
@@ -290,6 +315,15 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
           </button>
         </div>
       </div>
+      <div class="prompt-model-bar">
+        <label>Provider</label>
+        <select id="promptProvider" onchange="onPromptProviderChange(this.value)"></select>
+        <div class="pm-sep"></div>
+        <label>Model</label>
+        <select id="promptModel" onchange="onPromptModelChange(this.value)"></select>
+        <div class="pm-sep"></div>
+        <div class="pm-info">Active: <span class="pm-active" id="pmActiveModel">—</span></div>
+      </div>
       <div class="prompt-hints">
         <span class="hint">@file</span><span class="hint">@symbol</span><span class="hint">#session</span><span class="hint">/command</span>
       </div>
@@ -319,7 +353,133 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <span style="margin-left:auto"></span>
       <span class="key-hint">Tab</span><span>mode</span>
       <span class="sep"></span>
-      <span>ZIO Agent v1.0</span>
+      <span>ZIO Copilot v1.0</span>
+    </div>
+  </div>
+
+  <!-- Right Tools Panel -->
+  <div class="tools-panel">
+    <!-- System Nodes -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        System Nodes
+      </div>
+      <div class="node-card" id="node85">
+        <div class="node-card-head">
+          <div class="node-dot offline" id="node85Dot"></div>
+          <div class="node-name">.85 Primary</div>
+          <div class="node-tag">ZICORE</div>
+        </div>
+        <div class="node-stats">
+          <div class="node-stat"><span>CPU</span><span class="val" id="n85cpu">—</span></div>
+          <div class="node-stat"><span>RAM</span><span class="val" id="n85ram">—</span></div>
+          <div class="node-stat"><span>Disk</span><span class="val" id="n85disk">—</span></div>
+          <div class="node-stat"><span>Port</span><span class="val">:4000</span></div>
+        </div>
+      </div>
+      <div class="node-card" id="node68">
+        <div class="node-card-head">
+          <div class="node-dot offline" id="node68Dot"></div>
+          <div class="node-name">.68 Ollama</div>
+          <div class="node-tag">OC</div>
+        </div>
+        <div class="node-stats">
+          <div class="node-stat"><span>CPU</span><span class="val" id="n68cpu">—</span></div>
+          <div class="node-stat"><span>RAM</span><span class="val" id="n68ram">—</span></div>
+          <div class="node-stat"><span>Models</span><span class="val" id="n68models">13</span></div>
+          <div class="node-stat"><span>Port</span><span class="val">:4096</span></div>
+        </div>
+      </div>
+      <div class="node-card" id="nodeVPS">
+        <div class="node-card-head">
+          <div class="node-dot offline" id="nodeVPSDot"></div>
+          <div class="node-name">VPS Oracle</div>
+          <div class="node-tag">ARM64</div>
+        </div>
+        <div class="node-stats">
+          <div class="node-stat"><span>CPU</span><span class="val" id="nVcpu">—</span></div>
+          <div class="node-stat"><span>RAM</span><span class="val" id="nVram">—</span></div>
+          <div class="node-stat"><span>Models</span><span class="val" id="nVmodels">5</span></div>
+          <div class="node-stat"><span>IP</span><span class="val">.208</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        System Health
+      </div>
+      <div class="health-row"><span class="hicon">&#9889;</span><span class="hlabel">ZICORE Server</span><span class="hval" id="hZicore">checking...</span></div>
+      <div class="health-row"><span class="hicon">&#9881;</span><span class="hlabel">OpenCode API</span><span class="hval" id="hOpenCode">checking...</span></div>
+      <div class="health-row"><span class="hicon">&#129302;</span><span class="hlabel">Ollama (.68)</span><span class="hval" id="hOllama">checking...</span></div>
+      <div class="health-row"><span class="hicon">&#127760;</span><span class="hlabel">VPS Ollama</span><span class="hval" id="hVpsOllama">checking...</span></div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="tools-section" id="paramsSection" style="display:none">
+      <div class="tools-label" style="cursor:pointer" onclick="var s=document.getElementById('paramsContent');s.style.display=s.style.display==='none'?'block':'none'">
+        <svg viewBox="0 0 24 24"><path d="M12 15V3m0 12a3 3 0 100-6 3 3 0 000 6zm0 0v6"/></svg>
+        Parameters &#9660;
+      </div>
+      <div id="paramsContent">
+        <div class="cfg-slider-group">
+          <div class="cfg-slider-label"><span>Temperature</span><span class="val" id="tempVal">0.70</span></div>
+          <input type="range" class="cfg-slider" id="tempSlider" min="0" max="200" value="70" oninput="var v=(this.value/100).toFixed(2);document.getElementById('tempVal').textContent=v;saveParam('temperature',parseFloat(v))">
+        </div>
+        <div class="cfg-slider-group">
+          <div class="cfg-slider-label"><span>Max Tokens</span><span class="val" id="maxTokVal">4096</span></div>
+          <input type="range" class="cfg-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256" oninput="document.getElementById('maxTokVal').textContent=this.value;saveParam('max_tokens',parseInt(this.value))">
+        </div>
+        <div class="cfg-slider-group">
+          <div class="cfg-slider-label"><span>Top P</span><span class="val" id="topPVal">0.90</span></div>
+          <input type="range" class="cfg-slider" id="topPSlider" min="0" max="100" value="90" oninput="var v=(this.value/100).toFixed(2);document.getElementById('topPVal').textContent=v;saveParam('top_p',parseFloat(v))">
+        </div>
+      </div>
+    </div>
+
+    <!-- ZICORE Tools -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        ZICORE Tools
+      </div>
+      <div class="tool-grid">
+        <div class="tool-card" onclick="toolAction('memory')"><div class="icon">&#128218;</div><div class="name">Memory</div><div class="status">35 tools</div></div>
+        <div class="tool-card" onclick="toolAction('notify')"><div class="icon">&#128276;</div><div class="name">Notify</div><div class="status">Ready</div></div>
+        <div class="tool-card" onclick="toolAction('reminder')"><div class="icon">&#9200;</div><div class="name">Remind</div><div class="status">Ready</div></div>
+        <div class="tool-card" onclick="toolAction('device')"><div class="icon">&#128421;</div><div class="name">Device</div><div class="status">SSH</div></div>
+        <div class="tool-card" onclick="toolAction('engineering')"><div class="icon">&#128736;</div><div class="name">Engin</div><div class="status">Ready</div></div>
+        <div class="tool-card" onclick="toolAction('3d')"><div class="icon">&#128300;</div><div class="name">3D</div><div class="status">Materializer</div></div>
+      </div>
+    </div>
+
+    <!-- Quick Models -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Quick Models
+      </div>
+      <div class="model-chip" onclick="quickModel('vps-ollama','qwen3:8b')"><div class="dot" style="background:var(--green)"></div><span class="mn">Qwen3 8B</span><span class="mp">VPS</span></div>
+      <div class="model-chip" onclick="quickModel('groq','llama-3.3-70b-versatile')"><div class="dot" style="background:var(--cyan)"></div><span class="mn">Llama 3.3 70B</span><span class="mp">Groq</span></div>
+      <div class="model-chip" onclick="quickModel('openrouter','deepseek/deepseek-chat:free')"><div class="dot" style="background:var(--purple)"></div><span class="mn">DeepSeek Chat</span><span class="mp">Free</span></div>
+      <div class="model-chip" onclick="quickModel('openrouter','nvidia/llama-3.1-nemotron-ultra-253b-v1:free')"><div class="dot" style="background:var(--orange)"></div><span class="mn">Nemotron 253B</span><span class="mp">Free</span></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Quick Actions
+      </div>
+      <div class="qa-grid">
+        <button class="qa-btn" onclick="toolAction('new-session')"><span class="qa-icon">&#10010;</span>New Chat</button>
+        <button class="qa-btn" onclick="toolAction('refresh-all')"><span class="qa-icon">&#8635;</span>Refresh</button>
+        <button class="qa-btn" onclick="toolAction('ollama-pull')"><span class="qa-icon">&#11015;</span>Pull Model</button>
+        <button class="qa-btn" onclick="window.open('/settings','_blank')"><span class="qa-icon">&#9881;</span>Settings</button>
+      </div>
     </div>
   </div>
 </div>
@@ -339,6 +499,22 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   </div>
 </div>
 
+<!-- System Update Panel -->
+<div class="modal-overlay" id="sysModal" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head"><h3>◈ SYSTEM UPDATE</h3><button class="modal-close" onclick="hideSystemPanel()">&times;</button></div>
+    <div class="modal-body">
+      <div id="sysStatus"><div class="loading">Checking system status...</div></div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-cyan" onclick="sysGitStatus()">Recheck</button>
+        <button class="btn" onclick="sysGitPull()" style="border-color:var(--purple);color:var(--purple)">Git Pull</button>
+        <button class="btn" onclick="sysFullUpdate()" style="border-color:var(--orange);color:var(--orange)">Full Update + Restart</button>
+      </div>
+      <div id="sysResult" style="margin-top:12px;font-size:11px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;display:none;font-family:var(--mono);white-space:pre-wrap"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Starfield ──
 (function(){var c=document.getElementById('starfield'),x=c.getContext('2d');function rz(){c.width=innerWidth;c.height=innerHeight}rz();addEventListener('resize',rz);var S=[];for(var i=0;i<180;i++)S.push({x:Math.random()*2e3,y:Math.random()*2e3,s:Math.random()*1.2+0.3,p:Math.random()*6.28,sp:Math.random()*0.004+0.001});function d(){x.fillStyle='#04060c';x.fillRect(0,0,c.width,c.height);S.forEach(function(s){s.p+=s.sp;if(s.p>6.28)s.p-=6.28;var o=Math.abs(Math.sin(s.p))*0.5;x.fillStyle='rgba(0,229,255,'+(o*0.45)+')';x.fillRect(s.x%c.width,s.y%c.height,s.s,s.s)});requestAnimationFrame(d)}d()})();
@@ -351,6 +527,11 @@ function ocFetch(path,opts){
   opts.headers['Content-Type']=opts.headers['Content-Type']||'application/json';
   return fetch(OC_HOST+path,opts);
 }
+function localFetch(path,opts){
+  opts=opts||{};opts.headers=opts.headers||{};
+  opts.headers['Content-Type']=opts.headers['Content-Type']||'application/json';
+  return fetch(path,opts);
+}
 
 // ── State ──
 var allSessions=[],filtered=[],selected=null,liveSSE=null,liveOn=false,activeTab='all';
@@ -362,81 +543,97 @@ async function checkHealth(){
   try{
     var r=await ocFetch('/global/health');
     var d=await r.json();
-    var dot=document.getElementById('ollamaDot');
-    var txt=document.getElementById('ollamaStatusText');
+    var dot=document.getElementById('liveDot');
     if(d.healthy){
-      dot.className='cfg-dot on';
-      txt.textContent='OpenCode v'+d.version+' Online';
+      dot.className='dot online';
+      document.getElementById('liveLabel').textContent='OpenCode Online v'+d.version;
     }else{
-      dot.className='cfg-dot off';
-      txt.textContent='OpenCode Unhealthy';
+      dot.className='dot';
+      document.getElementById('liveLabel').textContent='OpenCode Unhealthy';
     }
   }catch(e){
-    document.getElementById('ollamaDot').className='cfg-dot off';
-    document.getElementById('ollamaStatusText').textContent='OpenCode Offline';
+    document.getElementById('liveDot').className='dot';
+    document.getElementById('liveLabel').textContent='OpenCode Offline';
   }
 }
 
-// ── Load Providers from OpenCode ──
+// ── Load Providers from OpenCode (fast fail with fallback) ──
+var KNOWN_PROVIDERS=[
+  {id:'vps-ollama',name:'VPS Ollama',models:['qwen3:8b','gemma3:4b','gemma3:1b','dolphin-phi:2.7b','qwen2.5-coder:7b']},
+  {id:'groq',name:'Groq',models:['mixtral-8x7b-32768']},
+  {id:'openrouter',name:'OpenRouter',models:['nvidia/nemotron-3-super-120b-a12b:free']},
+  {id:'openai',name:'OpenAI',models:['gpt-4o-mini']},
+  {id:'opencode',name:'OpenCode Zen',models:['opencode-zen']}
+];
 async function loadProviders(){
   try{
-    var r=await ocFetch('/provider');
+    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(10000)});
     var d=await r.json();
     providers=d.all||[];
     allModels={};
     providers.forEach(function(p){allModels[p.id]=p.models||[];});
-    renderProviderSelect();
-    updateProviderStat();
   }catch(e){
-    providers=[];
-    renderProviderSelect();
+    providers=KNOWN_PROVIDERS;
+    allModels={};
+    providers.forEach(function(p){allModels[p.id]=p.models||[];});
   }
+  renderPromptProviderSelect();
+  updateProviderStat();
 }
 
-function renderProviderSelect(){
-  var sel=document.getElementById('providerSelect');
+function renderPromptProviderSelect(){
+  var sel=document.getElementById('promptProvider');
+  if(!sel)return;
   sel.innerHTML='';
-  var customProviders=[
-    {id:'vps-ollama',name:'VPS Ollama (ZiCore)'},
-    {id:'ollama',name:'Ollama Local (Windows)'},
-    {id:'opencode',name:'OpenCode Zen'}
+  var important=[
+    {id:'vps-ollama',name:'VPS Ollama'},
+    {id:'groq',name:'Groq'},
+    {id:'openrouter',name:'OpenRouter'},
+    {id:'opencode',name:'OpenCode Zen'},
+    {id:'openai',name:'OpenAI'}
   ];
-  var all=customProviders.concat(providers.filter(function(p){
-    return customProviders.every(function(c){return c.id!==p.id});
+  var all=important.concat(providers.filter(function(p){
+    return important.every(function(c){return c.id!==p.id});
   }));
   all.forEach(function(p){
     var o=document.createElement('option');
     o.value=p.id;o.textContent=p.name||p.id;
-    if(p.id===activeSessionProvider())o.selected=true;
     sel.appendChild(o);
   });
+  onPromptProviderChange(sel.value);
 }
 
-function activeSessionProvider(){
-  if(selected&&selected.model)return selected.model.providerID||'opencode';
-  return currentModel?'':'opencode';
-}
-
-function switchProvider(pid){
+function onPromptProviderChange(pid){
   var models=allModels[pid]||[];
-  updateModelSelect(pid,models);
-}
-
-function updateModelSelect(pid,models){
-  var ms=document.getElementById('modelSelect');
+  var ms=document.getElementById('promptModel');
+  if(!ms)return;
   ms.innerHTML='';
-  if(!models||!models.length){ms.innerHTML='<option>No models</option>';return;}
+  if(!models.length){ms.innerHTML='<option>No models</option>';return;}
   models.forEach(function(m){
     var name=typeof m==='object'?m.name||m.id:m;
     var o=document.createElement('option');
     o.value=name;o.textContent=name;
     ms.appendChild(o);
   });
+  if(ms.options.length>0){
+    currentModel=ms.value;
+    document.getElementById('pmActiveModel').textContent=ms.value;
+    document.getElementById('statModel').textContent=ms.value;
+    document.getElementById('statProvider').textContent=pid;
+  }
 }
 
-function switchModel(model){
+function onPromptModelChange(model){
   currentModel=model;
+  document.getElementById('pmActiveModel').textContent=model;
   document.getElementById('statModel').textContent=model;
+  var pid=document.getElementById('promptProvider').value;
+  document.getElementById('statProvider').textContent=pid;
+}
+
+function activeSessionProvider(){
+  if(selected&&selected.model)return selected.model.providerID||'opencode';
+  return currentModel?'':'opencode';
 }
 
 function updateProviderStat(){
@@ -486,7 +683,7 @@ var importedSessions=[];
 
 async function loadImported(){
   try{
-    var r=await ocFetch('/api/opencode/imported');
+    var r=await localFetch('/api/opencode/imported');
     var d=await r.json();
     importedSessions=(d.sessions||[]).map(function(s){
       return {
@@ -504,15 +701,20 @@ async function loadImported(){
       };
     });
     importedSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
-    allSessions=importedSessions;
+    // Merge imported into allSessions (don't replace)
+    var liveIds={};
+    allSessions.forEach(function(s){liveIds[s.id]=true;});
+    importedSessions.forEach(function(s){
+      if(!liveIds[s.id])allSessions.push(s);
+    });
+    allSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
     document.getElementById('statSess').textContent=allSessions.length;
     document.getElementById('sessionCount').textContent=allSessions.length;
     document.getElementById('statExp').textContent=d.exported_at?new Date(d.exported_at).toLocaleDateString():'-';
-    document.getElementById('statModel').textContent='ChatGPT Import';
     activeTab='all';
     filterSessions();
   }catch(e){
-    document.getElementById('sessionList').innerHTML='<div class="loading" style="animation:none">Failed to load ZIO chats</div>';
+    console.log('Import load failed:',e.message);
   }
 }
 
@@ -738,6 +940,8 @@ function exportChats(){
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
+function saveParam(key,val){}
+
 // ── Agent Mode (Build/Plan) ──
 function switchMode(mode){
   agentMode=mode;
@@ -786,11 +990,268 @@ function parseModel(m){
   try{var p=JSON.parse(m);return p.id||p.name||m;}catch(e){return m;}
 }
 
+// ── System Status Polling ──
+async function pollSystemStatus(){
+  check85();
+  check68();
+  checkVPS();
+  checkOllamaHealth();
+}
+
+async function check85(){
+  try{
+    var r=await localFetch('/api/system/stats',{signal:AbortSignal.timeout(5000)});
+    var d=await r.json();
+    var dot=document.getElementById('node85Dot');
+    dot.className='node-dot online';
+    var cpu=d.cpu||d.cpu_percent||'—';
+    var ram=d.ram_percent||d.memory_percent||'—';
+    var disk=d.disk_percent||'—';
+    document.getElementById('n85cpu').textContent=typeof cpu==='number'?cpu.toFixed(0)+'%':cpu;
+    document.getElementById('n85ram').textContent=typeof ram==='number'?ram.toFixed(0)+'%':ram;
+    document.getElementById('n85disk').textContent=typeof disk==='number'?disk.toFixed(0)+'%':disk;
+    var cpuEl=document.getElementById('n85cpu');
+    var ramEl=document.getElementById('n85ram');
+    var diskEl=document.getElementById('n85disk');
+    if(typeof cpu==='number'&&cpu>80)cpuEl.className='val danger';else if(typeof cpu==='number'&&cpu>60)cpuEl.className='val warn';else cpuEl.className='val';
+    if(typeof ram==='number'&&ram>85)ramEl.className='val danger';else if(typeof ram==='number'&&ram>70)ramEl.className='val warn';else ramEl.className='val';
+    document.getElementById('hZicore').textContent='Online';
+    document.getElementById('hZicore').className='hval';
+  }catch(e){
+    document.getElementById('node85Dot').className='node-dot offline';
+    document.getElementById('hZicore').textContent='Offline';
+    document.getElementById('hZicore').className='hval danger';
+  }
+}
+
+async function check68(){
+  try{
+    var r=await ocFetch('/global/health',{signal:AbortSignal.timeout(5000)});
+    var d=await r.json();
+    var dot=document.getElementById('node68Dot');
+    dot.className=d.healthy?'node-dot online':'node-dot warning';
+    document.getElementById('hOpenCode').textContent=d.healthy?'v'+d.version:'Unhealthy';
+    document.getElementById('hOpenCode').className=d.healthy?'hval':'hval warn';
+  }catch(e){
+    document.getElementById('node68Dot').className='node-dot offline';
+    document.getElementById('hOpenCode').textContent='Offline';
+    document.getElementById('hOpenCode').className='hval danger';
+  }
+}
+
+async function checkVPS(){
+  try{
+    var r=await fetch('/ollama/api/tags',{signal:AbortSignal.timeout(8000),
+      headers:{'User-Agent':'ZICORE/5.0'}});
+    var d=await r.json();
+    var dot=document.getElementById('nodeVPSDot');
+    var models=d.models||[];
+    dot.className=models.length>0?'node-dot online':'node-dot warning';
+    document.getElementById('nVmodels').textContent=models.length;
+    document.getElementById('hVpsOllama').textContent=models.length+' models';
+    document.getElementById('hVpsOllama').className='hval';
+  }catch(e){
+    document.getElementById('nodeVPSDot').className='node-dot offline';
+    document.getElementById('hVpsOllama').textContent='Offline';
+    document.getElementById('hVpsOllama').className='hval danger';
+  }
+}
+
+async function checkOllamaHealth(){
+  try{
+    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(5000)});
+    var d=await r.json();
+    var all=d.all||[];
+    var hasOllama=all.some(function(p){return p.id&&p.id.indexOf('ollama')>=0;});
+    document.getElementById('hOllama').textContent=hasOllama?'Connected':'No provider';
+    document.getElementById('hOllama').className=hasOllama?'hval':'hval warn';
+  }catch(e){
+    document.getElementById('hOllama').textContent='Unknown';
+    document.getElementById('hOllama').className='hval warn';
+  }
+}
+
+function quickModel(provider,model){
+  document.getElementById('statModel').textContent=model;
+  document.getElementById('statProvider').textContent=provider;
+  currentModel=model;
+}
+
+// ── Tool Actions ──
+function toolAction(action){
+  var cards=document.querySelectorAll('.tool-card');
+  cards.forEach(function(c){c.classList.remove('active')});
+  event.currentTarget.classList.add('active');
+  switch(action){
+    case 'new-session':
+      activeSessionId=null;selected=null;
+      document.getElementById('chatTitle').textContent='New Session';
+      document.getElementById('chatMeta').innerHTML='';
+      document.getElementById('chatArea').innerHTML='<div class="empty-state"><svg class="hex-icon" viewBox="0 0 100 100"><defs><linearGradient id="zg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="none" stroke="url(#zg2)" stroke-width="2.5" opacity="0.4"/><text x="50" y="46" text-anchor="middle" fill="#00e5ff" font-size="16" font-weight="800" font-family="monospace" opacity="0.4">ZIO</text><text x="50" y="64" text-anchor="middle" fill="#7c4dff" font-size="9" font-family="monospace" opacity="0.3">COPILOT</text></svg><h3>New Session</h3><p>Type a message below to start a new conversation with ZIO Copilot.</p></div>';
+      document.getElementById('promptInput').focus();
+      renderList();
+      break;
+    case 'refresh-all':
+      loadSessions();pollSystemStatus();loadProviders();
+      break;
+    case 'ollama-pull':
+      var model=prompt('Enter Ollama model name to pull (e.g. qwen3:8b):');
+      if(model){
+        fetch('/api/ollama/pull',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model})})
+        .then(function(){alert('Pull started: '+model);})
+        .catch(function(e){alert('Error: '+e.message);});
+      }
+      break;
+    case 'memory':
+      var q=prompt('Search ZICORE memory:');
+      if(q){sendAsUser('[MEMORY] '+q);}
+      break;
+    case 'notify':
+      var msg=prompt('Notification message:');
+      if(msg){sendAsUser('[NOTIFY] '+msg);}
+      break;
+    case 'reminder':
+      var rem=prompt('Reminder (e.g. "Check orbit in 30 minutes"):');
+      if(rem){sendAsUser('[REMIND] '+rem);}
+      break;
+    case 'device':
+      var cmd=prompt('SSH command to execute on .85:');
+      if(cmd){sendAsUser('[COMMAND] '+cmd);}
+      break;
+    case 'engineering':
+      sendAsUser('[ENGINEERING] Run structural analysis on current vehicle');
+      break;
+    case '3d':
+      window.open('/materializer','_blank');
+      break;
+  }
+  setTimeout(function(){cards.forEach(function(c){c.classList.remove('active')});},2000);
+}
+
+// ── Prompt Bar ──
+function handlePromptKeydown(e){
+  if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();
+    sendPrompt();
+  }
+}
+
+function sendPrompt(){
+  var inp=document.getElementById('promptInput');
+  var txt=inp.value.trim();
+  if(!txt)return;
+  inp.value='';
+  inp.style.height='44px';
+  sendAsUser(txt);
+  var pid=document.getElementById('promptProvider')?document.getElementById('promptProvider').value:'';
+  var mid=document.getElementById('promptModel')?document.getElementById('promptModel').value:'';
+  if(!activeSessionId){
+    var body={title:txt.substring(0,80),agent:agentMode};
+    if(pid)body.provider=pid;
+    if(mid)body.model=mid;
+    ocFetch('/session',{method:'POST',body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(s){
+      if(s&&s.id){activeSessionId=s.id;loadSessions();}
+    }).catch(function(){});
+  }
+}
+
+function toggleAgentMode(){
+  switchMode(agentMode==='build'?'plan':'build');
+}
+
+function sendAsUser(text){
+  var area=document.getElementById('chatArea');
+  var empty=area.querySelector('.empty-state');
+  if(empty)empty.remove();
+  var div=document.createElement('div');div.className='msg user';
+  div.innerHTML='<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-bubble">'+esc(text)+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
+  area.appendChild(div);area.scrollTop=area.scrollHeight;
+  if(activeSessionId){
+    ocFetch('/session/'+encodeURIComponent(activeSessionId)+'/prompt_async',{method:'POST',body:JSON.stringify({content:text,agent:agentMode})});
+  }
+}
+
+// ── System Auto-Update ──
+var _sysUpdating=false;
+function showSystemPanel(){
+  document.getElementById('sysModal').style.display='';
+  sysGitStatus();
+}
+function hideSystemPanel(){
+  document.getElementById('sysModal').style.display='none';
+  document.getElementById('sysResult').style.display='none';
+}
+async function sysGitStatus(){
+  var s=document.getElementById('sysStatus');
+  var r=document.getElementById('sysResult');
+  r.style.display='none';
+  s.innerHTML='<div class="loading">Checking...</div>';
+  try{
+    var resp=await fetch('/api/system/git-status');
+    var d=await resp.json();
+    if(d.status==='ok'){
+      var h='<div style="font-size:12px;color:var(--text)"><b>Branch:</b> '+d.branch+'</div>';
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:4px"><b>Ahead:</b> '+d.ahead+' | <b>Behind:</b> '+d.behind+'</div>';
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:4px"><b>Modified:</b> '+d.modified_count+' files</div>';
+      if(d.modified&&d.modified.length){
+        h+='<div style="margin-top:8px;font-size:10px;color:var(--text3);max-height:80px;overflow-y:auto">';
+        d.modified.forEach(function(m){h+='<div>'+esc(m)+'</div>';});
+        h+='</div>';
+      }
+      if(d.recent_commits&&d.recent_commits.length){
+        h+='<div style="margin-top:8px;font-size:10px;color:var(--green);border-top:1px solid var(--border);padding-top:6px"><b>Recent commits:</b></div>';
+        d.recent_commits.forEach(function(c){h+='<div style="font-size:10px;color:var(--text3)">'+esc(c)+'</div>';});
+      }
+      s.innerHTML=h;
+      document.getElementById('sysUpdateStatus').style.display='';
+    } else {
+      s.innerHTML='<div style="color:var(--orange)">Error: '+esc(d.error)+'</div>';
+    }
+  } catch(e){
+    s.innerHTML='<div style="color:var(--red)">Connection error: '+esc(e.message)+'</div>';
+  }
+}
+async function sysGitPull(){
+  if(_sysUpdating)return;
+  _sysUpdating=true;
+  var r=document.getElementById('sysResult');
+  r.style.display='block';
+  r.innerHTML='<div class="loading">Pulling...</div>';
+  try{
+    var resp=await fetch('/api/system/git-pull',{method:'POST'});
+    var d=await resp.json();
+    r.innerHTML='<b>Git Pull Result:</b>\n'+esc(JSON.stringify(d,null,2));
+    sysGitStatus();
+  } catch(e){r.innerHTML='Error: '+esc(e.message);}
+  _sysUpdating=false;
+}
+async function sysFullUpdate(){
+  if(_sysUpdating)return;
+  _sysUpdating=true;
+  var r=document.getElementById('sysResult');
+  r.style.display='block';
+  r.innerHTML='<div class="loading">Updating system...</div>';
+  try{
+    var resp=await fetch('/api/system/update',{method:'POST',body:'{}',headers:{'Content-Type':'application/json'}});
+    var d=await resp.json();
+    r.innerHTML='<b>Update Result:</b>\n'+esc(JSON.stringify(d,null,2));
+    sysGitStatus();
+  } catch(e){r.innerHTML='Error: '+esc(e.message);}
+  _sysUpdating=false;
+}
+
 // ── Init ──
 checkHealth();
 loadProviders();
 loadSessions();
+loadImported();
 connectLive();
+pollSystemStatus();
+setInterval(pollSystemStatus,30000);
+// Auto-connect SSE after short delay
+setTimeout(function(){if(!liveOn)connectLive();},3000);
 </script>
 </body>
 </html>

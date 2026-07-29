@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiUsers — User Administration</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1528;--bg4:#151c35;--bg5:#1a2240;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d71;--orange:#ff9f43;--yellow:#ffd32a;
+  --text:#e0e6f0;--text2:#8892b0;--text3:#5a6480;
+  --glass:rgba(10,14,26,0.92);--glass2:rgba(15,21,40,0.75);
+  --border:rgba(0,229,255,0.1);--border2:rgba(0,229,255,0.2);
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+  --radius:12px;--radius-sm:8px;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Cascadia Code','Consolas','Courier New',monospace;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:hidden}
+
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.006) 2px,rgba(0,229,255,.006) 4px)}
+
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(4,6,12,0.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:20px}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;cursor:pointer;flex-shrink:0}
+.topbar-logo svg{width:26px;height:26px}
+.topbar-logo span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-sep{width:1px;height:20px;background:rgba(0,229,255,0.1);flex-shrink:0}
+.topbar-title{font-size:12px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.topbar-clock{font-size:12px;color:var(--text3);font-family:var(--mono);letter-spacing:1px}
+.topbar-user{display:flex;align-items:center;gap:8px;padding:4px 12px;border-radius:var(--radius-sm);background:rgba(0,229,255,0.06);border:1px solid var(--border);font-size:11px;color:var(--cyan);font-weight:600}
+
+/* ── Main ── */
+.main{position:relative;z-index:2;margin-top:56px;padding:24px;min-height:calc(100vh - 56px)}
+
+/* ── Stats Cards ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.stats-row{grid-template-columns:1fr}}
+.stat-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;transition:all .3s}
+.stat-card:hover{border-color:var(--border2);box-shadow:var(--shadow)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card:nth-child(1)::before{background:linear-gradient(90deg,var(--cyan),transparent)}
+.stat-card:nth-child(2)::before{background:linear-gradient(90deg,var(--green),transparent)}
+.stat-card:nth-child(3)::before{background:linear-gradient(90deg,var(--purple),transparent)}
+.stat-card:nth-child(4)::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:8px}
+.stat-value{font-size:32px;font-weight:800;font-family:var(--mono);line-height:1}
+.stat-card:nth-child(1) .stat-value{color:var(--cyan)}
+.stat-card:nth-child(2) .stat-value{color:var(--green)}
+.stat-card:nth-child(3) .stat-value{color:var(--purple)}
+.stat-card:nth-child(4) .stat-value{color:var(--orange)}
+.stat-sub{font-size:10px;color:var(--text3);margin-top:4px}
+
+/* ── Search Bar ── */
+.search-bar{display:flex;gap:12px;margin-bottom:20px;align-items:center}
+.search-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;color:var(--text);font-size:13px;outline:none;transition:border-color .2s}
+.search-input:focus{border-color:var(--cyan)}
+.search-input::placeholder{color:var(--text3)}
+.filter-btn{padding:10px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.5px;white-space:nowrap}
+.filter-btn:hover{border-color:var(--cyan);color:var(--text)}
+.filter-btn.active{background:rgba(0,229,255,0.12);border-color:var(--cyan);color:var(--cyan)}
+
+/* ── Users Table ── */
+.table-wrap{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.table-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:0.5px}
+.table-count{font-size:11px;color:var(--text3);font-family:var(--mono)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:12px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(0,229,255,0.04);vertical-align:middle}
+tr{transition:background .15s}
+tr:hover{background:rgba(0,229,255,0.03)}
+tr.disabled{opacity:0.45}
+.username{font-weight:700;color:var(--cyan);font-family:var(--mono);font-size:12px}
+.user-number{font-size:10px;color:var(--purple);font-family:var(--mono);background:rgba(124,77,255,0.1);padding:2px 8px;border-radius:4px;display:inline-block;margin-left:6px}
+.email{color:var(--text2);font-size:12px}
+.role-badge{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.role-admin{background:rgba(255,159,67,0.15);color:var(--orange)}
+.role-user{background:rgba(0,229,255,0.1);color:var(--cyan)}
+.role-mod{background:rgba(124,77,255,0.1);color:var(--purple)}
+.services-cell{display:flex;flex-wrap:wrap;gap:4px;max-width:300px}
+.svc-tag{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:600;letter-spacing:0.5px;background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.12);white-space:nowrap}
+.svc-more{padding:2px 8px;border-radius:4px;font-size:9px;color:var(--text3);background:var(--bg3)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-active{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-inactive{background:var(--red);box-shadow:0 0 6px var(--red)}
+.actions-cell{display:flex;gap:6px}
+.action-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.5px}
+.action-btn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.06)}
+.action-btn.danger{border-color:rgba(255,61,113,0.2);color:var(--red)}
+.action-btn.danger:hover{border-color:var(--red);background:rgba(255,61,113,0.08)}
+.action-btn.warn{border-color:rgba(255,159,67,0.2);color:var(--orange)}
+.action-btn.warn:hover{border-color:var(--orange);background:rgba(255,159,67,0.08)}
+
+/* ── Tab Nav ── */
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.tab-btn{padding:8px 20px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.5px}
+.tab-btn:hover{color:var(--text2);background:rgba(0,229,255,0.03)}
+.tab-btn.active{color:var(--cyan);border-color:var(--border);background:var(--bg3);border-bottom-color:var(--bg3)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── Audit Log ── */
+.audit-list{max-height:500px;overflow-y:auto}
+.audit-entry{display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid rgba(0,229,255,0.04);font-size:12px;align-items:flex-start}
+.audit-time{color:var(--text3);font-family:var(--mono);font-size:10px;white-space:nowrap;min-width:140px;flex-shrink:0}
+.audit-action{font-weight:600;min-width:160px;flex-shrink:0}
+.audit-action.login{color:var(--green)}
+.audit-action.register{color:var(--cyan)}
+.audit-action.update{color:var(--orange)}
+.audit-action.danger{color:var(--red)}
+.audit-action.service{color:var(--purple)}
+.audit-detail{color:var(--text2);flex:1}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);width:90%;max-width:700px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:16px;font-weight:700;color:var(--text)}
+.modal-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{border-color:var(--red);color:var(--red);background:rgba(255,61,113,0.08)}
+.modal-body{padding:24px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)}
+
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-weight:600;margin-bottom:6px}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--cyan)}
+.form-select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;outline:none;appearance:none;cursor:pointer}
+
+.btn{padding:10px 20px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid var(--border);letter-spacing:0.5px}
+.btn-primary{background:rgba(0,229,255,0.12);border-color:var(--cyan);color:var(--cyan)}
+.btn-primary:hover{background:rgba(0,229,255,0.2)}
+.btn-danger{background:rgba(255,61,113,0.1);border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:rgba(255,61,113,0.2)}
+.btn-ghost{background:transparent;color:var(--text3)}
+.btn-ghost:hover{color:var(--text)}
+.btn-sm{padding:5px 12px;font-size:10px}
+
+/* ── Services Grid in Modal ── */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.svc-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;display:flex;align-items:center;justify-content:space-between;transition:all .2s}
+.svc-item.granted{border-color:rgba(0,255,136,0.2);background:rgba(0,255,136,0.04)}
+.svc-name{font-size:12px;font-weight:600;color:var(--text)}
+.svc-desc{font-size:10px;color:var(--text3);margin-top:2px}
+.svc-toggle{width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;position:relative;transition:all .2s}
+.svc-toggle.on{background:var(--green)}
+.svc-toggle.off{background:var(--bg5);border:1px solid var(--border)}
+.svc-toggle::after{content:'';position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:white;transition:all .2s}
+.svc-toggle.on::after{left:18px}
+.svc-toggle.off::after{left:2px}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:60px;color:var(--text3)}
+.loading::after{content:'';display:block;width:40px;height:40px;margin:16px auto;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px;color:var(--text3);font-size:14px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.2)}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="scanline"></div>
+
+<div class="topbar">
+  <div class="topbar-logo" onclick="location.href='/zicore'">
+    <svg viewBox="0 0 100 100"><polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="none" stroke="url(#hg)" stroke-width="3"/><defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs></svg>
+    <span>ZICORE</span>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">ZiUsers Administration</div>
+  <div class="topbar-right">
+    <div class="topbar-clock" id="clock"></div>
+    <div class="topbar-user" id="currentUser">Loading...</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value" id="statUsers">-</div><div class="stat-sub" id="statUsersSub"></div></div>
+    <div class="stat-card"><div class="stat-label">Active Sessions</div><div class="stat-value" id="statSessions">-</div><div class="stat-sub">Currently online</div></div>
+    <div class="stat-card"><div class="stat-label">Services</div><div class="stat-value" id="statServices">-</div><div class="stat-sub">Registered modules</div></div>
+    <div class="stat-card"><div class="stat-label">Audit Entries</div><div class="stat-value" id="statAudit">-</div><div class="stat-sub">System events</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="users">Users</button>
+    <button class="tab-btn" data-tab="audit">Audit Log</button>
+    <button class="tab-btn" data-tab="services">Services</button>
+  </div>
+
+  <div class="tab-content active" id="tab-users">
+    <div class="search-bar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search users by name, email, or username...">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="active">Active</button>
+      <button class="filter-btn" data-filter="admin">Admins</button>
+      <button class="filter-btn" data-filter="inactive">Inactive</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-title">User Directory</div>
+        <div class="table-count" id="userCount">0 users</div>
+      </div>
+      <div id="usersTable"><div class="loading">Loading users...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-audit">
+    <div class="search-bar">
+      <input type="text" class="search-input" id="auditSearch" placeholder="Filter audit log...">
+      <button class="filter-btn active" data-audit-filter="all">All</button>
+      <button class="filter-btn" data-audit-filter="login">Login</button>
+      <button class="filter-btn" data-audit-filter="register">Register</button>
+      <button class="filter-btn" data-audit-filter="service">Service</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-title">System Audit Log</div>
+        <div class="table-count" id="auditCount">0 entries</div>
+      </div>
+      <div class="audit-list" id="auditList"><div class="loading">Loading audit log...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-services">
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-title">Registered Services</div>
+        <div class="table-count" id="svcCount">0 services</div>
+      </div>
+      <div id="servicesList"><div class="loading">Loading services...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">User Details</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let allUsers = [];
+let allServices = [];
+let allAudit = [];
+let currentFilter = 'all';
+let currentAuditFilter = 'all';
+let token = localStorage.getItem('sso_token') || '';
+
+function getToken() {
+  return token || localStorage.getItem('sso_token') || '';
+}
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  const t = getToken();
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  const r = await fetch(API + path, { ...opts, headers });
+  return r.json();
+}
+
+async function checkAuth() {
+  try {
+    const r = await api('/api/sso/me');
+    if (r.status === 'ok' && r.user) {
+      document.getElementById('currentUser').innerHTML = `<span style="color:var(--green)">●</span> ${r.user.display_name || r.user.username} <span style="color:var(--text3);font-size:10px">${r.user.user_number || ''}</span>`;
+      if (r.user.role !== 'admin') {
+        document.querySelector('.main').innerHTML = '<div class="empty" style="margin-top:100px"><h2 style="color:var(--red);margin-bottom:12px">Access Denied</h2><p>Admin privileges required.</p></div>';
+        return false;
+      }
+      return true;
+    }
+  } catch (e) {}
+  document.querySelector('.main').innerHTML = '<div class="empty" style="margin-top:100px"><h2 style="color:var(--orange);margin-bottom:12px">Authentication Required</h2><p>Please <a href="/login">log in</a> as an administrator.</p></div>';
+  return false;
+}
+
+async function loadStats() {
+  try {
+    const r = await api('/api/ziusers/stats');
+    if (r.status === 'ok') {
+      const s = r.stats;
+      document.getElementById('statUsers').textContent = s.users || 0;
+      document.getElementById('statSessions').textContent = s.active_sessions || 0;
+      document.getElementById('statServices').textContent = s.services || 0;
+      document.getElementById('statAudit').textContent = s.audit_entries || 0;
+    }
+  } catch (e) {}
+}
+
+async function loadUsers() {
+  try {
+    const r = await api('/api/ziusers/list');
+    if (r.status === 'ok') {
+      allUsers = r.users;
+      renderUsers();
+    }
+  } catch (e) {
+    document.getElementById('usersTable').innerHTML = '<div class="empty">Failed to load users</div>';
+  }
+}
+
+async function loadServices() {
+  try {
+    const r = await api('/api/ziusers/services');
+    if (r.status === 'ok') {
+      allServices = r.services;
+      renderServices();
+    }
+  } catch (e) {}
+}
+
+async function loadAudit() {
+  try {
+    const r = await api('/api/ziusers/audit?limit=100');
+    if (r.status === 'ok') {
+      allAudit = r.entries;
+      renderAudit();
+    }
+  } catch (e) {
+    document.getElementById('auditList').innerHTML = '<div class="empty">Failed to load audit log</div>';
+  }
+}
+
+function renderUsers() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let filtered = allUsers.filter(u => {
+    if (q && !(u.username||'').toLowerCase().includes(q) && !(u.email||'').toLowerCase().includes(q) && !(u.display_name||'').toLowerCase().includes(q) && !(u.user_number||'').toLowerCase().includes(q)) return false;
+    if (currentFilter === 'active' && !u.is_active) return false;
+    if (currentFilter === 'inactive' && u.is_active) return false;
+    if (currentFilter === 'admin' && u.role !== 'admin') return false;
+    return true;
+  });
+
+  document.getElementById('userCount').textContent = filtered.length + ' users';
+
+  if (filtered.length === 0) {
+    document.getElementById('usersTable').innerHTML = '<div class="empty">No users found</div>';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Services</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+  for (const u of filtered) {
+    const svcNames = (u.services || []).map(s => s.name);
+    const showSvcs = svcNames.slice(0, 3);
+    const moreCount = svcNames.length - 3;
+    html += `<tr class="${u.is_active ? '' : 'disabled'}">
+      <td><span class="username">${esc(u.username)}</span>${u.user_number ? '<span class="user-number">' + esc(u.user_number) + '</span>' : ''}</td>
+      <td><span class="email">${esc(u.email || '-')}</span></td>
+      <td><span class="role-badge role-${u.role}">${esc(u.role)}</span></td>
+      <td><div class="services-cell">${showSvcs.map(s => '<span class="svc-tag">' + esc(s) + '</span>').join('')}${moreCount > 0 ? '<span class="svc-more">+' + moreCount + '</span>' : ''}</div></td>
+      <td><span class="status-dot ${u.is_active ? 'status-active' : 'status-inactive'}"></span>${u.is_active ? 'Active' : 'Inactive'}</td>
+      <td><div class="actions-cell">
+        <button class="action-btn" onclick="openUser(${u.id})">View</button>
+        ${u.is_active ? `<button class="action-btn warn" onclick="deactivateUser(${u.id},'${esc(u.username)}')">Disable</button>` : `<button class="action-btn" onclick="activateUser(${u.id})">Enable</button>`}
+      </div></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('usersTable').innerHTML = html;
+}
+
+function renderAudit() {
+  const q = document.getElementById('auditSearch').value.toLowerCase();
+  let filtered = allAudit.filter(e => {
+    if (q && !(e.action||'').toLowerCase().includes(q) && !(e.detail||'').toLowerCase().includes(q)) return false;
+    if (currentAuditFilter !== 'all') {
+      if (currentAuditFilter === 'login' && !e.action.includes('login')) return false;
+      if (currentAuditFilter === 'register' && !e.action.includes('register')) return false;
+      if (currentAuditFilter === 'service' && !e.action.includes('service')) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('auditCount').textContent = filtered.length + ' entries';
+
+  if (filtered.length === 0) {
+    document.getElementById('auditList').innerHTML = '<div class="empty">No audit entries found</div>';
+    return;
+  }
+
+  let html = '';
+  for (const e of filtered) {
+    let cls = '';
+    if (e.action.includes('login')) cls = 'login';
+    else if (e.action.includes('register')) cls = 'register';
+    else if (e.action.includes('service')) cls = 'service';
+    else if (e.action.includes('delete') || e.action.includes('deactivat') || e.action.includes('password')) cls = 'danger';
+    else if (e.action.includes('update')) cls = 'update';
+
+    html += `<div class="audit-entry">
+      <span class="audit-time">${formatTime(e.timestamp)}</span>
+      <span class="audit-action ${cls}">${esc(e.action)}</span>
+      <span class="audit-detail">${esc(e.detail || '')}</span>
+    </div>`;
+  }
+  document.getElementById('auditList').innerHTML = html;
+}
+
+function renderServices() {
+  document.getElementById('svcCount').textContent = allServices.length + ' services';
+  let html = '<div style="padding:20px"><div class="svc-grid">';
+  for (const s of allServices) {
+    html += `<div class="svc-item">
+      <div><div class="svc-name">${esc(s.name)}</div><div class="svc-desc">${esc(s.description || '')}</div></div>
+    </div>`;
+  }
+  html += '</div></div>';
+  document.getElementById('servicesList').innerHTML = html;
+}
+
+async function openUser(userId) {
+  const r = await api('/api/ziusers/' + userId);
+  if (r.status !== 'ok') return;
+  const u = r.user;
+
+  document.getElementById('modalTitle').textContent = u.username + (u.user_number ? ' (' + u.user_number + ')' : '');
+
+  let svcHtml = '';
+  for (const s of allServices) {
+    const granted = (u.services || []).some(us => us.id === s.id);
+    svcHtml += `<div class="svc-item ${granted ? 'granted' : ''}">
+      <div><div class="svc-name">${esc(s.name)}</div><div class="svc-desc">${esc(s.description || '')}</div></div>
+      <button class="svc-toggle ${granted ? 'on' : 'off'}" onclick="toggleService(${u.id},${s.id},${granted})"></button>
+    </div>`;
+  }
+
+  let html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="form-group"><div class="form-label">Username</div><div style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px;color:var(--cyan)">${esc(u.username)}</div></div>
+      <div class="form-group"><div class="form-label">User Number</div><div style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px;color:var(--purple)">${esc(u.user_number || 'N/A')}</div></div>
+      <div class="form-group"><div class="form-label">Email</div><input class="form-input" id="editEmail" value="${esc(u.email || '')}"></div>
+      <div class="form-group"><div class="form-label">Display Name</div><input class="form-input" id="editName" value="${esc(u.display_name || '')}"></div>
+      <div class="form-group"><div class="form-label">Role</div><select class="form-select" id="editRole">
+        <option value="user" ${u.role==='user'?'selected':''}>User</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        <option value="mod" ${u.role==='mod'?'selected':''}>Moderator</option>
+      </select></div>
+      <div class="form-group"><div class="form-label">Status</div><div style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-size:13px"><span class="status-dot ${u.is_active ? 'status-active' : 'status-inactive'}"></span>${u.is_active ? 'Active' : 'Inactive'}</div></div>
+      <div class="form-group"><div class="form-label">Created</div><div style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px;color:var(--text2)">${formatTime(u.created_at)}</div></div>
+      <div class="form-group"><div class="form-label">Active Sessions</div><div style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-size:13px;color:var(--green)">${u.session_count || 0}</div></div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Reset Password</div>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="newPassword" placeholder="New password (min 8 chars)" style="flex:1">
+        <button class="btn btn-danger btn-sm" onclick="resetPassword(${u.id})">Reset</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Services Access</div>
+      <div class="svc-grid">${svcHtml}</div>
+    </div>
+  `;
+  document.getElementById('modalBody').innerHTML = html;
+
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    ${!u.is_active ? `<button class="btn btn-primary" onclick="activateUser(${u.id});closeModal()">Activate</button>` : ''}
+    <button class="btn btn-primary" onclick="saveUser(${u.id})">Save Changes</button>
+  `;
+
+  document.getElementById('userModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('userModal').classList.remove('show');
+}
+
+async function saveUser(userId) {
+  const email = document.getElementById('editEmail').value;
+  const name = document.getElementById('editName').value;
+  const role = document.getElementById('editRole').value;
+  const r = await api('/api/ziusers/' + userId, { method: 'PUT', body: JSON.stringify({ email, display_name: name, role }) });
+  if (r.status === 'ok') {
+    closeModal();
+    loadUsers();
+    loadStats();
+  } else {
+    alert(r.error || 'Update failed');
+  }
+}
+
+async function toggleService(userId, serviceId, currentlyGranted) {
+  if (currentlyGranted) {
+    await api('/api/ziusers/' + userId + '/revoke-service', { method: 'DELETE', body: JSON.stringify({ service_id: serviceId }) });
+  } else {
+    await api('/api/ziusers/' + userId + '/grant-service', { method: 'POST', body: JSON.stringify({ service_id: serviceId }) });
+  }
+  openUser(userId);
+  loadUsers();
+}
+
+async function resetPassword(userId) {
+  const pw = document.getElementById('newPassword').value;
+  if (!pw || pw.length < 8) { alert('Password must be at least 8 characters'); return; }
+  if (!confirm('Reset password for this user?')) return;
+  const r = await api('/api/ziusers/' + userId + '/reset-password', { method: 'POST', body: JSON.stringify({ new_password: pw }) });
+  if (r.status === 'ok') { alert('Password reset successfully'); document.getElementById('newPassword').value = ''; }
+  else alert(r.error || 'Failed');
+}
+
+async function deactivateUser(userId, username) {
+  if (!confirm('Deactivate user "' + username + '"? They will be logged out everywhere.')) return;
+  const r = await api('/api/ziusers/' + userId + '/deactivate', { method: 'POST' });
+  if (r.status === 'ok') { loadUsers(); loadStats(); }
+  else alert(r.error || 'Failed');
+}
+
+async function activateUser(userId) {
+  const r = await api('/api/ziusers/' + userId + '/activate', { method: 'POST' });
+  if (r.status === 'ok') { loadUsers(); loadStats(); }
+  else alert(r.error || 'Failed');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+function formatTime(iso) {
+  if (!iso) return '-';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso; }
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// User filter
+document.querySelectorAll('[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderUsers();
+  });
+});
+
+// Audit filter
+document.querySelectorAll('[data-audit-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-audit-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentAuditFilter = btn.dataset.auditFilter;
+    renderAudit();
+  });
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', renderUsers);
+document.getElementById('auditSearch').addEventListener('input', renderAudit);
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Starfield
+(function() {
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function resize() { c.width = window.innerWidth; c.height = window.innerHeight; initStars(); }
+  function initStars() { stars = []; for (let i = 0; i < 200; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, r: Math.random() * 1.5 + 0.3, a: Math.random(), da: (Math.random() - 0.5) * 0.01 }); }
+  function draw() { ctx.clearRect(0, 0, c.width, c.height); for (const s of stars) { s.a += s.da; if (s.a > 1 || s.a < 0.1) s.da = -s.da; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(0,229,255,${s.a * 0.5})`; ctx.fill(); } requestAnimationFrame(draw); }
+  window.addEventListener('resize', resize); resize(); draw();
+})();
+
+// Close modal on overlay click
+document.getElementById('userModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// Init
+(async function() {
+  const ok = await checkAuth();
+  if (!ok) return;
+  await Promise.all([loadStats(), loadUsers(), loadServices(), loadAudit()]);
+})();
+</script>
+</body>
+</html>
