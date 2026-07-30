@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIO Unified — 3D Printing Control System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+canvas#starfield{position:fixed;inset:0;z-index:0}
+.content{position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto}
+h1{font-size:clamp(32px,5vw,56px);font-weight:300;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text),var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{font-size:14px;color:var(--text-dim);line-height:1.8;max-width:600px;margin-bottom:48px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s}
+.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-2px)}
+.card-icon{font-size:28px;margin-bottom:12px;color:var(--cyan)}
+.card-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.card-desc{font-size:11px;color:var(--text-dim);line-height:1.7}
+.card-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
+.back{display:inline-block;margin-top:32px;padding:12px 28px;border:1px solid var(--border);color:var(--text-dim);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all 0.4s}
+.back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.info{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:32px;font-size:13px;line-height:1.8;color:var(--text-dim)}
+.info strong{color:var(--text)}
+.info code{font-family:var(--mono);font-size:11px;color:var(--cyan);background:rgba(0,229,255,0.06);padding:2px 6px;border-radius:2px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:600;transition:all 0.3s;border:1px solid var(--border)}
+.btn-github{background:rgba(124,77,255,0.1);border-color:rgba(124,77,255,0.25);color:var(--purple)}
+.btn-github:hover{background:rgba(124,77,255,0.2);box-shadow:0 0 20px rgba(124,77,255,0.1)}
+@media(max-width:768px){.content{padding:80px 24px}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="content">
+  <a href="/" class="back" style="margin-bottom:32px;display:inline-block">&larr; ZICORE OS</a>
+  <h1>ZIO Unified</h1>
+  <div class="sub">Unified 3D printing control system. ESP32-S3 camera, Marlin firmware, desktop visualizer, Android app, and CNC control — all integrated into a single platform.</div>
+
+  <div class="info">
+    <strong>ZIO Unified</strong> is the original 3D printing module now integrated into ZICORE Aerospace. It combines <strong>ESP32-S3 camera streaming</strong>, <strong>Marlin firmware control</strong>, <strong>CNC node management</strong>, and a <strong>desktop visualizer</strong> into one cohesive system. <br><br>
+    Repository: <code>github.com/Zine24/ZioUnified</code><br>
+    License: Open Source
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon">&#x1F4F7;</div>
+      <div class="card-title">ZiCAM ESP32-S3</div>
+      <div class="card-desc">MJPEG video streaming, microSD recording, web panel control. OV3660 camera with MPU6050 IMU integration.</div>
+      <span class="card-tag">Firmware</span>
+    </div>
+    <div class="card" style="border-color:rgba(124,77,255,0.1)">
+      <div class="card-icon" style="color:var(--purple)">&#x1F5A5;</div>
+      <div class="card-title">Desktop Visualizer</div>
+      <div class="card-desc">3-column HTML layout. Live camera feed, IMU data panel, print control. Works in any browser.</div>
+      <span class="card-tag" style="color:var(--purple);border-color:rgba(124,77,255,0.15)">Desktop</span>
+    </div>
+    <div class="card" style="border-color:rgba(0,255,136,0.1)">
+      <div class="card-icon" style="color:var(--green)">&#x2699;</div>
+      <div class="card-title">Marlin Firmware</div>
+      <div class="card-desc">Custom Marlin build with ZiMMU support. Multi-material unit control, CNC node integration. PlatformIO project.</div>
+      <span class="card-tag" style="color:var(--green);border-color:rgba(0,255,136,0.15)">Firmware</span>
+    </div>
+    <div class="card" style="border-color:rgba(255,136,0,0.1)">
+      <div class="card-icon" style="color:var(--orange)">&#x1F4F1;</div>
+      <div class="card-title">Android App</div>
+      <div class="card-desc">Native Android control. Print monitoring, camera view, remote control from your phone.</div>
+      <span class="card-tag" style="color:var(--orange);border-color:rgba(255,136,0,0.15)">Mobile</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F527;</div>
+      <div class="card-title">ZiMMU CNC</div>
+      <div class="card-desc">CNC node controller. Multi-material unit management, tool changing, coordinate control.</div>
+      <span class="card-tag">CNC</span>
+    </div>
+    <div class="card" style="border-color:rgba(0,229,255,0.1)">
+      <div class="card-icon">&#x1F4E1;</div>
+      <div class="card-title">Serial Bridge</div>
+      <div class="card-desc">Python serial bridge for desktop ↔ firmware communication. Build and deployment scripts included.</div>
+      <span class="card-tag">Bridge</span>
+    </div>
+  </div>
+
+  <a href="https://github.com/Zine24/ZioUnified" target="_blank" class="btn btn-github">&#x1F4C2; View on GitHub</a>
+  <a href="/master-creator" class="btn" style="margin-left:12px;border-color:rgba(0,229,255,0.2);color:var(--cyan)">&larr; Master Creator</a>
+</div>
+<script>
+var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
+function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
+function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
+draw();
+</script>
+</body>
+</html>

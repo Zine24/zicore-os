@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZINEMOTION START — The Conception of Innovation</title>
+<meta name="description" content="ZINEMOTION START — From concept to reality. Executive production for the next generation of aerospace, cinematic, and scientific projects.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--bg2:#080c16;--bg3:#0a0e1a;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--gold:#ffd700;--orange:#ff8800;--red:#ff3333;--text:#c8d6e5;--text2:#7a8ba8;--text3:#4a5568;--border:rgba(0,229,255,0.08);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+#starfield{position:fixed;inset:0;z-index:0}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.02;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
+.content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:80px 40px}
+.hero{min-height:80vh;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2;padding:80px 40px;max-width:1200px;margin:0 auto}
+.hero-tag{font-family:var(--mono);font-size:11px;letter-spacing:8px;color:var(--gold);text-transform:uppercase;margin-bottom:24px}
+.hero h1{font-size:clamp(42px,8vw,96px);font-weight:900;letter-spacing:-2px;line-height:1;margin-bottom:24px;background:linear-gradient(135deg,#fff 0%,var(--gold) 40%,var(--cyan) 70%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(16px,2vw,22px);font-weight:300;color:var(--text2);line-height:1.7;max-width:700px;margin-bottom:48px}
+.hero-meta{font-family:var(--mono);font-size:12px;color:var(--text3);letter-spacing:2px;border-top:1px solid var(--border);padding-top:24px;display:flex;gap:32px;flex-wrap:wrap}
+.section{padding:100px 0}
+.section-tag{font-family:var(--mono);font-size:10px;letter-spacing:6px;color:var(--text3);text-transform:uppercase;margin-bottom:16px}
+.section-title{font-size:clamp(28px,4vw,48px);font-weight:700;letter-spacing:-1px;margin-bottom:16px;line-height:1.2}
+.section-title .gold{color:var(--gold)}
+.section-title .cyan{color:var(--cyan)}
+.section-title .purple{color:var(--purple)}
+.section-desc{font-size:15px;color:var(--text2);line-height:1.8;max-width:600px;margin-bottom:48px}
+.portal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.portal-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s}
+.portal-card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-3px)}
+.portal-card .icon{font-size:32px;margin-bottom:12px}
+.portal-card h3{font-size:15px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
+.portal-card p{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.portal-card .domain{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px;display:inline-block}
+.portal-card .badge{display:inline-block;margin-left:6px;padding:3px 8px;border-radius:2px;font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.badge-new{background:rgba(0,229,255,0.15);color:var(--cyan);border:1px solid rgba(0,229,255,0.3)}
+.badge-wordpress{background:rgba(124,77,255,0.15);color:var(--purple);border:1px solid rgba(124,77,255,0.3)}
+.badge-classic{background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.3)}
+.badge-system{background:rgba(0,255,136,0.15);color:var(--green);border:1px solid rgba(0,255,136,0.3)}
+.divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:40px 0}
+.producer-section{display:grid;grid-template-columns:2fr 1fr;gap:48px;align-items:start;padding:48px;border:1px solid var(--border);border-radius:16px;background:var(--bg2)}
+.producer-text h2{font-size:24px;font-weight:700;margin-bottom:16px}
+.producer-text p{font-size:14px;color:var(--text2);line-height:1.8;margin-bottom:16px}
+.producer-text .role{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+.producer-stats{display:flex;flex-direction:column;gap:16px}
+.stat-box{padding:20px;border:1px solid var(--border);border-radius:8px;text-align:center;background:var(--bg3)}
+.stat-num{font-size:32px;font-weight:700;color:var(--cyan);font-family:var(--mono)}
+.stat-label{font-size:10px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-top:4px}
+footer{padding:60px 40px;border-top:1px solid var(--border);text-align:center}
+footer p{font-size:11px;color:var(--text3);letter-spacing:1px}
+footer a{color:var(--cyan);text-decoration:none}
+@media(max-width:768px){.producer-section{grid-template-columns:1fr}.hero{padding:60px 24px}.content{padding:60px 24px}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="grain"></div>
+
+<div class="hero">
+  <div class="hero-tag">EUREKA · The conception of innovation</div>
+  <h1>ZINEMOTION<br>START</h1>
+  <div class="hero-sub">Every great project begins with a single conception. We don't sell production capacity — we sell the intellectual blueprint of how systems are built, how ideas evolve, and how humanity advances through technology and cinema.</div>
+  <div class="hero-meta">
+    <span>✦ Executive Producer of Projects</span>
+    <span>✦ Intellectual Property Architect</span>
+    <span>✦ Aerospace & Cinematic Systems</span>
+    <span>✦ Since 2010</span>
+  </div>
+</div>
+
+<div class="content">
+  <!-- PRODUCER STATEMENT -->
+  <div class="producer-section">
+    <div class="producer-text">
+      <div class="role">Executive Producer · Intellectual Architecture</div>
+      <h2>The Mind Behind the Systems</h2>
+      <p>ZINEMOTION is not a production house — it is the genesis point. Every module, every system, every vehicle concept in the ZICORE ecosystem originates from the intellectual framework designed here. We are the executive producer of projects that span from cinematic storytelling to aerospace engineering.</p>
+      <p>DogmaD21, ZICORE Aerospace, Obsidiana Lunar Cryo, ZIAtoMex — these are not products we manufacture. They are <strong>conceptions we birth</strong>, blueprinted in code and narrative, then realized by the ecosystems they inspire.</p>
+      <p>This portal is the collage of every project, every system, every idea that carries the ZINEMOTION signature.</p>
+    </div>
+    <div class="producer-stats">
+      <div class="stat-box">
+        <div class="stat-num">15+</div>
+        <div class="stat-label">Years of Conception</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">50+</div>
+        <div class="stat-label">Systems & Modules</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">3</div>
+        <div class="stat-label">Active Ecosystems</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">∞</div>
+        <div class="stat-label">Ideas in Conception</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PORTALS COLLAGE -->
+  <div class="section">
+    <div class="section-tag">001 — Project Portals</div>
+    <h2 class="section-title">The <span class="gold">Collage</span> of Creation</h2>
+    <p class="section-desc">Every portal, every system, every idea conceived under ZINEMOTION. From cinematic workshops to aerospace operating systems.</p>
+    
+    <div class="portal-grid">
+      <a href="https://zinemotion.com.mx" class="portal-card">
+        <div class="icon">&#x1F3AC;</div>
+        <h3>ZineMotion Business</h3>
+        <p>Corporate portal of ZineMotion. Cinematic production, film resources, professional services. The creative soul of the ecosystem.</p>
+        <span class="domain">zinemotion.com.mx</span>
+        <span class="badge badge-classic">Classic</span>
+      </a>
+
+      <a href="https://zicore.space" class="portal-card">
+        <div class="icon">&#x1F680;</div>
+        <h3>ZICORE OS</h3>
+        <p>Digital aerospace operating system. Mission control, vehicle design, orbital mechanics, 3D materializer, AI copilot, and 50+ modules.</p>
+        <span class="domain">zicore.space</span>
+        <span class="badge badge-system">OS</span>
+      </a>
+
+      <a href="https://dogmad21.zinemotion.com.mx" class="portal-card">
+        <div class="icon">&#x1F4DD;</div>
+        <h3>DogmaD21</h3>
+        <p>Workshop "From Script to Production Folder". Transform your screenplay into a production-ready project. Cinematic methodology.</p>
+        <span class="domain">dogmad21.zinemotion.com.mx</span>
+        <span class="badge badge-wordpress">WordPress</span>
+      </a>
+
+      <a href="https://zzz.zicore.space" class="portal-card">
+        <div class="icon">&#x1F30C;</div>
+        <h3>ZZZ Space</h3>
+        <p>Aerospace career chronicle. The workout to go to space. A race through human spaceflight history, training regimens, and the future.</p>
+        <span class="domain">zzz.zicore.space</span>
+        <span class="badge badge-wordpress">WordPress</span>
+      </a>
+
+      <a href="/master-creator" class="portal-card">
+        <div class="icon">&#x2728;</div>
+        <h3>Master Creator</h3>
+        <p>Unified creative center. 3D materializer, CAD parametric, AI generation, multimedia editing, automated production. From concept to object.</p>
+        <span class="domain">zinemotion.com/master-creator</span>
+        <span class="badge badge-new">New</span>
+      </a>
+
+      <a href="/visualizer" class="portal-card">
+        <div class="icon">&#x1F4CA;</div>
+        <h3>Visualizer</h3>
+        <p>Real-time 3D visualization engine. Mesh preview, orbital views, spacecraft rendering, terrain generation. Integrated across ZICORE.</p>
+        <span class="domain">zicore.space/visualizer</span>
+        <span class="badge badge-system">Tool</span>
+      </a>
+
+      <a href="https://zzz.zinemotion.com" class="portal-card">
+        <div class="icon">&#x1F50D;</div>
+        <h3>ZZZ Classic</h3>
+        <p>The original ZZZ portal. Legacy content, early projects, foundational ideas that shaped the ZINEMOTION conception.</p>
+        <span class="domain">zzz.zinemotion.com</span>
+        <span class="badge badge-classic">Archive</span>
+      </a>
+
+      <a href="https://zcs.zicore.space" class="portal-card">
+        <div class="icon">&#x1F4E1;</div>
+        <h3>Mission Control</h3>
+        <p>Real-time dashboard. Telemetry, node status, module health, active missions, system alerts. The command center of ZICORE.</p>
+        <span class="domain">zcs.zicore.space</span>
+        <span class="badge badge-system">Live</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SYSTEMS & PRODUCTS -->
+  <div class="section">
+    <div class="section-tag">002 — Star Products</div>
+    <h2 class="section-title">Systems That <span class="cyan">Define</span> the Ecosystem</h2>
+    <p class="section-desc">The flagship products conceived by ZINEMOTION and realized through ZICORE. Each is a complete, production-ready system.</p>
+    
+    <div class="portal-grid">
+      <div class="portal-card" style="border-color:rgba(0,229,255,0.15)">
+        <div class="icon">&#x1F3A8;</div>
+        <h3>Visualizer</h3>
+        <p>Procedural 3D rendering and mesh visualization engine. Used across all ZICORE modules for real-time preview of spacecraft, terrain, and mechanical parts.</p>
+        <span class="domain">zicore.space/visualizer</span>
+        <span class="badge badge-new">Star</span>
+      </div>
+      <div class="portal-card" style="border-color:rgba(124,77,255,0.15)">
+        <div class="icon">&#x1F680;</div>
+        <h3>Aerospace System</h3>
+        <p>Full aerospace engineering suite. Vehicle design, propulsion lab, orbital mechanics, structural analysis, mission planning. 14 vehicle categories.</p>
+        <span class="domain">zicore.space/aerospace-system</span>
+        <span class="badge badge-new">Star</span>
+      </div>
+      <div class="portal-card" style="border-color:rgba(0,255,136,0.15)">
+        <div class="icon">&#x1F9E0;</div>
+        <h3>ZIO Unified</h3>
+        <p>Neural intelligence platform. Multi-modal inference, 3D printing control, ESP32-S3 camera integration, desktop visualizer, mobile control. Open source.</p>
+        <span class="domain">github.com/Zine24/ZioUnified</span>
+        <span class="badge badge-new">Star</span>
+      </div>
+      <div class="portal-card" style="border-color:rgba(255,215,0,0.15)">
+        <div class="icon">&#x1F3D9;</div>
+        <h3>ZiCore METROPOLIS</h3>
+        <p>Universal Earth navigation system. VTOL, aircraft, marine, ground vehicle control. Multi-modal transport platform for air, sea, and land.</p>
+        <span class="domain">zicore.space/metropolis</span>
+        <span class="badge badge-new">Star</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- MANIFESTO / CONCEPT -->
+  <div class="section" style="text-align:center;max-width:800px;margin:0 auto">
+    <div class="section-tag">000 — The Conception</div>
+    <h2 class="section-title" style="font-size:clamp(32px,5vw,56px);font-weight:900;letter-spacing:-2px;line-height:1.1">
+      <span class="gold">ZINEMOTION</span><br>
+      <span style="background:linear-gradient(135deg,var(--gold),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent">START</span>
+    </h2>
+    <p style="font-size:18px;color:var(--text2);line-height:2;margin-top:32px;font-weight:300">
+      Not a company. Not a brand. <strong style="color:var(--text)">A conception.</strong><br><br>
+      Every system, every vehicle, every film begins the same way —<br>
+      as an idea so clear it demands to exist.<br><br>
+      ZINEMOTION START is that moment. The Eureka.<br>
+      The point where intelligence meets imagination,<br>
+      and architecture becomes reality.<br><br>
+      <em style="color:var(--gold);font-style:normal">"We do not build. We conceive. The rest follows."</em>
+    </p>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 ZINEMOTION — The Conception of Innovation</p>
+  <p style="margin-top:8px">
+    <a href="https://zinemotion.com.mx">zinemotion.com.mx</a> · 
+    <a href="https://zicore.space">zicore.space</a> · 
+    <a href="https://dogmad21.zinemotion.com.mx">DogmaD21</a> · 
+    <a href="https://zzz.zicore.space">ZZZ Space</a>
+  </p>
+</footer>
+
+<script>
+var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
+function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
+function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
+draw();
+</script>
+</body>
+</html>

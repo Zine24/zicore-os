@@ -747,6 +747,8 @@ class SSOAuthMiddleware:
         "/api/downloads",
         "/",
         "/zinemotion",
+        "/zinemotion-start",
+        "/ziounified",
         "/aerospace-system",
         "/master-creator",
         "/metropolis",
@@ -1007,9 +1009,16 @@ async def serve_main_menu(request: Request):
     """Main entry point — public landing page."""
     host = request.headers.get("host", "")
     if "zzz.zicore.space" in host:
+        # WordPress at /www/wwwroot/zzz.zicore.space (nginx needed)
         return FileResponse(str(FRONTEND_DIR / "blog.html"))
-    if "zinemotion.com.mx" in host or "zinemotion.com" in host:
+    if "zinemotion.com.mx" in host:
         return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
+    if "zinemotion.com" in host:
+        # ZINEMOTION START — producer collage & intellectual property
+        return FileResponse(str(FRONTEND_DIR / "zinemotion-start.html"))
+    if "dogmad21.zinemotion.com.mx" in host:
+        # WordPress at /www/wwwroot/dogmad21.zinemotion.com.mx
+        return FileResponse(str(FRONTEND_DIR / "blog.html"))
     if "zcs.zicore.space" in host or "zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
     return FileResponse(str(FRONTEND_DIR / "index.html"))
@@ -1018,6 +1027,16 @@ async def serve_main_menu(request: Request):
 @app.get("/zinemotion")
 async def serve_zinemotion():
     return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
+
+
+@app.get("/zinemotion-start")
+async def serve_zinemotion_start():
+    return FileResponse(str(FRONTEND_DIR / "zinemotion-start.html"))
+
+
+@app.get("/ziounified")
+async def serve_ziounified():
+    return FileResponse(str(FRONTEND_DIR / "ziounified.html"))
 
 
 @app.get("/zicore")
