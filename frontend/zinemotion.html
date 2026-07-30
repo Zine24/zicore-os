@@ -1,548 +1,240 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-MX">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZineMotion — creating time</title>
-<meta name="description" content="ZineMotion — creating time. Digital aerospace operating systems.">
-<meta property="og:title" content="ZineMotion — creating time">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<title>ZineMotion · ZICORE — Universo Alterno</title>
 <style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;
-  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;
-  --text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;
-  --border:rgba(0,229,255,0.06);
-  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
-}
-html{scroll-behavior:smooth;overflow-x:hidden}
-body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden;-webkit-font-smoothing:antialiased}
-
-.grain{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.035;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
-#starfield{position:fixed;inset:0;z-index:0}
-.scanline{position:fixed;top:0;left:0;right:0;height:1px;z-index:9998;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.06),transparent);animation:scanMove 8s linear infinite}
-@keyframes scanMove{0%{top:-2px}100%{top:100vh}}
-
-/* ── NAVBAR ── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 40px;display:flex;align-items:center;justify-content:space-between;background:rgba(6,8,16,0.6);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transition:all 0.6s cubic-bezier(0.16,1,0.3,1)}
-.nav.scrolled{padding:14px 40px;background:rgba(6,8,16,0.92)}
-.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
-.nav-hex{width:32px;height:32px;position:relative;transform-style:preserve-3d;animation:hexSpin 12s linear infinite}
-@keyframes hexSpin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
-.nav-hex-face{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--cyan);background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(124,77,255,0.04));border:1px solid rgba(0,229,255,0.12);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);backface-visibility:visible}
-.nav-hex-face:nth-child(1){transform:rotateY(0deg)translateZ(16px)}
-.nav-hex-face:nth-child(2){transform:rotateY(60deg)translateZ(16px)}
-.nav-hex-face:nth-child(3){transform:rotateY(120deg)translateZ(16px)}
-.nav-hex-face:nth-child(4){transform:rotateY(180deg)translateZ(16px)}
-.nav-hex-face:nth-child(5){transform:rotateY(240deg)translateZ(16px)}
-.nav-hex-face:nth-child(6){transform:rotateY(300deg)translateZ(16px)}
-.nav-brand{font-size:14px;font-weight:600;letter-spacing:6px;color:var(--cyan);text-transform:uppercase}
-.nav-links{display:flex;align-items:center;gap:32px}
-.nav-links a{font-size:11px;letter-spacing:3px;color:var(--text-dim);text-decoration:none;text-transform:uppercase;transition:color 0.4s;position:relative}
-.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--cyan);transition:width 0.4s cubic-bezier(0.16,1,0.3,1)}
-.nav-links a:hover{color:var(--cyan)}
-.nav-links a:hover::after{width:100%}
-.nav-cta{font-family:var(--font);font-size:10px;letter-spacing:3px;padding:8px 20px;border:1px solid rgba(0,229,255,0.2);background:transparent;color:var(--cyan);cursor:pointer;text-transform:uppercase;transition:all 0.4s}
-.nav-cta:hover{border-color:rgba(0,229,255,0.4);box-shadow:0 0 20px rgba(0,229,255,0.08)}
-
-/* ── HERO ── */
-.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 40px 80px;text-align:center}
-.hero-vignette{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at center,transparent 40%,var(--bg) 100%);pointer-events:none}
-.hero-content{position:relative;z-index:1;max-width:800px}
-.hero-tag{font-family:var(--mono);font-size:10px;letter-spacing:6px;color:var(--text-dim);text-transform:uppercase;margin-bottom:32px;opacity:0;transform:translateY(20px);animation:fadeUp 1.2s cubic-bezier(0.16,1,0.3,1) 0.3s forwards}
-.hero-title{font-size:clamp(36px,6vw,72px);font-weight:300;letter-spacing:-1px;line-height:1.1;margin-bottom:24px;background:linear-gradient(135deg,var(--text) 0%,var(--cyan) 50%,var(--purple) 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;transform:translateY(30px);animation:fadeUp 1.4s cubic-bezier(0.16,1,0.3,1) 0.5s forwards}
-.hero-sub{font-size:clamp(14px,1.6vw,18px);font-weight:300;color:var(--text-dim);line-height:1.8;max-width:560px;margin:0 auto 48px;opacity:0;transform:translateY(20px);animation:fadeUp 1.2s cubic-bezier(0.16,1,0.3,1) 0.7s forwards}
-.hero-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;opacity:0;transform:translateY(20px);animation:fadeUp 1.2s cubic-bezier(0.16,1,0.3,1) 0.9s forwards}
-.btn-primary,.btn-ghost{font-family:var(--font);font-size:11px;letter-spacing:4px;padding:14px 32px;cursor:pointer;text-transform:uppercase;transition:all 0.5s cubic-bezier(0.16,1,0.3,1);text-decoration:none}
-.btn-primary{background:linear-gradient(135deg,rgba(0,229,255,0.12),rgba(124,77,255,0.08));border:1px solid rgba(0,229,255,0.25);color:var(--cyan)}
-.btn-primary:hover{border-color:rgba(0,229,255,0.5);box-shadow:0 0 40px rgba(0,229,255,0.1);transform:translateY(-2px)}
-.btn-ghost{background:transparent;border:1px solid rgba(200,208,220,0.08);color:var(--text-dim)}
-.btn-ghost:hover{border-color:rgba(200,208,220,0.2);color:var(--text)}
-.hero-scroll{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;animation:fadeUp 1s ease 1.5s forwards}
-.hero-scroll span{font-size:8px;letter-spacing:4px;color:var(--text-faint);text-transform:uppercase}
-.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--cyan),transparent);animation:scrollPulse 2s ease-in-out infinite}
-@keyframes scrollPulse{0%,100%{opacity:0.3;transform:scaleY(0.6)}50%{opacity:0.8;transform:scaleY(1)}}
-@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
-
-/* ── SECTION ── */
-.section{position:relative;z-index:1;padding:160px 40px}
-.section-inner{max-width:1100px;margin:0 auto}
-.section-tag{font-family:var(--mono);font-size:9px;letter-spacing:6px;color:var(--text-faint);text-transform:uppercase;margin-bottom:16px}
-.section-title{font-size:clamp(28px,4vw,48px);font-weight:300;letter-spacing:-0.5px;line-height:1.2;margin-bottom:20px}
-.section-desc{font-size:15px;font-weight:300;color:var(--text-dim);line-height:1.9;max-width:520px}
-.reveal{opacity:0;transform:translateY(40px);transition:all 1s cubic-bezier(0.16,1,0.3,1)}
-.reveal.visible{opacity:1;transform:translateY(0)}
-.reveal-delay-1{transition-delay:0.1s}.reveal-delay-2{transition-delay:0.2s}.reveal-delay-3{transition-delay:0.3s}
-
-/* ── DIVIDER ── */
-.divider{width:100%;max-width:1100px;margin:0 auto;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
-
-/* ── STATS ── */
-.stats{position:relative;z-index:1;padding:80px 40px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(6,8,16,0.5)}
-.stats-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:40px;text-align:center}
-.stat-item{display:flex;flex-direction:column;align-items:center;gap:8px}
-.stat-value{font-family:var(--mono);font-size:clamp(28px,4vw,42px);font-weight:300;color:var(--cyan);letter-spacing:-1px}
-.stat-label{font-size:9px;letter-spacing:4px;color:var(--text-faint);text-transform:uppercase}
-
-/* ── SERVICES ── */
-.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:64px;background:var(--border)}
-.service-card{background:var(--bg2);padding:48px 32px;position:relative;overflow:hidden;transition:all 0.6s cubic-bezier(0.16,1,0.3,1)}
-.service-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity 0.6s}
-.service-card:hover{background:var(--bg3)}
-.service-card:hover::before{opacity:0.4}
-.service-num{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-faint);margin-bottom:20px}
-.service-icon{width:40px;height:40px;margin-bottom:20px;border:1px solid rgba(0,229,255,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--cyan);font-size:16px;transition:all 0.4s}
-.service-card:hover .service-icon{border-color:rgba(0,229,255,0.3);box-shadow:0 0 20px rgba(0,229,255,0.08)}
-.service-name{font-size:14px;font-weight:500;letter-spacing:2px;color:var(--text);margin-bottom:12px;text-transform:uppercase}
-.service-desc{font-size:12px;line-height:1.8;color:var(--text-dim)}
-
-/* ── PORTFOLIO ── */
-.portfolio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;margin-top:64px}
-.portfolio-item{position:relative;aspect-ratio:16/10;overflow:hidden;background:var(--bg2);cursor:pointer;transition:all 0.6s cubic-bezier(0.16,1,0.3,1);text-decoration:none;color:var(--text)}
-.portfolio-item:hover{transform:scale(1.01)}
-.portfolio-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--bg2),var(--bg3));transition:all 0.6s}
-.portfolio-item:hover .portfolio-bg{background:linear-gradient(135deg,rgba(0,229,255,0.04),rgba(124,77,255,0.04))}
-.portfolio-content{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:32px;background:linear-gradient(to top,rgba(6,8,16,0.9) 0%,transparent 60%)}
-.portfolio-tag{font-family:var(--mono);font-size:8px;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:8px}
-.portfolio-name{font-size:18px;font-weight:400;letter-spacing:1px;color:var(--text);margin-bottom:4px}
-.portfolio-detail{font-size:11px;color:var(--text-dim)}
-
-/* ── MODULES GRID ── */
-.mods{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:64px;background:var(--border)}
-.mod{background:var(--bg2);padding:40px 32px;text-align:center;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.5s cubic-bezier(0.16,1,0.3,1)}
-.mod::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,0.04),transparent 60%);opacity:0;transition:opacity 0.5s}
-.mod:hover{background:var(--bg3)}
-.mod:hover::before{opacity:1}
-.mod-icon{width:48px;height:48px;margin:0 auto 16px;border:1px solid rgba(0,229,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--cyan);transition:all 0.4s}
-.mod:hover .mod-icon{border-color:rgba(0,229,255,0.3);box-shadow:0 0 24px rgba(0,229,255,0.1);transform:scale(1.08)}
-.mod-name{font-size:13px;font-weight:600;letter-spacing:3px;color:var(--text);margin-bottom:8px;text-transform:uppercase}
-.mod-desc{font-size:11px;color:var(--text-dim);line-height:1.6}
-.mod-tag{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
-.mod.purple .mod-icon{border-color:rgba(124,77,255,0.1);color:var(--purple)}
-.mod.purple:hover .mod-icon{border-color:rgba(124,77,255,0.3);box-shadow:0 0 24px rgba(124,77,255,0.1)}
-.mod.purple .mod-tag{color:var(--purple);border-color:rgba(124,77,255,0.15)}
-.mod.green .mod-icon{border-color:rgba(0,255,136,0.1);color:var(--green)}
-.mod.green:hover .mod-icon{border-color:rgba(0,255,136,0.3);box-shadow:0 0 24px rgba(0,255,136,0.1)}
-.mod.green .mod-tag{color:var(--green);border-color:rgba(0,255,136,0.15)}
-
-/* ── ABOUT ── */
-.about-layout{display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:64px;align-items:start}
-.about-text{font-size:14px;line-height:2;color:var(--text-dim);font-weight:300}
-.about-text p{margin-bottom:24px}
-.about-values{display:flex;flex-direction:column;gap:24px;margin-top:40px}
-.value-item{padding:24px;border:1px solid var(--border);background:rgba(0,229,255,0.01);transition:all 0.4s}
-.value-item:hover{border-color:rgba(0,229,255,0.12)}
-.value-label{font-size:10px;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:8px}
-.value-text{font-size:12px;color:var(--text-dim);line-height:1.7}
-
-/* ── CONTACT ── */
-.contact-layout{display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:64px}
-.contact-form{display:flex;flex-direction:column;gap:20px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-label{font-size:9px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase}
-.form-input,.form-textarea{font-family:var(--font);font-size:13px;color:var(--text);background:rgba(0,229,255,0.02);border:1px solid var(--border);padding:14px 16px;outline:none;transition:all 0.4s}
-.form-input:focus,.form-textarea:focus{border-color:rgba(0,229,255,0.2)}
-.form-textarea{min-height:120px;resize:vertical}
-.form-submit{font-family:var(--font);font-size:11px;letter-spacing:4px;padding:14px 32px;background:transparent;border:1px solid rgba(0,229,255,0.2);color:var(--cyan);cursor:pointer;text-transform:uppercase;transition:all 0.4s;align-self:flex-start}
-.form-submit:hover{border-color:rgba(0,229,255,0.4);box-shadow:0 0 30px rgba(0,229,255,0.08)}
-.contact-info{display:flex;flex-direction:column;gap:32px}
-.contact-block{display:flex;flex-direction:column;gap:6px}
-.contact-label{font-size:9px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase}
-.contact-value{font-size:13px;color:var(--text-dim)}
-.contact-value a{color:var(--cyan);text-decoration:none;transition:opacity 0.3s}
-.contact-value a:hover{opacity:0.7}
-.contact-social{display:flex;gap:12px;margin-top:16px}
-.social-link{width:36px;height:36px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px;text-decoration:none;transition:all 0.4s}
-.social-link:hover{border-color:rgba(0,229,255,0.2);color:var(--cyan)}
-
-/* ── FOOTER ── */
-.footer{position:relative;z-index:1;padding:60px 40px 80px;border-top:1px solid var(--border);background:rgba(6,8,16,0.8)}
-.footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-.footer-copy{font-size:10px;letter-spacing:2px;color:var(--text-faint)}
-.footer-links{display:flex;gap:24px}
-.footer-links a{font-size:9px;letter-spacing:2px;color:var(--text-faint);text-decoration:none;text-transform:uppercase;transition:color 0.3s}
-.footer-links a:hover{color:var(--cyan)}
-
-@media(max-width:900px){
-  .nav{padding:16px 20px}.nav-links{display:none}
-  .hero{padding:120px 24px 60px}.section{padding:100px 24px}
-  .stats-grid{grid-template-columns:repeat(2,1fr);gap:32px}
-  .services-grid,.mods{grid-template-columns:1fr}
-  .portfolio-grid{grid-template-columns:1fr}
-  .about-layout,.contact-layout{grid-template-columns:1fr;gap:48px}
-  .footer-inner{flex-direction:column;gap:20px;text-align:center}
-}
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;600;700&display=swap');
+:root{--bg:#04060c;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--gold:#ffd700;--gray:#8892b0;--card-bg:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06)}
+body{background:var(--bg);color:#fff;font-family:'Rajdhani',sans-serif;overflow-x:hidden}
+canvas#stars{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+.hero .logos{display:flex;align-items:center;gap:3rem;margin-bottom:2rem;flex-wrap:wrap;justify-content:center}
+.hero .logos .old-logo{width:220px;height:auto;filter:drop-shadow(0 0 30px rgba(255,215,0,0.3))}
+.hero .logos .divider{width:2px;height:80px;background:linear-gradient(to bottom,transparent,var(--cyan),transparent)}
+.hero .logos .new-logo{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;letter-spacing:8px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero h1{font-family:'Orbitron',sans-serif;font-size:1.2rem;letter-spacing:12px;color:var(--gold);margin-bottom:0.5rem;text-transform:uppercase}
+.hero .tagline{font-size:2rem;font-weight:300;letter-spacing:4px;color:var(--gray);margin-bottom:0.5rem}
+.hero .tagline em{color:#fff;font-style:normal;font-weight:600}
+.hero .subtitle{font-size:1.1rem;color:var(--gray);letter-spacing:6px;margin-bottom:3rem}
+.scroll-indicator{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);animation:bounce 2s infinite;color:var(--gray);font-size:0.8rem;letter-spacing:3px}
+@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(10px)}}
+section{position:relative;z-index:1;padding:6rem 2rem;max-width:1200px;margin:0 auto}
+.section-title{font-family:'Orbitron',sans-serif;font-size:1.8rem;letter-spacing:6px;margin-bottom:0.5rem;text-align:center}
+.section-title .accent{color:var(--cyan)}
+.section-title .gold{color:var(--gold)}
+.section-title .purple{color:var(--purple)}
+.section-desc{text-align:center;color:var(--gray);font-size:1.1rem;margin-bottom:3rem;max-width:700px;margin-left:auto;margin-right:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:2rem}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;transition:all 0.3s ease;cursor:default}
+.card:hover{transform:translateY(-4px);border-color:var(--cyan);box-shadow:0 8px 32px rgba(0,229,255,0.1)}
+.card .icon{font-size:2.2rem;margin-bottom:1rem}
+.card h3{font-size:1.3rem;font-weight:600;margin-bottom:0.5rem;letter-spacing:1px}
+.card p{color:var(--gray);font-size:0.95rem;line-height:1.5}
+.card .tag{display:inline-block;padding:0.2rem 0.6rem;border-radius:4px;font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;margin-top:0.8rem}
+.tag-classic{background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.3)}
+.tag-new{background:rgba(0,229,255,0.15);color:var(--cyan);border:1px solid rgba(0,229,255,0.3)}
+.ecosystem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:3rem}
+.eco-card{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;text-align:center;transition:all 0.3s}
+.eco-card:hover{transform:translateY(-4px)}
+.eco-card.old{border-color:rgba(255,215,0,0.2)}.eco-card.old:hover{border-color:var(--gold)}
+.eco-card.new{border-color:rgba(0,229,255,0.2)}.eco-card.new:hover{border-color:var(--cyan)}
+.eco-card.bridge{border-color:rgba(124,77,255,0.2)}.eco-card.bridge:hover{border-color:var(--purple)}
+.eco-card h3{font-family:'Orbitron',sans-serif;font-size:1.1rem;letter-spacing:3px;margin-bottom:0.5rem}
+.eco-card .domain{color:var(--gray);font-size:0.85rem;margin-bottom:1rem;font-family:monospace}
+.eco-card p{color:var(--gray);font-size:0.9rem;line-height:1.6}
+.eco-card a{display:inline-block;margin-top:1.2rem;padding:0.5rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.9rem;letter-spacing:1px;transition:all 0.3s}
+.eco-card.old a{background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.3)}
+.eco-card.old a:hover{background:rgba(255,215,0,0.25)}
+.eco-card.new a{background:rgba(0,229,255,0.15);color:var(--cyan);border:1px solid rgba(0,229,255,0.3)}
+.eco-card.new a:hover{background:rgba(0,229,255,0.25)}
+.eco-card.bridge a{background:rgba(124,77,255,0.15);color:var(--purple);border:1px solid rgba(124,77,255,0.3)}
+.eco-card.bridge a:hover{background:rgba(124,77,255,0.25)}
+.dogma-section{text-align:center;padding:4rem 2rem;position:relative;z-index:1;max-width:800px;margin:0 auto}
+.dogma-section h2{font-family:'Orbitron',sans-serif;font-size:2rem;letter-spacing:8px;margin-bottom:1rem}
+.dogma-section p{color:var(--gray);font-size:1.1rem;margin-bottom:2rem;line-height:1.7}
+.dogma-section .btn{display:inline-block;padding:1rem 2.5rem;border-radius:12px;text-decoration:none;font-weight:700;font-size:1rem;letter-spacing:2px;background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;transition:all 0.3s}
+.dogma-section .btn:hover{box-shadow:0 0 40px rgba(124,77,255,0.4);transform:scale(1.02)}
+footer{position:relative;z-index:1;text-align:center;padding:4rem 2rem;border-top:1px solid var(--border);color:var(--gray);font-size:0.85rem}
+footer a{color:var(--cyan);text-decoration:none}
+footer a:hover{text-decoration:underline}
+footer .foot-links{display:flex;justify-content:center;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap}
+footer .foot-links a{font-size:0.9rem;letter-spacing:2px}
+@media(max-width:768px){.hero .logos{gap:1.5rem}.hero .logos .old-logo{width:150px}.hero .logos .new-logo{font-size:1.8rem}.hero .tagline{font-size:1.3rem}.ecosystem-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<canvas id="stars"></canvas>
 
-<div class="grain"></div>
-<div class="scanline"></div>
-<canvas id="starfield"></canvas>
-
-<!-- NAVBAR -->
-<nav class="nav" id="nav">
-  <a class="nav-logo" href="#">
-    <div class="nav-hex">
-      <div class="nav-hex-face">Z</div><div class="nav-hex-face">Z</div><div class="nav-hex-face">Z</div>
-      <div class="nav-hex-face">Z</div><div class="nav-hex-face">Z</div><div class="nav-hex-face">Z</div>
-    </div>
-    <span class="nav-brand">ZineMotion</span>
-  </a>
-  <div class="nav-links">
-    <a href="#servicios">Services</a>
-    <a href="#materializer">Materializer</a>
-    <a href="#modulos">Modules</a>
-    <a href="#descargas">Downloads</a>
-    <a href="#nosotros">About</a>
-    <a href="#contacto">Contact</a>
-    <a href="https://zzz.zinemotion.com" target="_blank" rel="noopener" style="color:var(--cyan)">Store</a>
+<div class="hero">
+  <div class="logos">
+    <img src="/api/file/zinemotion_logo" alt="ZineMotion" class="old-logo" id="logo-img">
+    <div class="divider"></div>
+    <div class="new-logo">ZICORE</div>
   </div>
-  <button class="nav-cta" onclick="document.getElementById('contacto').scrollIntoView({behavior:'smooth'})">Let's Talk</button>
-</nav>
-
-<!-- HERO -->
-<section class="hero" id="hero">
-  <div class="hero-vignette"></div>
-  <div class="hero-content">
-    <div class="hero-tag">creating time</div>
-    <h1 class="hero-title">We turn your ideas into reality</h1>
-    <p class="hero-sub">From prompt to object. Adaptable engineering anyone can understand. 3D design, CAD, printing, multimedia. The creative soul of ZICORE.</p>
-    <div class="hero-actions">
-      <a class="btn-primary" href="/dashboard" target="_blank">MATERIALIZAR</a>
-      <a class="btn-ghost" href="/zicore" target="_blank">ZICORE OS</a>
-    </div>
-  </div>
-  <div class="hero-scroll"><span>Scroll</span><div class="scroll-line"></div></div>
-</section>
-
-<!-- STATS -->
-<div class="stats">
-  <div class="stats-grid">
-    <div class="stat-item reveal"><div class="stat-value">50+</div><div class="stat-label">Active Modules</div></div>
-    <div class="stat-item reveal reveal-delay-1"><div class="stat-value">17</div><div class="stat-label">Subsystems</div></div>
-    <div class="stat-item reveal reveal-delay-2"><div class="stat-value">99.97%</div><div class="stat-label">Uptime</div></div>
-    <div class="stat-item reveal reveal-delay-3"><div class="stat-value">∞</div><div class="stat-label">Scalable</div></div>
-  </div>
+  <h1>Universo Alterno • Casi Paralelo</h1>
+  <div class="tagline">Donde el <em>Cine</em> Encuentra el <em>Cosmos</em></div>
+  <div class="subtitle">PRODUCCIÓN AUDIOVISUAL · SISTEMAS AEROESPACIALES · TECNOLOGÍA</div>
+  <div class="scroll-indicator">▼ DESCUBRE ▼</div>
 </div>
 
-<!-- SERVICES -->
-<section class="section" id="servicios">
-  <div class="section-inner">
-    <div class="section-tag reveal">001 — Services</div>
-    <h2 class="section-title reveal reveal-delay-1">Where engineering<br>meets digital</h2>
-    <p class="section-desc reveal reveal-delay-2">Every system we build is designed to operate in the most demanding environments in the universe.</p>
-    <div class="services-grid">
-      <div class="service-card reveal reveal-delay-1">
-        <div class="service-num">01</div>
-        <div class="service-icon">◇</div>
-        <div class="service-name">Aerospace Design</div>
-        <div class="service-desc">Vehicles, propulsion, structures. Complete systems from concept to digital implementation.</div>
-      </div>
-      <div class="service-card reveal reveal-delay-2">
-        <div class="service-num">02</div>
-        <div class="service-icon">△</div>
-        <div class="service-name">3D Materialization</div>
-        <div class="service-desc">Procedural generation of complex geometries. Materials, textures, CAD/STL/OBJ export.</div>
-      </div>
-      <div class="service-card reveal reveal-delay-3">
-        <div class="service-num">03</div>
-        <div class="service-icon">○</div>
-        <div class="service-name">Artificial Intelligence</div>
-        <div class="service-desc">ZIO — dual neural assistant. Local and cloud inference. Vision, generation, knowledge.</div>
-      </div>
-      <div class="service-card reveal reveal-delay-1">
-        <div class="service-num">04</div>
-        <div class="service-icon">□</div>
-        <div class="service-name">Software Development</div>
-        <div class="service-desc">Distributed systems, APIs, IoT, digital twins. Modular and scalable architecture.</div>
-      </div>
-      <div class="service-card reveal reveal-delay-2">
-        <div class="service-num">05</div>
-        <div class="service-icon">⬡</div>
-        <div class="service-name">Digital Content</div>
-        <div class="service-desc">Video, audio, images, 3D. Multimedia production with next-generation tools.</div>
-      </div>
-      <div class="service-card reveal reveal-delay-3">
-        <div class="service-num">06</div>
-        <div class="service-icon">⊕</div>
-        <div class="service-name">Mission Simulation</div>
-        <div class="service-desc">Orbit, celestial mechanics, trajectory. Testing environments for real missions.</div>
-      </div>
+<section>
+  <div class="section-title">Nuestro <span class="accent">Universo</span></div>
+  <p class="section-desc">
+    ZineMotion nació como un estudio de producción cinematográfica independiente en la Ciudad de México.
+    Con el tiempo, la pasión por la tecnología nos llevó a construir <strong>ZICORE</strong>, un sistema operativo
+    digital aeroespacial. Hoy, ambos mundos coexisten en un mismo ecosistema: el cine y el cosmos.
+  </p>
+  <div class="ecosystem-grid">
+    <div class="eco-card old">
+      <h3>ZineMotion</h3>
+      <div class="domain">zinemotion.com.mx</div>
+      <p>Producción cinematográfica, cortometrajes, talleres de guion, edición de video, recursos audiovisuales y más.</p>
+      <a href="https://zinemotion.com.mx">Explorar →</a>
+    </div>
+    <div class="eco-card bridge">
+      <h3>Dogma D21</h3>
+      <div class="domain">dogmad21.zinemotion.com.mx</div>
+      <p>Taller "Del Guion a la Carpeta" — transforma tu guion en un proyecto listo para producción.</p>
+      <a href="https://dogmad21.zinemotion.com.mx">Workshop →</a>
+    </div>
+    <div class="eco-card new">
+      <h3>ZICORE</h3>
+      <div class="domain">zicore.space</div>
+      <p>Sistema operativo aeroespacial digital. Control de misiones, simulación orbital, generación 3D, ingeniería y más.</p>
+      <a href="https://zicore.space">Lanzar →</a>
     </div>
   </div>
 </section>
 
-<div class="divider"></div>
-
-<!-- MATERIALIZER WORKFLOW -->
-<section class="section" id="materializer" style="padding:120px 40px">
-  <div class="section-inner">
-    <div class="section-tag reveal">001b — Workflow</div>
-    <h2 class="section-title reveal reveal-delay-1">From prompt to object.<br>Engineering anyone can understand.</h2>
-    <p class="section-desc reveal reveal-delay-2">The Materializer turns your ideas into real objects. Design in 3D with a simple description, customize materials, and export for printing.</p>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:40px">
-      <div class="reveal" style="text-align:center;padding:20px 12px;border:1px solid rgba(0,229,255,.1);border-radius:8px;background:rgba(0,229,255,.03)">
-        <div style="font-size:24px;margin-bottom:8px">💬</div>
-        <div style="font-size:10px;font-weight:600;color:var(--cyan);letter-spacing:1px;margin-bottom:4px">PROMPT</div>
-        <div style="font-size:11px;color:var(--text2)">Describe what you want to create</div>
-      </div>
-      <div class="reveal reveal-delay-1" style="text-align:center;padding:20px 12px;border:1px solid rgba(124,77,255,.1);border-radius:8px;background:rgba(124,77,255,.03)">
-        <div style="font-size:24px;margin-bottom:8px">⚙</div>
-        <div style="font-size:10px;font-weight:600;color:var(--purple);letter-spacing:1px;margin-bottom:4px">WORKFLOW</div>
-        <div style="font-size:11px;color:var(--text2)">Select generation type</div>
-      </div>
-      <div class="reveal reveal-delay-2" style="text-align:center;padding:20px 12px;border:1px solid rgba(0,255,136,.1);border-radius:8px;background:rgba(0,255,136,.03)">
-        <div style="font-size:24px;margin-bottom:8px">◎</div>
-        <div style="font-size:10px;font-weight:600;color:var(--green);letter-spacing:1px;margin-bottom:4px">3D VIEW</div>
-        <div style="font-size:11px;color:var(--text2)">Three.js preview</div>
-      </div>
-      <div class="reveal reveal-delay-3" style="text-align:center;padding:20px 12px;border:1px solid rgba(255,136,0,.1);border-radius:8px;background:rgba(255,136,0,.03)">
-        <div style="font-size:24px;margin-bottom:8px">↓</div>
-        <div style="font-size:10px;font-weight:600;color:var(--orange);letter-spacing:1px;margin-bottom:4px">EXPORT</div>
-        <div style="font-size:11px;color:var(--text2)">STL / OBJ / GLB / OpenSCAD</div>
-      </div>
-      <div class="reveal" style="text-align:center;padding:20px 12px;border:1px solid rgba(255,51,51,.1);border-radius:8px;background:rgba(255,51,51,.03)">
-        <div style="font-size:24px;margin-bottom:8px">🏭</div>
-        <div style="font-size:10px;font-weight:600;color:var(--red);letter-spacing:1px;margin-bottom:4px">PRINT</div>
-        <div style="font-size:11px;color:var(--text2)">3D printer connection</div>
-      </div>
+<section style="padding-top:2rem">
+  <div class="section-title"><span class="gold">ZineMotion</span> Classic</div>
+  <p class="section-desc">Más de 15 años creando contenido audiovisual, desde cortometrajes hasta talleres de producción.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="icon">🎬</div>
+      <h3>Cortometrajes</h3>
+      <p>"Que te quede claro" y otras producciones independientes. Narrativa visual con identidad mexicana.</p>
+      <span class="tag tag-classic">Film</span>
     </div>
-    <div style="text-align:center;margin-top:32px" class="reveal">
-      <a href="/dashboard" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none">OPEN MATERIALIZER</a>
+    <div class="card">
+      <div class="icon">✍️</div>
+      <h3>Taller de Guion</h3>
+      <p>Del guion a la carpeta de producción. Desarrolla tu proyecto cinematográfico paso a paso.</p>
+      <span class="tag tag-classic">Workshop</span>
+    </div>
+    <div class="card">
+      <div class="icon">🎞️</div>
+      <h3>Edición de Video</h3>
+      <p>Post-producción profesional, efectos visuales, motion graphics y corrección de color.</p>
+      <span class="tag tag-classic">Servicio</span>
+    </div>
+    <div class="card">
+      <div class="icon">📖</div>
+      <h3>Recursos</h3>
+      <p>Biblioteca de recursos cinematográficos, guías, plantillas de producción y documentación.</p>
+      <span class="tag tag-classic">Recursos</span>
     </div>
   </div>
 </section>
 
-<div class="divider"></div>
-  <div class="section-inner">
-    <div class="section-tag reveal">002 — Modules</div>
-    <h2 class="section-title reveal reveal-delay-1">One ecosystem.<br>Independent modules.</h2>
-    <p class="section-desc reveal reveal-delay-2">Each module operates independently. Access directly from here.</p>
-    <div class="mods">
-      <a class="mod reveal" href="/zio" target="_blank">
-        <div class="mod-icon">◎</div>
-        <div class="mod-name">ZIO</div>
-        <div class="mod-desc">Dual neural assistant. Local and cloud inference. Vision, generation, knowledge.</div>
-        <div class="mod-tag">Intelligence</div>
-      </a>
-      <a class="mod purple reveal reveal-delay-1" href="/zicore" target="_blank">
-        <div class="mod-icon">◈</div>
-        <div class="mod-name">ZICORE</div>
-        <div class="mod-desc">Unified portal. Aerospace, ZiEnvironment, ZineMotion. Ecosystem command center.</div>
-        <div class="mod-tag">Central System</div>
-      </a>
-      <a class="mod green reveal reveal-delay-2" href="http://localhost:4000" target="_blank">
-        <div class="mod-icon">◉</div>
-        <div class="mod-name">ZiEnvironment</div>
-        <div class="mod-desc">Distributed kernel. 21 autonomous nodes, 6 layers, neural microkernel.</div>
-        <div class="mod-tag">Ecosystem</div>
-      </a>
-      <a class="mod purple reveal reveal-delay-1" href="/aerospace" target="_blank">
-        <div class="mod-icon">◇</div>
-        <div class="mod-name">Aerospace</div>
-        <div class="mod-desc">Vehicle design, propulsion, orbit, celestial mechanics, trajectory.</div>
-        <div class="mod-tag">Engineering</div>
-      </a>
-      <a class="mod green reveal reveal-delay-2" href="/games" target="_blank">
-        <div class="mod-icon">⬡</div>
-        <div class="mod-name">Games</div>
-        <div class="mod-desc">HTML5 game center. 14+ titles with global leaderboard.</div>
-        <div class="mod-tag">Entertainment</div>
-      </a>
-      <a class="mod reveal reveal-delay-3" href="/multimedia" target="_blank">
-        <div class="mod-icon">⊕</div>
-        <div class="mod-name">Multimedia</div>
-        <div class="mod-desc">Audio, video, image and music library generated by ZIO. Play and manage from the server.</div>
-        <div class="mod-tag">Content</div>
-      </a>
-      <a class="mod reveal" href="/mail" target="_blank">
-        <div class="mod-icon">✉</div>
-        <div class="mod-name">Mail</div>
-        <div class="mod-desc">Email service. Inbox, sending, users, DNS configuration.</div>
-        <div class="mod-tag">Communication</div>
-      </a>
-      <a class="mod reveal" href="https://zzz.zinemotion.com" target="_blank" rel="noopener">
-        <div class="mod-icon">🛍</div>
-        <div class="mod-name">ZineMotion Store</div>
-        <div class="mod-desc">TechWear, ZiCapsules, 3D frames and ZineMotion ecosystem products.</div>
-        <div class="mod-tag">Store</div>
-      </a>
+<section>
+  <div class="section-title"><span class="accent">ZICORE</span> System</div>
+  <p class="section-desc">Arquitectura aeroespacial digital. 24 módulos para simulación, diseño, control y exploración.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="icon">🚀</div>
+      <h3>Mission Control</h3>
+      <p>Dashboard en tiempo real con telemetría, estado del sistema, nodos y alertas. Centro de comando.</p>
+      <span class="tag tag-new">Core</span>
+    </div>
+    <div class="card">
+      <div class="icon">🧊</div>
+      <h3>3D Materializer</h3>
+      <p>Generador procedimental 3D con 14+ tipos. Exportación STL/OBJ/GLB. Integración con AI.</p>
+      <span class="tag tag-new">3D</span>
+    </div>
+    <div class="card">
+      <div class="icon">🤖</div>
+      <h3>ZIO Copilot</h3>
+      <p>Asistente AI con múltiples proveedores (OpenRouter, Ollama, Groq). Modo ingeniero, científico, piloto.</p>
+      <span class="tag tag-new">AI</span>
+    </div>
+    <div class="card">
+      <div class="icon">🛰️</div>
+      <h3>Orbital Mechanics</h3>
+      <p>Cálculo de órbita, delta-V, transferencias de Hohmann, asistencias gravitacionales y trayectorias.</p>
+      <span class="tag tag-new">Engineering</span>
+    </div>
+    <div class="card">
+      <div class="icon">🏗️</div>
+      <h3>Vehicle Designer</h3>
+      <p>Diseñador de vehículos espaciales: cohetes, satélites, drones, naves tripuladas y módulos.</p>
+      <span class="tag tag-new">Engineering</span>
+    </div>
+    <div class="card">
+      <div class="icon">⚡</div>
+      <h3>AI 3D Generation</h3>
+      <p>Generación de modelos 3D por IA vía TRELLIS.2, Tripo3D, Meshy, Hunyuan3D y motores procedurales.</p>
+      <span class="tag tag-new">AI/3D</span>
     </div>
   </div>
 </section>
 
-<div class="divider"></div>
+<div class="dogma-section">
+  <h2>Dogma <span style="color:var(--purple)">D21</span></h2>
+  <p>Un taller intensivo donde transformamos tu guion en una carpeta de producción completa.<br>
+  <em style="color:var(--gold)">"You already have your script! But you still don't have your folder."</em></p>
+  <a href="https://dogmad21.zinemotion.com.mx" class="btn">ENTRAR AL WORKSHOP</a>
+</div>
 
-<!-- DOWNLOADS -->
-<section class="section" id="descargas" style="padding:120px 40px">
-  <div class="section-inner">
-    <div class="section-tag reveal">002b — Downloads</div>
-    <h2 class="section-title reveal reveal-delay-1">Download ZICORE<br>to your device</h2>
-    <p class="section-desc reveal reveal-delay-2">Available for Windows, Linux, macOS and Android. Installation in minutes.</p>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:48px;background:var(--border)">
-      <a class="mod reveal" href="/installers/zicore-android.apk" download>
-        <div class="mod-icon">📱</div>
-        <div class="mod-name">Android</div>
-        <div class="mod-desc">Native APK. WebView, SSO, stereo VR, Termux.</div>
-        <div class="mod-tag">~3 MB</div>
-      </a>
-      <a class="mod purple reveal reveal-delay-1" href="/installers/install_zicore.ps1" download>
-        <div class="mod-icon">⊞</div>
-        <div class="mod-name">Windows</div>
-        <div class="mod-desc">PowerShell script. Python, Node.js, Git automatic.</div>
-        <div class="mod-tag">~10 KB</div>
-      </a>
-      <a class="mod green reveal reveal-delay-2" href="/installers/install_zicore.sh" download>
-        <div class="mod-icon">◉</div>
-        <div class="mod-name">Linux</div>
-        <div class="mod-desc">Bash script. Ubuntu, Debian, Fedora, Arch.</div>
-        <div class="mod-tag">~10 KB</div>
-      </a>
-      <a class="mod reveal reveal-delay-3" href="/installers/install_zicore_mac.sh" download>
-        <div class="mod-icon">◈</div>
-        <div class="mod-name">macOS</div>
-        <div class="mod-desc">Homebrew. Apple Silicon and Intel.</div>
-        <div class="mod-tag">~9 KB</div>
-      </a>
-    </div>
-    <div style="text-align:center;margin-top:32px" class="reveal">
-      <a href="/installers" class="btn-primary" style="display:inline-block;text-decoration:none">VIEW ALL DOWNLOADS</a>
-    </div>
+<section style="padding-top:1rem">
+  <div class="section-title" style="margin-bottom:2rem">Cineastas <span class="gold">Clásicos</span></div>
+  <p class="section-desc">Páginas tributo a los grandes maestros que inspiran nuestro lenguaje visual.</p>
+  <div style="display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap">
+    <a href="godard.html" style="color:var(--gold);text-decoration:none;padding:0.8rem 1.5rem;border:1px solid rgba(255,215,0,0.2);border-radius:8px;transition:all 0.3s;font-weight:600;letter-spacing:2px" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,215,0,0.2)'">Godard</a>
+    <a href="lynch.html" style="color:var(--purple);text-decoration:none;padding:0.8rem 1.5rem;border:1px solid rgba(124,77,255,0.2);border-radius:8px;transition:all 0.3s;font-weight:600;letter-spacing:2px" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='rgba(124,77,255,0.2)'">Lynch</a>
+    <a href="tarkovsky.html" style="color:var(--cyan);text-decoration:none;padding:0.8rem 1.5rem;border:1px solid rgba(0,229,255,0.2);border-radius:8px;transition:all 0.3s;font-weight:600;letter-spacing:2px" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='rgba(0,229,255,0.2)'">Tarkovsky</a>
   </div>
 </section>
 
-<div class="divider"></div>
-
-<!-- ABOUT -->
-<section class="section" id="nosotros">
-  <div class="section-inner">
-    <div class="section-tag reveal">003 — About</div>
-    <h2 class="section-title reveal reveal-delay-1">Earth is just<br>the starting point</h2>
-    <div class="about-layout">
-      <div class="about-text reveal reveal-delay-2">
-        <p>ZineMotion was born from the conviction that the aerospace infrastructure of the future is being built today, in code.</p>
-        <p>We are not a traditional software company. We are architects of operating systems for missions that don't exist yet.</p>
-        <p>Our ZICORE ecosystem already controls simulations, engineering modules, autonomous AI and 3D generation. The next step is real space.</p>
-      </div>
-      <div class="about-values reveal reveal-delay-3">
-        <div class="value-item">
-          <div class="value-label">Mission</div>
-          <div class="value-text">Create the digital infrastructure for the next space era.</div>
-        </div>
-        <div class="value-item">
-          <div class="value-label">Vision</div>
-          <div class="value-text">An operating system that connects Earth, Moon, Mars and beyond.</div>
-        </div>
-        <div class="value-item">
-          <div class="value-label">Principles</div>
-          <div class="value-text">Modularity. Scalability. Future compatibility over short-term implementation.</div>
-        </div>
-      </div>
-    </div>
+<footer>
+  <div class="foot-links">
+    <a href="https://zinemotion.com.mx">ZineMotion.mx</a>
+    <a href="https://zicore.space">ZICORE.space</a>
+    <a href="https://dogmad21.zinemotion.com.mx">DogmaD21</a>
+    <a href="https://zcs.zicore.space">Mission Control</a>
   </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- CONTACT -->
-<section class="section" id="contacto">
-  <div class="section-inner">
-    <div class="section-tag reveal">004 — Contact</div>
-    <h2 class="section-title reveal reveal-delay-1">Let's build something<br>together</h2>
-    <div class="contact-layout">
-      <form class="contact-form reveal reveal-delay-2" onsubmit="submitContact(event)">
-        <div class="form-group">
-          <label class="form-label">Name</label>
-          <input class="form-input" type="text" id="contact-name" placeholder="Your name" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-input" type="email" id="contact-email" placeholder="you@email.com" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Message</label>
-          <textarea class="form-textarea" id="contact-message" placeholder="Tell us about your project..." required></textarea>
-        </div>
-        <button class="form-submit" type="submit" id="contact-btn">Send Message</button>
-        <div id="contact-status" style="font-size:12px;letter-spacing:1px;margin-top:8px;display:none"></div>
-      </form>
-      <div class="contact-info reveal reveal-delay-3">
-        <div class="contact-block">
-          <div class="contact-label">Email</div>
-          <div class="contact-value"><a href="mailto:hola@zinemotion.com.mx">hola@zinemotion.com.mx</a></div>
-        </div>
-        <div class="contact-block">
-          <div class="contact-label">Location</div>
-          <div class="contact-value">Mexico</div>
-        </div>
-        <div class="contact-block">
-          <div class="contact-label">ZICORE OS</div>
-          <div class="contact-value"><a href="/zicore" target="_blank">zicore.space →</a></div>
-        </div>
-        <div class="contact-social">
-          <a class="social-link" href="https://x.com" target="_blank">✕</a>
-          <a class="social-link" href="https://github.com" target="_blank">⟁</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-copy">© 2026 ZineMotion — creating time</div>
-    <div class="footer-links">
-      <a href="https://zcs.zicore.space" target="_blank">ZICORE</a>
-      <a href="https://zicore.space" target="_blank">ZiCore</a>
-      <a href="#contacto">Contact</a>
-      <a href="https://zcs.zicore.space/disclaimer">Disclaimer</a>
-      <a href="https://zcs.zicore.space/terms-of-service">Terms</a>
-      <a href="https://zcs.zicore.space/privacy-policy">Privacy</a>
-    </div>
-  </div>
+  <p>© 2026 ZineMotion · ZICORE — Un Universo Alterno, Casi Paralelo</p>
+  <p style="margin-top:0.5rem">Hecho en México · admin@zinemotion.com</p>
 </footer>
 
 <script>
-(function(){
-  var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
-  function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
-  resize();window.addEventListener('resize',resize);
-  for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
-  function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
-  draw();
-})();
-(function(){
-  var nav=document.getElementById('nav');
-  window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>60)});
-})();
-(function(){
-  var els=document.querySelectorAll('.reveal');
-  var observer=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}})},{threshold:0.15,rootMargin:'0px 0px -40px 0px'});
-  els.forEach(function(el){observer.observe(el)});
-})();
-document.querySelectorAll('a[href^="#"]').forEach(function(a){
-  a.addEventListener('click',function(e){e.preventDefault();var t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth'})});
-});
-function submitContact(e){
-  e.preventDefault();
-  var name=document.getElementById('contact-name').value;
-  var email=document.getElementById('contact-email').value;
-  var msg=document.getElementById('contact-message').value;
-  var btn=document.getElementById('contact-btn');
-  var status=document.getElementById('contact-status');
-  btn.textContent='SENDING...';btn.disabled=true;status.style.display='none';
-  fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email,message:msg})})
-  .then(function(r){return r.json()}).then(function(d){
-    if(d.status==='ok'){status.textContent='Message sent successfully!';status.style.color='#00ff88';status.style.display='block';
-      document.getElementById('contact-name').value='';document.getElementById('contact-email').value='';document.getElementById('contact-message').value='';
-    }else{status.textContent=d.error||'Failed to send';status.style.color='#ff5555';status.style.display='block';}
-    btn.textContent='SEND MESSAGE';btn.disabled=false;
-  }).catch(function(){status.textContent='Network error';status.style.color='#ff5555';status.style.display='block';btn.textContent='SEND MESSAGE';btn.disabled=false;});
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const stars = [];
+for (let i = 0; i < 300; i++) {
+  stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.5 + 0.3, a: Math.random(), s: Math.random() * 0.02 + 0.005 });
 }
+let t = 0;
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const s of stars) {
+    const alpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * s.s + s.a * 10));
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.fill();
+  }
+  t += 0.02;
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+
+
 </script>
 </body>
 </html>

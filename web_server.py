@@ -1005,8 +1005,8 @@ async def serve_main_menu(request: Request):
     host = request.headers.get("host", "")
     if "zzz.zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "blog.html"))
-    if "zinemotion.com.mx" in host:
-        return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
+        if "zinemotion.com.mx" in host or "zinemotion.com" in host:
+            return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
     if "zcs.zicore.space" in host or "zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
     return FileResponse(str(FRONTEND_DIR / "index.html"))
@@ -1055,6 +1055,16 @@ async def serve_aerospace():
 @app.get("/engineering")
 async def serve_engineering():
     return FileResponse(str(FRONTEND_DIR / "engineering.html"))
+
+
+@app.get("/api/file/zinemotion_logo")
+async def serve_zinemotion_logo():
+    """Serve the old ZineMotion logo PNG for the showroom."""
+    logo_path = Path("/opt/zicore-materializer/frontend/assets/zinemotion_logo.png")
+    if logo_path.exists():
+        return FileResponse(str(logo_path), media_type="image/png")
+    # Fallback: fetch from .68
+    return FileResponse(str(FRONTEND_DIR / "assets" / "zicore-logo.svg"), media_type="image/svg+xml")
 
 
 @app.get("/aerospace-engineering")
