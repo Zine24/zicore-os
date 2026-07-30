@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Master Creator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--orange:#ff8800;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+#starfield{position:fixed;inset:0;z-index:0}
+.content{position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto}
+h1{font-size:clamp(32px,5vw,56px);font-weight:300;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text),var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{font-size:14px;color:var(--text-dim);line-height:1.8;max-width:600px;margin-bottom:48px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s}
+.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-2px)}
+.card-icon{font-size:28px;margin-bottom:12px;color:var(--cyan)}
+.card-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.card-desc{font-size:11px;color:var(--text-dim);line-height:1.7}
+.card-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
+.back{display:inline-block;margin-top:32px;padding:12px 28px;border:1px solid var(--border);color:var(--text-dim);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all 0.4s}
+.back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.purple .card-icon{color:var(--purple)}.purple .card-tag{color:var(--purple);border-color:rgba(124,77,255,0.15)}
+.green .card-icon{color:var(--green)}.green .card-tag{color:var(--green);border-color:rgba(0,255,136,0.15)}
+.orange .card-icon{color:var(--orange)}.orange .card-tag{color:var(--orange);border-color:rgba(255,136,0,0.15)}
+@media(max-width:768px){.content{padding:80px 24px}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="content">
+  <a href="/" class="back" style="margin-bottom:32px;display:inline-block">&larr; ZICORE OS</a>
+  <h1>Master Creator</h1>
+  <div class="sub">Centro creativo unificado. Del concepto al objeto. Generación 3D, IA, CAD, edición multimedia y producción automatizada.</div>
+  <div class="grid">
+    <a href="/dashboard" class="card">
+      <div class="card-icon">&#x2728;</div>
+      <div class="card-title">Materializer</div>
+      <div class="card-desc">14 generadores procedurales. Cubo, esfera, cohete, terreno, engranaje, estrella, paramétricos y más. Exportación STL/OBJ/GLB.</div>
+      <span class="card-tag">3D</span>
+    </a>
+    <a href="/cad-generator" class="card purple">
+      <div class="card-icon">&#x1F3ED;</div>
+      <div class="card-title">CAD Generator</div>
+      <div class="card-desc">Diseño paramétrico con CadQuery, Build123d, SolidPython2. OpenSCAD programático. Precisión industrial.</div>
+      <span class="card-tag">CAD</span>
+    </a>
+    <a href="/ai-3d" class="card green">
+      <div class="card-icon">&#x1F916;</div>
+      <div class="card-title">AI 3D Generation</div>
+      <div class="card-desc">Tripo3D, Meshy, Hunyuan3D, TRELLIS. Texto a 3D, imagen a 3D. Modelos listos para imprimir.</div>
+      <span class="card-tag">AI</span>
+    </a>
+    <a href="/multimedia" class="card orange">
+      <div class="card-icon">&#x1F3AC;</div>
+      <div class="card-title">Multimedia Studio</div>
+      <div class="card-desc">Audio, video, imagen, música. Reproducción, edición, generación por IA. Biblioteca multimedia centralizada.</div>
+      <span class="card-tag">Media</span>
+    </a>
+    <a href="/mesh-processing" class="card purple">
+      <div class="card-icon">&#x25A3;</div>
+      <div class="card-title">Mesh Processing</div>
+      <div class="card-desc">Open3D, PyMeshLab, trimesh. Reparación, simplificación, reconstrucción, voxelización.</div>
+      <span class="card-tag">Mallas</span>
+    </a>
+    <a href="/materializer/openscad" class="card green">
+      <div class="card-icon">&#x2699;</div>
+      <div class="card-title">OpenSCAD Studio</div>
+      <div class="card-desc">Editor OpenSCAD con vista previa 3D. Generación programática de geometría CSG.</div>
+      <span class="card-tag">Code</span>
+    </a>
+  </div>
+  <a href="/" class="back">&larr; Volver a ZICORE OS</a>
+</div>
+<script>
+var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
+function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
+function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
+draw();
+</script>
+</body>
+</html>

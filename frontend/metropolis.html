@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiCore METROPOLIS — Navegación Terrestre</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--gold:#ffd700;--orange:#ff8800;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+#starfield{position:fixed;inset:0;z-index:0}
+.content{position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto}
+h1{font-size:clamp(32px,5vw,56px);font-weight:300;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text),var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{font-size:14px;color:var(--text-dim);line-height:1.8;max-width:600px;margin-bottom:48px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s}
+.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-2px)}
+.card-icon{font-size:28px;margin-bottom:12px;color:var(--cyan)}
+.card-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.card-desc{font-size:11px;color:var(--text-dim);line-height:1.7}
+.card-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
+.back{display:inline-block;margin-top:32px;padding:12px 28px;border:1px solid var(--border);color:var(--text-dim);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all 0.4s}
+.back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.air .card-icon{color:var(--cyan)}.air .card-tag{color:var(--cyan);border-color:rgba(0,229,255,0.15)}
+.sea .card-icon{color:var(--green)}.sea .card-tag{color:var(--green);border-color:rgba(0,255,136,0.15)}
+.land .card-icon{color:var(--gold)}.land .card-tag{color:var(--gold);border-color:rgba(255,215,0,0.15)}
+.space .card-icon{color:var(--purple)}.space .card-tag{color:var(--purple);border-color:rgba(124,77,255,0.15)}
+@media(max-width:768px){.content{padding:80px 24px}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="content">
+  <a href="/" class="back" style="margin-bottom:32px;display:inline-block">&larr; ZICORE OS</a>
+  <h1>ZiCore METROPOLIS</h1>
+  <div class="sub">Sistema de navegación multimodal. Controla cualquier vehículo — aire, mar y tierra. Una plataforma, todos los modos de transporte.</div>
+  <div class="grid">
+    <div class="card air">
+      <div class="card-icon">&#x2708;</div>
+      <div class="card-title">VTOL / Air</div>
+      <div class="card-desc">Vehículos de despegue vertical, aviones, drones. Navegación aérea, rutas, aterrizaje autónomo.</div>
+      <span class="card-tag">Aire</span>
+    </div>
+    <div class="card sea">
+      <div class="card-icon">&#x26F5;</div>
+      <div class="card-title">Marítimo</div>
+      <div class="card-desc">Barcos, lanchas, submarinos. Navegación marítima, rutas oceánicas, puertos, corrientes.</div>
+      <span class="card-tag">Mar</span>
+    </div>
+    <div class="card land">
+      <div class="card-icon">&#x1F697;</div>
+      <div class="card-title">Terrestre</div>
+      <div class="card-desc">Automóviles, camiones, motos, trenes. Rutas terrestres, tráfico, navegación GPS avanzada.</div>
+      <span class="card-tag">Tierra</span>
+    </div>
+    <div class="card air">
+      <div class="card-icon">&#x1F680;</div>
+      <div class="card-title">Flota Mixta</div>
+      <div class="card-desc">Gestión de flotas multimodales. Coordinación aire-mar-tierra en una sola interfaz.</div>
+      <span class="card-tag">Flota</span>
+    </div>
+    <div class="card sea">
+      <div class="card-icon">&#x1F30A;</div>
+      <div class="card-title">Ocean Routing</div>
+      <div class="card-desc">Ruteo oceánico inteligente. Corrientes, viento, combustible, puertos de escala.</div>
+      <span class="card-tag">Rutas</span>
+    </div>
+    <div class="card land">
+      <div class="card-icon">&#x1F5FA;</div>
+      <div class="card-title">City Mesh</div>
+      <div class="card-desc">Navegación urbana 3D. Tráfico en tiempo real, rutas óptimas, integración smart city.</div>
+      <span class="card-tag">Ciudad</span>
+    </div>
+    <div class="card space">
+      <div class="card-icon">&#x1F30D;</div>
+      <div class="card-title">Global Map</div>
+      <div class="card-desc">Mapa mundial interactivo con capas de tráfico aéreo, marítimo y terrestre en vivo.</div>
+      <span class="card-tag">Global</span>
+    </div>
+    <div class="card space">
+      <div class="card-icon">&#x1F4C8;</div>
+      <div class="card-title">Analytics</div>
+      <div class="card-desc">Análisis de rutas, consumo, emisiones, eficiencia. Reportes y optimización de flota.</div>
+      <span class="card-tag">Datos</span>
+    </div>
+  </div>
+  <a href="/" class="back">&larr; Volver a ZICORE OS</a>
+</div>
+<script>
+var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
+function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
+function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
+draw();
+</script>
+</body>
+</html>

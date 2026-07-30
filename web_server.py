@@ -1005,8 +1005,8 @@ async def serve_main_menu(request: Request):
     host = request.headers.get("host", "")
     if "zzz.zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "blog.html"))
-        if "zinemotion.com.mx" in host or "zinemotion.com" in host:
-            return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
+    if "zinemotion.com.mx" in host or "zinemotion.com" in host:
+        return FileResponse(str(FRONTEND_DIR / "zinemotion.html"))
     if "zcs.zicore.space" in host or "zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
     return FileResponse(str(FRONTEND_DIR / "index.html"))
@@ -1050,6 +1050,21 @@ async def serve_opencode():
 @app.get("/aerospace")
 async def serve_aerospace():
     return FileResponse(str(FRONTEND_DIR / "aerospace.html"))
+
+
+@app.get("/aerospace-system")
+async def serve_aerospace_system():
+    return FileResponse(str(FRONTEND_DIR / "aerospace-system.html"))
+
+
+@app.get("/master-creator")
+async def serve_master_creator():
+    return FileResponse(str(FRONTEND_DIR / "master-creator.html"))
+
+
+@app.get("/metropolis")
+async def serve_metropolis():
+    return FileResponse(str(FRONTEND_DIR / "metropolis.html"))
 
 
 @app.get("/engineering")
