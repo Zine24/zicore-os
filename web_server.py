@@ -11404,14 +11404,17 @@ OLLAMA_PROXY_URL = os.environ.get("OLLAMA_PROXY_URL", "http://localhost:11434")
 
 @app.api_route("/ollama/{path:path}", methods=["GET", "POST", "DELETE", "PUT"])
 async def ollama_proxy(path: str, request: Request):
-    """Reverse proxy: /ollama/* → localhost:11434/*"""
+    """Reverse proxy: /ollama/* → OLLAMA_PROXY_URL/path (supports HTTP and HTTPS)"""
     target = f"{OLLAMA_PROXY_URL}/{path}"
     method = request.method
     try:
         body = await request.body()
         from urllib.parse import urlparse
         parsed = urlparse(target)
-        conn = http.client.HTTPConnection(parsed.hostname, parsed.port or 11434, timeout=180)
+        is_https = target.startswith("https://")
+        conn_cls = http.client.HTTPSConnection if is_https else http.client.HTTPConnection
+        port = parsed.port or (443 if is_https else 11434)
+        conn = conn_cls(parsed.hostname, port, timeout=180)
         headers = {k: v for k, v in request.headers.items()
                    if k.lower() not in ("host", "transfer-encoding")}
         conn.request(method, parsed.path, body=body, headers=headers)
