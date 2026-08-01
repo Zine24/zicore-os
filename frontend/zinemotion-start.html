@@ -14,7 +14,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
 #starfield{position:fixed;inset:0;z-index:0}
 .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.02;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
 .content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:80px 40px}
-.hero{min-height:80vh;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2;padding:80px 40px;max-width:1200px;margin:0 auto}
+.nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:rgba(4,6,12,0.78);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.nav-logo{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:3px;text-decoration:none;color:#fff}
+.nav-logo span{color:var(--gold)}
+.nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nav-links a{font-size:11px;letter-spacing:1px;color:var(--text2);text-decoration:none;padding:8px 14px;border:1px solid transparent;border-radius:4px;transition:all .25s}
+.nav-links a:hover{color:var(--text);border-color:var(--border);background:rgba(0,229,255,0.04)}
+.nav-btn-store{background:linear-gradient(135deg,var(--gold),var(--orange));color:#0a0a00!important;font-weight:700;border:1px solid transparent!important}
+.nav-btn-store:hover{filter:brightness(1.12)}
+.hero{min-height:80vh;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2;padding:140px 40px 80px;max-width:1200px;margin:0 auto}
 .hero-tag{font-family:var(--mono);font-size:11px;letter-spacing:8px;color:var(--gold);text-transform:uppercase;margin-bottom:24px}
 .hero h1{font-size:clamp(42px,8vw,96px);font-weight:900;letter-spacing:-2px;line-height:1;margin-bottom:24px;background:linear-gradient(135deg,#fff 0%,var(--gold) 40%,var(--cyan) 70%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .hero-sub{font-size:clamp(16px,2vw,22px);font-weight:300;color:var(--text2);line-height:1.7;max-width:700px;margin-bottom:48px}
@@ -50,12 +58,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
 footer{padding:60px 40px;border-top:1px solid var(--border);text-align:center}
 footer p{font-size:11px;color:var(--text3);letter-spacing:1px}
 footer a{color:var(--cyan);text-decoration:none}
-@media(max-width:768px){.producer-section{grid-template-columns:1fr}.hero{padding:60px 24px}.content{padding:60px 24px}}
+@media(max-width:768px){.producer-section{grid-template-columns:1fr}.hero{padding:120px 24px 60px}.content{padding:60px 24px}.nav{padding:12px 20px}.nav-links a{font-size:10px;padding:6px 10px}}
 </style>
 </head>
 <body>
 <canvas id="starfield"></canvas>
 <div class="grain"></div>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">ZINEMOTION<span>START</span></a>
+  <div class="nav-links">
+    <a href="https://zinemotion.com.mx">Portal</a>
+    <a href="https://zicore.space">ZICORE</a>
+    <a href="https://zzz.zicore.space">ZZZ Space</a>
+    <a href="https://zzz.zinemotion.com" class="nav-btn-store">ZZZ Store &nearr;</a>
+  </div>
+</nav>
 
 <div class="hero">
   <div class="hero-tag">EUREKA · The conception of innovation</div>
@@ -101,9 +119,53 @@ footer a{color:var(--cyan);text-decoration:none}
 
   <div class="divider"></div>
 
+  <!-- PROJECTS AREA -->
+  <div class="section" id="projects">
+    <div class="section-tag">001 — Projects</div>
+    <h2 class="section-title">The <span class="purple">Projects</span> of the Ecosystem</h2>
+    <p class="section-desc">The flagship conceptions born under ZINEMOTION. Each project is a complete system — a vehicle, an operating system, a scientific protocol, a store — realized across the network.</p>
+
+    <div class="portal-grid">
+      <a href="https://zzz.zinemotion.com" class="portal-card" style="border-color:rgba(124,77,255,0.25)">
+        <div class="icon">&#x1F4A0;</div>
+        <h3>Obsidiana</h3>
+        <p>Stealth aerospace interceptor. Black-glass lunar cryo architecture, silent propulsion, signature obscured. A conception of darkness engineered to fly.</p>
+        <span class="domain">zzz.zinemotion.com</span>
+        <span class="badge badge-wordpress">Vehicle</span>
+      </a>
+
+      <a href="https://zicore.space" class="portal-card" style="border-color:rgba(0,229,255,0.25)">
+        <div class="icon">&#x1F680;</div>
+        <h3>ZICORE OS</h3>
+        <p>Digital aerospace operating system. Mission control, vehicle design, orbital mechanics, 3D materializer, AI copilot and 50+ modules.</p>
+        <span class="domain">zicore.space</span>
+        <span class="badge badge-system">OS</span>
+      </a>
+
+      <a href="https://zzz.zicore.space" class="portal-card" style="border-color:rgba(255,215,0,0.25)">
+        <div class="icon">&#x1F52C;</div>
+        <h3>ZZZ — Scientific Connection Protocol</h3>
+        <p>The ZZZ protocol binds two scientific portals into one narrative: the aerospace career chronicle and the original archive. One protocol, two gateways to knowledge.</p>
+        <span class="domain">zzz.zinemotion.com</span>
+        <span class="domain" style="margin-left:6px">zzz.zicore.space</span>
+        <span class="badge badge-classic">Protocol</span>
+      </a>
+
+      <a href="https://zzz.zinemotion.com" class="portal-card" style="border-color:rgba(0,255,136,0.25)">
+        <div class="icon">&#x1F6CD;</div>
+        <h3>The ZineMotion Store</h3>
+        <p>TechWear, ZiCapsules, 3D frames and ecosystem products. The conception, wearable and collectible.</p>
+        <span class="domain">zzz.zinemotion.com</span>
+        <span class="badge badge-system">Store</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
   <!-- PORTALS COLLAGE -->
   <div class="section">
-    <div class="section-tag">001 — Project Portals</div>
+    <div class="section-tag">002 — Project Portals</div>
     <h2 class="section-title">The <span class="gold">Collage</span> of Creation</h2>
     <p class="section-desc">Every portal, every system, every idea conceived under ZINEMOTION. From cinematic workshops to aerospace operating systems.</p>
     
@@ -178,7 +240,7 @@ footer a{color:var(--cyan);text-decoration:none}
 
   <!-- SYSTEMS & PRODUCTS -->
   <div class="section">
-    <div class="section-tag">002 — Star Products</div>
+    <div class="section-tag">003 — Star Products</div>
     <h2 class="section-title">Systems That <span class="cyan">Define</span> the Ecosystem</h2>
     <p class="section-desc">The flagship products conceived by ZINEMOTION and realized through ZICORE. Each is a complete, production-ready system.</p>
     
