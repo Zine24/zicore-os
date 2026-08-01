@@ -125,7 +125,7 @@ ZICORE includes:
   - ZIO AI Copilot
   - ZICORE Materializer (3D generation)
   - ZMMX Media Center
-  - Video Chat
+  - CAPCOM (Video Call)
   - Cloud Storage
   - Engineering modules
 
