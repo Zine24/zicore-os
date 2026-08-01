@@ -877,6 +877,15 @@ function renderModels(cfg){
     });
   }
 
+  function fetchZicoreCluster(){
+    var statusEl=document.getElementById('fetchStatus_zicore_cluster');
+    if(statusEl)statusEl.textContent='Scanning...';
+    ['zicore_native','uncensored_68','zicore_vps_tunnel'].forEach(function(pid){
+      fetchProviderModels(pid);
+    });
+    if(statusEl)statusEl.textContent='Scanning cluster...';
+  }
+
   /* OpenRouter */
   h+='<div class="section"><div class="section-title green">OPENROUTER</div>';
   h+='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px">';
@@ -956,6 +965,45 @@ function renderModels(cfg){
     h+='</div>';
   }
   h+='<div id="ollama_fetched_models"></div>';
+  h+='</div>';
+
+  /* ZICORE Inference Cluster */
+  h+='<div class="section"><div class="section-title" style="color:#0ff">ZICORE INFERENCE</div>';
+  h+='<div class="flex" style="gap:8px;align-items:center;margin-bottom:8px">';
+  h+='<div class="fs-8 text-2">Ollama cluster: VPS direct, .68, and Cloudflare tunnel fallback.</div>';
+  h+='<button onclick="fetchZicoreCluster()" style="padding:2px 8px;font-size:7px;background:rgba(0,255,255,0.12);border:1px solid rgba(0,255,255,0.35);color:#0ff;border-radius:3px;cursor:pointer">SCAN ALL</button>';
+  h+='<span id="fetchStatus_zicore_cluster" class="fs-8 text-2"></span>';
+  h+='</div>';
+  var zicoreProviders=['zicore_native','uncensored_68','zicore_vps_tunnel'];
+  zicoreProviders.forEach(function(zpId){
+    var zpCfg=cfg.providers&&cfg.providers[zpId]||{};
+    var zpName=zpCfg.name||zpId;
+    var zpModels=FETCHED_MODELS[zpId]||(zpCfg.models||[]);
+    h+='<div style="margin-bottom:10px;padding:8px;border:1px solid rgba(0,255,255,0.08);border-radius:3px">';
+    h+='<div class="flex" style="gap:8px;margin-bottom:6px">';
+    h+='<span style="font-size:9px;color:#0ff;letter-spacing:2px">'+zpName.toUpperCase()+'</span>';
+    h+='<span class="fs-7 text-2">'+(zpCfg.base_url||'')+'</span>';
+    h+='<button onclick="fetchProviderModels(\''+zpId+'\')" style="padding:1px 6px;font-size:6px;background:rgba(0,255,255,0.1);border:1px solid rgba(0,255,255,0.25);color:#0ff;border-radius:3px;cursor:pointer">FETCH</button>';
+    h+='<span id="fetchStatus_'+zpId+'" class="fs-8 text-2"></span>';
+    h+='</div>';
+    h+='<div id="'+zpId+'_fetched_models"></div>';
+    if(zpModels.length){
+      h+='<div id="'+zpId+'ModelList">';
+      zpModels.forEach(function(m,i){
+        var mid=zpId+'_model_'+i;
+        var mName=typeof m==='string'?m:(m.id||m.name||'');
+        var sel=activeModel===mName;
+        h+='<label class="model-item'+(sel?' selected':'')+'" for="'+mid+'">';
+        h+='<input type="radio" name="default_model_select" id="'+mid+'" value="'+mName+'"'+(sel?' checked':'')+' onchange="selectDefaultModel(\''+mName.replace(/'/g,"\\'")+'\',this)">';
+        h+='<div style="flex:1"><div class="model-name">'+getName(mName)+'</div>';
+        h+='<div class="model-desc">'+(getDesc(mName)||'ZICORE inference')+'</div></div>';
+        h+='<span class="model-tag tag-free">FREE</span>';
+        h+='</label>';
+      });
+      h+='</div>';
+    }
+    h+='</div>';
+  });
   h+='</div>';
 
   /* Remote Providers */

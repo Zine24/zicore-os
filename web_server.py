@@ -362,7 +362,7 @@ def _provider_headers(provider: str, api_key: str) -> dict:
 
 
 def _extract_model_ids(provider: str, data: dict) -> list:
-    models = data.get("models") if provider == "ollama" else data.get("data")
+    models = data.get("models") if provider in ("ollama", "zicore_native", "uncensored_68", "zicore_vps_tunnel") else data.get("data")
     ids = []
     if isinstance(models, list):
         for item in models:
@@ -385,8 +385,8 @@ def get_available_models(provider: str, config: dict = None) -> dict:
         base_url = f"http://{base_url}"
     api_key = prov.get("api_key", "")
     config_models = prov.get("models", [])
-    # Treat all Ollama-compatible providers the same (local, VPS, .68)
-    if provider in ("ollama", "zicore_native", "uncensored_68"):
+    # Treat all Ollama-compatible providers the same (local, VPS, .68, tunnel)
+    if provider in ("ollama", "zicore_native", "uncensored_68", "zicore_vps_tunnel"):
         try:
             data = _request_json(f"{base_url}/api/tags", timeout=5)
             return {"status": "ok", "provider": provider, "models": _extract_model_ids(provider, data)}
@@ -10423,8 +10423,8 @@ def _fetch_provider_models(provider: str, prov_config: dict) -> dict:
     api_key = prov_config.get("api_key", "")
     config_models = prov_config.get("models", [])
 
-    # Treat all Ollama-compatible providers the same (local, VPS, .68)
-    if provider in ("ollama", "zicore_native", "uncensored_68"):
+    # Treat all Ollama-compatible providers the same (local, VPS, .68, tunnel)
+    if provider in ("ollama", "zicore_native", "uncensored_68", "zicore_vps_tunnel"):
         try:
             data = _request_json(f"{base_url}/api/tags", timeout=5)
             models = []

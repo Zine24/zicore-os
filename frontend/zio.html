@@ -594,6 +594,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
   var providers=[
     {id:'zicore_native',name:'ZICORE Native',color:'#0ff'},
     {id:'openrouter',name:'OpenRouter',color:'#f0f'},
+    {id:'uncensored_68',name:'Ollama .68',color:'#f60'},
+    {id:'zicore_vps_tunnel',name:'ZICORE Tunnel',color:'#0fa'},
     {id:'ollama',name:'Ollama (Local)',color:'#0a0'},
     {id:'openai',name:'OpenAI',color:'#0f6'},
     {id:'anthropic',name:'Anthropic',color:'#f80'},
@@ -867,16 +869,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     .then(function(d){
       var models=d.models||[];
       if(models.length===0){models=provCfg.models||[];}
-      if(activeProvider==='ollama'){
-        models=models.filter(function(m){return m.indexOf('gemma')===0;});
-      }
       _populateModelSelect(ms,models,provCfg);
     })
     .catch(function(){
       var models=provCfg.models||[];
-      if(activeProvider==='ollama'){
-        models=models.filter(function(m){return m.indexOf('gemma')===0;});
-      }
       _populateModelSelect(ms,models,provCfg);
     });
   }
@@ -890,7 +886,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
     }
     var currentDefault=(activeProvider==='zicore_native')
       ?(config.zio_engine&&config.zio_engine.active_model)
-      :(provCfg.default_model||'');
+      :(provCfg.default_model||config.zio_engine&&config.zio_engine.active_model||'');
     models.forEach(function(m){
       var o=document.createElement('option');
       o.value=m;
