@@ -849,6 +849,9 @@ class SSOAuthMiddleware:
         "/vr-monitor",
         "/api/vr-monitor/stats",
         "/api/vr-monitor/telemetry",
+        "/telemetry",
+        "/api/metropolis/modules",
+        "/api/metropolis/status",
         "/opencode",
     }
 
