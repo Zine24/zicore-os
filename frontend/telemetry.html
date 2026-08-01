@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ZICORE Telemetry VR</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--gold:#ffd700;--orange:#ff8800;--red:#ff3355;--text:#c8d0dc;--text-dim:#5a6478;--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--font);color:var(--text);-webkit-user-select:none;user-select:none}
+#camera{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+#camera-fallback{position:fixed;inset:0;z-index:0;display:none;background:linear-gradient(135deg,#0a0e18 0%,#060810 50%,#0f1420 100%)}
+#camera-fallback .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px}
+.hud{position:fixed;inset:0;z-index:1;pointer-events:none}.hud>*{pointer-events:auto}
+.vignette{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,4,10,0.85) 100%);pointer-events:none}
+.corner-tl,.corner-tr,.corner-bl,.corner-br{position:fixed;width:60px;height:60px;border-color:rgba(0,229,255,0.2);border-style:solid;z-index:2}
+.corner-tl{top:16px;left:16px;border-width:2px 0 0 2px}.corner-tr{top:16px;right:16px;border-width:2px 2px 0 0}
+.corner-bl{bottom:16px;left:16px;border-width:0 0 2px 2px}.corner-br{bottom:16px;right:16px;border-width:0 2px 2px 0}
+.top-hud{position:fixed;top:0;left:0;right:0;z-index:3;padding:20px;display:flex;justify-content:space-between;align-items:flex-start}
+.top-left{display:flex;flex-direction:column;gap:4px}
+.top-left .title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim)}
+.top-left .time{font-family:var(--mono);font-size:28px;font-weight:300;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 20px rgba(0,229,255,0.3)}
+.top-left .date{font-size:10px;color:var(--text-dim);letter-spacing:1px}
+.top-right .signal{display:flex;gap:3px;justify-content:flex-end;margin-bottom:4px}
+.top-right .signal .bar{width:3px;background:var(--green);border-radius:1px}
+.top-right .signal .bar:nth-child(1){height:8px}.top-right .signal .bar:nth-child(2){height:12px}.top-right .signal .bar:nth-child(3){height:16px}.top-right .signal .bar:nth-child(4){height:20px}
+.top-right .bat{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+.center-hud{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3;text-align:center}
+.center-hud .heading{font-family:var(--mono);font-size:clamp(48px,10vw,80px);font-weight:200;color:var(--cyan);text-shadow:0 0 40px rgba(0,229,255,0.2);letter-spacing:4px;line-height:1}
+.center-hud .heading-label{font-size:9px;letter-spacing:4px;color:var(--text-dim);margin-top:4px}
+.center-hud .compass-ring{position:relative;width:80px;height:80px;border-radius:50%;border:1px solid rgba(0,229,255,0.1);margin:16px auto 0;display:flex;align-items:center;justify-content:center}
+.center-hud .compass-ring .n{font-size:11px;color:var(--cyan);position:absolute;top:-14px;letter-spacing:1px}
+.center-hud .compass-ring .s{font-size:9px;color:var(--text-dim);position:absolute;bottom:-12px}
+.center-hud .compass-ring .e{font-size:9px;color:var(--text-dim);position:absolute;right:-10px}
+.center-hud .compass-ring .w{font-size:9px;color:var(--text-dim);position:absolute;left:-10px}
+.center-hud .compass-ring .arrow{font-size:16px;color:var(--cyan)}
+.bottom-hud{position:fixed;bottom:0;left:0;right:0;z-index:3;padding:20px 20px 32px;display:flex;justify-content:space-between;align-items:flex-end}
+.bottom-left{display:flex;gap:24px}
+.data-item .label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)}
+.data-item .value{font-family:var(--mono);font-size:14px;color:var(--text);letter-spacing:1px}
+.data-item .value.cyan{color:var(--cyan)}.data-item .value.gold{color:var(--gold)}
+.bottom-right .speed-label{font-size:8px;letter-spacing:2px;color:var(--text-dim)}
+.bottom-right .speed{font-family:var(--mono);font-size:32px;font-weight:200;color:var(--green);letter-spacing:1px;text-shadow:0 0 20px rgba(0,255,136,0.2)}
+.zio-assist{position:fixed;bottom:80px;right:20px;z-index:4;width:180px;background:rgba(10,14,24,0.85);border:1px solid rgba(0,229,255,0.1);border-radius:12px;padding:12px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .3s;pointer-events:auto}
+.zio-assist .header{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer}
+.zio-assist .header .avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:12px}
+.zio-assist .header .name{font-size:10px;font-weight:600;letter-spacing:1px}
+.zio-assist .header .status{font-size:7px;color:var(--green);margin-left:auto;letter-spacing:1px}
+.zio-assist .input-area{display:flex;gap:6px;margin-top:8px}
+.zio-assist .input-area input{flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none;border-radius:4px;pointer-events:auto}
+.zio-assist .input-area input:focus{border-color:rgba(0,229,255,0.3)}
+.zio-assist .input-area button{background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.15);color:var(--cyan);padding:6px 10px;font-size:10px;cursor:pointer;border-radius:4px;pointer-events:auto}
+.zio-assist .input-area button:hover{background:rgba(0,229,255,0.2)}
+.zio-assist .response{font-size:10px;color:var(--text-dim);line-height:1.5;margin-top:6px;max-height:60px;overflow-y:auto}
+.zio-assist.minimized{width:44px;height:44px;border-radius:50%;padding:0;overflow:hidden}
+.zio-assist.minimized>*{display:none}.zio-assist.minimized .header{display:flex;margin:0;width:100%;height:100%;align-items:center;justify-content:center}
+.zio-assist.minimized .header .avatar{width:44px;height:44px;border-radius:50%;font-size:18px;display:flex}
+.zio-assist.minimized .header .name,.zio-assist.minimized .header .status{display:none}
+#loading{position:fixed;inset:0;z-index:100;background:#060810;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s}
+#loading.hidden{opacity:0;pointer-events:none}
+#loading .spinner{width:32px;height:32px;border:2px solid rgba(0,229,255,0.1);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading .text{font-size:10px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><div class="text">Iniciando Telemetry VR...</div></div>
+<video id="camera" autoplay playsinline muted></video>
+<div id="camera-fallback"><div class="grid-overlay"></div></div>
+<div class="vignette"></div>
+<div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+<div class="hud">
+  <div class="top-hud">
+    <div class="top-left">
+      <div class="title">ZiCore Telemetry VR</div>
+      <div class="time" id="clockTime">00:00</div>
+      <div class="date" id="clockDate">---</div>
+    </div>
+    <div class="top-right">
+      <div class="signal"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+      <div class="bat" id="batteryLevel">--%</div>
+    </div>
+  </div>
+  <div class="center-hud">
+    <div class="heading" id="headingVal">000&deg;</div>
+    <div class="heading-label">HEADING</div>
+    <div class="compass-ring">
+      <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
+      <div class="arrow" id="compassArrow">&#x2191;</div>
+    </div>
+  </div>
+  <div class="bottom-hud">
+    <div class="bottom-left">
+      <div class="data-item"><div class="label">ALTITUD</div><div class="value cyan" id="altVal">-- m</div></div>
+      <div class="data-item"><div class="label">LAT</div><div class="value" id="latVal">--</div></div>
+      <div class="data-item"><div class="label">LON</div><div class="value" id="lonVal">--</div></div>
+    </div>
+    <div class="bottom-right">
+      <div class="speed-label">VELOCIDAD</div>
+      <div><span class="speed" id="speedVal">0</span><span class="speed-unit">km/h</span></div>
+    </div>
+  </div>
+</div>
+<div class="zio-assist" id="zioAssist">
+  <div class="header" onclick="toggleZio()">
+    <div class="avatar">Z</div>
+    <div class="name">ZIO Assist</div>
+    <div class="status">&#9679; Online</div>
+  </div>
+  <div class="input-area">
+    <input type="text" id="zioInput" placeholder="Comando..." onkeydown="if(event.key==='Enter')sendZio()">
+    <button onclick="sendZio()">&#x2191;</button>
+  </div>
+  <div class="response" id="zioResponse">Di un comando a ZIO</div>
+</div>
+<script>
+setTimeout(()=>document.getElementById('loading').classList.add('hidden'),1000);
+function updateClock(){const n=new Date;document.getElementById('clockTime').textContent=n.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false});document.getElementById('clockDate').textContent=n.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'})}
+updateClock();setInterval(updateClock,1000);
+async function startCamera(){try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});document.getElementById('camera').srcObject=s}catch(e){document.getElementById('camera').style.display='none';document.getElementById('camera-fallback').style.display='block'}}
+startCamera();
+function updateSensors(){
+  const h=document.getElementById('headingVal'),ca=document.getElementById('compassArrow');
+  window.addEventListener('deviceorientation',e=>{const a=e.alpha||0;h.textContent=Math.round(a)+'\u00b0';ca.style.transform='rotate('+a+'deg)'});
+  if(navigator.geolocation)navigator.geolocation.watchPosition(p=>{document.getElementById('latVal').textContent=p.coords.latitude.toFixed(4);document.getElementById('lonVal').textContent=p.coords.longitude.toFixed(4);document.getElementById('altVal').textContent=Math.round(p.coords.altitude||0)+' m';document.getElementById('speedVal').textContent=Math.round((p.coords.speed||0)*3.6)},()=>{},{enableHighAccuracy:true,maximumAge:3000});
+}
+setTimeout(updateSensors,500);
+if(navigator.getBattery)navigator.getBattery().then(b=>{function u(){document.getElementById('batteryLevel').textContent=Math.round(b.level*100)+'%'}u();b.addEventListener('levelchange',u)});
+function toggleZio(){document.getElementById('zioAssist').classList.toggle('minimized')}
+function sendZio(){const i=document.getElementById('zioInput'),r=document.getElementById('zioResponse'),m=i.value.trim();if(!m)return;r.textContent='...';fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,provider:'zicore_native',session_id:'telemetry_vr'})}).then(x=>x.json()).then(d=>{r.textContent=d.response||d.error||'Sin respuesta';i.value=''}).catch(()=>{r.textContent='Error de conexion';i.value=''})}
+</script>
+</body>
+</html>

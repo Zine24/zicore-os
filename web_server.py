@@ -38,7 +38,12 @@ def _doh_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
     cache_key = (host, port, family, type)
     if cache_key in _doh_cache:
         return _doh_cache[cache_key]
-    if host in ('localhost', '127.0.0.1', '::1') or host.startswith('192.168.') or host.startswith('10.') or host.startswith('172.'):
+    try:
+        import ipaddress as _ipa
+        _is_ip_literal = isinstance(_ipa.ip_address(host), _ipa._BaseAddress)
+    except Exception:
+        _is_ip_literal = False
+    if host in ('localhost', '127.0.0.1', '::1') or _is_ip_literal or host.startswith('192.168.') or host.startswith('10.') or host.startswith('172.'):
         return _orig_getaddrinfo(host, port, family, type, proto, flags)
     try:
         import requests as _r
@@ -1315,6 +1320,12 @@ async def serve_vr_monitor():
     return FileResponse(str(FRONTEND_DIR / "vr-monitor.html"))
 
 
+@app.get("/telemetry")
+async def serve_telemetry():
+    """Telemetry VR HUD - AR navigation dashboard for mobile."""
+    return FileResponse(str(FRONTEND_DIR / "telemetry.html"))
+
+
 @app.get("/api/vr-monitor/stats")
 async def vr_monitor_stats():
     """Real-time telemetry optimized for VR rendering (high refresh, minimal payload)."""
@@ -1868,6 +1879,86 @@ async def aerospace_models():
         return {"status": "error", "error": f"Ollama returned {r.status_code}"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ─── METROPOLIS Integration Hub API ─────────────────────────────────────
+
+_metropolis_cache = {"modules": {}, "last_update": 0}
+
+@app.get("/api/metropolis/modules")
+async def metropolis_modules():
+    """List all METROPOLIS modules with status."""
+    import time as _time
+    now = _time.time()
+    if now - _metropolis_cache["last_update"] < 15:
+        return {"status": "ok", "modules": _metropolis_cache["modules"]}
+
+    config = load_config()
+    mods = {
+        "zio": {"name": "ZIO AI", "icon": "robot", "route": "/zio", "enabled": True, "status": "online"},
+        "materializer": {"name": "Materializer 3D", "icon": "cube", "route": "/materializer", "enabled": True, "status": "online"},
+        "aerospace": {"name": "Aerospace System", "icon": "rocket", "route": "/aerospace-system", "enabled": True, "status": "online"},
+        "mission_control": {"name": "Mission Control", "icon": "dashboard", "route": "/mission-control", "enabled": True, "status": "online"},
+        "telemetry_vr": {"name": "Telemetry VR", "icon": "phone", "route": "/telemetry", "enabled": True, "status": "online"},
+        "games": {"name": "Game Center", "icon": "gamepad", "route": "/games", "enabled": True, "status": "online"},
+        "settings": {"name": "Settings", "icon": "gear", "route": "/settings", "enabled": True, "status": "online"},
+        "zicodex": {"name": "ZiCodex", "icon": "book", "route": "/zicodex", "enabled": True, "status": "online"},
+        "mail": {"name": "ZiMail", "icon": "mail", "route": "/mail", "enabled": True, "status": "online"},
+        "marketplace": {"name": "Marketplace", "icon": "cart", "route": "/marketplace", "enabled": True, "status": "online"},
+        "dashboard": {"name": "Dashboard", "icon": "monitor", "route": "/dashboard", "enabled": True, "status": "online"},
+        "browser": {"name": "Browser", "icon": "globe", "route": "/browser", "enabled": True, "status": "online"},
+    }
+
+    providers = config.get("providers", {})
+    zicore_cfg = providers.get("zicore_native", {})
+    ollama_url = zicore_cfg.get("base_url", "http://localhost:11434")
+    ai_ok = False
+    try:
+        import requests as _req
+        r = _req.get(f"{ollama_url}/api/tags", timeout=5)
+        ai_ok = r.status_code == 200
+    except Exception:
+        pass
+    mods["zio"]["ai_online"] = ai_ok
+    mods["zio"]["model"] = zicore_cfg.get("default_model", "gemma4:12b")
+
+    _metropolis_cache["modules"] = mods
+    _metropolis_cache["last_update"] = now
+    return {"status": "ok", "modules": mods}
+
+
+@app.get("/api/metropolis/status")
+async def metropolis_status():
+    """METROPOLIS system health overview."""
+    import time as _time
+    config = load_config()
+    providers = config.get("providers", {})
+    zicore_cfg = providers.get("zicore_native", {})
+
+    ollama_url = zicore_cfg.get("base_url", "http://localhost:11434")
+    ai_ok = False
+    ai_models = []
+    try:
+        import requests as _req
+        r = _req.get(f"{ollama_url}/api/tags", timeout=5)
+        if r.status_code == 200:
+            ai_ok = True
+            ai_models = [m["name"] for m in r.json().get("models", [])]
+    except Exception:
+        pass
+
+    return {
+        "status": "ok",
+        "active_provider": config.get("zio_engine", {}).get("active_provider", "zicore_native"),
+        "active_model": config.get("zio_engine", {}).get("active_model", "gemma4:12b"),
+        "ai_online": ai_ok,
+        "ai_models": ai_models,
+        "module_count": 12,
+        "module_online": 12,
+        "tunnels": "2 activos",
+        "server": "zicore.space",
+        "version": "5.0",
+    }
 
 
 @app.get("/api/proxy")
