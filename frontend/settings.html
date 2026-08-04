@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZICORE SYSTEM — System Configuration</title>
+<link rel="stylesheet" href="/css/zicore-ui.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
 :root{--glow:#00e5ff;--glow2:#7c4dff;--panel-bg:rgba(10,14,22,0.88);--panel-border:rgba(0,229,255,0.12);--text2:#607080;--text3:#303848}
 body{display:flex;flex-direction:column}
 
-#main{flex:1;display:flex;overflow:hidden}
+#main{flex:1;display:flex;overflow:hidden;padding-top:var(--topbar-h,48px)}
 #tabs{width:200px;min-width:200px;border-right:1px solid rgba(0,229,255,0.08);padding:8px 0;overflow-y:auto;flex-shrink:0}
 .tab{padding:8px 14px;font-size:9px;letter-spacing:2px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .2s}
 .tab:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
@@ -140,7 +141,44 @@ select option{background:#0a0e16;color:var(--glow)}
 })();
 
 var CONFIG=null;
-var PROVIDER_ORDER=['ollama','openrouter','openai','anthropic','groq','deepseek','together','opencode','tripo3d','meshy','rodin','openscad'];
+var CUR_PROVIDER=null;
+var PROVIDER_ORDER=['ollama','openrouter','openai','anthropic','groq','deepseek','together','opencode','zicore_native','uncensored_68','zicore_vps_tunnel','tripo3d','meshy','rodin','openscad'];
+var PROVIDER_INFO={
+  ollama:{label:'Ollama (Local)',desc:'Modelos locales via Ollama server',cat:'LOCAL LLM'},
+  openrouter:{label:'OpenRouter',desc:'Acceso a multiples modelos cloud',cat:'LLM CLOUD'},
+  openai:{label:'OpenAI',desc:'GPT-4, GPT-4o, DALL-E',cat:'LLM CLOUD'},
+  anthropic:{label:'Anthropic',desc:'Claude 3.5, Claude 3 Opus',cat:'LLM CLOUD'},
+  groq:{label:'Groq',desc:'inferencia ultrarrapida (LPU)',cat:'LLM CLOUD'},
+  deepseek:{label:'DeepSeek',desc:'DeepSeek V3, Coder',cat:'LLM CLOUD'},
+  together:{label:'Together AI',desc:'Modelos open-source managed',cat:'LLM CLOUD'},
+  opencode:{label:'OpenCode Zen',desc:'Modelos gratuitos y de pago',cat:'LLM CLOUD'},
+  zicore_native:{label:'ZICORE Native (VPS)',desc:'Ollama local del VPS — gemma4:12b, qwen2.5-coder:7b',cat:'LOCAL LLM'},
+  uncensored_68:{label:'Ollama .68 (Uncensored)',desc:'Ollama en servidor .68 — qwen3.5:4b, deepseek-r1',cat:'LOCAL LLM'},
+  zicore_vps_tunnel:{label:'ZICORE VPS (via Tunnel)',desc:'Fallback via Cloudflare tunnel al Ollama del VPS',cat:'LOCAL LLM'},
+  tripo3d:{label:'Tripo3D',desc:'Text/Image to 3D — 300 créditos gratis/mes',cat:'3D GENERATORS'},
+  meshy:{label:'Meshy AI',desc:'Text/Image to 3D — tier gratis disponible',cat:'3D GENERATORS'},
+  rodin:{label:'Rodin Gen-1',desc:'Image to 3D — tier gratis disponible',cat:'3D GENERATORS'},
+  openscad:{label:'OpenSCAD',desc:'Motor CSG local — requiere binario en PATH',cat:'CAD ENGINES'},
+};
+var MAT_SHAPES=['cube','sphere','cylinder','cone','capsule','rocket','terrain','pipe','gear','star','parametric_surface','openscad_script','mesh_import','heightmap','spacecraft_hull','engine_nozzle','landing_legs','solar_panels','satellite_bus','station_module','procedural_rocket','torus','turbine','wing'];
+var MAT_TEXTURES=['metal','brushed_metal','aluminum','titanium','carbon_fiber','hull_plating','glass','ceramic','plastic','rubber','wood','stone','emissive','glowing_grid','warning_stripes','camouflage','neon','matte_black','thermal_white','thermal_orange','thermal_blue','gold','copper','chrome','rust','ice','sand','lunar_regolith','martian_regolith','checkered','circuit_board','painted_hull','exposed_mechanics'];
+var MAT_ENGINES={
+  trimesh:{label:'trimesh (Core Mesh)',cat:'CORE',path:'pip install trimesh[easy]',def:true,shapes:'cube, sphere, cylinder, cone, capsule, rocket, torus, gear, pipe, star, terrain, heightmap, parametric_surface, spacecraft_hull, engine_nozzle, landing_legs, solar_panels, satellite_bus, station_module, procedural_rocket',textures:'metal, carbon_fiber, hull_plating, emissive, matte_black, thermal_white'},
+  cadquery:{label:'CadQuery (OpenCASCADE)',cat:'CAD',path:'pip install cadquery',def:true,shapes:'box, cylinder, slot, sweep, loft, fillet, chamfer, gear, flange, bracket',textures:'metal, aluminum, titanium, painted_hull'},
+  build123d:{label:'Build123d (Modern CAD)',cat:'CAD',path:'pip install build123d',def:false,shapes:'box, cylinder, polygon, sweep, revolution, loft, pipe',textures:'metal, plastic, aluminum'},
+  solidpython:{label:'SolidPython2 (OpenSCAD CSG)',cat:'CAD',path:'pip install solidpython2',def:true,shapes:'cube, sphere, cylinder, union, difference, intersection, hull, minkowski',textures:'metal, chrome, matte_black'},
+  openscad:{label:'OpenSCAD Binary',cat:'CAD',path:'/usr/bin/openscad',def:true,shapes:'cube, sphere, cylinder, polyhedron, linear_extrude, rotate_extrude',textures:'metal, plastic'},
+  picopie:{label:'PicoGK/PicoPie (Voxel/Implicit)',cat:'VOXEL',path:'pip install picopie',def:false,shapes:'implicit_surface, tpms, gyroid, lattice, voronoi, level_set',textures:'exposed_mechanics, glowing_grid, lattice'},
+  lattice300:{label:'lattice300 / gmsh',cat:'VOXEL',path:'pip install gmsh',def:false,shapes:'voronoi, delaunay, lattice, truss, frame',textures:'lattice, exposed_mechanics'},
+  open3d:{label:'Open3D (Point Clouds)',cat:'MESH',path:'pip install open3d-cpu',def:false,shapes:'point_cloud, reconstruction, icp, mesh',textures:'metal, rust'},
+  pymeshlab:{label:'PyMeshLab (Filters)',cat:'MESH',path:'pip install pymeshlab',def:false,shapes:'repair, simplify, remesh, smooth, clean',textures:'metal, stone'},
+  tripo3d:{label:'Tripo3D (Cloud AI)',cat:'AI',path:'API — pip install tripo3d',def:false,shapes:'text_to_3d, image_to_3d',textures:'pbr_texture, auto_texture'},
+  meshy:{label:'Meshy AI (Cloud AI)',cat:'AI',path:'API REST',def:false,shapes:'text_to_3d, image_to_3d',textures:'pbr_texture, auto_texture'},
+  rodin:{label:'Rodin Gen-1 (Cloud AI)',cat:'AI',path:'API REST',def:false,shapes:'image_to_3d',textures:'auto_texture'},
+  hunyuan:{label:'Hunyuan3D 2.1 (GPU)',cat:'AI',path:'GPU required',def:false,shapes:'image_to_3d, texture',textures:'auto_texture, pbr_texture'},
+  stable_diffusion:{label:'Stable Diffusion (Image)',cat:'IMAGE',path:'local CPU',def:true,shapes:'txt2img, img2img, upscale, inpaint',textures:'all'},
+  ffmpeg:{label:'FFmpeg (Media Pipeline)',cat:'MEDIA',path:'system',def:true,shapes:'cut, trim, concat, video_export, gif',textures:'none'}
+};
 
 function switchTab(name,event){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
@@ -169,11 +207,12 @@ function loadCfg(){
     renderTheme(cfg);
     renderSystem(cfg);
     renderChats(cfg);
+    fetchZicoreCluster();
   }).catch(function(e){toast('Error loading config: '+e.message,true);});
 }
 
 function gatherAll(){
-  var c={providers:{},zio_engine:{},system:{},materializer:{},theme_config:{},theme:CONFIG.theme||'midnight',ollama_service:{},engineering:{}};
+  var c={providers:{},zio_engine:{},system:{},materializer:{},theme_config:{},theme:CONFIG.theme||'midnight',ollama_service:{},engineering:{},network:{}};
   /* providers */
   PROVIDER_ORDER.forEach(function(pid){
     var el=document.getElementById('prov_'+pid+'_enabled');
@@ -217,6 +256,47 @@ function gatherAll(){
   if(sdGdEl)c.materializer.sd_guidance=parseFloat(sdGdEl.value);
   var sdMdEl=document.getElementById('matSDModel');
   if(sdMdEl)c.materializer.sd_model=sdMdEl.value;
+  /* materializer engines */
+  var matEngs={};
+  Object.keys(MAT_ENGINES).forEach(function(id){
+    var eEl=document.getElementById('mat_eng_'+id+'_enabled');
+    var sEl=document.getElementById('mat_eng_'+id+'_shapes');
+    var tEl=document.getElementById('mat_eng_'+id+'_textures');
+    if(eEl&&sEl&&tEl){
+      matEngs[id]={enabled:eEl.classList.contains('on')};
+      matEngs[id].shapes=sEl.value.split(',').map(function(x){return x.trim();}).filter(function(x){return x;}).join(', ');
+      matEngs[id].textures=tEl.value.split(',').map(function(x){return x.trim();}).filter(function(x){return x;}).join(', ');
+    }
+  });
+  if(Object.keys(matEngs).length)c.materializer.engines=matEngs;
+  /* network */
+  var toVal=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  var nm={
+    cluster_name:toVal('net_cluster_name')||'ZICORE-CLUSTER',
+    node_id:toVal('net_node_id')||'zicore-85',
+    primary_ip:toVal('net_primary_ip')||'192.168.1.85',
+    secondary_ip:toVal('net_secondary_ip')||'192.168.1.68',
+    primary_port:parseInt(toVal('net_primary_port'))||4000,
+    secondary_port:parseInt(toVal('net_secondary_port'))||11434,
+    heartbeat_interval:parseInt(toVal('net_heartbeat'))||10,
+    sync_dir:toVal('net_sync_dir')||'/mnt/zicore-fs/ZiCoreFS',
+    mem_pool:parseInt(toVal('net_mem_pool'))||4096,
+    compute_pool:parseInt(toVal('net_compute_pool'))||8
+  };
+  var nmT=document.getElementById('net_heartbeat_toggle');
+  if(nmT)nm.heartbeat=nmT.classList.contains('on');
+  var fbEl=document.getElementById('net_fallback');
+  if(fbEl)nm.fallback=fbEl.classList.contains('on');
+  var inet2={
+    external_ip:toVal('net_ext_ip')||'160.34.209.208',
+    tunnel_id:toVal('net_tunnel_id')||'d2881059-86c9-4230-8531-ac4dceb60d84',
+    public_host:toVal('net_public_host')||'zicore.space',
+    dns:toVal('net_dns')||'1.1.1.1',
+    proxy:toVal('net_proxy')||''
+  };
+  var wanEl=document.getElementById('net_wan');
+  if(wanEl)inet2.wan=wanEl.classList.contains('on');
+  c.network={netmanager:nm,internet:inet2};
   /* system */
   var wpEl=document.getElementById('sysWebPort');
   if(wpEl)c.system.web_port=parseInt(wpEl.value);
@@ -286,7 +366,8 @@ function renderGeneral(cfg){
   h+='<label>Active Provider</label><select id="cfgActiveProv">';
   var ap=cfg.zio_engine&&cfg.zio_engine.active_provider||'zicore_native';
   var provs=cfg.providers||{};
-  var allProvs=['zicore_native'].concat(PROVIDER_ORDER);
+  var allProvs=[];
+  ['zicore_native'].concat(PROVIDER_ORDER).forEach(function(p){if(allProvs.indexOf(p)<0)allProvs.push(p);});
   allProvs.forEach(function(p){
     var pName=provs[p]?provs[p].name||p:p;
     h+='<option value="'+p+'"'+(ap===p?' selected':'')+'>'+pName+'</option>';
@@ -298,41 +379,57 @@ function renderGeneral(cfg){
 
 function renderProviders(cfg){
   var h='';
-  var PROVIDER_INFO={
-    ollama:{label:'Ollama (Local)',desc:'Modelos locales via Ollama server'},
-    openrouter:{label:'OpenRouter',desc:'Acceso a multiples modelos cloud'},
-    openai:{label:'OpenAI',desc:'GPT-4, GPT-4o, DALL-E'},
-    anthropic:{label:'Anthropic',desc:'Claude 3.5, Claude 3 Opus'},
-    groq:{label:'Groq',desc:' inference ultrarrapida (LPU)'},
-    deepseek:{label:'DeepSeek',desc:'DeepSeek V3, Coder'},
-    together:{label:'Together AI',desc:'Modelos open-source managed'},
-    opencode:{label:'OpenCode Zen',desc:'Modelos gratuitos y de pago'},
-    tripo3d:{label:'Tripo3D',desc:'Text/Image to 3D — 300 créditos gratis/mes',category:'3D GENERATORS'},
-    meshy:{label:'Meshy AI',desc:'Text/Image to 3D — tier gratis disponible',category:'3D GENERATORS'},
-    rodin:{label:'Rodin Gen-1',desc:'Image to 3D — tier gratis disponible',category:'3D GENERATORS'},
-    openscad:{label:'OpenSCAD',desc:'Motor CSG local —requiere binario en PATH',category:'CAD ENGINES'},
-  };
-  var LAST_AI_PROVIDER='opencode';
+  h+='<div class="section"><div class="section-title purple">PROVIDERS — SELECT PROVIDER</div>';
+  h+='<div class="grid grid-2"><label>Provider</label><select id="provSelect" onchange="selectProvider(this.value)">';
+  var cats={};
   PROVIDER_ORDER.forEach(function(pid){
     var info=PROVIDER_INFO[pid]||{};
-    var p=cfg.providers&&cfg.providers[pid]||{enabled:false,api_key:'',base_url:'',default_model:'',models:[]};
-    if(info.category&&pid!=='ollama'){
-      h+='<div style="margin:16px 0 8px;padding:6px 10px;border-bottom:1px solid rgba(124,77,255,0.15);font-size:8px;letter-spacing:3px;color:#b388ff">'+info.category+'</div>';
-    }
-    h+='<div class="section"><div class="section-title purple flex"><span>'+(info.label||p.name||pid).toUpperCase()+'</span>';
-    h+='<div class="toggle '+(p.enabled?'on':'off')+'" id="prov_'+pid+'_enabled" onclick="toggleEl(this)"><div></div></div>';
-    h+='<span class="fs-7 ls-1 text-2">'+(p.enabled?'ENABLED':'DISABLED')+'</span>';
-    h+='<button class="btn btn-test fs-8 ml-auto" onclick="testProvider(\''+pid+'\')">TEST</button>';
-    h+='<span class="fs-8" id="testStatus_'+pid+'"></span>';
-    h+='</div>';
-    if(info.desc){h+='<div style="font-size:8px;color:var(--text2);margin-bottom:8px;letter-spacing:0.5px">'+info.desc+'</div>';}
-    h+='<div class="grid grid-2"><label>API Key</label><input id="prov_'+pid+'_api_key" type="password" value="'+(p.api_key||'')+'" placeholder="'+(pid==='openscad'?'No requiere — binario local':'sk-...')+'">';
-    h+='<label>Base URL</label><input id="prov_'+pid+'_base_url" value="'+(p.base_url||'')+'" placeholder="'+(pid==='openscad'?'/usr/bin/openscad':(pid==='tripo3d'?'https://api.tri3d.com':(pid==='meshy'?'https://api.meshy.ai':(pid==='rodin'?'https://zrodin.com/api':''))))+'">';
-    h+='<label>Default Model</label><input id="prov_'+pid+'_default_model" value="'+(p.default_model||'')+'" placeholder="'+(pid==='tripo3d'?'tripo_v2':(pid==='meshy'?'meshy-4':(pid==='rodin'?'rodin-v1':(pid==='openscad'?'openscad-2021':''))))+'">';
-    h+='<label>Available Models</label><textarea rows="3" readonly style="color:var(--text2)">'+(p.models&&p.models.length?p.models.join('\n'):'— none configured —')+'</textarea>';
-    h+='</div></div>';
+    var cat=info.cat||'OTHER';
+    if(!cats[cat])cats[cat]=[];
+    cats[cat].push(pid);
   });
+  Object.keys(cats).forEach(function(cat){
+    h+='<optgroup label="'+cat+'">';
+    cats[cat].forEach(function(pid){
+      var info=PROVIDER_INFO[pid]||{};
+      var p=cfg.providers&&cfg.providers[pid]||{};
+      var pName=info.label||p.name||pid;
+      h+='<option value="'+pid+'"'+(CUR_PROVIDER===pid?' selected':'')+'>'+pName+(p.enabled?'  ✓':'')+'</option>';
+    });
+    h+='</optgroup>';
+  });
+  h+='</select></div></div>';
+  h+='<div id="provDetail"></div>';
   document.getElementById('panel-providers').innerHTML=h;
+  if(!CUR_PROVIDER||!cfg.providers||!cfg.providers[CUR_PROVIDER])CUR_PROVIDER='zicore_native';
+  renderProviderDetail(cfg);
+}
+
+function selectProvider(pid){
+  CUR_PROVIDER=pid;
+  renderProviderDetail(CONFIG||{});
+}
+
+function renderProviderDetail(cfg){
+  var h='';
+  var pid=CUR_PROVIDER;
+  if(!pid)return;
+  var info=PROVIDER_INFO[pid]||{};
+  var p=cfg.providers&&cfg.providers[pid]||{enabled:false,api_key:'',base_url:'',default_model:'',models:[]};
+  h+='<div class="section"><div class="section-title purple flex"><span>'+(info.label||p.name||pid).toUpperCase()+'</span>';
+  if(info.cat){h+='<span class="fs-7 ls-1" style="color:#b388ff;margin-left:8px">'+info.cat+'</span>';}
+  h+='<div class="toggle '+(p.enabled?'on':'off')+'" id="prov_'+pid+'_enabled" onclick="toggleEl(this)"><div></div></div>';
+  h+='<span class="fs-7 ls-1 text-2">'+(p.enabled?'ENABLED':'DISABLED')+'</span>';
+  h+='<button class="btn btn-test fs-8 ml-auto" onclick="testProvider(\''+pid+'\')">TEST</button>';
+  h+='<span class="fs-8" id="testStatus_'+pid+'"></span>';
+  h+='</div>';
+  if(info.desc){h+='<div style="font-size:8px;color:var(--text2);margin-bottom:8px;letter-spacing:0.5px">'+info.desc+'</div>';}
+  h+='<div class="grid grid-2"><label>API Key</label><input id="prov_'+pid+'_api_key" type="password" value="'+(p.api_key||'')+'" placeholder="'+(pid==='openscad'?'No requiere — binario local':'sk-...')+'">';
+  h+='<label>Base URL</label><input id="prov_'+pid+'_base_url" value="'+(p.base_url||'')+'" placeholder="'+(pid==='openscad'?'/usr/bin/openscad':(pid==='tripo3d'?'https://api.tri3d.com':(pid==='meshy'?'https://api.meshy.ai':(pid==='rodin'?'https://zrodin.com/api':''))))+'">';
+  h+='<label>Default Model</label><input id="prov_'+pid+'_default_model" value="'+(p.default_model||'')+'" placeholder="'+(pid==='tripo3d'?'tripo_v2':(pid==='meshy'?'meshy-4':(pid==='rodin'?'rodin-v1':(pid==='openscad'?'openscad-2021':''))))+'">';
+  h+='<label>Available Models</label><textarea rows="3" readonly style="color:var(--text2)">'+(p.models&&p.models.length?p.models.join('\n'):'— none configured —')+'</textarea>';
+  h+='</div></div>';
+  document.getElementById('provDetail').innerHTML=h;
 }
 
 function renderZIO(cfg){
@@ -361,6 +458,7 @@ function renderZIO(cfg){
 
 function renderMaterializer(cfg){
   var mat=cfg.materializer||{};
+  var engs=mat.engines||{};
   var h='<div class="section"><div class="section-title">MATERIALIZER ENGINE</div>';
   h+='<div class="grid grid-2">';
   h+='<label>Output Directory</label><input id="matOutputDir" value="'+(mat.output_dir||'output')+'">';
@@ -368,11 +466,41 @@ function renderMaterializer(cfg){
   ['draft','standard','high'].forEach(function(q){h+='<option value="'+q+'"'+((mat.image_quality||'standard')===q?' selected':'')+'>'+q.toUpperCase()+'</option>';});
   h+='</select>';
   h+='<label>3D Mesh Format</label><select id="matMeshFormat">';
-  ['STL','OBJ','GLTF'].forEach(function(f){h+='<option value="'+f+'"'+((mat.mesh_format||'STL')===f?' selected':'')+'>'+f+'</option>';});
+  ['STL','OBJ','GLB','GLTF'].forEach(function(f){h+='<option value="'+f+'"'+((mat.mesh_format||'STL')===f?' selected':'')+'>'+f+'</option>';});
   h+='</select>';
   h+='<label>SD Steps</label><input id="matSDSteps" type="number" min="10" max="100" value="'+(mat.sd_steps||20)+'">';
   h+='<label>SD Guidance</label><input id="matSDGuidance" type="number" min="1" max="20" step="0.5" value="'+(mat.sd_guidance||7.5)+'">';
   h+='<label>SD Model</label><input id="matSDModel" value="'+(mat.sd_model||'runwayml/stable-diffusion-v1-5')+'">';
+  h+='</div></div>';
+  /* Engines */
+  h+='<div class="section"><div class="section-title green">3D ENGINES ('+Object.keys(MAT_ENGINES).length+')</div>';
+  h+='<div class="fs-8" style="color:var(--text2);margin-bottom:8px;line-height:1.6">Activa cada motor, define sus <b style="color:var(--glow)">formas</b> (comma separated) y las <b style="color:var(--glow)">texturas</b> por motor. Guarda con SAVE ALL.</div>';
+  Object.keys(MAT_ENGINES).forEach(function(id){
+    var e=MAT_ENGINES[id];
+    var saved=engs[id]||{};
+    var enabled=saved.enabled!==undefined?saved.enabled:e.def;
+    var shapes=saved.shapes||e.shapes;
+    var textures=saved.textures||e.textures;
+    h+='<div style="border:1px solid rgba(0,229,255,0.06);padding:8px;margin-bottom:8px;border-radius:3px">';
+    h+='<div class="flex"><div class="toggle '+(enabled?'on':'off')+'" id="mat_eng_'+id+'_enabled" onclick="toggleEl(this)"><div></div></div>';
+    h+='<b style="font-size:9px;color:var(--glow);letter-spacing:1px">'+e.label+'</b>';
+    h+='<span class="fs-8" style="color:#b388ff;margin-left:8px">'+e.cat+'</span>';
+    h+='<span class="fs-8 text-2" style="margin-left:auto">'+e.path+'</span></div>';
+    h+='<div class="grid grid-2" style="margin-top:6px;font-size:8px">';
+    h+='<label>Formas</label><input id="mat_eng_'+id+'_shapes" value="'+shapes+'" style="font-size:9px">';
+    h+='<label>Texturas</label><input id="mat_eng_'+id+'_textures" value="'+textures+'" style="font-size:9px">';
+    h+='</div></div>';
+  });
+  h+='</div>';
+  /* Shapes reference */
+  h+='<div class="section"><div class="section-title purple">FORMAS DISPONIBLES ('+MAT_SHAPES.length+')</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
+  MAT_SHAPES.forEach(function(s){h+='<span style="font-size:8px;padding:2px 8px;border:1px solid rgba(0,229,255,0.08);border-radius:2px;color:var(--text2)">'+s+'</span>';});
+  h+='</div></div>';
+  /* Textures reference */
+  h+='<div class="section"><div class="section-title green">TEXTURAS DISPONIBLES ('+MAT_TEXTURES.length+')</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
+  MAT_TEXTURES.forEach(function(s){h+='<span style="font-size:8px;padding:2px 8px;border:1px solid rgba(0,229,255,0.08);border-radius:2px;color:var(--text2)">'+s+'</span>';});
   h+='</div></div>';
   /* Capabilities */
   h+='<div class="section"><div class="section-title green">MATERIALIZER CAPABILITIES</div>';
@@ -381,13 +509,46 @@ function renderMaterializer(cfg){
   h+='&#8226; <b style="color:var(--glow)">Parametric 3D:</b> Box, sphere, cylinder, cone, rocket, torus, gear, pipe, star, custom via trimesh<br>';
   h+='&#8226; <b style="color:var(--glow)">Procedural 3D:</b> Terrain (Perlin noise), caves (cellular automata), fractals, L-system plants<br>';
   h+='&#8226; <b style="color:var(--glow)">OpenSCAD:</b> Script-based parametric CAD modeling<br>';
+  h+='&#8226; <b style="color:var(--glow)">CAD:</b> CadQuery + Build123d + SolidPython2 (OpenCASCADE kernel)<br>';
+  h+='&#8226; <b style="color:var(--glow)">Voxel:</b> PicoGK/PicoPie — lattices, TPMS, implicit surfaces<br>';
+  h+='&#8226; <b style="color:var(--glow)">Mesh:</b> Open3D + PyMeshLab — repair, simplify, reconstruct<br>';
+  h+='&#8226; <b style="color:var(--glow)">Cloud AI 3D:</b> Tripo3D, Meshy, Rodin — text/image to 3D<br>';
   h+='&#8226; <b style="color:var(--glow)">Video:</b> Cut, trim, concatenate, export via FFmpeg<br>';
   h+='&#8226; <b style="color:var(--glow)">Audio:</b> TTS synthesis, waveform generation</div></div>';
   document.getElementById('panel-materializer').innerHTML=h;
 }
 
 function renderNetwork(cfg){
-  var h='<div class="section"><div class="section-title">NETWORK SERVICES</div>';
+  var net=cfg.network||{};
+  var nm=net.netmanager||{};
+  var inet=net.internet||{};
+  var h='<div class="section"><div class="section-title">NETMANAGER — CLUSTER NODES</div>';
+  h+='<div class="fs-8" style="color:var(--text2);margin-bottom:8px;line-height:1.6">Conecta los nodos (<b style="color:var(--glow)">.85</b> primary, <b style="color:var(--glow)">.68</b> ollama, <b style="color:var(--glow)">VPS</b>) en un solo servicio con heartbeat, fallback y pool de memoria/procesamiento compartido.</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>Cluster Name</label><input id="net_cluster_name" value="'+(nm.cluster_name||'ZICORE-CLUSTER')+'">';
+  h+='<label>Node ID</label><input id="net_node_id" value="'+(nm.node_id||'zicore-85')+'">';
+  h+='<label>Primary Server (.85)</label><input id="net_primary_ip" value="'+(nm.primary_ip||'192.168.1.85')+'">';
+  h+='<label>Secondary Server (.68)</label><input id="net_secondary_ip" value="'+(nm.secondary_ip||'192.168.1.68')+'">';
+  h+='<label>API Port (.85)</label><input id="net_primary_port" type="number" value="'+(nm.primary_port||4000)+'">';
+  h+='<label>Ollama Port (.68)</label><input id="net_secondary_port" type="number" value="'+(nm.secondary_port||11434)+'">';
+  h+='<label>Heartbeat Interval (s)</label><input id="net_heartbeat" type="number" value="'+(nm.heartbeat_interval||10)+'">';
+  h+='<label>Heartbeat Enabled</label><div class="toggle '+(nm.heartbeat!==false?'on':'off')+'" id="net_heartbeat_toggle" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>Fallback Mode</label><div class="toggle '+(nm.fallback!==false?'on':'off')+'" id="net_fallback" onclick="toggleEl(this)"><div></div></div>';
+  h+='<label>Sync Directory</label><input id="net_sync_dir" value="'+(nm.sync_dir||'/mnt/zicore-fs/ZiCoreFS')+'">';
+  h+='<label>Memory Pool (MB)</label><input id="net_mem_pool" type="number" value="'+(nm.mem_pool||4096)+'">';
+  h+='<label>Compute Pool (workers)</label><input id="net_compute_pool" type="number" value="'+(nm.compute_pool||8)+'">';
+  h+='</div></div>';
+  h+='<div class="section"><div class="section-title purple">INTERNET — PUBLIC ACCESS</div>';
+  h+='<div class="grid grid-2">';
+  h+='<label>External IP (VPS)</label><input id="net_ext_ip" value="'+(inet.external_ip||'160.34.209.208')+'">';
+  h+='<label>Cloudflare Tunnel ID</label><input id="net_tunnel_id" value="'+(inet.tunnel_id||'d2881059-86c9-4230-8531-ac4dceb60d84')+'">';
+  h+='<label>Public Hostname</label><input id="net_public_host" value="'+(inet.public_host||'zicore.space')+'">';
+  h+='<label>DNS Server</label><input id="net_dns" value="'+(inet.dns||'1.1.1.1')+'">';
+  h+='<label>HTTP Proxy</label><input id="net_proxy" value="'+(inet.proxy||'')+'">';
+  h+='<label>WAN Access</label><div class="toggle '+(inet.wan!==false?'on':'off')+'" id="net_wan" onclick="toggleEl(this)"><div></div></div>';
+  h+='</div></div>';
+  /* Services table */
+  h+='<div class="section"><div class="section-title green">NETWORK SERVICES</div>';
   h+='<div class="fs-8" style="color:var(--text2);line-height:2">';
   var services=[
     {port:3000,name:'Next.js',status:'active'},
@@ -983,6 +1144,8 @@ function renderModels(cfg){
     h+='<div class="flex" style="gap:8px;margin-bottom:6px">';
     h+='<span style="font-size:9px;color:#0ff;letter-spacing:2px">'+zpName.toUpperCase()+'</span>';
     h+='<span class="fs-7 text-2">'+(zpCfg.base_url||'')+'</span>';
+    h+='<div class="toggle '+(zpCfg.enabled?'on':'off')+'" id="mod_enabled_'+zpId+'" onclick="toggleClusterProvider(\''+zpId+'\',this)"><div></div></div>';
+    h+='<span class="fs-7 '+(zpCfg.enabled?'text-glow':'text-2')+'">'+(zpCfg.enabled?'ENABLED':'DISABLED')+'</span>';
     h+='<button onclick="fetchProviderModels(\''+zpId+'\')" style="padding:1px 6px;font-size:6px;background:rgba(0,255,255,0.1);border:1px solid rgba(0,255,255,0.25);color:#0ff;border-radius:3px;cursor:pointer">FETCH</button>';
     h+='<span id="fetchStatus_'+zpId+'" class="fs-8 text-2"></span>';
     h+='</div>';
@@ -1049,6 +1212,20 @@ function selectDefaultModel(modelId,radioEl){
   if(CONFIG&&CONFIG.zio_engine)CONFIG.zio_engine.active_model=modelId;
   document.querySelectorAll('[name=default_model_select]').forEach(function(el){el.closest('.model-item').classList.remove('selected');});
   if(radioEl)radioEl.closest('.model-item').classList.add('selected');
+}
+
+function toggleClusterProvider(pid,el){
+  toggleEl(el);
+  var on=el.classList.contains('on');
+  var pEl=document.getElementById('prov_'+pid+'_enabled');
+  if(pEl&&pEl!==el&&(pEl.classList.contains('on')!==on))toggleEl(pEl);
+  if(!CONFIG.providers)CONFIG.providers={};
+  if(!CONFIG.providers[pid])CONFIG.providers[pid]={};
+  CONFIG.providers[pid].enabled=on;
+  var provPatch={};provPatch[pid]={enabled:on};
+  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({providers:provPatch})})
+  .then(function(){toast(pid.toUpperCase()+' '+(on?'ENABLED':'DISABLED'));})
+  .catch(function(e){toast('Save error: '+e.message,true);});
 }
 
 function renderChats(cfg){

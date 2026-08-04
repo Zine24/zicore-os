@@ -88,33 +88,50 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
 
 /* ── SERVICES ── */
 .services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:64px;background:var(--border)}
-.service-card{background:var(--bg2);padding:48px 32px;position:relative;overflow:hidden;transition:all 0.6s cubic-bezier(0.16,1,0.3,1)}
-.service-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity 0.6s}
-.service-card:hover{background:var(--bg3)}
-.service-card:hover::before{opacity:0.4}
+.service-card{background:var(--bg2);padding:48px 32px;position:relative;overflow:hidden;isolation:isolate;transition:all 0.6s cubic-bezier(0.16,1,0.3,1)}
+.service-card::before{content:'';position:absolute;inset:-40%;z-index:0;pointer-events:none;opacity:0.55;filter:blur(26px);background:radial-gradient(60% 55% at 18% 20%,rgba(0,229,255,0.16),transparent 60%),radial-gradient(50% 50% at 80% 28%,rgba(124,77,255,0.15),transparent 62%),radial-gradient(55% 55% at 62% 90%,rgba(0,255,136,0.09),transparent 60%);animation:nebDrift 16s ease-in-out infinite alternate;transition:opacity 0.6s}
+.service-card::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0.5;background-image:radial-gradient(1px 1px at 12% 20%,rgba(255,255,255,0.9),transparent 100%),radial-gradient(1px 1px at 30% 66%,rgba(255,255,255,0.6),transparent 100%),radial-gradient(1.4px 1.4px at 55% 30%,rgba(0,229,255,0.9),transparent 100%),radial-gradient(1px 1px at 70% 76%,rgba(255,255,255,0.5),transparent 100%),radial-gradient(1.4px 1.4px at 88% 44%,rgba(124,77,255,0.9),transparent 100%),radial-gradient(1px 1px at 20% 86%,rgba(255,255,255,0.6),transparent 100%),radial-gradient(1px 1px at 45% 8%,rgba(255,255,255,0.7),transparent 100%),radial-gradient(1.4px 1.4px at 92% 14%,rgba(0,255,136,0.7),transparent 100%);animation:starTwinkle 3.6s ease-in-out infinite alternate}
+.service-card>*{position:relative;z-index:2}
+.service-card:hover{background:var(--bg3);box-shadow:inset 0 1px 0 rgba(0,229,255,0.35),0 0 46px rgba(0,229,255,0.06)}
+.service-card:hover::before{opacity:0.95}
 .service-num{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-faint);margin-bottom:20px}
-.service-icon{width:40px;height:40px;margin-bottom:20px;border:1px solid rgba(0,229,255,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--cyan);font-size:16px;transition:all 0.4s}
-.service-card:hover .service-icon{border-color:rgba(0,229,255,0.3);box-shadow:0 0 20px rgba(0,229,255,0.08)}
+.service-icon{width:40px;height:40px;margin-bottom:20px;border:1px solid rgba(0,229,255,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--cyan);font-size:16px;position:relative;transition:all 0.4s}
+.service-icon::after{content:'';position:absolute;inset:-7px;border:1px dashed rgba(0,229,255,0.14);border-radius:50%;animation:orbitSpin 14s linear infinite}
+.service-card:hover .service-icon{border-color:rgba(0,229,255,0.3);box-shadow:0 0 22px rgba(0,229,255,0.1)}
+.service-card:hover .service-icon::after{border-color:rgba(0,229,255,0.3)}
 .service-name{font-size:14px;font-weight:500;letter-spacing:2px;color:var(--text);margin-bottom:12px;text-transform:uppercase}
 .service-desc{font-size:12px;line-height:1.8;color:var(--text-dim)}
 
 /* ── MODULES GRID ── */
 .mods{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:64px;background:var(--border)}
-.mod{background:var(--bg2);padding:40px 32px;text-align:center;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.5s cubic-bezier(0.16,1,0.3,1)}
-.mod::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,0.04),transparent 60%);opacity:0;transition:opacity 0.5s}
-.mod:hover{background:var(--bg3)}
-.mod:hover::before{opacity:1}
-.mod-icon{width:48px;height:48px;margin:0 auto 16px;border:1px solid rgba(0,229,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--cyan);transition:all 0.4s}
+.mod{background:var(--bg2);padding:40px 32px;text-align:center;text-decoration:none;color:var(--text);position:relative;overflow:hidden;isolation:isolate;transition:all 0.5s cubic-bezier(0.16,1,0.3,1)}
+.mod::before{content:'';position:absolute;inset:-40%;z-index:0;pointer-events:none;opacity:0.5;filter:blur(26px);background:radial-gradient(60% 55% at 22% 18%,rgba(0,229,255,0.15),transparent 60%),radial-gradient(50% 50% at 78% 30%,rgba(124,77,255,0.14),transparent 62%),radial-gradient(55% 55% at 55% 88%,rgba(0,255,136,0.08),transparent 60%);animation:nebDrift 13s ease-in-out infinite alternate;transition:opacity 0.6s}
+.mod::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0.5;background-image:radial-gradient(1px 1px at 15% 22%,rgba(255,255,255,0.85),transparent 100%),radial-gradient(1px 1px at 35% 64%,rgba(255,255,255,0.55),transparent 100%),radial-gradient(1.4px 1.4px at 58% 28%,rgba(0,229,255,0.85),transparent 100%),radial-gradient(1px 1px at 72% 74%,rgba(255,255,255,0.5),transparent 100%),radial-gradient(1.4px 1.4px at 86% 46%,rgba(124,77,255,0.85),transparent 100%),radial-gradient(1px 1px at 18% 84%,rgba(255,255,255,0.6),transparent 100%),radial-gradient(1px 1px at 48% 12%,rgba(255,255,255,0.7),transparent 100%),radial-gradient(1.4px 1.4px at 90% 16%,rgba(0,255,136,0.65),transparent 100%);animation:starTwinkle 3.2s ease-in-out infinite alternate}
+.mod>*{position:relative;z-index:2}
+.mod:hover{background:var(--bg3);box-shadow:inset 0 1px 0 rgba(0,229,255,0.3),0 0 44px rgba(0,229,255,0.07)}
+.mod:hover::before{opacity:0.95}
+.mod-icon{width:48px;height:48px;margin:0 auto 16px;border:1px solid rgba(0,229,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--cyan);position:relative;transition:all 0.4s}
+.mod-icon::after{content:'';position:absolute;inset:-7px;border:1px dashed rgba(0,229,255,0.13);border-radius:50%;animation:orbitSpin 12s linear infinite}
 .mod:hover .mod-icon{border-color:rgba(0,229,255,0.3);box-shadow:0 0 24px rgba(0,229,255,0.1);transform:scale(1.08)}
+.mod:hover .mod-icon::after{border-color:rgba(0,229,255,0.28)}
 .mod-name{font-size:13px;font-weight:600;letter-spacing:3px;color:var(--text);margin-bottom:8px;text-transform:uppercase}
 .mod-desc{font-size:11px;color:var(--text-dim);line-height:1.6}
 .mod-tag{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
 .mod.purple .mod-icon{border-color:rgba(124,77,255,0.1);color:var(--purple)}
+.mod.purple .mod-icon::after{border-color:rgba(124,77,255,0.13)}
 .mod.purple:hover .mod-icon{border-color:rgba(124,77,255,0.3);box-shadow:0 0 24px rgba(124,77,255,0.1)}
+.mod.purple:hover .mod-icon::after{border-color:rgba(124,77,255,0.28)}
 .mod.purple .mod-tag{color:var(--purple);border-color:rgba(124,77,255,0.15)}
 .mod.green .mod-icon{border-color:rgba(0,255,136,0.1);color:var(--green)}
+.mod.green .mod-icon::after{border-color:rgba(0,255,136,0.13)}
 .mod.green:hover .mod-icon{border-color:rgba(0,255,136,0.3);box-shadow:0 0 24px rgba(0,255,136,0.1)}
+.mod.green:hover .mod-icon::after{border-color:rgba(0,255,136,0.28)}
 .mod.green .mod-tag{color:var(--green);border-color:rgba(0,255,136,0.15)}
+
+/* ── ANIMATED GRADIENT + STELLAR KEYFRAMES ── */
+@keyframes nebDrift{0%{transform:translate3d(-2%,-1%,0) rotate(0deg) scale(1)}50%{transform:translate3d(3%,4%,0) rotate(9deg) scale(1.1)}100%{transform:translate3d(-2%,3%,0) rotate(-7deg) scale(1.05)}}
+@keyframes starTwinkle{0%{opacity:0.3}100%{opacity:0.75}}
+@keyframes orbitSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
 /* ── ABOUT ── */
 .about-layout{display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:64px;align-items:start}
@@ -199,8 +216,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
     <h1 class="hero-title">Materializamos tus ideas en realidad</h1>
     <p class="hero-sub">Del prompt al objeto. Ingeniería adaptable que cualquiera puede entender. Diseño 3D, CAD, impresión, multimedia. El alma creativa de ZICORE.</p>
     <div class="hero-actions">
-      <a class="btn-primary" href="https://zicore.space" target="_blank">EXPLORAR ZICORE</a>
-      <a class="btn-ghost" href="https://zcs.zicore.space" target="_blank">MISSION CONTROL</a>
+      <a class="btn-primary" href="https://vps.zicore.space" target="_blank">EXPLORAR ZICORE</a>
+      <a class="btn-ghost" href="https://vps.zicore.space" target="_blank">MISSION CONTROL</a>
     </div>
   </div>
   <div class="hero-scroll"><span>Scroll</span><div class="scroll-line"></div></div>
@@ -299,7 +316,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
       </div>
     </div>
     <div style="text-align:center;margin-top:32px" class="reveal">
-      <a href="https://zicore.space/dashboard" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none">ABRIR MATERIALIZER</a>
+      <a href="https://vps.zicore.space/dashboard" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none">ABRIR MATERIALIZER</a>
     </div>
   </div>
 </section>
@@ -313,55 +330,55 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
     <h2 class="section-title reveal reveal-delay-1">Un ecosistema.<br>Módulos independientes.</h2>
     <p class="section-desc reveal reveal-delay-2">Cada módulo opera de forma independiente. Accede directamente desde aquí.</p>
     <div class="mods">
-      <a class="mod reveal" href="https://zicore.space/zio" target="_blank">
+      <a class="mod reveal" href="https://vps.zicore.space/zio" target="_blank">
         <div class="mod-icon">◎</div>
         <div class="mod-name">ZIO AI</div>
         <div class="mod-desc">Asistente neural dual. OpenRouter, Ollama, Groq, VPS. Chat, importación, sesiones, modo ingeniero/científico/piloto.</div>
         <div class="mod-tag">Inteligencia</div>
       </a>
-      <a class="mod purple reveal reveal-delay-1" href="https://zcs.zicore.space" target="_blank">
+      <a class="mod purple reveal reveal-delay-1" href="https://vps.zicore.space" target="_blank">
         <div class="mod-icon">◈</div>
         <div class="mod-name">Mission Control</div>
         <div class="mod-desc">Dashboard en tiempo real. Telemetría, sistema, nodos, módulos, alertas, misiones. Centro de comando del ecosistema.</div>
         <div class="mod-tag">Control</div>
       </a>
-      <a class="mod green reveal reveal-delay-2" href="https://zicore.space/dashboard" target="_blank">
+      <a class="mod green reveal reveal-delay-2" href="https://vps.zicore.space/dashboard" target="_blank">
         <div class="mod-icon">◉</div>
         <div class="mod-name">Materializer</div>
         <div class="mod-desc">14 generadores procedurales 3D. CAD paramétrico, OpenSCAD, mallas, voxels, TPMS. Exportación STL/OBJ/GLB.</div>
         <div class="mod-tag">3D</div>
       </a>
-      <a class="mod purple reveal reveal-delay-1" href="https://zicore.space/aerospace" target="_blank">
+      <a class="mod purple reveal reveal-delay-1" href="https://vps.zicore.space/aerospace" target="_blank">
         <div class="mod-icon">◇</div>
         <div class="mod-name">Aerospace</div>
         <div class="mod-desc">Diseño vehicular, propulsión, órbita, ingeniería. 5 pestañas: vehículos, propulsión, orbital, ingeniería, misiones.</div>
         <div class="mod-tag">Ingeniería</div>
       </a>
-      <a class="mod reveal reveal-delay-3" href="https://zicore.space/flight-sim" target="_blank">
+      <a class="mod reveal reveal-delay-3" href="https://vps.zicore.space/flight-sim" target="_blank">
         <div class="mod-icon">△</div>
         <div class="mod-name">Flight Sim</div>
         <div class="mod-desc">Simulación de vuelo con física atmosférica, orbital y celeste. Instrumentos HUD, terreno procedural.</div>
         <div class="mod-tag">Simulación</div>
       </a>
-      <a class="mod green reveal reveal-delay-2" href="https://zicore.space/games" target="_blank">
+      <a class="mod green reveal reveal-delay-2" href="https://vps.zicore.space/games" target="_blank">
         <div class="mod-icon">⬡</div>
         <div class="mod-name">Game Center</div>
         <div class="mod-desc">14+ juegos HTML5 con leaderboard global. Arcade, estrategia, puzzles y simuladores espaciales.</div>
         <div class="mod-tag">Entretenimiento</div>
       </a>
-      <a class="mod purple reveal reveal-delay-3" href="https://zicore.space/multimedia" target="_blank">
+      <a class="mod purple reveal reveal-delay-3" href="https://vps.zicore.space/multimedia" target="_blank">
         <div class="mod-icon">⊕</div>
         <div class="mod-name">Multimedia</div>
         <div class="mod-desc">Biblioteca de audio, video, imagen y música producidos por ZIO. Reproduce y gestiona desde el servidor.</div>
         <div class="mod-tag">Contenido</div>
       </a>
-      <a class="mod reveal" href="https://zicore.space/mail" target="_blank">
+      <a class="mod reveal" href="https://vps.zicore.space/mail" target="_blank">
         <div class="mod-icon">✉</div>
         <div class="mod-name">Mail</div>
         <div class="mod-desc">Servicio de correo electrónico. Bandeja, envío, usuarios, configuración DNS, seguridad admin.</div>
         <div class="mod-tag">Comunicación</div>
       </a>
-      <a class="mod green reveal" href="https://zicore.space/settings" target="_blank">
+      <a class="mod green reveal" href="https://vps.zicore.space/settings" target="_blank">
         <div class="mod-icon">⚙</div>
         <div class="mod-name">Configuración</div>
         <div class="mod-desc">11 pestañas: General, Providers, ZIO, Materializer, Network, Ollama, Engineering, Theme, System, Models, Chats.</div>
@@ -494,11 +511,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
         </div>
         <div class="contact-block">
           <div class="contact-label">ZICORE OS</div>
-          <div class="contact-value"><a href="https://zicore.space" target="_blank">zicore.space →</a></div>
+          <div class="contact-value"><a href="https://vps.zicore.space" target="_blank">zicore.space →</a></div>
         </div>
         <div class="contact-block">
           <div class="contact-label">Mission Control</div>
-          <div class="contact-value"><a href="https://zcs.zicore.space" target="_blank">zcs.zicore.space →</a></div>
+          <div class="contact-value"><a href="https://vps.zicore.space" target="_blank">zcs.zicore.space →</a></div>
         </div>
         <div class="contact-social">
           <a class="social-link" href="https://x.com" target="_blank">✕</a>
@@ -514,8 +531,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
   <div class="footer-inner">
     <div class="footer-copy">© 2026 ZineMotion — creando el tiempo</div>
     <div class="footer-links">
-      <a href="https://zcs.zicore.space" target="_blank">Mission Control</a>
-      <a href="https://zicore.space" target="_blank">ZICORE</a>
+      <a href="https://vps.zicore.space" target="_blank">Mission Control</a>
+      <a href="https://vps.zicore.space" target="_blank">ZICORE</a>
       <a href="https://zinemotion.com" target="_blank">ZineMotion.com</a>
       <a href="https://zinemotion.com.mx" target="_blank">ZineMotion.mx</a>
       <a href="#contacto">Contacto</a>

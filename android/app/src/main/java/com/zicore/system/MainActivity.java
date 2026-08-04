@@ -323,10 +323,55 @@ public class MainActivity extends AppCompatActivity {
                 android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                 if (v != null) v.vibrate(ms);
             }
+
+            @android.webkit.JavascriptInterface
+            public void openPlayer() {
+                runOnUiThread(() -> {
+                    Intent i = new Intent(MainActivity.this, PlayerActivity.class);
+                    startActivity(i);
+                });
+            }
+
+            @android.webkit.JavascriptInterface
+            public void openPlayer(String url, String title) {
+                runOnUiThread(() -> {
+                    Intent i = new Intent(MainActivity.this, PlayerActivity.class);
+                    i.putExtra("start_url", url);
+                    i.putExtra("start_title", title);
+                    startActivity(i);
+                });
+            }
         }, "ZICORE");
 
-        // Replace loading screen with webview
-        setContentView(webView);
+        // Replace loading screen with webview + floating player button
+        android.widget.FrameLayout content = new android.widget.FrameLayout(this);
+        content.setBackgroundColor(Color.parseColor("#060a12"));
+        content.addView(webView, new android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        TextView playerBtn = new TextView(this);
+        playerBtn.setText("▶");
+        playerBtn.setTextSize(22);
+        playerBtn.setTextColor(Color.parseColor("#00e5ff"));
+        playerBtn.setTypeface(android.graphics.Typeface.MONOSPACE);
+        playerBtn.setGravity(android.view.Gravity.CENTER);
+        playerBtn.setBackgroundColor(Color.parseColor("#16213e"));
+        android.widget.FrameLayout.LayoutParams fabParams = new android.widget.FrameLayout.LayoutParams(
+            dp(52), dp(52)
+        );
+        fabParams.gravity = android.view.Gravity.BOTTOM | android.view.Gravity.END;
+        fabParams.setMargins(0, 0, dp(12), dp(12));
+        playerBtn.setLayoutParams(fabParams);
+        playerBtn.setElevation(10f);
+        playerBtn.setOnClickListener(v -> {
+            Intent i = new Intent(MainActivity.this, PlayerActivity.class);
+            startActivity(i);
+        });
+        content.addView(playerBtn);
+
+        setContentView(content);
         webView.loadUrl(serverUrl);
 
         // Handle back button
@@ -348,8 +393,11 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    public static String getLocalIpAddress(Context context) {
-        try {
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    public static String getLocalIpAddress(Context context) {        try {
             List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
             for (NetworkInterface iface : interfaces) {
                 List<InetAddress> addrs = Collections.list(iface.getInetAddresses());

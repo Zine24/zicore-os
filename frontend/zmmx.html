@@ -240,7 +240,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
       <span class="count" id="plCount">0 tracks</span>
     </div>
     <div class="pl-list" id="plList">
-      <div class="pl-empty"><div class="big">♪</div>Double-click a file to add it to the playlist</div>
+      <div class="pl-empty"><div class="big">♪</div>Click a file to play it</div>
     </div>
     <div class="pl-actions">
       <button class="pl-btn" onclick="clearPlaylist()">Clear</button>
@@ -318,7 +318,7 @@ let shuffleOn = false;
 let repeatOn = false;
 let searchQuery = '';
 let searchTimeout = null;
-let audioCtx = null, analyser = null, sourceNode = null;
+let audioCtx = null, analyser = null, sourceNode = null, mediaSourceBound = false;
 let eqNodes = [];
 let visualizerRAF = null;
 let audio = new Audio();
@@ -333,11 +333,44 @@ function getUrl(file) {
   return '';
 }
 
+function encFile(f) { return encodeURIComponent(JSON.stringify(f)); }
+function pickFile(el) { return JSON.parse(decodeURIComponent(el.dataset.file)); }
+
+function selectFile(f) {
+  if (!f) return;
+  var wasCurrent = currentTrack >= 0 && playlist[currentTrack] &&
+    playlist[currentTrack].path === f.path && playlist[currentTrack].source === f.source;
+  addToPlaylist(f);
+  if (wasCurrent) return;
+  if (currentTrack >= 0) {
+    var idx = playlist.findIndex(function(p){ return p.path === f.path && p.source === f.source; });
+    if (idx >= 0) { currentTrack = idx; loadTrack(idx); }
+  }
+}
+
+function markPlaying() {
+  var list = document.getElementById('fileList');
+  if (!list) return;
+  list.querySelectorAll('.file-row, .file-card').forEach(function(el){
+    var f;
+    try { f = pickFile(el); } catch(e){ return; }
+    var on = currentTrack >= 0 && playlist[currentTrack] &&
+      playlist[currentTrack].path === f.path && playlist[currentTrack].source === f.source;
+    el.classList.toggle('playing', !!on);
+  });
+}
+
 function getAudioContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 256;
+    if (!mediaSourceBound) {
+      try {
+        sourceNode = audioCtx.createMediaElementSource(audio);
+        mediaSourceBound = true;
+      } catch(e) { console.warn('Media element already bound:', e); }
+    }
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
@@ -346,11 +379,9 @@ function getAudioContext() {
 function connectAnalyzer(el) {
   try {
     const ctx = getAudioContext();
-    if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
-    sourceNode = ctx.createMediaElementSource(el);
-    // Disconnect EQ nodes first
-    eqNodes.forEach(function(n){ n.gain.value = 0; });
-    // Connect: source -> analyser -> ctx.destination
+    if (!sourceNode) { sourceNode = ctx.createMediaElementSource(el); mediaSourceBound = true; }
+    // Disconnect previous connections but keep the graph alive
+    try { analyser.disconnect(); } catch(e){}
     sourceNode.connect(analyser);
     analyser.connect(ctx.destination);
     startVisualizer();
@@ -359,9 +390,8 @@ function connectAnalyzer(el) {
 
 function disconnectAnalyzer() {
   if (visualizerRAF) { cancelAnimationFrame(visualizerRAF); visualizerRAF = null; }
-  if (sourceNode) { try { sourceNode.disconnect(); } catch(e){} sourceNode = null; }
   if (analyser) try { analyser.disconnect(); } catch(e){}
-  if (audioCtx) try { audioCtx.close(); } catch(e){}; audioCtx = null; analyser = null;
+  if (sourceNode) try { sourceNode.disconnect(); } catch(e){}
 }
 
 function startVisualizer() {
@@ -450,6 +480,9 @@ function renderFiles(items) {
     return;
   }
 
+  const enc = encFile;
+  const pick = pickFile;
+
   if (currentView === 'grid') {
     list.className = 'file-list grid-view';
     const icons = { images:'🖼️', audio:'🎵', music:'🎶', video:'🎬', ebooks:'📚' };
@@ -458,7 +491,7 @@ function renderFiles(items) {
       const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(f.name);
       const isImage = /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(f.name);
       const icon = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '📄';
-      return `<div class="file-card" ondblclick="addToPlaylist(${esc(JSON.stringify(f).replace(/"/g,'&quot;'))})">
+      return `<div class="file-card" data-file="${enc(f)}">
         <div class="fc-icon">${icon}</div>
         <div class="fc-name" title="${esc(f.name)}">${esc(f.name)}</div>
         <div class="fc-meta">${formatSize(f.size)} · <span class="fi-source ${f.source}">${f.source}</span></div>
@@ -471,15 +504,30 @@ function renderFiles(items) {
       const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(f.name);
       const isImage = /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(f.name);
       const icon = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '📄';
-      return `<div class="file-row" ondblclick="addToPlaylist(${esc(JSON.stringify(f).replace(/"/g,'&quot;'))})">
+      return `<div class="file-row" data-file="${enc(f)}">
         <span class="fi-icon">${icon}</span>
         <span class="fi-name" title="${esc(f.name)}">${esc(f.name)}</span>
         <span class="fi-size">${formatSize(f.size)}</span>
         <span class="fi-source ${f.source}">${f.source}</span>
-        <span class="fi-add" onclick="event.stopPropagation();addToPlaylist(${esc(JSON.stringify(f).replace(/"/g,'&quot;'))})">+</span>
+        <span class="fi-add">+</span>
       </div>`;
     }).join('');
   }
+
+  list.querySelectorAll('.file-card, .file-row').forEach(function(el){
+    el.addEventListener('click', function(e){
+      if (e.target.classList && e.target.classList.contains('fi-add')) {
+        e.stopPropagation();
+        selectFile(pick(el));
+        return;
+      }
+      selectFile(pick(el));
+    });
+    el.addEventListener('dblclick', function(){
+      selectFile(pick(el));
+    });
+  });
+  markPlaying();
 }
 
 function addToPlaylist(file) {
@@ -498,7 +546,7 @@ function renderPlaylist() {
   document.getElementById('plCount').textContent = playlist.length + ' tracks';
 
   if (playlist.length === 0) {
-    el.innerHTML = '<div class="pl-empty"><div class="big">♪</div>Double-click a file to add it to the playlist</div>';
+    el.innerHTML = '<div class="pl-empty"><div class="big">♪</div>Click a file to play it</div>';
     return;
   }
 
@@ -559,6 +607,7 @@ function loadTrack(idx) {
   }
 
   renderPlaylist();
+  markPlaying();
   savePlaylist();
 }
 
@@ -576,7 +625,12 @@ function removeFromPlaylist(idx) {
   savePlaylist();
 }
 
-function clearPlaylist() { playlist = []; currentTrack = -1; audio.src = ''; video.src = ''; video.style.display = 'none'; isPlaying = false; disconnectAnalyzer(); document.getElementById('playBtn').textContent = '▶'; document.getElementById('playerTitle').textContent = 'No track selected'; renderPlaylist(); savePlaylist(); }
+function clearPlaylist() { playlist = []; currentTrack = -1; audio.src = ''; video.src = ''; video.style.display = 'none'; isPlaying = false; disconnectAnalyzer(); document.getElementById('playBtn').textContent = '▶'; document.getElementById('playerTitle').textContent = 'No track selected'; renderPlaylist(); markPlaying(); savePlaylist(); }
+
+function removeSelected() {
+  if (currentTrack < 0 || playlist.length === 0) return;
+  removeFromPlaylist(currentTrack);
+}
 
 function exportPlaylist() {
   if (playlist.length === 0) return;

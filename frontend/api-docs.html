@@ -128,18 +128,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <h2>Quick Start</h2>
     </div>
     <div class="code-block"><span class="comment"># 1. Registrar usuario</span>
-<span class="kw">curl</span> -X POST https://zcs.zicore.space/api/sso/register \
+<span class="kw">curl</span> -X POST https://vps.zicore.space/api/sso/register \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"email":"user@zinemotion.com.mx","password":"pass123","name":"Mi Nombre"}'</span>
 
 <span class="comment"># 2. Login y obtener token</span>
-<span class="kw">curl</span> -X POST https://zcs.zicore.space/api/sso/login \
+<span class="kw">curl</span> -X POST https://vps.zicore.space/api/sso/login \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"email":"user@zinemotion.com.mx","password":"pass123"}'</span>
 <span class="comment"># Response: {"status":"ok","token":"abc123...","user":{...}}</span>
 
 <span class="comment"># 3. Usar token en requests autenticados</span>
-<span class="kw">curl</span> https://zcs.zicore.space/api/bank/portfolio \
+<span class="kw">curl</span> https://vps.zicore.space/api/bank/portfolio \
   -H <span class="str">"Authorization: Bearer abc123..."</span>
 
 <span class="comment"># 4. WebSocket ZIO AI</span>

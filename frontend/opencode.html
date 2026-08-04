@@ -54,6 +54,13 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .session-item:hover{background:rgba(0,229,255,0.03);border-left-color:rgba(0,229,255,0.15)}
 .session-item.active{background:rgba(0,229,255,0.06);border-left-color:var(--cyan)}
 .session-title{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.session-title-wrap{display:flex;align-items:center;gap:6px}
+.session-title-wrap .session-title{flex:1;min-width:0}
+.session-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.session-item:hover .session-actions{opacity:1}
+.session-actions .sact{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;color:var(--text3);cursor:pointer;background:var(--bg4);transition:all .15s;user-select:none}
+.session-actions .sact:hover{color:var(--cyan);background:var(--bg5)}
+.session-actions .sact.danger:hover{color:var(--red);background:rgba(255,61,113,0.12)}
 .session-meta{display:flex;gap:6px;margin-top:3px;font-size:10px;color:var(--text3);flex-wrap:wrap;align-items:center}
 .session-meta .msgs{color:var(--cyan);font-family:var(--mono);font-weight:600}
 .session-meta .model{color:var(--purple);font-family:var(--mono);background:rgba(124,77,255,0.08);padding:1px 6px;border-radius:3px}
@@ -278,12 +285,14 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <div class="sidebar-tab active" onclick="setTab(this,'all')">All</div>
       <div class="sidebar-tab" onclick="setTab(this,'recent')">Recent</div>
       <div class="sidebar-tab" onclick="setTab(this,'large')">Largest</div>
-      <div class="sidebar-tab" onclick="loadImported()" style="color:var(--cyan);font-weight:800;letter-spacing:1px">ZIO</div>
+      <div class="sidebar-tab" onclick="setTab(this,'agent')" style="color:var(--purple);font-weight:800;letter-spacing:1px">Copilot</div>
+      <div class="sidebar-tab" onclick="loadImported(this)" style="color:var(--green);font-weight:800;letter-spacing:1px">ChatGPT</div>
     </div>
     <div class="session-list" id="sessionList"><div class="loading">Loading...</div></div>
     <div class="sidebar-foot">
       <button onclick="loadSessions()">Refresh</button>
-      <button class="primary" onclick="showImport()">Import</button>
+      <button onclick="createNewSession()">New</button>
+      <button onclick="showImport()">Import</button>
     </div>
   </div>
 
@@ -462,10 +471,10 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         Quick Models
       </div>
-      <div class="model-chip" onclick="quickModel('vps-ollama','qwen3:8b')"><div class="dot" style="background:var(--green)"></div><span class="mn">Qwen3 8B</span><span class="mp">VPS</span></div>
+      <div class="model-chip" onclick="quickModel('zicore_native','gemma4:12b')"><div class="dot" style="background:var(--green)"></div><span class="mn">Gemma4 12B</span><span class="mp">VPS</span></div>
       <div class="model-chip" onclick="quickModel('groq','llama-3.3-70b-versatile')"><div class="dot" style="background:var(--cyan)"></div><span class="mn">Llama 3.3 70B</span><span class="mp">Groq</span></div>
-      <div class="model-chip" onclick="quickModel('openrouter','deepseek/deepseek-chat:free')"><div class="dot" style="background:var(--purple)"></div><span class="mn">DeepSeek Chat</span><span class="mp">Free</span></div>
-      <div class="model-chip" onclick="quickModel('openrouter','nvidia/llama-3.1-nemotron-ultra-253b-v1:free')"><div class="dot" style="background:var(--orange)"></div><span class="mn">Nemotron 253B</span><span class="mp">Free</span></div>
+      <div class="model-chip" onclick="quickModel('openrouter','nvidia/nemotron-3-super-120b-a12b:free')"><div class="dot" style="background:var(--purple)"></div><span class="mn">Nemotron 120B</span><span class="mp">Free</span></div>
+      <div class="model-chip" onclick="quickModel('openrouter','google/gemini-2.5-flash')"><div class="dot" style="background:var(--orange)"></div><span class="mn">Gemini 2.5 Flash</span><span class="mp">Free</span></div>
     </div>
 
     <!-- Quick Actions -->
@@ -520,8 +529,8 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 (function(){var c=document.getElementById('starfield'),x=c.getContext('2d');function rz(){c.width=innerWidth;c.height=innerHeight}rz();addEventListener('resize',rz);var S=[];for(var i=0;i<180;i++)S.push({x:Math.random()*2e3,y:Math.random()*2e3,s:Math.random()*1.2+0.3,p:Math.random()*6.28,sp:Math.random()*0.004+0.001});function d(){x.fillStyle='#04060c';x.fillRect(0,0,c.width,c.height);S.forEach(function(s){s.p+=s.sp;if(s.p>6.28)s.p-=6.28;var o=Math.abs(Math.sin(s.p))*0.5;x.fillStyle='rgba(0,229,255,'+(o*0.45)+')';x.fillRect(s.x%c.width,s.y%c.height,s.s,s.s)});requestAnimationFrame(d)}d()})();
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
 
-// ── OpenCode API Config ──
-var OC_HOST='https://opencode.zicore.space';
+// ── OpenCode API Config (same-origin: VPS proxy -> .68 tailnet) ──
+var OC_HOST='';
 function ocFetch(path,opts){
   opts=opts||{};opts.headers=opts.headers||{};
   opts.headers['Content-Type']=opts.headers['Content-Type']||'application/json';
@@ -557,17 +566,45 @@ async function checkHealth(){
   }
 }
 
-// ── Load Providers from OpenCode (fast fail with fallback) ──
+// ── Load Providers from ZICORE config (providers settings: API keys + models) ──
 var KNOWN_PROVIDERS=[
-  {id:'vps-ollama',name:'VPS Ollama',models:['qwen3:8b','gemma3:4b','gemma3:1b','dolphin-phi:2.7b','qwen2.5-coder:7b']},
-  {id:'groq',name:'Groq',models:['mixtral-8x7b-32768']},
-  {id:'openrouter',name:'OpenRouter',models:['nvidia/nemotron-3-super-120b-a12b:free']},
-  {id:'openai',name:'OpenAI',models:['gpt-4o-mini']},
-  {id:'opencode',name:'OpenCode Zen',models:['opencode-zen']}
+  {id:'zicore_native',name:'VPS Ollama',models:['gemma4:12b','qwen2.5-coder:7b','deepseek-r1:8b','gemma3:4b','gemma3:1b','dolphin-phi:2.7b']},
+  {id:'openrouter',name:'OpenRouter',models:['nvidia/nemotron-3-super-120b-a12b:free','google/gemini-2.5-flash','anthropic/claude-sonnet-4','meta-llama/llama-4-maverick','deepseek/deepseek-chat']},
+  {id:'groq',name:'Groq',models:['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','mixtral-8x7b-32768']},
+  {id:'opencode',name:'OpenCode Zen',models:['opencode/mimo-v2-free']},
+  {id:'openai',name:'OpenAI',models:['gpt-4o-mini']}
 ];
+var PROVIDER_ORDER=['zicore_native','zicore_vps_tunnel','uncensored_68','ollama','openrouter','groq','opencode','openai','anthropic','deepseek','together'];
 async function loadProviders(){
+  // Prefer ZICORE config (providers settings) — authoritative for API keys/models
   try{
-    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(10000)});
+    var token=localStorage.getItem('zicore_sso_token')||'';
+    var r=await fetch('/api/config',{headers:token?{'Authorization':'Bearer '+token}:{}});
+    var cfg=await r.json();
+    var pv=cfg.providers||{};
+    var list=Object.keys(pv).filter(function(k){return pv[k]&&pv[k].enabled!==false;});
+    if(list.length){
+      providers=list.map(function(id){
+        var p=pv[id];
+        var models=p.models||[];
+        var dm=p.default_model;
+        if(dm&&models.indexOf(dm)<0)models=[dm].concat(models);
+        return {id:id,name:p.name||id,models:models,default_model:dm,base_url:p.base_url};
+      });
+      providers.sort(function(a,b){
+        var ia=PROVIDER_ORDER.indexOf(a.id),ib=PROVIDER_ORDER.indexOf(b.id);
+        return (ia<0?99:ia)-(ib<0?99:ib);
+      });
+      allModels={};
+      providers.forEach(function(p){allModels[p.id]=p.models||[];});
+      renderPromptProviderSelect(cfg);
+      updateProviderStat();
+      refreshVPSModels();
+      return;
+    }
+  }catch(e){console.log('Config load failed, using fallback:',e.message);}
+  try{
+    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(30000)});
     var d=await r.json();
     providers=d.all||[];
     allModels={};
@@ -579,32 +616,57 @@ async function loadProviders(){
   }
   renderPromptProviderSelect();
   updateProviderStat();
+  refreshVPSModels();
 }
 
-function renderPromptProviderSelect(){
+async function refreshVPSModels(){
+  try{
+    var token=localStorage.getItem('zicore_sso_token')||'';
+    var r=await fetch('/api/provider/models/zicore_native',{headers:token?{'Authorization':'Bearer '+token}:{}});
+    var d=await r.json();
+    var models=d.models||[];
+    if(!models.length)return;
+    var cur=allModels['zicore_native']||[];
+    var same=cur.length===models.length&&cur.every(function(m,i){return m===models[i];});
+    if(!same){
+      allModels['zicore_native']=models;
+      var found=false;
+      providers.forEach(function(p){if(p.id==='zicore_native'){p.models=models;found=true;}});
+      if(!found)providers.push({id:'zicore_native',name:'VPS Ollama',models:models,default_model:'gemma4:12b'});
+      renderPromptProviderSelect();
+    }
+  }catch(e){}
+}
+
+var defaultProviderId='zicore_native';
+
+function renderPromptProviderSelect(cfg){
   var sel=document.getElementById('promptProvider');
   if(!sel)return;
   sel.innerHTML='';
-  var important=[
-    {id:'vps-ollama',name:'VPS Ollama'},
-    {id:'groq',name:'Groq'},
-    {id:'openrouter',name:'OpenRouter'},
-    {id:'opencode',name:'OpenCode Zen'},
-    {id:'openai',name:'OpenAI'}
-  ];
-  var all=important.concat(providers.filter(function(p){
-    return important.every(function(c){return c.id!==p.id});
-  }));
+  var active=cfg&&cfg.zio_engine?cfg.zio_engine.active_provider:'';
+  var order=PROVIDER_ORDER;
+  var all=providers.slice().sort(function(a,b){
+    var ia=order.indexOf(a.id),ib=order.indexOf(b.id);
+    return (ia<0?99:ia)-(ib<0?99:ib);
+  });
   all.forEach(function(p){
     var o=document.createElement('option');
     o.value=p.id;o.textContent=p.name||p.id;
     sel.appendChild(o);
   });
+  // Default selection: active provider from config, else VPS ollama, else first
+  var pick=active;
+  if(pick&&!all.some(function(p){return p.id===pick;}))pick='';
+  if(!pick&&all.some(function(p){return p.id==='zicore_native';}))pick='zicore_native';
+  if(!pick&&all.length)pick=all[0].id;
+  if(pick)sel.value=pick;
   onPromptProviderChange(sel.value);
 }
 
 function onPromptProviderChange(pid){
-  var models=allModels[pid]||[];
+  var prov=providers.find(function(p){return p.id===pid;});
+  var models=prov?prov.models||[]:(allModels[pid]||[]);
   var ms=document.getElementById('promptModel');
   if(!ms)return;
   ms.innerHTML='';
@@ -615,6 +677,12 @@ function onPromptProviderChange(pid){
     o.value=name;o.textContent=name;
     ms.appendChild(o);
   });
+  // Prefer configured default_model for this provider
+  if(prov&&prov.default_model){
+    for(var i=0;i<ms.options.length;i++){
+      if(ms.options[i].value===prov.default_model){ms.selectedIndex=i;break;}
+    }
+  }
   if(ms.options.length>0){
     currentModel=ms.value;
     document.getElementById('pmActiveModel').textContent=ms.value;
@@ -681,7 +749,7 @@ async function loadSessions(){
 
 var importedSessions=[];
 
-async function loadImported(){
+async function loadImported(tabEl){
   try{
     var r=await localFetch('/api/opencode/imported');
     var d=await r.json();
@@ -711,7 +779,11 @@ async function loadImported(){
     document.getElementById('statSess').textContent=allSessions.length;
     document.getElementById('sessionCount').textContent=allSessions.length;
     document.getElementById('statExp').textContent=d.exported_at?new Date(d.exported_at).toLocaleDateString():'-';
-    activeTab='all';
+    if(tabEl){
+      activeTab='chatgpt';
+      document.querySelectorAll('.sidebar-tab').forEach(function(t){t.classList.remove('active')});
+      tabEl.classList.add('active');
+    }
     filterSessions();
   }catch(e){
     console.log('Import load failed:',e.message);
@@ -722,6 +794,7 @@ function setTab(el,tab){
   activeTab=tab;
   document.querySelectorAll('.sidebar-tab').forEach(function(t){t.classList.remove('active')});
   el.classList.add('active');
+  if(tab==='chatgpt'){loadImported(el);return;}
   filterSessions();
 }
 
@@ -731,6 +804,8 @@ function filterSessions(){
     var mn=parseModel(s.model).toLowerCase();
     var title=(s.title||'').toLowerCase();
     if(q&&!(title.indexOf(q)>=0||mn.indexOf(q)>=0))return false;
+    if(activeTab==='agent'&&s.source==='chatgpt')return false;
+    if(activeTab==='chatgpt'&&s.source!=='chatgpt')return false;
     return true;
   });
   var now=Date.now();
@@ -753,7 +828,11 @@ function renderList(){
     var badge=s.source==='chatgpt'?'<span style="color:var(--green);font-size:9px;font-weight:800">ZIO </span>':'';
     var mc=s.msg_count?(s.msg_count+' msgs'):'';
     return '<div class="session-item '+cls+'" onclick="selectSession(\''+s.id+'\')">'
-      +'<div class="session-title">'+badge+esc(s.title)+'</div>'
+      +'<div class="session-title-wrap"><div class="session-title">'+badge+esc(s.title)+'</div>'
+      +'<div class="session-actions" onclick="event.stopPropagation()">'
+      +'<span class="sact" title="Rename" onclick="renameSession(\''+s.id+'\')">&#9998;</span>'
+      +'<span class="sact danger" title="Delete" onclick="deleteSession(\''+s.id+'\')">&#10005;</span>'
+      +'</div></div>'
       +'<div class="session-meta">'
       +'<span>'+d+'</span>'
       +(mc?'<span>'+mc+'</span>':'')
@@ -763,6 +842,53 @@ function renderList(){
 }
 
 function fmtNum(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n}
+
+// ── Session Controls (create / rename / delete) ──
+async function createNewSession(){
+  try{
+    var r=await ocFetch('/session',{method:'POST',body:JSON.stringify({title:'New session',agent:agentMode})});
+    var s=await r.json();
+    if(s&&s.id){
+      activeSessionId=s.id;
+      selected=null;
+      document.getElementById('chatTitle').textContent=s.title||'New session';
+      document.getElementById('chatMeta').innerHTML='';
+      document.getElementById('chatArea').innerHTML='<div class="empty-state"><h3>New Session</h3><p>Type a message below to start a new conversation with ZIO Copilot.</p></div>';
+      await loadSessions();
+    }
+  }catch(e){
+    alert('Failed to create session: '+e.message);
+  }
+}
+
+function renameSession(id){
+  var s=allSessions.find(function(x){return x.id===id});
+  var cur=s?(s.title||s.id):'';
+  var name=prompt('Rename session:',cur);
+  if(!name)return;
+  ocFetch('/session/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({title:name})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.id){
+        loadSessions();
+        if(selected&&selected.id===id){
+          document.getElementById('chatTitle').textContent=d.title||name;
+        }
+      }
+    })
+    .catch(function(e){alert('Rename failed: '+e.message);});
+}
+
+function deleteSession(id){
+  if(!confirm('Delete session? This cannot be undone.'))return;
+  ocFetch('/session/'+encodeURIComponent(id),{method:'DELETE'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(activeSessionId===id){activeSessionId=null;selected=null;}
+      loadSessions();
+    })
+    .catch(function(e){alert('Delete failed: '+e.message);});
+}
 
 async function selectSession(id){
   selected=allSessions.find(function(s){return s.id===id});
@@ -826,6 +952,14 @@ function renderMessages(msgs){
 }
 
 // ── Live SSE + Chat (OpenCode /event + /session/{id}/prompt_async) ──
+var streamPartID=null;
+var streamDone=false;
+function resetLiveMessage(){
+  var existing=document.getElementById('chatArea').querySelector('.msg.live-ai');
+  if(existing)existing.remove();
+  streamPartID=null;
+  streamDone=false;
+}
 function connectLive(){
   if(liveOn)return;
   var es=new EventSource(OC_HOST+'/event');
@@ -840,12 +974,52 @@ function connectLive(){
     try{
       var d=JSON.parse(e.data);
       var type=d.type||d.event||'';
+      var props=d.properties||d.info||d;
       if(type.indexOf('tool')>=0||type==='tool_start'){
-        var toolName=d.name||d.tool||(d.properties&&d.properties.tool)||'tool';
+        var toolName=props.name||props.tool||(props.properties&&props.properties.tool)||'tool';
         showTool(toolName);
       }
-      if(type==='message'||type==='assistant'||type==='response'||type==='chat'||type==='message.updated'){
-        var info=d.properties||d.info||d;
+      if(type==='message.part.delta'){
+        if(props.field==='text'&&props.delta){
+          if(props.partID!==streamPartID){
+            resetLiveMessage();
+            streamPartID=props.partID;
+            streamDone=false;
+          }
+          appendLiveMessage(String(props.delta));
+        }
+      }
+      if(type==='message.part.updated'){
+        var part=props.part||props;
+        if(part&&part.type==='text'&&part.text&&props.partID&&props.partID!==streamPartID){
+          resetLiveMessage();
+          appendLiveMessage(String(part.text));
+          streamPartID=props.partID;
+        }
+      }
+      if(type==='text'&&props.text){
+        appendLiveMessage(String(props.text));
+      }
+      if(type==='message.updated'&&props.info){
+        var info=props.info;
+        var content=info.content||info.text||'';
+        if(content)appendLiveMessage(String(content));
+      }
+      if(type==='session.error'||type==='session.error'){
+        var em=props.message||props.error||'Agent error';
+        if(typeof em==='object')em=em.message||JSON.stringify(em);
+        appendLiveMessage('[Error: '+em+']');
+        hideTool();
+      }
+      if(type==='session.idle'||type==='idle'){
+        streamPartID=null;
+        streamDone=true;
+        if(activeSessionId){
+          setTimeout(function(){refreshActiveMessages();},500);
+        }
+      }
+      if(type==='message'||type==='assistant'||type==='response'||type==='chat'){
+        var info=props.info||props;
         var content=info.content||info.text||info.delta||'';
         if(typeof content==='object'&&content){
           if(Array.isArray(content)){
@@ -870,8 +1044,23 @@ function connectLive(){
 }
 function disconnectLive(){if(liveSSE)liveSSE.close();liveSSE=null;liveOn=false;}
 
-function appendLiveMessage(text){
-  if(!text)return;
+async function refreshActiveMessages(){
+  if(!activeSessionId)return;
+  try{
+    var r=await ocFetch('/session/'+encodeURIComponent(activeSessionId)+'/message');
+    var data=await r.json();
+    var msgs=Array.isArray(data)?data:data.messages||[];
+    if(msgs.length){
+      var area=document.getElementById('chatArea');
+      var live=area.querySelector('.msg.live-ai');
+      var keepScroll=live&&area.scrollTop+area.clientHeight>=area.scrollHeight-10;
+      renderMessages(msgs);
+      if(keepScroll)area.scrollTop=area.scrollHeight;
+    }
+  }catch(e){}
+}
+
+function appendLiveMessage(text){  if(!text)return;
   var area=document.getElementById('chatArea');
   var existing=area.querySelector('.msg.live-ai .msg-bubble');
   if(existing){
@@ -895,31 +1084,17 @@ async function sendLive(){
   div.innerHTML='<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-bubble">'+esc(txt)+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
   area.appendChild(div);area.scrollTop=area.scrollHeight;
 
-  if(activeSessionId){
-    try{
-      await ocFetch('/session/'+encodeURIComponent(activeSessionId)+'/prompt_async',{
-        method:'POST',
-        body:JSON.stringify({content:txt,agent:agentMode})
-      });
-    }catch(e){
-      appendLiveMessage('[Error sending: '+e.message+']');
-    }
-  }else{
-    try{
-      var r=await ocFetch('/session',{method:'POST',body:JSON.stringify({title:txt.substring(0,80),agent:agentMode})});
-      var s=await r.json();
-      if(s&&s.id){
-        activeSessionId=s.id;
-        appendLiveMessage('[Session created: '+s.id+']');
-        await ocFetch('/session/'+encodeURIComponent(s.id)+'/prompt_async',{
-          method:'POST',
-          body:JSON.stringify({content:txt,agent:agentMode})
-        });
-        await loadSessions();
-      }
-    }catch(e){
-      appendLiveMessage('[Error: '+e.message+']');
-    }
+  try{
+    var sid=await ensureSession();
+    var mo=currentModelObj();
+    var body={parts:[{type:'text',text:txt}],agent:agentMode};
+    if(mo)body.model=mo;
+    await ocFetch('/session/'+encodeURIComponent(sid)+'/prompt_async',{
+      method:'POST',
+      body:JSON.stringify(body)
+    });
+  }catch(e){
+    appendLiveMessage('[Error sending: '+e.message+']');
   }
 }
 
@@ -1059,7 +1234,7 @@ async function checkVPS(){
 
 async function checkOllamaHealth(){
   try{
-    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(5000)});
+    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(30000)});
     var d=await r.json();
     var all=d.all||[];
     var hasOllama=all.some(function(p){return p.id&&p.id.indexOf('ollama')>=0;});
@@ -1075,6 +1250,11 @@ function quickModel(provider,model){
   document.getElementById('statModel').textContent=model;
   document.getElementById('statProvider').textContent=provider;
   currentModel=model;
+  var ps=document.getElementById('promptProvider');
+  var ms=document.getElementById('promptModel');
+  if(ps){ps.value=provider;onPromptProviderChange(provider);}
+  if(ms){ms.value=model;}
+  document.getElementById('pmActiveModel').textContent=model;
 }
 
 // ── Tool Actions ──
@@ -1143,22 +1323,30 @@ function sendPrompt(){
   inp.value='';
   inp.style.height='44px';
   sendAsUser(txt);
-  var pid=document.getElementById('promptProvider')?document.getElementById('promptProvider').value:'';
-  var mid=document.getElementById('promptModel')?document.getElementById('promptModel').value:'';
-  if(!activeSessionId){
-    var body={title:txt.substring(0,80),agent:agentMode};
-    if(pid)body.provider=pid;
-    if(mid)body.model=mid;
-    ocFetch('/session',{method:'POST',body:JSON.stringify(body)})
-    .then(function(r){return r.json();})
-    .then(function(s){
-      if(s&&s.id){activeSessionId=s.id;loadSessions();}
-    }).catch(function(){});
-  }
 }
 
 function toggleAgentMode(){
   switchMode(agentMode==='build'?'plan':'build');
+}
+
+function currentModelObj(){
+  var pid=document.getElementById('promptProvider')?document.getElementById('promptProvider').value:'';
+  var mid=document.getElementById('promptModel')?document.getElementById('promptModel').value:'';
+  if(!pid||!mid||mid==='No models')return null;
+  return {providerID:pid,modelID:mid};
+}
+
+async function ensureSession(){
+  if(activeSessionId)return activeSessionId;
+  var body={title:'New session',agent:agentMode};
+  var r=await ocFetch('/session',{method:'POST',body:JSON.stringify(body)});
+  var s=await r.json();
+  if(s&&s.id){
+    activeSessionId=s.id;
+    loadSessions();
+    return s.id;
+  }
+  throw new Error('Failed to create session');
 }
 
 function sendAsUser(text){
@@ -1168,9 +1356,17 @@ function sendAsUser(text){
   var div=document.createElement('div');div.className='msg user';
   div.innerHTML='<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-bubble">'+esc(text)+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
   area.appendChild(div);area.scrollTop=area.scrollHeight;
-  if(activeSessionId){
-    ocFetch('/session/'+encodeURIComponent(activeSessionId)+'/prompt_async',{method:'POST',body:JSON.stringify({content:text,agent:agentMode})});
-  }
+  (async function(){
+    try{
+      var sid=await ensureSession();
+      var mo=currentModelObj();
+      var body={parts:[{type:'text',text:text}],agent:agentMode};
+      if(mo)body.model=mo;
+      await ocFetch('/session/'+encodeURIComponent(sid)+'/prompt_async',{method:'POST',body:JSON.stringify(body)});
+    }catch(e){
+      appendLiveMessage('[Error sending: '+e.message+']');
+    }
+  })();
 }
 
 // ── System Auto-Update ──

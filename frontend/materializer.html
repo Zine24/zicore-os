@@ -198,11 +198,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="engine-label">Engine</div>
       <div class="engine-grid" id="engineGrid">
         <div class="engine-card active" data-engine="trimesh" onclick="selectEngine(this)"><div class="ec-icon">⬡</div><div class="ec-name">Trimesh</div></div>
+        <div class="engine-card" data-engine="ai3d" onclick="selectEngine(this)"><div class="ec-icon">🤖</div><div class="ec-name">Shap-E</div></div>
         <div class="engine-card" data-engine="cadquery" onclick="selectEngine(this)"><div class="ec-icon">⚙</div><div class="ec-name">CadQuery</div></div>
         <div class="engine-card" data-engine="openscad" onclick="selectEngine(this)"><div class="ec-icon">🔧</div><div class="ec-name">OpenSCAD</div></div>
+        <div class="engine-card" data-engine="build123d" onclick="selectEngine(this)"><div class="ec-icon">🧱</div><div class="ec-name">Build123d</div></div>
+        <div class="engine-card" data-engine="solidpython2" onclick="selectEngine(this)"><div class="ec-icon">🛠</div><div class="ec-name">SolidPy2</div></div>
         <div class="engine-card" data-engine="picogk" onclick="selectEngine(this)"><div class="ec-icon">🧊</div><div class="ec-name">PicoGK</div></div>
         <div class="engine-card" data-engine="procedural" onclick="selectEngine(this)"><div class="ec-icon">🌐</div><div class="ec-name">Procedural</div></div>
-        <div class="engine-card" data-engine="ai3d" onclick="selectEngine(this)"><div class="ec-icon">🤖</div><div class="ec-name">AI 3D</div></div>
+        <div class="engine-card" data-engine="tripo3d" onclick="selectEngine(this)"><div class="ec-icon">☁</div><div class="ec-name">Tripo3D</div></div>
+        <div class="engine-card" data-engine="meshy" onclick="selectEngine(this)"><div class="ec-icon">🕸</div><div class="ec-name">Meshy</div></div>
+        <div class="engine-card" data-engine="hunyuan3d" onclick="selectEngine(this)"><div class="ec-icon">🌀</div><div class="ec-name">Hunyuan3D</div></div>
+        <div class="engine-card" data-engine="shap_e" onclick="selectEngine(this)"><div class="ec-icon">✨</div><div class="ec-name">Shap-E 68</div></div>
       </div>
     </div>
 
@@ -606,10 +612,12 @@ function startGeneration(){
 
   var engine=selectedEngine;
   var detail=parseInt(document.getElementById('paramDetail').value)||5;
+  var apiEngine=engine;
+  if(engine==='shap_e')apiEngine='ai3d';
   var payload={
     prompt:prompt,
     model:detail>=7?'gemma3:4b':'gemma3:1b',
-    engine:engine==='cadquery'||engine==='openscad'?engine:'local'
+    engine:apiEngine
   };
 
   var token=localStorage.getItem('zicore_sso_token')||'';
@@ -828,7 +836,7 @@ function renderLibrary(){
   if(!items.length){grid.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   grid.innerHTML=items.map(function(it,i){
-    var icons={trimesh:'\u2B21',cadquery:'\u2699',openscad:'\uD83D\uDD27',picogk:'\uD83E\uDDCA',procedural:'\uD83C\uDF10',ai3d:'\uD83E\uDD16'};
+    var icons={trimesh:'\u2B21',cadquery:'\u2699',openscad:'\uD83D\uDD27',picogk:'\uD83E\uDDCA',procedural:'\uD83C\uDF10',ai3d:'\uD83E\uDD16',shap_e:'\u2728',build123d:'\uD83E\uDDF1',solidpython2:'\uD83D\uDEE0',tripo3d:'\u2601',meshy:'\uD83D\uDD78',hunyuan3d:'\uD83C\uDF00'};
     return '<div class="lib-card" onclick="loadFromLibrary('+i+')">'+
       '<div class="lthumb">'+(icons[it.engine]||'\u25C8')+'</div>'+
       '<div class="linfo"><div class="lname">'+esc(it.prompt)+'</div>'+
@@ -1035,7 +1043,7 @@ function runSimulation(){
 function updateHistory(){
   var list=document.getElementById('historyList');
   if(!history.length){list.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:8px">No generations yet</div>';return;}
-  var icons={trimesh:'\u2B21',cadquery:'\u2699',openscad:'\uD83D\uDD27',picogk:'\uD83E\uDDCA',procedural:'\uD83C\uDF10',ai3d:'\uD83E\uDD16'};
+  var icons={trimesh:'\u2B21',cadquery:'\u2699',openscad:'\uD83D\uDD27',picogk:'\uD83E\uDDCA',procedural:'\uD83C\uDF10',ai3d:'\uD83E\uDD16',shap_e:'\u2728',build123d:'\uD83E\uDDF1',solidpython2:'\uD83D\uDEE0',tripo3d:'\u2601',meshy:'\uD83D\uDD78',hunyuan3d:'\uD83C\uDF00'};
   list.innerHTML=history.map(function(h,i){
     return '<div class="hist-item" onclick="loadHistory(\''+h.id+'\')">'+
       '<div class="hi-icon">'+(icons[h.engine]||'\u25C8')+'</div>'+

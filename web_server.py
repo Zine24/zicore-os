@@ -668,6 +668,8 @@ app.add_middleware(
     allow_origins=[
         "https://zcs.zicore.space",
         "https://zicore.space",
+        "https://vps.zicore.space",
+        "https://www.zicore.space",
         "https://zinemotion.com.mx",
         "https://www.zinemotion.com.mx",
         "https://zichat.zinemotion.com",
@@ -853,6 +855,12 @@ class SSOAuthMiddleware:
         "/api/metropolis/modules",
         "/api/metropolis/status",
         "/opencode",
+        "/api/media/serve",
+        "/api/jilocomotion/serve",
+        "/session",
+        "/provider",
+        "/global/health",
+        "/event",
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -891,7 +899,9 @@ class SSOAuthMiddleware:
         "/api/sso/grant-all-defaults", # Service backfill (admin, checked in handler)
         "/api/ziusers/", # ZiUsers admin API (admin checked in handler)
         "/api/opencode/", # OpenCode sessions API (public)
+        "/session/", # OpenCode native sessions API proxy (public)
         "/api/aerospace/", # Aerospace AI calculation API (public)
+        "/api/ai3d/", # AI 3D generation (public for materializer)
         "/api/system/", # System auto-update API (public, admin check in handler)
     )
 
@@ -2139,6 +2149,25 @@ def _load_jilocomotion_catalog():
     return {"stats": {}, "music": [], "photos": [], "videos": [], "ebooks": [], "programs": [], "courses": [], "other_media": []}
 
 
+@app.get("/api/jilocomotion/serve")
+async def api_jilocomotion_serve(request: Request):
+    """Serve a file from the jilocomotion drive by absolute path with Range support."""
+    path = request.query_params.get("path", "")
+    if not path:
+        return JSONResponse({"error": "missing path"}, status_code=400)
+    if ".." in path:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    path = path.replace("\\", "/")
+    if path.startswith("/mnt/jilocomotion/"):
+        path = path[len("/mnt/jilocomotion"):]
+    resolved = (JILOCOMOTION_ROOT / path.lstrip("/")).resolve()
+    try:
+        resolved.relative_to(JILOCOMOTION_ROOT.resolve())
+    except ValueError:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    return _serve_file_with_range(request, resolved)
+
+
 @app.get("/api/jilocomotion/catalog")
 async def jilocomotion_catalog():
     """Full catalog of jilocomotion drive content."""
@@ -2358,7 +2387,7 @@ async def zmmx_search(request: Request):
             if cat and cat != "all" and cat != mcat and cat != jcat:
                 continue
             for item in catalog.get(jcat, []):
-                name = item.get("name", item.get("file", ""))
+                name = item.get("title", item.get("name", item.get("file", "")))
                 if q and q not in name.lower():
                     continue
                 results.append({
@@ -2503,7 +2532,7 @@ async def zmmx_browse(request: Request):
         jcat = jilo_map.get(cat, "")
         if jcat:
             for item in catalog.get(jcat, []):
-                name = item.get("name", item.get("file", ""))
+                name = item.get("title", item.get("name", item.get("file", "")))
                 file_path = item.get("file", "")
                 items.append({
                     "name": name,
@@ -2529,6 +2558,77 @@ async def zmmx_browse(request: Request):
     total = len(items)
     items = items[offset:offset + limit]
     return {"total": total, "offset": offset, "limit": limit, "category": cat, "source": source, "items": items}
+
+
+# ─── ZMMX MEDIA SERVE (Range support for streaming) ───────────────────────────
+JILOCOMOTION_ROOT = Path(os.environ.get("ZICORE_JILO_ROOT", "/mnt/jilocomotion"))
+_LOCAL_MEDIA_ROOTS = (MEDIA_DIR, ZICORE_FS_MEDIA)
+
+
+def _serve_file_with_range(request, file_path: Path):
+    """Serve a file supporting HTTP Range requests (audio/video streaming)."""
+    import mimetypes
+    file_path = Path(file_path)
+    if not file_path.is_file():
+        return JSONResponse({"error": "file not found"}, status_code=404)
+    size = file_path.stat().st_size
+    mime = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    range_header = request.headers.get("range", "")
+    m = re.match(r"bytes=(\d*)-(\d*)$", range_header.strip())
+    if not m:
+        return FileResponse(str(file_path), media_type=mime, stat_result=file_path.stat())
+    start_str, end_str = m.groups()
+    start = int(start_str) if start_str else 0
+    end = int(end_str) if end_str else size - 1
+    if start >= size or (end_str and start > end):
+        return JSONResponse(
+            {"error": "range not satisfiable"},
+            status_code=416,
+            headers={"Content-Range": f"bytes */{size}"},
+        )
+    end = min(end, size - 1)
+    length = end - start + 1
+    content_range = f"bytes {start}-{end}/{size}"
+
+    def iter_chunks():
+        with open(file_path, "rb") as fh:
+            fh.seek(start)
+            remaining = length
+            while remaining > 0:
+                chunk = fh.read(min(65536, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+
+    return StreamingResponse(
+        iter_chunks(),
+        status_code=206,
+        media_type=mime,
+        headers={
+            "Content-Range": content_range,
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(length),
+        },
+    )
+
+
+@app.get("/api/media/serve")
+async def api_media_serve(request: Request):
+    """Serve a local media file by relative path with Range support."""
+    path = request.query_params.get("path", "")
+    if not path:
+        return JSONResponse({"error": "missing path"}, status_code=400)
+    candidate = Path(path)
+    if candidate.is_absolute():
+        resolved = candidate
+        allowed = any(str(resolved).startswith(str(root)) for root in _LOCAL_MEDIA_ROOTS if root)
+    else:
+        resolved = MEDIA_DIR / candidate
+        allowed = True
+    if not allowed or ".." in path:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    return _serve_file_with_range(request, resolved)
 
 
 # ─── OpenCode Sessions API ────────────────────────────────────────────────────
@@ -2616,7 +2716,7 @@ async def opencode_websocket(websocket):
     import asyncio, websockets
     try:
         async with websockets.connect(
-            "ws://192.168.1.68:4096",
+            "ws://100.94.98.59:4096",
             open_timeout=5, close_timeout=5
         ) as remote:
             async def forward(src, dst):
@@ -2642,6 +2742,122 @@ async def opencode_websocket(websocket):
             await websocket.close()
         except Exception:
             pass
+
+
+# ── OpenCode API reverse proxy (VPS -> tailnet .68) ──
+OPENCODE_UPSTREAM = os.environ.get("ZICORE_OPENCODE_UPSTREAM", "http://100.94.98.59:4096")
+
+def _oc_forward(method, path, body=None, headers=None):
+    import urllib.request
+    import urllib.error
+    url = OPENCODE_UPSTREAM + path
+    req = urllib.request.Request(url, data=body, method=method, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return resp.status, resp.read(), dict(resp.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(), dict(e.headers)
+    except Exception as e:
+        return 502, json.dumps({"error": str(e)}).encode(), {}
+
+
+@app.get("/global/health")
+async def oc_proxy_health():
+    status, raw, _ = _oc_forward("GET", "/global/health")
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"healthy": False}, status_code=status)
+
+
+@app.get("/provider")
+async def oc_proxy_providers():
+    status, raw, _ = _oc_forward("GET", "/provider")
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.get("/session")
+async def oc_proxy_sessions():
+    status, raw, _ = _oc_forward("GET", "/session")
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.post("/session")
+async def oc_proxy_session_create(request: Request):
+    body = await request.body()
+    headers = {"Content-Type": "application/json"}
+    status, raw, _ = _oc_forward("POST", "/session", body=body, headers=headers)
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.get("/session/{session_id}/message")
+async def oc_proxy_session_messages(session_id: str):
+    status, raw, _ = _oc_forward("GET", "/session/" + quote(session_id) + "/message")
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.patch("/session/{session_id}")
+async def oc_proxy_session_rename(session_id: str, request: Request):
+    body = await request.body()
+    headers = {"Content-Type": "application/json"}
+    status, raw, _ = _oc_forward("PATCH", "/session/" + quote(session_id), body=body, headers=headers)
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.delete("/session/{session_id}")
+async def oc_proxy_session_delete(session_id: str):
+    status, raw, _ = _oc_forward("DELETE", "/session/" + quote(session_id))
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.post("/session/{session_id}/prompt_async")
+async def oc_proxy_prompt_async(session_id: str, request: Request):
+    body = await request.body()
+    headers = {"Content-Type": "application/json"}
+    status, raw, _ = _oc_forward("POST", "/session/" + quote(session_id) + "/prompt_async", body=body, headers=headers)
+    try:
+        return JSONResponse(json.loads(raw), status_code=status)
+    except Exception:
+        return JSONResponse({"error": "bad upstream"}, status_code=status)
+
+
+@app.get("/event")
+async def oc_proxy_event():
+    def gen():
+        import urllib.request
+        req = urllib.request.Request(OPENCODE_UPSTREAM + "/event")
+        try:
+            with urllib.request.urlopen(req, timeout=600) as resp:
+                while True:
+                    chunk = resp.readline()
+                    if not chunk:
+                        break
+                    yield chunk
+        except Exception as e:
+            try:
+                yield f"event: error\ndata: {json.dumps({'type': 'error', 'text': str(e)})}\n\n".encode("utf-8")
+            except Exception:
+                pass
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.get("/api/status")
@@ -5290,6 +5506,20 @@ async def outpreview_export_vr(gen_id: str):
 
 # ─── Preview Generation ───────────────────────────────────────────────────────
 
+@app.get("/api/ai3d/output/{filename}")
+async def api_ai3d_output(filename: str):
+    p = OUTPUT_DIR / "ai3d" / filename
+    if p.is_file():
+        return FileResponse(p, filename=p.name)
+    p2 = OUTPUT_DIR / filename
+    if p2.is_file():
+        return FileResponse(p2, filename=p2.name)
+    p3 = OUTPUT_DIR / "3d" / filename
+    if p3.is_file():
+        return FileResponse(p3, filename=p3.name)
+    return JSONResponse({"status": "error", "error": "not found"}, status_code=404)
+
+
 @app.post("/api/preview/generate")
 async def preview_generate(body: dict):
     try:
@@ -5535,6 +5765,30 @@ User description: {prompt}"""
 
     # Step 2: Generate mesh based on parsed type
     output_file = None
+
+    if engine == "ai3d" and not output_file:
+        try:
+            import asyncio as _asyncio
+            from zicore.ai3d_engines import ai3d
+            result = await _asyncio.to_thread(ai3d.generate, engine_key="shap_e", prompt=prompt)
+            result_dict = result.to_dict() if hasattr(result, 'to_dict') else result
+            if result_dict.get("status") == "ok":
+                output_file = result_dict.get("file", "")
+                import os as _os
+                fname = _os.path.basename(output_file)
+                return {
+                    "status": "ok",
+                    "parsed_type": "shap_e_ai3d",
+                    "params": {},
+                    "engine": "shap_e",
+                    "model": "text300M",
+                    "file": f"/api/ai3d/output/{fname}",
+                    "vertices": result_dict.get("vertices", 0),
+                    "faces": result_dict.get("faces", 0),
+                    "elapsed_s": result_dict.get("elapsed_s", 0),
+                }
+        except Exception as e:
+            logger.error(f"AI3D (shap_e) generation failed: {e}")
 
     if engine == "openscad":
         # Generate OpenSCAD script from parsed params

@@ -11,6 +11,8 @@ import subprocess
 import tempfile
 import urllib.request
 import urllib.error
+import urllib.parse
+import pathlib
 from pathlib import Path
 from typing import Optional
 
@@ -557,7 +559,7 @@ class SolidPython2Engine:
     def __init__(self):
         self._available = False
         try:
-            import solid
+            import solid2 as solid
             self._solid = solid
             self._available = True
         except ImportError:
@@ -613,15 +615,15 @@ class SolidPython2Engine:
 
 
 class ShapEEngine:
-    """Shap-E — Local CPU-based text-to-3D using trimesh fallback.
-
-    The actual Shap-E model requires PyTorch + CUDA. On CPU-only/ARM systems,
-    a trimesh-based procedural generator is used as fallback.
-    """
+    """Shap-E — text-to-3D. Uses the real OpenAI Shap-E model when torch is
+    available (zicore-68 node), otherwise falls back to procedural trimesh."""
 
     def __init__(self):
         self._trimesh_available = False
+        self._shap_e_available = False
+        self._shap_e_models = None
         self._try_import_trimesh()
+        self._try_import_shap_e()
 
     def _try_import_trimesh(self):
         try:
@@ -631,13 +633,22 @@ class ShapEEngine:
         except ImportError:
             pass
 
+    def _try_import_shap_e(self):
+        try:
+            import torch
+            import shap_e  # noqa: F401
+            self._torch = torch
+            self._shap_e_available = True
+        except Exception:
+            pass
+
     @property
     def name(self):
         return "Shap-E"
 
     @property
     def available(self):
-        return self._trimesh_available
+        return self._shap_e_available or self._trimesh_available
 
     @property
     def capabilities(self):
@@ -645,11 +656,15 @@ class ShapEEngine:
 
     @property
     def requires(self):
-        return "trimesh (CPU fallback); PyTorch + CUDA for full Shap-E"
+        return "torch + shap-e (full model); trimesh (procedural fallback)"
 
     def generate_from_text(self, prompt: str) -> AI3DEngineResult:
+        if self._shap_e_available:
+            result = self._generate_real_shap_e(prompt)
+            if result.success:
+                return result
         if not self._trimesh_available:
-            return AI3DEngineResult(error="Shap-E requires trimesh. Run: pip install trimesh")
+            return AI3DEngineResult(error="Shap-E requires torch+shap-e or trimesh")
         try:
             ts = int(time.time())
             mesh = self._shape_from_prompt(prompt)
@@ -666,6 +681,54 @@ class ShapEEngine:
             )
         except Exception as e:
             return AI3DEngineResult(error=str(e))
+
+    def _generate_real_shap_e(self, prompt: str) -> AI3DEngineResult:
+        try:
+            ts = int(time.time())
+            if self._shap_e_models is None:
+                from shap_e.models.download import load_model
+                from shap_e.diffusion.sample import sample_latents
+                from shap_e.diffusion.gaussian_diffusion import diffusion_from_config
+                device = "cuda" if self._torch.cuda.is_available() else "cpu"
+                xm = load_model("text300M", device=device)
+                diffusion = diffusion_from_config(xm.config, device=device)
+                self._shap_e_models = (xm, diffusion, sample_latents, device)
+            xm, diffusion, sample_latents, device = self._shap_e_models
+            latents = sample_latents(
+                batch_size=1,
+                model=xm,
+                diffusion=diffusion,
+                guidance_scale=3.0,
+                model_kwargs={"texts": [prompt]},
+                progress=False,
+                clip_denoised=True,
+                use_fp16=False,
+                use_karras=True,
+                karras_steps=64,
+                sigma_min=1e-3,
+                sigma_max=160,
+                s_churn=0,
+            )
+            from shap_e.util.notebooks import decode_latent_mesh
+            from shap_e.util import trimesh_utils
+            mesh_obj = decode_latent_mesh(xm, latents[0])
+            with mesh_obj.tri_mesh() as tri:
+                tri.export(f"/tmp/shap_e_{ts}.ply")
+            stl_path = OUTPUT_DIR / f"shap_e_{ts}.stl"
+            obj_path = OUTPUT_DIR / f"shap_e_{ts}.obj"
+            stl_path.parent.mkdir(parents=True, exist_ok=True)
+            tm = self._trimesh
+            m = tm.load(f"/tmp/shap_e_{ts}.ply")
+            m.export(str(stl_path))
+            m.export(str(obj_path))
+            return AI3DEngineResult(
+                success=True, file_path=str(stl_path),
+                engine="shap_e_model", vertices=len(m.vertices),
+                faces=len(m.faces),
+                metadata={"prompt": prompt, "obj_path": str(obj_path), "model": "text300M"},
+            )
+        except Exception as e:
+            return AI3DEngineResult(error=f"shap-e model: {e}")
 
     def _shape_from_prompt(self, prompt: str):
         """Match prompt keywords to a high-quality procedural shape with smoothing."""
@@ -712,193 +775,6 @@ class ShapEEngine:
         mesh = tm.creation.icosphere(subdivisions=3, radius=1)
         tm.smoothing.filter_laplacian(mesh, iterations=2)
         return mesh
-
-
-class TrellisEngine:
-    """TRELLIS/TRELLIS.2 — Microsoft text/image-to-3D via HuggingFace API.
-
-    Uses the HuggingFace Inference API to run TRELLIS.2 remotely.
-    No local GPU needed. Falls back to trimesh procedural generation.
-    """
-
-    def __init__(self):
-        self.api_token = os.environ.get("HF_API_TOKEN", "")
-        self._hf_available = bool(self.api_token)
-        self._trimesh_available = False
-        try:
-            import trimesh
-            self._trimesh = trimesh
-            self._trimesh_available = True
-        except ImportError:
-            pass
-        # TRELLIS.2 HF Space
-        self.hf_url = os.environ.get(
-            "TRELLIS_HF_URL",
-            "https://api-inference.huggingface.co/models/microsoft/TRELLIS.2-4B"
-        )
-
-    @property
-    def name(self):
-        return "TRELLIS.2"
-
-    @property
-    def available(self):
-        return self._hf_available or self._trimesh_available
-
-    @property
-    def capabilities(self):
-        return ["text_to_3d", "image_to_3d"]
-
-    @property
-    def requires(self):
-        return "HF_API_TOKEN env var for cloud; trimesh always fallback"
-
-    def generate_from_text(self, prompt: str) -> AI3DEngineResult:
-        if self._hf_available:
-            try:
-                result = self._hf_infer({"inputs": prompt, "parameters": {"format": "glb"}})
-                if result and result.get("success"):
-                    return result
-            except Exception:
-                pass
-        return self._trimesh_fallback(prompt)
-
-    def generate_from_image(self, image_path: str) -> AI3DEngineResult:
-        if self._hf_available:
-            try:
-                import base64
-                with open(image_path, "rb") as f:
-                    img_b64 = base64.b64encode(f.read()).decode()
-                result = self._hf_infer({
-                    "inputs": img_b64, "parameters": {"format": "glb"}
-                }, is_image=True)
-                if result and result.get("success"):
-                    return result
-            except Exception:
-                pass
-        return self._trimesh_fallback("from_image")
-
-    def _hf_infer(self, payload, is_image=False) -> AI3DEngineResult:
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.api_token}",
-                "Content-Type": "application/json",
-            }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                self.hf_url, data=data, headers=headers, method="POST"
-            )
-            resp = urllib.request.urlopen(req, timeout=180)
-            content = resp.read()
-            ts = int(time.time())
-            glb_path = OUTPUT_DIR / f"trellis_{ts}.glb"
-            with open(glb_path, "wb") as f:
-                f.write(content)
-            # Try to read mesh stats
-            verts, faces = 0, 0
-            try:
-                mesh = self._trimesh.load(str(glb_path))
-                if hasattr(mesh, 'vertices'):
-                    verts = len(mesh.vertices)
-                    faces = len(mesh.faces)
-            except Exception:
-                pass
-            return AI3DEngineResult(
-                success=True, file_path=str(glb_path),
-                engine="trellis.2", vertices=verts, faces=faces,
-                metadata={"api": "huggingface"},
-            )
-        except urllib.error.HTTPError as e:
-            if e.code == 503:
-                return AI3DEngineResult(
-                    error="TRELLIS.2 model is loading on HF. Try again in 30s."
-                )
-            return AI3DEngineResult(error=f"HF API error {e.code}: {e.reason}")
-        except Exception as e:
-            return AI3DEngineResult(error=str(e))
-
-    def _trimesh_fallback(self, prompt: str) -> AI3DEngineResult:
-        """High-quality procedural mesh with smoothing."""
-        if not self._trimesh_available:
-            return AI3DEngineResult(error="trimesh not available")
-        try:
-            tm = self._trimesh
-            ts = int(time.time())
-            p = prompt.lower()
-
-            # High-subdivision primitives with Laplacian smoothing
-            if any(w in p for w in ["cube", "box", "block"]):
-                mesh = tm.creation.box(extents=(1, 1, 1))
-                mesh = mesh.subdivide()
-                tm.smoothing.filter_laplacian(mesh, iterations=3)
-            elif any(w in p for w in ["sphere", "ball", "round"]):
-                mesh = tm.creation.icosphere(subdivisions=4, radius=1)
-                tm.smoothing.filter_laplacian(mesh, iterations=2)
-            elif any(w in p for w in ["cylinder", "tube", "pipe"]):
-                mesh = tm.creation.cylinder(radius=0.5, height=2, sections=48)
-                tm.smoothing.filter_laplacian(mesh, iterations=2)
-            elif any(w in p for w in ["cone", "nose", "tip"]):
-                mesh = tm.creation.cone(radius=0.5, height=2, sections=48)
-                tm.smoothing.filter_laplacian(mesh, iterations=2)
-            elif any(w in p for w in ["capsule", "fuselage"]):
-                mesh = tm.creation.capsule(radius=0.4, height=1.5, sections=48)
-                tm.smoothing.filter_laplacian(mesh, iterations=3)
-            elif any(w in p for w in ["rocket", "spaceship", "ship"]):
-                body = tm.creation.cylinder(radius=0.5, height=2, sections=48)
-                nose = tm.creation.cone(radius=0.5, height=0.8, sections=48)
-                nose.apply_translation([0, 0, 1.4])
-                mesh = tm.util.concatenate([body, nose])
-                tm.smoothing.filter_laplacian(mesh, iterations=2)
-            elif any(w in p for w in ["gear", "cog", "wheel"]):
-                mesh = self._make_gear(tm)
-            elif any(w in p for w in ["satellite", "antenna", "solar"]):
-                body = tm.creation.box(extents=(0.4, 0.4, 0.6))
-                panel = tm.creation.box(extents=(1.5, 0.05, 0.3))
-                panel.apply_translation([0.95, 0, 0.15])
-                mesh = tm.util.concatenate([body, panel])
-                mesh = mesh.subdivide()
-            elif any(w in p for w in ["toroidal", "torus", "ring", "donut"]):
-                mesh = tm.creation.torus(radius=0.8, tube=0.3, sections=48)
-            else:
-                mesh = tm.creation.icosphere(subdivisions=3, radius=1)
-                tm.smoothing.filter_laplacian(mesh, iterations=2)
-
-            # Ensure watertight
-            if not mesh.is_watertight:
-                try:
-                    mesh.fill_holes()
-                except Exception:
-                    pass
-
-            stl_path = OUTPUT_DIR / f"trellis_{ts}.stl"
-            glb_path = OUTPUT_DIR / f"trellis_{ts}.glb"
-            stl_path.parent.mkdir(parents=True, exist_ok=True)
-            mesh.export(str(stl_path))
-            mesh.export(str(glb_path))
-            return AI3DEngineResult(
-                success=True, file_path=str(stl_path),
-                engine="trellis_fallback", vertices=len(mesh.vertices),
-                faces=len(mesh.faces),
-                metadata={"prompt": prompt, "glb": str(glb_path)},
-            )
-        except Exception as e:
-            return AI3DEngineResult(error=str(e))
-
-    def _make_gear(self, tm, teeth=12, radius=1.0):
-        """Procedural gear with clean topology."""
-        import numpy as np
-        angles = np.linspace(0, 2 * np.pi, teeth * 4, endpoint=False)
-        verts = []
-        for a in angles:
-            r = radius + 0.15 * (1 if int(a / (2 * np.pi / teeth)) % 2 == 0 else -0.3)
-            verts.append([r * np.cos(a), r * np.sin(a), -0.1])
-            verts.append([r * np.cos(a), r * np.sin(a), 0.1])
-        verts.append([0, 0, -0.1])
-        verts.append([0, 0, 0.1])
-        mesh = tm.Trimesh(vertices=verts)
-        tm.smoothing.filter_laplacian(mesh, iterations=5)
-        return mesh
-
 
 class Hunyuan3DAI3DEngine:
     """Hunyuan3D — Local AI 3D generation (Docker service or trimesh fallback)."""
@@ -968,6 +844,102 @@ class Hunyuan3DAI3DEngine:
             return AI3DEngineResult(error=str(e))
 
 
+class RemoteAI3DEngine:
+    """Shap-E delegated to the zicore-68 worker (real torch/text-to-3D),
+    with the local trimesh procedural fallback if the worker is unreachable."""
+
+    WORKER_URL = os.environ.get("ZICORE_AI3D_WORKER", "http://192.168.1.68:8200")
+
+    def __init__(self):
+        self._fallback = ShapEEngine()
+        self._remote_ok = None
+
+    def _check_remote(self):
+        if self._remote_ok is not None:
+            return self._remote_ok
+        try:
+            req = urllib.request.Request(f"{self.WORKER_URL}/api/ai3d/health", method="GET")
+            with urllib.request.urlopen(req, timeout=4) as r:
+                data = json.loads(r.read().decode())
+            self._remote_ok = data.get("status") == "ok"
+        except Exception:
+            self._remote_ok = False
+        return self._remote_ok
+
+    @property
+    def name(self):
+        return "Shap-E (zicore-68)"
+
+    @property
+    def available(self):
+        return self._check_remote() or self._fallback.available
+
+    @property
+    def capabilities(self):
+        return ["text_to_3d", "image_to_3d"]
+
+    @property
+    def requires(self):
+        return "Worker on zicore-68 (torch + shap-e) or local trimesh fallback"
+
+    def _fetch_remote_file(self, remote_path, res):
+        try:
+            url = f"{self.WORKER_URL}/api/ai3d/file?path={urllib.parse.quote(remote_path)}"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=700) as r:
+                content = r.read()
+            ts = int(time.time())
+            suffix = pathlib.Path(remote_path).suffix or ".stl"
+            local_path = OUTPUT_DIR / f"shap_e_remote_{ts}{suffix}"
+            local_path.write_bytes(content)
+            return AI3DEngineResult(
+                success=True, file_path=str(local_path),
+                engine="shap_e_remote", vertices=res.get("vertices", 0),
+                faces=res.get("faces", 0),
+                metadata=dict(res.get("metadata", {}), remote="zicore-68"),
+            )
+        except Exception as e:
+            return AI3DEngineResult(error=f"fetch remote file: {e}")
+
+    def generate_from_text(self, prompt: str) -> AI3DEngineResult:
+        if self._check_remote():
+            try:
+                payload = json.dumps({"engine": "shap_e", "prompt": prompt}).encode()
+                req = urllib.request.Request(
+                    f"{self.WORKER_URL}/api/ai3d/generate", data=payload,
+                    headers={"Content-Type": "application/json"}, method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=700) as r:
+                    res = json.loads(r.read().decode())
+                if res.get("status") == "ok":
+                    return self._fetch_remote_file(res.get("file", ""), res)
+                if res.get("error"):
+                    return self._fallback.generate_from_text(prompt)
+            except Exception:
+                self._remote_ok = None
+                pass
+        return self._fallback.generate_from_text(prompt)
+
+    def generate_from_image(self, image_path: str) -> AI3DEngineResult:
+        if self._check_remote():
+            try:
+                with open(image_path, "rb") as fp:
+                    b64 = base64.b64encode(fp.read()).decode()
+                header = "data:image/jpeg;base64," if str(image_path).lower().endswith((".jpg", ".jpeg")) else "data:image/png;base64,"
+                payload = json.dumps({"engine": "shap_e", "image": header + b64}).encode()
+                req = urllib.request.Request(
+                    f"{self.WORKER_URL}/api/ai3d/generate", data=payload,
+                    headers={"Content-Type": "application/json"}, method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=700) as r:
+                    res = json.loads(r.read().decode())
+                if res.get("status") == "ok":
+                    return self._fetch_remote_file(res.get("file", ""), res)
+            except Exception:
+                pass
+        return AI3DEngineResult(error="Shap-E image-to-3D requires the zicore-68 worker")
+
+
 class AI3DEngineManager:
     """Unified manager for all AI 3D engines."""
 
@@ -980,9 +952,8 @@ class AI3DEngineManager:
         self._register("cadquery", CadQueryEngine())
         self._register("build123d", Build123dEngine())
         self._register("solidpython2", SolidPython2Engine())
-        self._register("shap_e", ShapEEngine())
+        self._register("shap_e", RemoteAI3DEngine())
         self._register("hunyuan3d", Hunyuan3DAI3DEngine())
-        self._register("trellis", TrellisEngine())
         logger.info(f"[AI3D] Registered {len(self.engines)} engines: {list(self.engines.keys())}")
 
     def _register(self, key: str, engine):
