@@ -3,85 +3,467 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE Master Creator</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Master Creator — Sistema Embebido ZICORE</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--orange:#ff8800;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+:root{
+  --bg:#04060c;--bg2:#070b14;--bg3:#0a101d;--bg4:#0f1728;
+  --cyan:#00e5ff;--green:#00ff88;--purple:#7c4dff;--orange:#ff8800;--yellow:#ffcc00;--red:#ff3333;
+  --text:#c8d6e5;--text2:#7a8ba8;--text3:#4a5568;--text4:#2a3344;
+  --border:rgba(0,229,255,0.10);--border2:rgba(0,229,255,0.22);
+  --mono:'JetBrains Mono','Consolas',monospace;--font:'Inter',system-ui,sans-serif;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes scanMove{0%{top:-2px}100%{top:100vh}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.grain{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.028;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
+.scanline{position:fixed;top:0;left:0;right:0;height:1px;z-index:9998;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.10),transparent);animation:scanMove 9s linear infinite}
 #starfield{position:fixed;inset:0;z-index:0}
-.content{position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto}
-h1{font-size:clamp(32px,5vw,56px);font-weight:300;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text),var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sub{font-size:14px;color:var(--text-dim);line-height:1.8;max-width:600px;margin-bottom:48px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
-.card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s}
-.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-2px)}
-.card-icon{font-size:28px;margin-bottom:12px;color:var(--cyan)}
-.card-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
-.card-desc{font-size:11px;color:var(--text-dim);line-height:1.7}
-.card-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
-.back{display:inline-block;margin-top:32px;padding:12px 28px;border:1px solid var(--border);color:var(--text-dim);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all 0.4s}
-.back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
-.purple .card-icon{color:var(--purple)}.purple .card-tag{color:var(--purple);border-color:rgba(124,77,255,0.15)}
-.green .card-icon{color:var(--green)}.green .card-tag{color:var(--green);border-color:rgba(0,255,136,0.15)}
-.orange .card-icon{color:var(--orange)}.orange .card-tag{color:var(--orange);border-color:rgba(255,136,0,0.15)}
-@media(max-width:768px){.content{padding:80px 24px}}
+.page{position:relative;z-index:1}
+
+/* ═══ NAV ═══ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;background:rgba(4,6,12,0.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-hex{width:30px;height:30px}
+.nav-brand{font-size:12px;font-weight:700;letter-spacing:4px;color:var(--cyan)}
+.nav-brand b{color:var(--purple);font-weight:700}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-status{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:2px;color:var(--green)}
+.nav-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+.nav-clock{font-size:11px;color:var(--cyan);letter-spacing:1px}
+.nav-back{font-size:9px;letter-spacing:2px;color:var(--text2);text-decoration:none;text-transform:uppercase;transition:all .3s;border:1px solid var(--border);padding:8px 14px;border-radius:2px}
+.nav-back:hover{color:var(--cyan);border-color:var(--border2)}
+
+/* ═══ HERO ═══ */
+.hero{min-height:46vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 24px 40px;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,var(--bg) 100%);pointer-events:none}
+.hero-badge{font-size:9px;letter-spacing:5px;color:var(--text3);margin-bottom:20px;border:1px solid var(--border);padding:8px 16px;border-radius:2px}
+.hero-title{font-size:clamp(28px,5vw,52px);font-weight:700;letter-spacing:3px;line-height:1.1;margin-bottom:14px;
+  background:linear-gradient(135deg,#00e5ff 0%,#7c4dff 55%,#00ff88 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:12.5px;color:var(--text2);max-width:640px;line-height:1.9}
+.hero-sub b{color:var(--cyan);font-weight:500}
+.hero-pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:24px}
+.pill{font-size:8.5px;letter-spacing:1.5px;padding:5px 12px;border-radius:2px;border:1px solid var(--border);color:var(--text2)}
+.pill.on{color:var(--green);border-color:rgba(0,255,136,0.25)}
+.pill.warn{color:var(--yellow);border-color:rgba(255,204,0,0.25)}
+.pill.off{color:var(--red);border-color:rgba(255,51,51,0.25)}
+
+/* ═══ SECTIONS ═══ */
+.section{max-width:1180px;margin:0 auto;padding:44px 32px 8px}
+.section-title{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.section-title h2{font-size:12px;font-weight:700;letter-spacing:4px;color:var(--cyan);text-transform:uppercase}
+.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent)}
+.section-title .n{color:var(--text3);font-size:10px;letter-spacing:2px}
+
+/* ═══ TELEMETRY ═══ */
+.tel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tel-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;position:relative;overflow:hidden}
+.tel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.4}
+.tel-label{font-size:8px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
+.tel-value{font-size:19px;font-weight:700;color:var(--cyan)}
+.tel-value.small{font-size:12px;font-weight:500;color:var(--text)}
+.tel-bar{height:4px;background:var(--bg4);border-radius:2px;margin-top:10px;overflow:hidden}
+.tel-bar-fill{height:100%;border-radius:2px;width:0%;transition:width .6s ease}
+
+/* ═══ COMPONENTS / DEPLOY ═══ */
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
+.comp-item{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;position:relative;overflow:hidden;transition:all .3s}
+.comp-item:hover{border-color:var(--border2)}
+.comp-item::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.4}
+.comp-item .ci-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.comp-item .ci-name{font-size:9px;letter-spacing:2px;color:var(--text);text-transform:uppercase;font-weight:700}
+.comp-item .ci-port{font-size:8px;color:var(--text3)}
+.comp-item .ci-state{font-size:9px;letter-spacing:1.5px;font-weight:700}
+.comp-item .ci-state.on{color:var(--green)}
+.comp-item .ci-state.on::before{content:'● ';color:var(--green);text-shadow:0 0 8px var(--green)}
+.comp-item .ci-state.off{color:var(--red)}
+.comp-item .ci-state.off::before{content:'● ';color:var(--red);text-shadow:0 0 8px var(--red)}
+.comp-item .ci-svc{font-size:8px;color:var(--text3);font-family:var(--mono);margin-top:6px}
+.deploy-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:6px}
+.deploy-btn{font-family:var(--mono);font-size:10px;letter-spacing:2px;padding:12px 24px;border:none;border-radius:4px;cursor:pointer;font-weight:700;text-transform:uppercase;transition:all .3s;color:var(--bg);background:linear-gradient(135deg,var(--green),var(--cyan))}
+.deploy-btn:hover{box-shadow:0 0 30px rgba(0,255,136,0.3);transform:translateY(-1px)}
+.deploy-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.deploy-btn.danger{background:linear-gradient(135deg,#ff5555,#ff3333);color:#fff}
+.deploy-btn.danger:hover{box-shadow:0 0 30px rgba(255,51,51,0.3)}
+.deploy-btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--border2);font-weight:500}
+.deploy-status{font-size:9px;color:var(--text2);letter-spacing:1.5px}
+.deploy-status b{color:var(--cyan);font-weight:500}
+
+/* ═══ CONSOLE ═══ */
+.console{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.console-bar{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:9px;letter-spacing:2px;color:var(--text2)}
+.console-dots{display:flex;gap:5px}
+.console-dots i{width:9px;height:9px;border-radius:50%}
+.console-dots i:nth-child(1){background:var(--red)}
+.console-dots i:nth-child(2){background:var(--yellow)}
+.console-dots i:nth-child(3){background:var(--green)}
+.console-out{max-height:260px;overflow-y:auto;padding:14px 16px;font-size:11.5px;line-height:1.85;color:var(--text2);white-space:pre-wrap;word-break:break-word}
+.console-out .l-ok{color:var(--green)}
+.console-out .l-err{color:var(--red)}
+.console-out .l-warn{color:var(--yellow)}
+.console-out .l-step{color:var(--cyan);font-weight:500}
+.console-cursor{display:inline-block;width:8px;height:13px;background:var(--green);vertical-align:middle;animation:blink 1s steps(1) infinite;margin-left:4px}
+
+/* ═══ MODULES ═══ */
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px}
+.mod-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px;position:relative;overflow:hidden;transition:all .3s}
+.mod-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.mod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.35}
+.mod-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.mod-id{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--cyan)}
+.mod-state{font-size:8px;letter-spacing:1.5px;padding:4px 9px;border-radius:2px;font-weight:700}
+.mod-state.nominal{color:var(--green);background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.18)}
+.mod-state.warning{color:var(--yellow);background:rgba(255,204,0,0.07);border:1px solid rgba(255,204,0,0.18)}
+.mod-state.critical{color:var(--red);background:rgba(255,51,51,0.07);border:1px solid rgba(255,51,51,0.18)}
+.mod-state.standby{color:var(--text3);background:rgba(122,139,168,0.07);border:1px solid rgba(122,139,168,0.15)}
+.mod-desc{font-size:11px;color:var(--text2);line-height:1.7;font-family:var(--font)}
+.mod-meta{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.mod-tag{font-size:8px;letter-spacing:1.5px;color:var(--purple);border:1px solid rgba(124,77,255,0.2);padding:3px 8px;border-radius:2px}
+
+/* ═══ CREATION GRID ═══ */
+.cre-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.cre-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:16px;transition:all .3s;position:relative;overflow:hidden}
+.cre-card:hover{border-color:var(--border2);background:var(--bg4);transform:translateY(-2px)}
+.cre-card:hover .cre-arrow{transform:translateX(4px);color:var(--cyan)}
+.cre-icon{width:40px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--cyan);border:1px solid var(--border2);border-radius:50%}
+.cre-info{flex:1}
+.cre-name{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text);text-transform:uppercase;margin-bottom:4px}
+.cre-desc{font-size:10px;color:var(--text2);font-family:var(--font);line-height:1.5}
+.cre-arrow{font-size:14px;color:var(--text3);transition:all .3s}
+.cre-card.purple .cre-icon{color:var(--purple);border-color:rgba(124,77,255,0.25)}
+.cre-card.green .cre-icon{color:var(--green);border-color:rgba(0,255,136,0.25)}
+.cre-card.orange .cre-icon{color:var(--orange);border-color:rgba(255,136,0,0.25)}
+
+/* ═══ FOOTER ═══ */
+.footer{max-width:1180px;margin:48px auto 0;padding:28px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.footer-text{font-size:9px;color:var(--text3);letter-spacing:2px}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-link{font-size:9px;color:var(--text2);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
+.footer-link:hover{color:var(--cyan)}
+
+@media(max-width:768px){
+  .nav{padding:12px 18px}
+  .nav-brand{font-size:10px;letter-spacing:2px}
+  .hero{padding:100px 18px 34px}
+  .section{padding:32px 18px 4px}
+  .footer{flex-direction:column;align-items:flex-start}
+}
 </style>
 </head>
 <body>
+<div class="grain"></div>
+<div class="scanline"></div>
 <canvas id="starfield"></canvas>
-<div class="content">
-  <a href="/" class="back" style="margin-bottom:32px;display:inline-block">&larr; ZICORE OS</a>
-  <h1>Master Creator</h1>
-  <div class="sub">Centro creativo unificado. Del concepto al objeto. Generación 3D, IA, CAD, edición multimedia y producción automatizada.</div>
-  <div class="grid">
-    <a href="/dashboard" class="card">
-      <div class="card-icon">&#x2728;</div>
-      <div class="card-title">Materializer</div>
-      <div class="card-desc">14 generadores procedurales. Cubo, esfera, cohete, terreno, engranaje, estrella, paramétricos y más. Exportación STL/OBJ/GLB.</div>
-      <span class="card-tag">3D</span>
+
+<div class="page">
+  <nav class="nav">
+    <a class="nav-logo" href="/zicore-os">
+      <svg class="nav-hex" viewBox="0 0 100 100"><polygon points="50,2 93,26 93,74 50,98 7,74 7,26" fill="none" stroke="#00e5ff" stroke-width="3"/><text x="50" y="64" font-size="30" fill="#7c4dff" text-anchor="middle" font-weight="700" font-family="JetBrains Mono">Z</text></svg>
+      <span class="nav-brand">MASTER <b>CREATOR</b></span>
     </a>
-    <a href="/cad-generator" class="card purple">
-      <div class="card-icon">&#x1F3ED;</div>
-      <div class="card-title">CAD Generator</div>
-      <div class="card-desc">Diseño paramétrico con CadQuery, Build123d, SolidPython2. OpenSCAD programático. Precisión industrial.</div>
-      <span class="card-tag">CAD</span>
-    </a>
-    <a href="/ai-3d" class="card green">
-      <div class="card-icon">&#x1F916;</div>
-      <div class="card-title">AI 3D Generation</div>
-      <div class="card-desc">Tripo3D, Meshy, Hunyuan3D, TRELLIS. Texto a 3D, imagen a 3D. Modelos listos para imprimir.</div>
-      <span class="card-tag">AI</span>
-    </a>
-    <a href="/multimedia" class="card orange">
-      <div class="card-icon">&#x1F3AC;</div>
-      <div class="card-title">Multimedia Studio</div>
-      <div class="card-desc">Audio, video, imagen, música. Reproducción, edición, generación por IA. Biblioteca multimedia centralizada.</div>
-      <span class="card-tag">Media</span>
-    </a>
-    <a href="/mesh-processing" class="card purple">
-      <div class="card-icon">&#x25A3;</div>
-      <div class="card-title">Mesh Processing</div>
-      <div class="card-desc">Open3D, PyMeshLab, trimesh. Reparación, simplificación, reconstrucción, voxelización.</div>
-      <span class="card-tag">Mallas</span>
-    </a>
-    <a href="/materializer/openscad" class="card green">
-      <div class="card-icon">&#x2699;</div>
-      <div class="card-title">OpenSCAD Studio</div>
-      <div class="card-desc">Editor OpenSCAD con vista previa 3D. Generación programática de geometría CSG.</div>
-      <span class="card-tag">Code</span>
-    </a>
-  </div>
-  <a href="/" class="back">&larr; Volver a ZICORE OS</a>
+    <div class="nav-right">
+      <div class="nav-status" id="nav-status">SISTEMA EMBEBIDO</div>
+      <div class="nav-clock" id="clock">--:--:--</div>
+      <a class="nav-back" href="/zicore-os">Launch Pad</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-badge">SISTEMA EMBEBIDO &middot; start_all.py &middot; EN VIVO</div>
+    <h1 class="hero-title">MASTER CREATOR SYSTEM</h1>
+    <p class="hero-sub">Sistema embebido del ecosistema ZICORE. Telemetria del kernel en <b>tiempo real</b>, control de despliegue de <b>start_all.py</b> y los <b>17 modulos de mision</b> con estado en vivo.</p>
+    <div class="hero-pills">
+      <span class="pill" id="pill-all">SIN CONTROL</span>
+      <span class="pill" id="pill-platform">--</span>
+      <span class="pill" id="pill-launcher">LAUNCHER: --</span>
+    </div>
+  </header>
+
+  <!-- ═══ KERNEL TELEMETRY ═══ -->
+  <section class="section" id="kernel">
+    <div class="section-title"><span class="n">[01]</span><h2>Kernel Telemetry</h2></div>
+    <div class="tel-grid">
+      <div class="tel-card">
+        <div class="tel-label">CPU <span id="cpu-x">--</span></div>
+        <div class="tel-value" id="cpu">--%</div>
+        <div class="tel-bar"><div class="tel-bar-fill" id="cpu-bar" style="background:linear-gradient(90deg,var(--green),var(--cyan))"></div></div>
+      </div>
+      <div class="tel-card">
+        <div class="tel-label">MEMORIA</div>
+        <div class="tel-value" id="mem">--%</div>
+        <div class="tel-bar"><div class="tel-bar-fill" id="mem-bar" style="background:linear-gradient(90deg,var(--purple),var(--cyan))"></div></div>
+      </div>
+      <div class="tel-card">
+        <div class="tel-label">DISCO</div>
+        <div class="tel-value small" id="disk">--</div>
+        <div class="tel-bar"><div class="tel-bar-fill" id="disk-bar" style="background:linear-gradient(90deg,var(--orange),var(--cyan))"></div></div>
+      </div>
+      <div class="tel-card">
+        <div class="tel-label">UPTIME</div>
+        <div class="tel-value small" id="uptime">--</div>
+      </div>
+      <div class="tel-card">
+        <div class="tel-label">PROVEEDOR AI</div>
+        <div class="tel-value small" id="provider">--</div>
+      </div>
+      <div class="tel-card">
+        <div class="tel-label">OLLAMA</div>
+        <div class="tel-value small" id="ollama">--</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ COMPONENTS + DEPLOY ═══ -->
+  <section class="section" id="componentes">
+    <div class="section-title"><span class="n">[02]</span><h2>Componentes y Despliegue</h2></div>
+    <div class="comp-grid" id="comp-grid"></div>
+    <div class="deploy-bar">
+      <button class="deploy-btn" id="btn-deploy" onclick="deploy()">&#x25B6; Desplegar</button>
+      <button class="deploy-btn danger" id="btn-stop" onclick="stopStack()">&#x25A0; Detener</button>
+      <button class="deploy-btn ghost" onclick="pollStatus(true)">&#x27F3; Refrescar</button>
+      <span class="deploy-status" id="deploy-msg">Control del stack <b>start_all.py</b> embebido.</span>
+    </div>
+    <div class="console" style="margin-top:16px">
+      <div class="console-bar"><span class="console-dots"><i></i><i></i><i></i></span><span>start_all &middot; zicore-console</span><span style="margin-left:auto" id="console-clock">--:--:--</span></div>
+      <div class="console-out" id="console-out"></div>
+    </div>
+  </section>
+
+  <!-- ═══ MISSION MODULES ═══ -->
+  <section class="section" id="modulos">
+    <div class="section-title"><span class="n">[03]</span><h2>Mission Modules &middot; 17</h2></div>
+    <div class="mod-grid" id="mod-grid"></div>
+  </section>
+
+  <!-- ═══ CREATION CENTER ═══ -->
+  <section class="section" id="creacion">
+    <div class="section-title"><span class="n">[04]</span><h2>Centro de Creacion</h2></div>
+    <div class="cre-grid">
+      <a class="cre-card" href="/dashboard">
+        <div class="cre-icon">&#x2728;</div>
+        <div class="cre-info"><div class="cre-name">Materializer</div><div class="cre-desc">14 generadores procedurales 3D. Exportacion STL/OBJ/GLB.</div></div>
+        <div class="cre-arrow">&rsaquo;</div>
+      </a>
+      <a class="cre-card purple" href="/cad-generator">
+        <div class="cre-icon">&#x1F3ED;</div>
+        <div class="cre-info"><div class="cre-name">CAD Generator</div><div class="cre-desc">CadQuery, Build123d, OpenSCAD. Precision industrial.</div></div>
+        <div class="cre-arrow">&rsaquo;</div>
+      </a>
+      <a class="cre-card green" href="/ai-3d">
+        <div class="cre-icon">&#x1F916;</div>
+        <div class="cre-info"><div class="cre-name">AI 3D Generation</div><div class="cre-desc">Tripo3D, Meshy, Hunyuan3D. Texto e imagen a 3D.</div></div>
+        <div class="cre-arrow">&rsaquo;</div>
+      </a>
+      <a class="cre-card orange" href="/multimedia">
+        <div class="cre-icon">&#x1F3AC;</div>
+        <div class="cre-info"><div class="cre-name">Multimedia Studio</div><div class="cre-desc">Audio, video, imagen, musica. Produccion automatizada.</div></div>
+        <div class="cre-arrow">&rsaquo;</div>
+      </a>
+      <a class="cre-card purple" href="/mesh-processing">
+        <div class="cre-icon">&#x25A3;</div>
+        <div class="cre-info"><div class="cre-name">Mesh Processing</div><div class="cre-desc">Open3D, PyMeshLab, trimesh. Reparacion y simplificacion.</div></div>
+        <div class="cre-arrow">&rsaquo;</div>
+      </a>
+      <a class="cre-card green" href="/materializer/openscad">
+        <div class="cre-icon">&#x2699;</div>
+        <div class="cre-info"><div class="cre-name">OpenSCAD Studio</div><div class="cre-desc">Editor OpenSCAD con vista previa 3D. Geometria CSG.</div></div>
+        <div class="cre-arrow">&rsaquo;</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-text">MASTER CREATOR SYSTEM &middot; SISTEMA EMBEBIDO &middot; ZICORE v5.0</div>
+    <div class="footer-links">
+      <a href="/zicore-os" class="footer-link">Launch Pad</a>
+      <a href="/mission-control" class="footer-link">Mission Control</a>
+      <a href="/zio" class="footer-link">ZIO AI</a>
+    </div>
+  </footer>
 </div>
+
 <script>
-var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
-function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
-resize();window.addEventListener('resize',resize);
-for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
-function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
-draw();
+/* ── Starfield ── */
+(function(){
+  var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  for(var i=0;i<210;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
+  function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
+  draw();
+})();
+
+function clock(){var d=new Date();document.getElementById('clock').textContent=d.toLocaleTimeString('es-MX',{hour12:false});}
+clock();setInterval(clock,1000);
+
+/* ── Console ── */
+var consoleOut=document.getElementById('console-out');
+var deployBusy=false;
+var deployCompMap={};
+
+function clog(cls,text){
+  var d=document.createElement('div');
+  if(cls)d.className=cls;
+  d.textContent=text;
+  consoleOut.appendChild(d);
+  consoleOut.scrollTop=consoleOut.scrollHeight;
+  return d;
+}
+
+/* ── Mission modules ── */
+var MODULES=[
+  "zihab","zinav","zipower","ziship","zidrone","zirobot","zicomm",
+  "zieco","zimed","zicorex","zilink","zivr","zisec","zicriogen",
+  "zimaury","zty","gpdengine"
+];
+var MOD_INFO={
+  zihab:{n:'Habitat',d:'Control de habitat: oxigeno, CO2, temperatura, humedad y presion de la base.',icon:'&#x1F3D8;'},
+  zinav:{n:'Navigation',d:'Navegacion principal. Planifica trayectorias y coordina los modos de vuelo.',icon:'&#x1F9ED;'},
+  zipower:{n:'Power',d:'Gestion energetica: paneles solares, baterias, carga y balance de red.',icon:'&#x26A1;'},
+  ziship:{n:'Ship',d:'Gestion de naves: integridad del casco, propulsion, termica y docking.',icon:'&#x1F680;'},
+  zidrone:{n:'Drone Swarm',d:'Control de enjambres de drones: bateria, senal, rango y fase de mision.',icon:'&#x1F9E9;'},
+  zirobot:{n:'Robotics',d:'Sistema robotico de mantenimiento: manipuladores, autonomia y temperatura.',icon:'&#x1F916;'},
+  zicomm:{n:'Comms',d:'Red de comunicaciones: enlace, ancho de banda, latencia y cifrado.',icon:'&#x1F4E1;'},
+  zieco:{n:'Eco Life',d:'Sistema ecologico de soporte vital: CO2, agua, aire y cultivo.',icon:'&#x1F33F;'},
+  zimed:{n:'Medical',d:'Monitoreo medico de la tripulacion: salud, vitales y radiacion.',icon:'&#x1FA7A;'},
+  zicorex:{n:'CoreX Compute',d:'Nucleo de computacion e IA: carga, memoria y cola de inferencia.',icon:'&#x1F9ED;'},
+  zilink:{n:'Data Link',d:'Enlace de datos optico/RF: canales, tasa y margen de enlace.',icon:'&#x1F517;'},
+  zivr:{n:'Virtual Reality',d:'Entorno de realidad virtual: cascos, FPS, latencia y haptica.',icon:'&#x1F453;'},
+  zisec:{n:'Security',d:'Ciberseguridad: firewall, intrusos, cifrado y canales seguros.',icon:'&#x1F512;'},
+  zicriogen:{n:'Cryogenics',d:'Gestion criogenica de propelente: temperatura, presion y boiloff.',icon:'&#x2744;&#xFE0F;'},
+  zimaury:{n:'ZiMaur Defense',d:'Sistema de defensa ZIMAUR: escudos, drones y seguridad de armas.',icon:'&#x1F6E1;&#xFE0F;'},
+  zty:{n:'Z-TY Factory',d:'Fabrica inteligente de aeronaves: plantillas y analisis de vehiculos.',icon:'&#x2708;&#xFE0F;'},
+  gpdengine:{n:'GPD Engine',d:'Descenso por camino gravitacional: gradiente, fuerza de marea y estabilidad.',icon:'&#x1F311;'}
+};
+
+function renderModules(states){
+  var grid=document.getElementById('mod-grid');
+  grid.innerHTML='';
+  MODULES.forEach(function(m){
+    var info=MOD_INFO[m]||{n:m,d:'Modulo del sistema start_all.',icon:'&#x25B8;'};
+    var st=states&&states[m]||{status:'standby'};
+    var s=(st.status||'standby').toLowerCase();
+    var cls=s==='nominal'?'nominal':(s==='warning'?'warning':(s==='critical'?'critical':'standby'));
+    var lbl=s==='nominal'?'NOMINAL':(s==='warning'?'WARNING':(s==='critical'?'CRITICAL':'STANDBY'));
+    var extra='';
+    if(st&&m==='zinav')extra='<div class="mod-meta"><span class="mod-tag">'+st.mode+'</span></div>';
+    if(st&&m==='zipower')extra='<div class="mod-meta"><span class="mod-tag">Net '+st.net_w+'W</span></div>';
+    if(st&&m==='ziship')extra='<div class="mod-meta"><span class="mod-tag">Hull '+st.hull_integrity_pct+'%</span></div>';
+    if(st&&m==='zidrone')extra='<div class="mod-meta"><span class="mod-tag">'+st.deployed+'/'+st.swarm_size+' deployed</span></div>';
+    grid.innerHTML+='<div class="mod-card"><div class="mod-top"><span class="mod-id">'+info.icon+'&nbsp; '+m.toUpperCase()+'</span><span class="mod-state '+cls+'">'+lbl+'</span></div><div class="mod-desc">'+info.d+'</div><div class="mod-meta"><span class="mod-tag">'+info.n+'</span></div>'+extra+'</div>';
+  });
+}
+
+function loadModules(){
+  fetch('/api/status').then(function(r){return r.json()}).then(function(d){
+    if(d&&d.modules){renderModules(d.modules);}
+  }).catch(function(){renderModules(null);});
+}
+
+/* ── Components / deploy ── */
+function renderComps(components){
+  var grid=document.getElementById('comp-grid');
+  grid.innerHTML='';
+  deployCompMap={};
+  components.forEach(function(c){
+    var on=c.online||(c.systemd==='active');
+    deployCompMap[c.id]=on;
+    grid.innerHTML+='<div class="comp-item"><div class="ci-top"><span class="ci-name">'+c.name+'</span><span class="ci-port">:'+c.port+'</span></div>'+
+      '<span class="ci-state '+(on?'on':'off')+'">'+(on?'ONLINE':'OFFLINE')+'</span>'+
+      (c.service?'<div class="ci-svc">'+c.service+' &middot; '+(c.systemd||'--')+'</div>':'<div class="ci-svc">system &middot; --</div>')+
+      '</div>';
+  });
+  var all=Object.keys(deployCompMap).length&&Object.values(deployCompMap).every(Boolean);
+  var pill=document.getElementById('pill-all');
+  pill.textContent=all?'TODO ONLINE':'SIN CONTROL';
+  pill.className='pill '+(all?'on':'warn');
+  document.getElementById('nav-status').textContent=all?'SISTEMA ONLINE':'SISTEMA EMBEBIDO';
+}
+
+function pollStatus(showMsg){
+  fetch('/api/system/startall/status',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+    if(d.error)throw new Error(d.error);
+    document.getElementById('pill-platform').textContent=d.platform.toUpperCase();
+    document.getElementById('pill-platform').className='pill '+(d.all_online?'on':'warn');
+    document.getElementById('pill-launcher').textContent='LAUNCHER: '+(d.launcher_running?'ACTIVO':'INACTIVO');
+    document.getElementById('pill-launcher').className='pill '+(d.launcher_running?'on':'');
+    renderComps(d.components);
+    if(showMsg)clog('l-ok','Kernel conectado. Estado del stack start_all.py recuperado en vivo.');
+  }).catch(function(e){
+    document.getElementById('pill-all').textContent='SIN CONTROL';
+    document.getElementById('pill-all').className='pill off';
+    if(showMsg)clog('l-err','No se pudo conectar con el endpoint start_all: '+(e.message||'error'));
+  });
+}
+
+function deploy(){
+  if(deployBusy)return;
+  deployBusy=true;
+  var btn=document.getElementById('btn-deploy');
+  btn.disabled=true;btn.innerHTML='Desplegando...';
+  clog('l-step','[DEPLOY] Iniciando despliegue de start_all.py...');
+  fetch('/api/system/startall/start',{method:'POST',headers:{'Content-Type':'application/json'}})
+    .then(function(r){return r.json()}).then(function(d){
+      (d.results||[]).forEach(function(res){
+        clog(res.ok!==false?'l-ok':'l-err','  ['+res.id+'] '+res.action+(res.ok!==false?'  OK':'  ERROR '+(res.err||'')));
+      });
+      if(d.status==='ok')clog('l-step','[DEPLOY] Stack arrancado. Verificando componentes...');
+      setTimeout(function(){pollStatus(true);},2500);
+    })
+    .catch(function(e){clog('l-err','[DEPLOY] Error: '+(e.message||e));})
+    .finally(function(){deployBusy=false;btn.disabled=false;btn.innerHTML='&#x25B6; Desplegar';});
+}
+
+function stopStack(){
+  if(deployBusy)return;
+  deployBusy=true;
+  var btn=document.getElementById('btn-stop');
+  btn.disabled=true;btn.innerHTML='Deteniendo...';
+  clog('l-step','[STOP] Deteniendo stack de start_all.py...');
+  fetch('/api/system/startall/stop',{method:'POST',headers:{'Content-Type':'application/json'}})
+    .then(function(r){return r.json()}).then(function(d){
+      (d.results||[]).forEach(function(res){
+        clog(res.ok!==false?'l-ok':'l-err','  ['+res.id+'] '+res.action+(res.ok!==false?'  OK':'  ERROR '+(res.err||'')));
+      });
+      setTimeout(function(){pollStatus(true);},2500);
+    })
+    .catch(function(e){clog('l-err','[STOP] Error: '+(e.message||e));})
+    .finally(function(){deployBusy=false;btn.disabled=false;btn.innerHTML='&#x25A0; Detener';});
+}
+
+/* ── Stats ── */
+function setBar(id,val,color){var el=document.getElementById(id);el.style.width=Math.min(100,val)+'%';if(color)el.style.background=color;}
+function loadStats(){
+  fetch('/api/system/stats').then(function(r){return r.json()}).then(function(d){
+    if(d.error)return;
+    var cpu=Math.round(d.cpu_percent||0),mem=Math.round(d.memory_percent||0),disk=Math.round(d.disk_percent||0);
+    document.getElementById('cpu').textContent=cpu+'%';
+    document.getElementById('cpu-x').textContent=cpu+'%';
+    document.getElementById('mem').textContent=mem+'%';
+    document.getElementById('disk').textContent=(d.disk_used_gb||'--')+'GB / '+(d.disk_total_gb||'--')+'GB';
+    document.getElementById('uptime').textContent=d.uptime||'--';
+    document.getElementById('provider').textContent=(d.active_provider||'--').toUpperCase();
+    document.getElementById('ollama').innerHTML='<span style="color:'+(d.ollama_status?'var(--green)':'var(--red)')+'">'+(d.ollama_status?'ONLINE':'OFFLINE')+'</span>';
+    setBar('cpu-bar',cpu);setBar('mem-bar',mem);
+    if(disk>85)setBar('disk-bar',disk,'linear-gradient(90deg,var(--red),var(--orange))');else setBar('disk-bar',disk);
+  }).catch(function(){});
+}
+
+/* ── Init ── */
+clog('l-step','ZICORE SYSTEM v5.0 - ZineMotion Foundation');
+clog('l-step','Aerospace Division - Inference Platform');
+clog('l-step','============================================================');
+clog('','Conectando con el kernel y start_all.py...');
+pollStatus(true);
+loadModules();
+loadStats();
+setInterval(function(){pollStatus(false);},6000);
+setInterval(loadStats,8000);
+setInterval(function(){var d=new Date();document.getElementById('console-clock').textContent=d.toLocaleTimeString('es-MX',{hour12:false});},1000);
 </script>
 </body>
 </html>

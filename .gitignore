@@ -113,8 +113,12 @@ mobile/yarn.lock
 # Distribution / APK binaries
 distro/
 installers/*.apk
+containers/installers/*.apk
 
 # Data artifacts
 data/camera_test.jpg
 data/thumbnails/
 mobile/zicore-android.apk
+android/build_log.txt
+data/sso.db-shm
+data/sso.db-wal

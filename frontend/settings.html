@@ -518,6 +518,21 @@ function renderMaterializer(cfg){
   document.getElementById('panel-materializer').innerHTML=h;
 }
 
+function checkNodeHeartbeat(){
+  var dot=document.getElementById('net_hb_dot');
+  var st=document.getElementById('net_hb_state');
+  if(!dot||!st)return;
+  dot.style.background='#f90';dot.style.boxShadow='0 0 8px #f90';
+  st.textContent='checking...';
+  fetch('/api/node/heartbeat').then(function(r){return r.json()}).then(function(d){
+    var ok=d.online;
+    dot.style.background=ok?'#0f8':'#f33';
+    dot.style.boxShadow=ok?'0 0 8px #0f8':'0 0 8px #f33';
+    st.textContent=ok?('ONLINE \u00b7 '+d.latency_ms+'ms'):('OFFLINE \u00b7 '+(d.last_error||'no response'));
+    st.style.color=ok?'var(--ok, #0f8)':'var(--err, #f33)';
+  }).catch(function(e){dot.style.background='#f33';dot.style.boxShadow='0 0 8px #f33';st.textContent='ERR \u00b7 '+e.message;st.style.color='var(--err,#f33)';});
+}
+
 function renderNetwork(cfg){
   var net=cfg.network||{};
   var nm=net.netmanager||{};
@@ -537,6 +552,12 @@ function renderNetwork(cfg){
   h+='<label>Sync Directory</label><input id="net_sync_dir" value="'+(nm.sync_dir||'/mnt/zicore-fs/ZiCoreFS')+'">';
   h+='<label>Memory Pool (MB)</label><input id="net_mem_pool" type="number" value="'+(nm.mem_pool||4096)+'">';
   h+='<label>Compute Pool (workers)</label><input id="net_compute_pool" type="number" value="'+(nm.compute_pool||8)+'">';
+  h+='</div>';
+  h+='<div class="flex mt-8" style="gap:8px;align-items:center">';
+  h+='<span style="color:var(--text2);font-size:11px">HEARTBEAT .68:</span>';
+  h+='<span id="net_hb_dot" style="width:10px;height:10px;border-radius:50%;background:#888;box-shadow:0 0 8px #888"></span>';
+  h+='<span id="net_hb_state" style="font-size:11px;color:var(--text2)">checking...</span>';
+  h+='<button class="btn btn-test" style="padding:2px 10px;font-size:10px" onclick="checkNodeHeartbeat()">CHECK</button>';
   h+='</div></div>';
   h+='<div class="section"><div class="section-title purple">INTERNET — PUBLIC ACCESS</div>';
   h+='<div class="grid grid-2">';

@@ -1,99 +1,235 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZIO Unified — 3D Printing Control System</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<title>ZIO Unified — Sistema Unificado ZICORE</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+:root{
+  --bg:#04060c;--bg2:#070b14;--bg3:#0a101d;--bg4:#0f1728;
+  --cyan:#00e5ff;--green:#00ff88;--purple:#7c4dff;--orange:#ff8800;--yellow:#ffcc00;--red:#ff3333;
+  --text:#c8d6e5;--text2:#7a8ba8;--text3:#4a5568;--text4:#2a3344;
+  --border:rgba(0,229,255,0.10);--border2:rgba(0,229,255,0.22);
+  --mono:'JetBrains Mono','Consolas',monospace;--font:'Inter',system-ui,sans-serif;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes scanMove{0%{top:-2px}100%{top:100vh}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes orbitSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
-canvas#starfield{position:fixed;inset:0;z-index:0}
-.content{position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto}
-h1{font-size:clamp(32px,5vw,56px);font-weight:300;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text),var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sub{font-size:14px;color:var(--text-dim);line-height:1.8;max-width:600px;margin-bottom:48px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
-.card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s}
-.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-2px)}
-.card-icon{font-size:28px;margin-bottom:12px;color:var(--cyan)}
-.card-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
-.card-desc{font-size:11px;color:var(--text-dim);line-height:1.7}
-.card-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
-.back{display:inline-block;margin-top:32px;padding:12px 28px;border:1px solid var(--border);color:var(--text-dim);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all 0.4s}
-.back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
-.info{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:32px;font-size:13px;line-height:1.8;color:var(--text-dim)}
-.info strong{color:var(--text)}
-.info code{font-family:var(--mono);font-size:11px;color:var(--cyan);background:rgba(0,229,255,0.06);padding:2px 6px;border-radius:2px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:600;transition:all 0.3s;border:1px solid var(--border)}
-.btn-github{background:rgba(124,77,255,0.1);border-color:rgba(124,77,255,0.25);color:var(--purple)}
-.btn-github:hover{background:rgba(124,77,255,0.2);box-shadow:0 0 20px rgba(124,77,255,0.1)}
-@media(max-width:768px){.content{padding:80px 24px}}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.grain{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.028;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
+.scanline{position:fixed;top:0;left:0;right:0;height:1px;z-index:9998;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.10),transparent);animation:scanMove 9s linear infinite}
+#starfield{position:fixed;inset:0;z-index:0}
+.page{position:relative;z-index:1}
+
+/* ═══ NAV ═══ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;background:rgba(4,6,12,0.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-hex{width:30px;height:30px}
+.nav-brand{font-size:12px;font-weight:700;letter-spacing:4px;color:var(--cyan)}
+.nav-brand b{color:var(--purple);font-weight:700}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-status{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:2px;color:var(--green)}
+.nav-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+.nav-clock{font-size:11px;color:var(--cyan);letter-spacing:1px}
+
+/* ═══ HERO ═══ */
+.hero{min-height:58vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:130px 24px 50px;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,var(--bg) 100%);pointer-events:none}
+.hero-badge{font-size:9px;letter-spacing:5px;color:var(--text3);margin-bottom:24px;border:1px solid var(--border);padding:8px 16px;border-radius:2px}
+.hero-orbits{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;pointer-events:none;opacity:.7}
+.orbit-ring{position:absolute;border:1px solid rgba(0,229,255,0.06);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:orbitSpin linear infinite}
+.orbit-ring:nth-child(1){width:170px;height:170px;animation-duration:11s}
+.orbit-ring:nth-child(2){width:220px;height:220px;animation-duration:17s;animation-direction:reverse;border-color:rgba(124,77,255,0.05)}
+.orbit-ring:nth-child(3){width:270px;height:270px;animation-duration:23s;border-color:rgba(0,255,136,0.04)}
+.hero-title{font-size:clamp(28px,5vw,54px);font-weight:700;letter-spacing:3px;line-height:1.1;margin-bottom:16px;
+  background:linear-gradient(135deg,#00e5ff 0%,#7c4dff 55%,#00ff88 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:13px;color:var(--text2);max-width:660px;line-height:1.9}
+.hero-sub b{color:var(--cyan);font-weight:500}
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:34px}
+.launch-btn{display:inline-flex;align-items:center;gap:12px;padding:14px 32px;font-family:var(--mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--bg);
+  background:linear-gradient(135deg,var(--green),var(--cyan));border:none;border-radius:4px;cursor:pointer;font-weight:700;transition:all .35s;text-decoration:none}
+.launch-btn:hover{box-shadow:0 0 44px rgba(0,255,136,0.35);transform:translateY(-2px)}
+.launch-btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--border2);font-weight:500}
+.launch-btn.ghost:hover{box-shadow:0 0 30px rgba(0,229,255,0.12)}
+
+/* ═══ SECTIONS ═══ */
+.section{max-width:1180px;margin:0 auto;padding:56px 32px 8px}
+.section-title{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.section-title h2{font-size:12px;font-weight:700;letter-spacing:4px;color:var(--cyan);text-transform:uppercase}
+.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent)}
+.section-title .n{color:var(--text3);font-size:10px;letter-spacing:2px}
+
+/* ═══ INFO BAND ═══ */
+.info-band{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:24px;margin-bottom:34px;font-size:12px;line-height:1.9;color:var(--text2);font-family:var(--font)}
+.info-band b{color:var(--text)}
+.info-band code{font-family:var(--mono);font-size:11px;color:var(--cyan);background:rgba(0,229,255,0.06);padding:2px 6px;border-radius:2px}
+
+/* ═══ MODULE GRID ═══ */
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px}
+.mod-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px;position:relative;overflow:hidden;transition:all .3s;text-decoration:none;color:var(--text)}
+.mod-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.mod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.35}
+.mod-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--cyan);border:1px solid var(--border2);border-radius:50%;margin-bottom:14px}
+.mod-name{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text);text-transform:uppercase;margin-bottom:8px}
+.mod-desc{font-size:11px;color:var(--text2);line-height:1.7;font-family:var(--font)}
+.mod-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:1.5px;color:var(--cyan);border:1px solid var(--border2);padding:3px 8px;border-radius:2px}
+.mod-card.purple .mod-icon{color:var(--purple);border-color:rgba(124,77,255,0.25)}
+.mod-card.green .mod-icon{color:var(--green);border-color:rgba(0,255,136,0.25)}
+.mod-card.orange .mod-icon{color:var(--orange);border-color:rgba(255,136,0,0.25)}
+
+/* ═══ BACK ═══ */
+.back{display:inline-block;margin-top:14px;padding:12px 26px;border:1px solid var(--border);color:var(--text2);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all .3s;font-family:var(--mono)}
+.back:hover{border-color:var(--border2);color:var(--cyan)}
+
+/* ═══ FOOTER ═══ */
+.footer{max-width:1180px;margin:56px auto 0;padding:32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.footer-text{font-size:9px;color:var(--text3);letter-spacing:2px}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-link{font-size:9px;color:var(--text2);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s}
+.footer-link:hover{color:var(--cyan)}
+
+@media(max-width:768px){
+  .nav{padding:12px 18px}
+  .nav-brand{font-size:10px;letter-spacing:2px}
+  .hero{padding:110px 18px 40px}
+  .section{padding:36px 18px 4px}
+  .footer{flex-direction:column;align-items:flex-start}
+}
 </style>
 </head>
 <body>
+<div class="grain"></div>
+<div class="scanline"></div>
 <canvas id="starfield"></canvas>
-<div class="content">
-  <a href="/" class="back" style="margin-bottom:32px;display:inline-block">&larr; ZICORE OS</a>
-  <h1>ZIO Unified</h1>
-  <div class="sub">Unified 3D printing control system. ESP32-S3 camera, Marlin firmware, desktop visualizer, Android app, and CNC control — all integrated into a single platform.</div>
 
-  <div class="info">
-    <strong>ZIO Unified</strong> is the original 3D printing module now integrated into ZICORE Aerospace. It combines <strong>ESP32-S3 camera streaming</strong>, <strong>Marlin firmware control</strong>, <strong>CNC node management</strong>, and a <strong>desktop visualizer</strong> into one cohesive system. <br><br>
-    Repository: <code>github.com/Zine24/ZioUnified</code><br>
-    License: Open Source
-  </div>
+<div class="page">
+  <nav class="nav">
+    <a class="nav-logo" href="/">
+      <svg class="nav-hex" viewBox="0 0 100 100"><polygon points="50,2 93,26 93,74 50,98 7,74 7,26" fill="none" stroke="#00e5ff" stroke-width="3"/><text x="50" y="64" font-size="30" fill="#7c4dff" text-anchor="middle" font-weight="700" font-family="JetBrains Mono">Z</text></svg>
+      <span class="nav-brand">ZIO <b>UNIFIED</b></span>
+    </a>
+    <div class="nav-right">
+      <div class="nav-status">SISTEMA UNIFICADO</div>
+      <div class="nav-clock" id="clock">--:--:--</div>
+    </div>
+  </nav>
 
-  <div class="grid">
-    <div class="card">
-      <div class="card-icon">&#x1F4F7;</div>
-      <div class="card-title">ZiCAM ESP32-S3</div>
-      <div class="card-desc">MJPEG video streaming, microSD recording, web panel control. OV3660 camera with MPU6050 IMU integration.</div>
-      <span class="card-tag">Firmware</span>
+  <header class="hero">
+    <div class="hero-orbits">
+      <div class="orbit-ring"></div>
+      <div class="orbit-ring"></div>
+      <div class="orbit-ring"></div>
     </div>
-    <div class="card" style="border-color:rgba(124,77,255,0.1)">
-      <div class="card-icon" style="color:var(--purple)">&#x1F5A5;</div>
-      <div class="card-title">Desktop Visualizer</div>
-      <div class="card-desc">3-column HTML layout. Live camera feed, IMU data panel, print control. Works in any browser.</div>
-      <span class="card-tag" style="color:var(--purple);border-color:rgba(124,77,255,0.15)">Desktop</span>
+    <div class="hero-badge">MODULO DEL ECOSISTEMA ZICORE</div>
+    <h1 class="hero-title">ZIO UNIFIED</h1>
+    <p class="hero-sub">Plataforma que integra los sistemas del ecosistema ZICORE: <b>control de fabricacion</b>, <b>vision por camara</b>, <b>firmware Marlin</b>, <b>control CNC</b> y <b>visualizacion en escritorio</b> en una sola interfaz.</p>
+    <div class="hero-actions">
+      <a class="launch-btn" href="/master-creator">&#x25B6; Abrir Master Creator</a>
+      <a class="launch-btn ghost" href="/zicore-os">Launch Pad</a>
     </div>
-    <div class="card" style="border-color:rgba(0,255,136,0.1)">
-      <div class="card-icon" style="color:var(--green)">&#x2699;</div>
-      <div class="card-title">Marlin Firmware</div>
-      <div class="card-desc">Custom Marlin build with ZiMMU support. Multi-material unit control, CNC node integration. PlatformIO project.</div>
-      <span class="card-tag" style="color:var(--green);border-color:rgba(0,255,136,0.15)">Firmware</span>
-    </div>
-    <div class="card" style="border-color:rgba(255,136,0,0.1)">
-      <div class="card-icon" style="color:var(--orange)">&#x1F4F1;</div>
-      <div class="card-title">Android App</div>
-      <div class="card-desc">Native Android control. Print monitoring, camera view, remote control from your phone.</div>
-      <span class="card-tag" style="color:var(--orange);border-color:rgba(255,136,0,0.15)">Mobile</span>
-    </div>
-    <div class="card">
-      <div class="card-icon">&#x1F527;</div>
-      <div class="card-title">ZiMMU CNC</div>
-      <div class="card-desc">CNC node controller. Multi-material unit management, tool changing, coordinate control.</div>
-      <span class="card-tag">CNC</span>
-    </div>
-    <div class="card" style="border-color:rgba(0,229,255,0.1)">
-      <div class="card-icon">&#x1F4E1;</div>
-      <div class="card-title">Serial Bridge</div>
-      <div class="card-desc">Python serial bridge for desktop ↔ firmware communication. Build and deployment scripts included.</div>
-      <span class="card-tag">Bridge</span>
-    </div>
-  </div>
+  </header>
 
-  <a href="https://github.com/Zine24/ZioUnified" target="_blank" class="btn btn-github">&#x1F4C2; View on GitHub</a>
-  <a href="/master-creator" class="btn" style="margin-left:12px;border-color:rgba(0,229,255,0.2);color:var(--cyan)">&larr; Master Creator</a>
+  <section class="section" id="info">
+    <div class="info-band">
+      <b>ZIO Unified</b> es el modulo de integracion del ecosistema ZICORE. Combina <b>streaming de camara ESP32-S3</b>, <b>control de firmware Marlin</b>, <b>gestion de nodos CNC</b> y un <b>visualizador de escritorio</b> en un solo sistema coherente.<br><br>
+      Repositorio: <code>github.com/Zine24/ZioUnified</code><br>
+      Licencia: Open Source
+    </div>
+  </section>
+
+  <section class="section" id="modulos">
+    <div class="section-title"><span class="n">[01]</span><h2>Modulos Integrados</h2></div>
+    <div class="mod-grid">
+      <a class="mod-card" href="/">
+        <div class="mod-icon">&#x1F4F7;</div>
+        <div class="mod-name">ZiCAM ESP32-S3</div>
+        <div class="mod-desc">Streaming de video MJPEG, grabacion microSD y panel web. Camara OV3660 con IMU MPU6050 integrada.</div>
+        <span class="mod-tag">Firmware</span>
+      </a>
+      <a class="mod-card purple" href="/">
+        <div class="mod-icon">&#x1F5A5;</div>
+        <div class="mod-name">Visualizador Desktop</div>
+        <div class="mod-desc">Layout HTML de 3 columnas. Feed de camara en vivo, panel de datos IMU y control de impresion.</div>
+        <span class="mod-tag">Desktop</span>
+      </a>
+      <a class="mod-card green" href="/">
+        <div class="mod-icon">&#x2699;&#xFE0F;</div>
+        <div class="mod-name">Firmware Marlin</div>
+        <div class="mod-desc">Build de Marlin con soporte ZiMMU. Control de unidad multi-material e integracion de nodos CNC. Proyecto PlatformIO.</div>
+        <span class="mod-tag">Firmware</span>
+      </a>
+      <a class="mod-card orange" href="/">
+        <div class="mod-icon">&#x1F4F1;</div>
+        <div class="mod-name">App Android</div>
+        <div class="mod-desc">Control nativo Android. Monitoreo de impresion, vista de camara y control remoto desde el telefono.</div>
+        <span class="mod-tag">Mobile</span>
+      </a>
+      <a class="mod-card" href="/">
+        <div class="mod-icon">&#x1F527;</div>
+        <div class="mod-name">ZiMMU CNC</div>
+        <div class="mod-desc">Controlador de nodos CNC. Gestion de unidad multi-material, cambio de herramienta y control de coordenadas.</div>
+        <span class="mod-tag">CNC</span>
+      </a>
+      <a class="mod-card purple" href="/">
+        <div class="mod-icon">&#x1F4E1;</div>
+        <div class="mod-name">Serial Bridge</div>
+        <div class="mod-desc">Puente serial Python para comunicacion escritorio &harr; firmware. Scripts de build y deployment incluidos.</div>
+        <span class="mod-tag">Bridge</span>
+      </a>
+    </div>
+    <a class="back" href="https://github.com/Zine24/ZioUnified" target="_blank">Ver en GitHub &rsaquo;</a>
+  </section>
+
+  <section class="section" id="ecosistema">
+    <div class="section-title"><span class="n">[02]</span><h2>Ecosistema ZICORE</h2></div>
+    <div class="mod-grid">
+      <a class="mod-card" href="/zicore-os">
+        <div class="mod-icon">&#x1F4DB;</div>
+        <div class="mod-name">Launch Pad</div>
+        <div class="mod-desc">Consola de lanzamiento del sistema start_all.py. Acceso a todos los componentes y modulos de mision.</div>
+        <span class="mod-tag">Sistema</span>
+      </a>
+      <a class="mod-card purple" href="/master-creator">
+        <div class="mod-icon">&#x2728;</div>
+        <div class="mod-name">Master Creator</div>
+        <div class="mod-desc">Centro creativo: materializacion 3D, CAD parametrico, AI 3D y multimedia.</div>
+        <span class="mod-tag">Creacion</span>
+      </a>
+      <a class="mod-card green" href="/mission-control">
+        <div class="mod-icon">&#x1F4CB;</div>
+        <div class="mod-name">Mission Control</div>
+        <div class="mod-desc">Telemetria, estado del sistema, nodos y alertas en tiempo real.</div>
+        <span class="mod-tag">Ops</span>
+      </a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-text">ZIO UNIFIED &middot; ZICORE v5.0 &middot; ZineMotion Foundation</div>
+    <div class="footer-links">
+      <a href="/zicore-os" class="footer-link">Launch Pad</a>
+      <a href="/master-creator" class="footer-link">Master Creator</a>
+      <a href="/zio" class="footer-link">ZIO AI</a>
+    </div>
+  </footer>
 </div>
+
 <script>
-var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
-function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
-resize();window.addEventListener('resize',resize);
-for(var i=0;i<200;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
-function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
-draw();
+(function(){
+  var c=document.getElementById('starfield'),ctx=c.getContext('2d'),stars=[];
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  for(var i=0;i<210;i++)stars.push({x:Math.random()*2000,y:Math.random()*2000,size:Math.random()*1.2,alpha:Math.random()*0.6+0.1,twinkle:Math.random()*Math.PI*2,speed:Math.random()*0.008+0.003});
+  function draw(){ctx.clearRect(0,0,c.width,c.height);stars.forEach(function(s){s.twinkle+=s.speed;ctx.fillStyle='rgba(180,200,240,'+s.alpha*(0.3+0.7*Math.sin(s.twinkle))+')';ctx.fillRect(s.x%c.width,s.y%c.height,s.size,s.size)});requestAnimationFrame(draw)}
+  draw();
+})();
+function clock(){var d=new Date();document.getElementById('clock').textContent=d.toLocaleTimeString('es-MX',{hour12:false});}
+clock();setInterval(clock,1000);
 </script>
 </body>
 </html>

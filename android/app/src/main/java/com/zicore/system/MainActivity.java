@@ -235,6 +235,11 @@ public class MainActivity extends AppCompatActivity {
                         "localStorage.setItem('zicore_sso_token','" + token + "')", null
                     );
                 }
+                // Sync latest token from localStorage back into prefs
+                view.evaluateJavascript(
+                    "(function(){var t=localStorage.getItem('zicore_sso_token');" +
+                    "if(t){window.ZICORE && window.ZICORE.saveToken(t);}})();", null
+                );
             }
 
             @Override

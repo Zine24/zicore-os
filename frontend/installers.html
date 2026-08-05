@@ -147,6 +147,34 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <div class="dl-btn" id="dl-android">Descargar .apk</div>
       <div class="size">APK — ~3 MB</div>
     </div>
+
+    <div class="card" onclick="downloadInstaller('ziounified')">
+      <span class="icon">📡</span>
+      <div class="name">ZioUnified</div>
+      <div class="desc">ZiCAM: firmware ESP32-S3 con stream MJPEG + grabación a microSD y visualizador desktop de 3 columnas.</div>
+      <div class="cmd">
+        <span class="comment"># Clona y prepara el stack:</span><br>
+        github.com/Zine24/ZioUnified<br>
+        firmware/ZiCAM_ESP32-S3/<br>
+        desktop/Desktop_Visualizer/
+      </div>
+      <div class="dl-btn" id="dl-ziounified">Descargar setup</div>
+      <div class="size">Setup .sh (Linux) / .bat (Windows)</div>
+    </div>
+
+    <div class="card" onclick="downloadInstaller('androidlite')">
+      <span class="icon">📶</span>
+      <div class="name">Android Lite</div>
+      <div class="desc">Versión ligera del APK para dispositivos con poco espacio. Mismo WebView, SSO y selector de servidor.</div>
+      <div class="cmd">
+        <span class="comment"># Alternativa rápida:</span><br>
+        zicore-lite.apk (~3 MB)<br>
+        zicore-full.apk (~137 MB)<br>
+        Guía: ANDROID-INSTALL.md
+      </div>
+      <div class="dl-btn" id="dl-androidlite">Descargar lite</div>
+      <div class="size">Guía de instalación incluida</div>
+    </div>
   </div>
 
   <div class="reqs">
@@ -204,7 +232,9 @@ function downloadInstaller(platform){
     windows:'/installers/install_zicore.ps1',
     linux:'/installers/install_zicore.sh',
     mac:'/installers/install_zicore_mac.sh',
-    android:'/installers/zicore-android.apk'
+    android:'/installers/zicore-android.apk',
+    androidlite:'/downloads/zicore-lite.apk',
+    ziounified: navigator.platform.toLowerCase().indexOf('win')>=0?'/installers/ziounified_setup.bat':'/installers/ziounified_setup.sh'
   };
   
   const a=document.createElement('a');
@@ -215,7 +245,7 @@ function downloadInstaller(platform){
   document.body.removeChild(a);
   
   setTimeout(()=>{
-    btn.textContent=platform==='windows'?'Descargar .ps1':platform==='android'?'Descargar .apk':'Descargar .sh';
+    btn.textContent=platform==='windows'?'Descargar .ps1':platform==='android'?'Descargar .apk':platform==='androidlite'?'Descargar lite':platform==='ziounified'?'Descargar setup':'Descargar .sh';
     btn.classList.remove('downloading');
   },2000);
 }

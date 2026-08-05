@@ -7,8 +7,8 @@ Signed by ZineMotion
 import subprocess, sys, os, time, json, webbrowser, threading, signal, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-BACKEND_PORT = 4080
-FRONTEND_PORT = 4000
+BACKEND_PORT = int(os.environ.get("ZICORE_API_PORT", "4080"))
+FRONTEND_PORT = int(os.environ.get("ZICORE_WEB_PORT", "4000"))
 
 backend_proc = None
 frontend_proc = None

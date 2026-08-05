@@ -676,6 +676,10 @@ app.add_middleware(
         "https://zzz.zinemotion.com",
         "http://localhost:4000",
         "http://localhost:8080",
+        "http://localhost:9080",
+        "http://localhost:9090",
+        "http://localhost:9091",
+        "http://localhost:9092",
         "http://192.168.1.85:4000",
         "http://192.168.1.68:8080",
     ],
@@ -748,6 +752,8 @@ class SSOAuthMiddleware:
         "/api/mail/check-username",
         "/api/mail/validate-email",
         "/api/system/stats",
+        "/api/node/heartbeat",
+        "/api/node/status",
         "/api/health",
         "/api/games/catalog",
         "/api/games/scores",
@@ -903,6 +909,7 @@ class SSOAuthMiddleware:
         "/api/aerospace/", # Aerospace AI calculation API (public)
         "/api/ai3d/", # AI 3D generation (public for materializer)
         "/api/system/", # System auto-update API (public, admin check in handler)
+        "/downloads/", # Distribution files (public, whitelisted)
     )
 
     def __init__(self, app):
@@ -1037,6 +1044,12 @@ async def serve_main_menu(request: Request):
     if "dogmad21.zinemotion.com.mx" in host:
         # WordPress at /www/wwwroot/dogmad21.zinemotion.com.mx
         return FileResponse(str(FRONTEND_DIR / "blog.html"))
+    if "ziounified.zicore.space" in host:
+        # ZIO Unified — start_all component
+        return FileResponse(str(FRONTEND_DIR / "ziounified.html"))
+    if "zicore-os.zicore.space" in host:
+        # ZICORE Master Creator OS — kernel launcher
+        return FileResponse(str(FRONTEND_DIR / "zicore-os.html"))
     if "zcs.zicore.space" in host or "zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
     return FileResponse(str(FRONTEND_DIR / "index.html"))
@@ -1065,6 +1078,11 @@ async def serve_zicore():
 @app.get("/frontpage")
 async def serve_frontpage():
     return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
+
+
+@app.get("/zicore-os")
+async def serve_zicore_os():
+    return FileResponse(str(FRONTEND_DIR / "zicore-os.html"))
 
 
 @app.get("/blog")
@@ -1280,7 +1298,8 @@ INSTALLERS_DIR = Path(__file__).parent / "installers"
 
 @app.get("/installers/{filename}")
 async def download_installer(filename: str):
-    allowed = {"install_zicore.ps1", "install_zicore.sh", "install_zicore_mac.sh", "zicore-android.apk"}
+    allowed = {"install_zicore.ps1", "install_zicore.sh", "install_zicore_mac.sh",
+               "zicore-android.apk", "ziounified_setup.sh", "ziounified_setup.bat"}
     if filename not in allowed:
         return JSONResponse({"status": "error", "error": "File not found"}, status_code=404)
     fpath = INSTALLERS_DIR / filename
@@ -1292,6 +1311,55 @@ async def download_installer(filename: str):
         media_type = "application/vnd.android.package-archive"
     elif filename.endswith(".sh"):
         media_type = "text/plain"
+    else:
+        media_type = "text/plain"
+    return FileResponse(str(fpath), media_type=media_type, filename=filename)
+
+
+# ─── DOWNLOADS (distribution files across the repo) ──────────────────
+# Whitelisted files served at /downloads/{filename}. Keeps the portal
+# links (zicore_oem_setup.*, docker-compose.yml) working without
+# exposing arbitrary paths.
+DOWNLOAD_FILES = {
+    "zicore_oem_setup.bat": ("root", "zicore_oem_setup.bat"),
+    "zicore_oem_setup.sh":  ("root", "zicore_oem_setup.sh"),
+    "docker-compose.yml":   ("root", "docker-compose.yml"),
+    "requirements.txt":     ("root", "requirements.txt"),
+    "ANDROID-INSTALL.md":   ("distro", "ANDROID-INSTALL.md"),
+    "zicore-lite.apk":      ("distro", "zicore-android.apk"),
+    "zicore-full.apk":      ("installers", "zicore-android.apk"),
+}
+
+
+def _resolve_download(name):
+    entry = DOWNLOAD_FILES.get(name)
+    if not entry:
+        return None
+    kind, fname = entry
+    if kind == "root":
+        base = SYSTEM_ROOT
+    elif kind == "distro":
+        base = SYSTEM_ROOT / "distro"
+    elif kind == "installers":
+        base = INSTALLERS_DIR
+    else:
+        base = SYSTEM_ROOT
+    return base / fname
+
+
+@app.get("/downloads/{filename}")
+async def download_file(filename: str):
+    fpath = _resolve_download(filename)
+    if fpath is None or not fpath.exists():
+        return JSONResponse({"status": "error", "error": "File not found"}, status_code=404)
+    count = _load_downloads() + 1
+    _save_downloads(count)
+    if filename.endswith(".apk"):
+        media_type = "application/vnd.android.package-archive"
+    elif filename.endswith(".md"):
+        media_type = "text/markdown"
+    elif filename.endswith(".yml") or filename.endswith(".yaml"):
+        media_type = "application/yaml"
     else:
         media_type = "text/plain"
     return FileResponse(str(fpath), media_type=media_type, filename=filename)
@@ -1631,7 +1699,7 @@ async def serve_flight_sim():
 
 @app.get("/emulatorjs")
 async def serve_emulatorjs():
-    return RedirectResponse(url="http://localhost:4001")
+    return RedirectResponse(url=f"http://localhost:{_startall_ports()['games']}")
 
 
 @app.get("/crypto-pay")
@@ -2863,6 +2931,7 @@ async def oc_proxy_event():
 @app.get("/api/status")
 async def web_status():
     config = load_config()
+    modules = _backend_modules_status()
     return {
         "status": "online",
         "service": "zicore-web",
@@ -2873,7 +2942,28 @@ async def web_status():
             "base_url": config.get("providers", {}).get("ollama", {}).get("base_url", OLLAMA_BASE_URL),
             "managed": config.get("ollama_service", {}).get("managed", False),
         },
+        "modules": modules,
     }
+
+
+def _backend_modules_status() -> dict:
+    """Merge live mission-module states from the FastAPI backend
+    (zicore-api service). Falls back to empty when unreachable so the
+    frontends render STANDBY instead of breaking."""
+    import urllib.request as _req
+    for port in (_startall_ports()["api"], 4080):
+        try:
+            req = _req.Request(f"http://127.0.0.1:{port}/api/status",
+                               headers={"User-Agent": "ZICORE/5.0"})
+            data = json.loads(_req.urlopen(req, timeout=3).read())
+            mods = data.get("modules")
+            if isinstance(mods, dict):
+                mods.setdefault("zty", {"status": "nominal"})
+                mods.setdefault("gpdengine", {"status": "nominal"})
+                return mods
+        except Exception:
+            continue
+    return {}
 
 
 @app.get("/api/config")
@@ -3083,6 +3173,39 @@ def _node_request(path: str, method: str = "GET", payload: dict = None, timeout:
         return {"status": "error", "error": f"Node unreachable: {e.reason}"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ─── Node Heartbeat (.68) ───────────────────────────────────────────────
+# Lightweight liveness probe against the secondary node, cached so the
+# mission-control / stats polling never blocks on the network.
+_node_heartbeat_cache = {"ts": 0.0, "online": False, "latency_ms": None, "last_error": None}
+
+
+def _node_heartbeat(force=False) -> dict:
+    import time as _time
+    now = _time.time()
+    if not force and now - _node_heartbeat_cache["ts"] < 15:
+        return {k: v for k, v in _node_heartbeat_cache.items() if k != "ts"}
+    online, latency, last_error = False, None, None
+    try:
+        import urllib.request as _req
+        url = NODE_BASE_URL.rstrip("/") + "/api/status"
+        t0 = _time.time()
+        req = _req.Request(url, headers={"User-Agent": "ZICORE/5.0"})
+        resp = _req.urlopen(req, timeout=3)
+        latency = int((_time.time() - t0) * 1000)
+        if 200 <= resp.status < 300:
+            body = json.loads(resp.read().decode())
+            online = body.get("status") == "online"
+    except Exception as e:
+        last_error = str(e)[:200]
+    _node_heartbeat_cache.update({"ts": now, "online": online, "latency_ms": latency, "last_error": last_error})
+    return {"online": online, "latency_ms": latency, "last_error": last_error}
+
+
+@app.get("/api/node/heartbeat")
+async def node_heartbeat():
+    return _node_heartbeat(force=True)
 
 
 @app.get("/api/node/status")
@@ -3627,6 +3750,7 @@ async def get_system_stats():
             "ollama_models": ollama_models,
             "sd_status": sd_ok,
             "active_provider": active_prov,
+            "node": _node_heartbeat(),
         }
     except ImportError:
         import random
@@ -3748,6 +3872,190 @@ async def system_restart():
         return {"status": "error", "error": "systemctl not available"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ─── START_ALL DEPLOY CONTROL ─────────────────────────────────────────
+# Controls the start_all.py stack: API, WEB, GAMES, MUSIC, OLLAMA.
+# Ports match start_all.py defaults (env-overridable). On Linux manages
+# systemd services; on Windows launches start_all.py detached.
+
+def _startall_ports():
+    return {
+        "api":   int(os.environ.get("ZICORE_API_PORT", "9080")),
+        "web":   int(os.environ.get("ZICORE_WEB_PORT", "9090")),
+        "games": int(os.environ.get("ZICORE_GAMES_PORT", "9091")),
+        "music": int(os.environ.get("ZICORE_MUSIC_PORT", "9092")),
+    }
+
+
+STARTALL_COMPONENTS = None
+
+def _build_startall_components():
+    p = _startall_ports()
+    return [
+        {"id": "api",    "name": "API Backend",   "port": p["api"],    "service": "zicore-api"},
+        {"id": "web",    "name": "Web Kernel",    "port": p["web"],    "service": "zicore-materializer"},
+        {"id": "games",  "name": "Games Server",  "port": p["games"],  "service": "zicore-games"},
+        {"id": "music",  "name": "Music Server",  "port": p["music"],  "service": "zicore-music"},
+        {"id": "ollama", "name": "Ollama AI",     "port": 11434,       "service": None},
+    ]
+
+
+def _is_linux():
+    return sys.platform.startswith("linux")
+
+
+def _port_open(port, host="127.0.0.1", timeout=1.0):
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def _run_cmd(cmd, timeout=15):
+    import subprocess
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return {"code": r.returncode, "out": r.stdout.strip(), "err": r.stderr.strip()}
+    except subprocess.TimeoutExpired:
+        return {"code": -1, "out": "", "err": "timeout"}
+    except FileNotFoundError:
+        return {"code": -2, "out": "", "err": "command not found"}
+    except Exception as e:
+        return {"code": -3, "out": "", "err": str(e)}
+
+
+def _startall_launcher_running():
+    if _is_linux():
+        r = _run_cmd(["bash", "-c", "pgrep -af 'python.*start_all\\.py' || true"], timeout=5)
+        return bool(r.get("out", "").strip())
+    try:
+        import psutil
+        for p in psutil.process_iter(["pid", "name", "cmdline"]):
+            try:
+                name = (p.info.get("name") or "").lower()
+                if "python" in name:
+                    cmd = " ".join(p.info.get("cmdline") or [])
+                    if "start_all.py" in cmd:
+                        return True
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return False
+
+
+def _ollama_online():
+    """Check the configured Ollama provider (not just localhost:11434)."""
+    if _port_open(11434):
+        return True
+    try:
+        config = load_config()
+        for key in ("ollama", "zicore_native"):
+            cfg = config.get("providers", {}).get(key, {})
+            if not cfg.get("enabled"):
+                continue
+            u = str(cfg.get("base_url", "") or "")
+            if not u:
+                continue
+            if not u.startswith("http"):
+                u = f"http://{u}"
+            try:
+                import urllib.request as _req
+                req = _req.Request(u.rstrip("/") + "/api/tags", headers={"User-Agent": "ZICORE/5.0"})
+                resp = _req.urlopen(req, timeout=2)
+                if 200 <= resp.status < 300:
+                    return True
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return False
+
+
+@app.get("/api/system/startall/status")
+async def startall_status():
+    """Real status of every start_all.py component (port + systemd)."""
+    components = []
+    for c in _build_startall_components():
+        online = _port_open(c["port"])
+        if c["id"] == "ollama":
+            online = _ollama_online()
+        systemd = None
+        if _is_linux() and c.get("service"):
+            r = _run_cmd(["systemctl", "is-active", c["service"]], timeout=5)
+            st = (r.get("out") or "").strip()
+            systemd = st if st else None
+        components.append({
+            "id": c["id"], "name": c["name"], "port": c["port"],
+            "online": online, "service": c.get("service"), "systemd": systemd,
+        })
+    launcher = _startall_launcher_running()
+    return {
+        "platform": "linux" if _is_linux() else "win",
+        "launcher_running": launcher,
+        "root": str(SYSTEM_ROOT),
+        "components": components,
+        "all_online": all(c["online"] for c in components),
+    }
+
+
+@app.post("/api/system/startall/start")
+async def startall_start():
+    """Deploy the start_all.py stack. Linux: restart systemd services.
+    Windows: launch start_all.py detached (logs to output/startall.log)."""
+    import subprocess
+    results = []
+    if _is_linux():
+        for c in _build_startall_components():
+            if not c.get("service") or c["service"] == "zicore-materializer":
+                continue  # web kernel is THIS process; ollama handled by API
+            r = _run_cmd(["sudo", "systemctl", "restart", c["service"]], timeout=30)
+            results.append({"id": c["id"], "action": "restart",
+                            "ok": r["code"] == 0, "err": (r["err"] or "")[:200]})
+    else:
+        try:
+            log_dir = SYSTEM_ROOT / "output"
+            log_dir.mkdir(exist_ok=True)
+            log = open(log_dir / "startall.log", "a", encoding="utf-8", errors="replace")
+            flags = 0
+            if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):
+                flags |= subprocess.CREATE_NEW_PROCESS_GROUP
+            if hasattr(subprocess, "DETACHED_PROCESS"):
+                flags |= subprocess.DETACHED_PROCESS
+            p = subprocess.Popen(
+                [sys.executable, "start_all.py"],
+                cwd=str(SYSTEM_ROOT), stdout=log, stderr=log, creationflags=flags or None)
+            results.append({"id": "startall", "action": "launch", "pid": p.pid, "ok": True})
+        except Exception as e:
+            results.append({"id": "startall", "action": "launch", "ok": False, "err": str(e)[:200]})
+    return {"status": "ok", "results": results, "platform": "linux" if _is_linux() else "win"}
+
+
+@app.post("/api/system/startall/stop")
+async def startall_stop():
+    """Stop the start_all.py stack (except the web kernel itself)."""
+    import subprocess
+    results = []
+    if _is_linux():
+        for c in _build_startall_components():
+            if not c.get("service") or c["service"] == "zicore-materializer":
+                continue
+            r = _run_cmd(["sudo", "systemctl", "stop", c["service"]], timeout=20)
+            results.append({"id": c["id"], "action": "stop",
+                            "ok": r["code"] == 0, "err": (r["err"] or "")[:200]})
+    else:
+        launcher = _startall_launcher_running()
+        if launcher:
+            r = _run_cmd(["taskkill", "/F", "/IM", "python.exe", "/FI",
+                          "WINDOWTITLE eq *start_all*"], timeout=10)
+            results.append({"id": "startall", "action": "kill", "ok": r["code"] == 0,
+                            "out": (r["out"] or "")[:200], "err": (r["err"] or "")[:200]})
+        else:
+            results.append({"id": "startall", "action": "kill", "ok": True, "out": "launcher not running"})
+    return {"status": "ok", "results": results, "platform": "linux" if _is_linux() else "win"}
 
 
 @app.post("/api/system/update")
@@ -11064,7 +11372,8 @@ async def diagnostics_run(body: dict = {}):
         }
     # Network check
     if "network" in checks:
-        results["network"] = {"node_reachable": _node_request("/api/status").get("status") == "online"}
+        hb = _node_heartbeat()
+        results["network"] = {"node_reachable": hb.get("online", False), "node": hb}
     # Services check
     if "services" in checks:
         results["services"] = {

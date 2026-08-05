@@ -1460,17 +1460,49 @@ def _laplacian_smooth_step(mesh: "trimesh.Trimesh") -> "trimesh.Trimesh":
     return result
 
 
+def _pymeshlab_apply_filter(ms: "pymeshlab.MeshSet", name: str, **kwargs):
+    """Apply a pymeshlab filter, supporting both old (immediate) and new
+    (returns a filter object requiring .apply()) API versions. Drops kwargs
+    not accepted by the installed pymeshlab version (param names changed
+    between releases)."""
+    try:
+        fn = getattr(ms, name)
+    except AttributeError:
+        raise
+    try:
+        result = fn(**kwargs)
+    except Exception as e:
+        if "not found for filter" in str(e) and len(kwargs) > 1:
+            logger.warning(f"pymeshlab {name}: {e} — retrying with default params")
+            result = fn()
+        else:
+            raise
+    if result is not None and hasattr(result, "apply"):
+        result.apply()
+    return result
+
+
+def _pymeshlab_load_mesh(ms: "pymeshlab.MeshSet",
+                         mesh: "trimesh.Trimesh"):
+    """Load a trimesh into a MeshSet, supporting both old and new pymeshlab APIs."""
+    verts = np.array(mesh.vertices, dtype=np.float64)
+    faces = np.array(mesh.faces, dtype=np.int32)
+    if hasattr(ms, "add_mesh"):
+        pymesh = pymeshlab.Mesh(vertex_matrix=verts, face_matrix=faces)
+        ms.add_mesh(pymesh)
+    else:
+        ms.add_new_mesh(verts, faces)
+
+
 def _pymeshlab_smooth(mesh: "trimesh.Trimesh", iterations: int) -> "trimesh.Trimesh":
     """Smooth using pymeshlab Laplacian."""
     if not HAS_PYMESHLAB:
         return mesh.copy()
     try:
         ms = pymeshlab.MeshSet()
-        ms.add_new_mesh(
-            np.array(mesh.vertices, dtype=np.float64),
-            np.array(mesh.faces, dtype=np.int32)
-        )
-        ms.apply_coord_laplacian_smoothing(
+        _pymeshlab_load_mesh(ms, mesh)
+        _pymeshlab_apply_filter(
+            ms, "apply_coord_laplacian_smoothing",
             stepsmoothnum=iterations,
             weight=0.5,
             cottangentsweighting=True
@@ -1492,11 +1524,11 @@ def _pymeshlab_decimate(mesh: "trimesh.Trimesh",
         return mesh.copy()
     try:
         ms = pymeshlab.MeshSet()
-        ms.add_new_mesh(
-            np.array(mesh.vertices, dtype=np.float64),
-            np.array(mesh.faces, dtype=np.int32)
+        _pymeshlab_load_mesh(ms, mesh)
+        _pymeshlab_apply_filter(
+            ms, "meshing_decimation_quadric_edge_collapse",
+            targetfacenum=target_faces
         )
-        ms.meshing_decimation_quadric_edge_collapse(targetfacenum=target_faces)
         m = ms.current_mesh()
         return trimesh.Trimesh(
             vertices=m.vertex_matrix(),
@@ -1514,11 +1546,9 @@ def _pymeshlab_chamfer(mesh: "trimesh.Trimesh",
         return mesh.copy()
     try:
         ms = pymeshlab.MeshSet()
-        ms.add_new_mesh(
-            np.array(mesh.vertices, dtype=np.float64),
-            np.array(mesh.faces, dtype=np.int32)
-        )
-        ms.apply_coord_laplacian_smoothing(
+        _pymeshlab_load_mesh(ms, mesh)
+        _pymeshlab_apply_filter(
+            ms, "apply_coord_laplacian_smoothing",
             stepsmoothnum=1,
             weight=0.5,
             cottangentsweighting=True

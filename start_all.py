@@ -13,8 +13,14 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-API_PORT = 4080
-WEB_PORT = 4000
+
+# Ports — configurable via env vars. Defaults avoid clashing with the
+# production kernel (.85 systemd: 4000/4080/4001/4002) when running the
+# embedded stack locally.
+API_PORT = int(os.environ.get("ZICORE_API_PORT", "9080"))
+WEB_PORT = int(os.environ.get("ZICORE_WEB_PORT", "9090"))
+GAMES_PORT = int(os.environ.get("ZICORE_GAMES_PORT", "9091"))
+MUSIC_PORT = int(os.environ.get("ZICORE_MUSIC_PORT", "9092"))
 
 MISSION_MODULES = [
     "zihab", "zinav", "zipower", "ziship", "zidrone", "zirobot",
@@ -239,7 +245,6 @@ def main():
         procs.append(("WEB", web_proc))
 
         # ── START EMULATORJS (GAMES) ──────────────────────────────────
-        GAMES_PORT = 4001
         games_server = ROOT / "tools" / "emulatorjs" / "server.js"
         if games_server.exists() and shutil.which("node"):
             if kill_port(GAMES_PORT):
@@ -256,7 +261,6 @@ def main():
             print(f"      [WARN] Games server skipped (node not found or server.js missing)")
 
         # ── START WEBAMP (MUSIC) ─────────────────────────────────────
-        MUSIC_PORT = 4002
         music_server = ROOT / "tools" / "webamp" / "server.js"
         if music_server.exists() and shutil.which("node"):
             if kill_port(MUSIC_PORT):
@@ -278,14 +282,14 @@ def main():
     print("=" * 60)
     print("  ZICORE System Ready")
     print("")
-    print("  Dashboard:  http://localhost:4000")
-    print("  ZIO Agent:  http://localhost:4000/zio")
-    print("  Portal:     http://localhost:4000/portal")
-    print("  API:        http://localhost:4080/api/status")
+    print("  Dashboard:  http://localhost:%d" % WEB_PORT)
+    print("  ZIO Agent:  http://localhost:%d/zio" % WEB_PORT)
+    print("  Portal:     http://localhost:%d/portal" % WEB_PORT)
+    print("  API:        http://localhost:%d/api/status" % API_PORT)
     if any(name == "GAMES" for name, _ in procs):
-        print("  Games:      http://localhost:4001")
+        print("  Games:      http://localhost:%d" % GAMES_PORT)
     if any(name == "MUSIC" for name, _ in procs):
-        print("  Music:      http://localhost:4002")
+        print("  Music:      http://localhost:%d" % MUSIC_PORT)
     print("=" * 60)
     print()
     print("[5/5] System online")
@@ -299,9 +303,9 @@ def main():
         check_url("WEB", f"http://localhost:{WEB_PORT}/")
         for name, _ in procs:
             if name == "GAMES":
-                check_url("GAMES", f"http://localhost:4001/")
+                check_url("GAMES", f"http://localhost:{GAMES_PORT}/")
             elif name == "MUSIC":
-                check_url("MUSIC", f"http://localhost:4002/")
+                check_url("MUSIC", f"http://localhost:{MUSIC_PORT}/")
         try:
             webbrowser.open(f"http://localhost:{WEB_PORT}")
         except Exception:

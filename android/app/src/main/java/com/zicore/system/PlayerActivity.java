@@ -347,9 +347,9 @@ public class PlayerActivity extends AppCompatActivity {
         new Thread(() -> {
             List<MediaItem> items = new ArrayList<>();
             try {
-                items.addAll(fetch("/api/zmmx/browse?category=music&source=all&limit=100&order=asc"));
-                items.addAll(fetch("/api/zmmx/browse?category=audio&source=all&limit=100&order=asc"));
-                items.addAll(fetch("/api/zmmx/browse?category=video&source=all&limit=100&order=asc"));
+                items.addAll(fetch("/api/zmmx/browse?category=music&source=zicore_fs&limit=100&order=asc"));
+                items.addAll(fetch("/api/zmmx/browse?category=audio&source=zicore_fs&limit=100&order=asc"));
+                items.addAll(fetch("/api/zmmx/browse?category=video&source=zicore_fs&limit=100&order=asc"));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -390,9 +390,12 @@ public class PlayerActivity extends AppCompatActivity {
             String name = o.optString("name");
             String u = o.optString("url");
             if (name.isEmpty() || u.isEmpty()) continue;
+            // skip macOS dot-files and hidden files
+            String base = name.substring(name.lastIndexOf('/') + 1);
+            if (base.startsWith("._") || base.startsWith(".~") || base.startsWith(".")) continue;
             String full;
             if (u.startsWith("http")) full = u;
-            else full = serverUrl + u;
+            else full = serverUrl + encodeUrlPath(u);
             boolean video = isVideo(u);
             out.add(new MediaItem(name, full, video));
         }
@@ -403,6 +406,32 @@ public class PlayerActivity extends AppCompatActivity {
         String s = url.toLowerCase();
         return s.endsWith(".mp4") || s.endsWith(".webm") || s.endsWith(".mkv")
                 || s.endsWith(".mov") || s.endsWith(".m4v") || s.endsWith(".3gp");
+    }
+
+    /** Encode URL path segments while preserving slashes and query params. */
+    private static String encodeUrlPath(String url) {
+        try {
+            int q = url.indexOf('?');
+            String path = q >= 0 ? url.substring(0, q) : url;
+            String query = q >= 0 ? url.substring(q) : "";
+            String[] segs = path.split("/");
+            StringBuilder sb = new StringBuilder();
+            for (String seg : segs) {
+                if (sb.length() > 0) sb.append('/');
+                sb.append(java.net.URLEncoder.encode(seg, "UTF-8").replace("+", "%20"));
+            }
+            return sb.toString() + query;
+        } catch (Exception e) {
+            return url;
+        }
+    }
+
+    /** Auth headers for protected media endpoints (/media-fs requires SSO). */
+    private static java.util.Map<String, String> buildHeaders(SharedPreferences prefs) {
+        String token = prefs.getString("sso_token", "");
+        java.util.Map<String, String> h = new java.util.HashMap<>();
+        if (!token.isEmpty()) h.put("Authorization", "Bearer " + token);
+        return h;
     }
 
     // ── Playback ────────────────────────────────────────────
@@ -430,7 +459,8 @@ public class PlayerActivity extends AppCompatActivity {
                 showVideo(false);
             }
 
-            player.setDataSource(this, Uri.parse(item.url));
+            player.setDataSource(this, Uri.parse(item.url),
+                    buildHeaders(getSharedPreferences(PREFS_NAME, MODE_PRIVATE)));
             player.setOnPreparedListener(mp -> {
                 if (item.video) {
                     android.view.SurfaceHolder holder = videoSurface.getHolder();
@@ -450,9 +480,13 @@ public class PlayerActivity extends AppCompatActivity {
             });
             player.setOnErrorListener((mp, what, extra) -> {
                 runOnUiThread(() -> {
-                    Toast("Error de reproducción (" + what + "/" + extra + ")");
+                    Toast("Error de reproducción (" + what + "/" + extra + "). Saltando...");
                     btnPlay.setText("▶");
-                    if (repeat) playAt(current); else playAt(nextIndex());
+                    if (repeat) {
+                        playAt(current);
+                    } else {
+                        playAt(nextIndex());
+                    }
                 });
                 return true;
             });

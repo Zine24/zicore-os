@@ -421,6 +421,8 @@ CPU | RAM | Network | Connected nodes
 - **Mission Control dashboard** (zcs.zicore.space) — real-time telemetry, system status, missions, nodes, modules, alerts
 - **ZineMotion portal** (zinemotion.com.mx) — cinematic landing page with module cards
 - **ZICORE main menu** (/zicore) — legacy 6-card launcher
+- **Launch pad** (/zicore-os) — Deploy Console embebida para el stack `start_all.py` (polling `/api/system/startall/status`)
+- **Master Creator** (/master-creator, público) — sistema embebido: telemetría, despliegue y 17 módulos de misión en vivo
 - ZIO AI chat (OpenRouter free models, Ollama fallback)
 - Chat import (ChatGPT, Grok, Claude, Gemini, DeepSeek formats)
 - 14 HTML5 games with leaderboard
@@ -430,15 +432,19 @@ CPU | RAM | Network | Connected nodes
 - Cloudflare tunnel (zcs.zicore.space, zinemotion.com.mx)
 - Aerospace module (/aerospace) — 5 tabs: Vehicles, Propulsion, Orbital, Engineering, Missions
 - Mail portal (/mail) — inbox, compose, user management
+- Portal de descargas (/installers + /downloads) — installers, APK, ZioUnified, docker-compose, OEM setup
+- **Heartbeat 2-nodos** — `_node_heartbeat()` cacheado (15s) sobre `ZICORE_NODE_BASE_URL` (default `http://192.168.1.68:4000`); expuesto en `/api/node/heartbeat` (público), `/api/system/stats` (clave `node`) y `/api/diagnostics/run` (check `network`)
+- **Puertos configurables vía env** — `start_all.py` y `web_server.py` leen `ZICORE_API_PORT/WEB_PORT/GAMES_PORT/MUSIC_PORT`. Defaults embebidos: 9080/9090/9091/9092. En `.85` el override systemd (`/etc/systemd/system/zicore-materializer.service.d/ports.conf`) fija 4080/4000/4001/4002 (producción).
+- **Node.js Engineering System (Node platform pre-aerospace)** — `/opt/zicore-os` (copia desplegada; maestro en `/mnt/zicore-fs/ZiCore/ZIO/ZiCore`). Stack Next.js + REST API `ZiRestServer` con **Noyron** (6 plantillas: heat_exchanger, bracket, lattice_block, mechanical_part, vase, freeform), **EngineeringPipeline** (noyron→picogk→slice→print), **PicoGKBridge** (dotnet opcional, fallback JS GeometryEngine), más ZiMail/ZiVPS/ZiBank/ZiCrypto/Obsidiana portales (4100-4105) y ZiGateway (4109). **Público en `https://zicore-os.zicore.space/`** (túnel Cloudflare `aa7670b0` → `localhost:3000`, config `/etc/cloudflared/zicore-os.yml` + systemd `cloudflared-zicore-os.service`). Servicio persistente: **`zicore-engineering.service`** (systemd, `ENG_PORT=3000`, WorkingDirectory `/opt/zicore-os`). Arranque manual (cmd en `.85`): `cd /opt/zicore-os && node scripts/start-engineering.js` (puerto 3000, `ENG_PORT` para cambiar). API: `POST /api/engineering/generate`, `GET /api/engineering/status/:taskId`, `GET /api/engineering/download/:taskId/:type`, `/api/engineering/noyron/templates`. **WebSocket bridge** montado sobre el mismo `:3000` en `/ws` (túnel Cloudflare proxea upgrade): `wss://zicore-os.zicore.space/ws`; mensajes `ping`, `status`, `generate`, `task.status`, `templates`; reenvía eventos `engineering:start/progress/complete/error` en tiempo real. Outputs en `/opt/zicore-os/data/picogk/`. No toca el stack Python.
 
 ### In Progress
 - mail.zinemotion.com.mx (DNS configured, needs Cloudflare ingress hostname)
 - zinemotion.com.mx template refinement
 - OpenCode API key renewal (current key 403)
+- Fallback/Heartbeat en frontends (indicator en settings → Network; replicar en mission-control/ecosystem)
 
 ### Not Started
 - Most advanced aerospace modules (Mission Control calculations, Orbital Mechanics live, etc.)
-- Heartbeat between .85 and .68
 - Distributed compute
 
 ---
