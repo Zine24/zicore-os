@@ -286,6 +286,8 @@ class ZICORESSO:
             ("avatar_url", "TEXT"),
             ("phone", "TEXT"),
             ("plan", "TEXT NOT NULL DEFAULT 'free'"),
+            ("api_token", "TEXT"),
+            ("api_token_created_at", "TEXT"),
         ]:
             try:
                 self.conn.execute(f"ALTER TABLE users ADD COLUMN {col} {typedef}")
@@ -389,6 +391,8 @@ class ZICORESSO:
             "plan": row["plan"] if "plan" in row.keys() else "free",
             "is_active": bool(row["is_active"]),
             "two_factor_enabled": bool(row["two_factor_enabled"]),
+            "has_api_token": bool(row["api_token"] if "api_token" in row.keys() else None),
+            "api_token_created_at": row["api_token_created_at"] if "api_token_created_at" in row.keys() else None,
             "avatar_url": row["avatar_url"] if "avatar_url" in row.keys() else None,
             "phone": row["phone"] if "phone" in row.keys() else None,
             "created_at": row["created_at"],
@@ -642,6 +646,93 @@ class ZICORESSO:
                 },
             }
 
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    # ------------------------------------------------------------------
+    # Universal per-user API tokens
+    # ------------------------------------------------------------------
+    def generate_api_token(self, user_id: int) -> Dict[str, Any]:
+        """Generate (or rotate) a universal API token for a user.
+
+        Returns::
+
+            {"success": True, "token": "...", "created_at": "..."}  on success
+            {"success": False, "error": "..."} on failure
+        """
+        try:
+            row = self.conn.execute(
+                "SELECT id FROM users WHERE id = ? AND is_active = 1", (user_id,)
+            ).fetchone()
+            if not row:
+                return {"success": False, "error": "User not found or disabled"}
+
+            token = "zc_" + secrets.token_urlsafe(32)
+            now = self._now()
+            self.conn.execute(
+                "UPDATE users SET api_token = ?, api_token_created_at = ?, updated_at = ? WHERE id = ?",
+                (token, now, now, user_id),
+            )
+            self.conn.commit()
+            self._log_audit(user_id, "api_token_generated", "API token generated/rotated")
+            return {"success": True, "token": token, "created_at": now}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    def get_api_token(self, user_id: int) -> Dict[str, Any]:
+        """Return the current API token for a user (or None if not set)."""
+        try:
+            row = self.conn.execute(
+                "SELECT api_token, api_token_created_at FROM users WHERE id = ?", (user_id,)
+            ).fetchone()
+            if not row:
+                return {"success": False, "error": "User not found"}
+            return {
+                "success": True,
+                "token": row["api_token"],
+                "created_at": row["api_token_created_at"],
+            }
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    def revoke_api_token(self, user_id: int) -> Dict[str, Any]:
+        """Revoke (clear) the API token for a user."""
+        try:
+            row = self.conn.execute(
+                "SELECT id FROM users WHERE id = ?", (user_id,)
+            ).fetchone()
+            if not row:
+                return {"success": False, "error": "User not found"}
+            now = self._now()
+            self.conn.execute(
+                "UPDATE users SET api_token = NULL, api_token_created_at = NULL, updated_at = ? WHERE id = ?",
+                (now, user_id),
+            )
+            self.conn.commit()
+            self._log_audit(user_id, "api_token_revoked", "API token revoked")
+            return {"success": True}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    def verify_api_token(self, token: str) -> Dict[str, Any]:
+        """Validate a universal API token and return the associated user.
+
+        Returns::
+
+            {"success": True, "user": {...}, "via": "api_token"}
+            {"success": False, "error": "..."}
+        """
+        if not token:
+            return {"success": False, "error": "Token is required"}
+        if not token.startswith("zc_"):
+            return {"success": False, "error": "Invalid API token"}
+        try:
+            row = self.conn.execute(
+                "SELECT * FROM users WHERE api_token = ? AND is_active = 1", (token,)
+            ).fetchone()
+            if not row:
+                return {"success": False, "error": "Invalid API token"}
+            return {"success": True, "user": self._user_row_to_dict(row), "via": "api_token"}
         except Exception as exc:
             return {"success": False, "error": str(exc)}
 

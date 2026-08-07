@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,47 +7,86 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0a0a12;--bg2:#0e0e1a;--bg3:#141422;--bg4:#1a1a30;--bg5:#222244;
+  --bg:#07070f;--bg2:#0c0c1a;--bg3:#12122a;--bg4:#191933;--bg5:#242450;
   --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d71;--orange:#ff9f43;--yellow:#ffd32a;
   --text:#d0d8e8;--text2:#7888a8;--text3:#4a5570;
-  --border:rgba(0,229,255,0.08);--border2:rgba(0,229,255,0.18);
-  --glass:rgba(10,10,18,0.95);--glass2:rgba(14,14,26,0.85);
-  --winamp:#1d1d3a;--winamp2:#252548;--winamp-border:rgba(100,100,200,0.15);
+  --border:rgba(0,229,255,0.09);--border2:rgba(0,229,255,0.18);
+  --glass:rgba(7,7,15,0.96);--glass2:rgba(12,12,26,0.9);
   --font:'Segoe UI',system-ui,-apple-system,sans-serif;
   --mono:'SF Mono','Cascadia Code','Consolas','Courier New',monospace;
 }
 html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}
-
-/* ── Layout ── */
-.app{display:grid;grid-template-rows:48px 1fr 100px;grid-template-columns:240px 1fr 280px;height:100vh;gap:0}
-.topbar{grid-column:1/-1;background:var(--glass);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:10}
-.sidebar{grid-row:2;grid-column:1;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
-.main-area{grid-row:2;grid-column:2;display:flex;flex-direction:column;overflow:hidden}
-.playlist-panel{grid-row:2;grid-column:3;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.player-bar{grid-column:1/-1;background:var(--glass);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
+#app{height:100vh;display:flex;flex-direction:column}
 
 /* ── Topbar ── */
-.logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.logo svg{width:24px;height:24px}
+.topbar{height:48px;flex-shrink:0;background:var(--glass);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:30}
+.logo{display:flex;align-items:center;gap:8px;flex-shrink:0;cursor:pointer}
+.logo svg{width:22px;height:22px}
 .logo span{font-size:13px;font-weight:800;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar-sep{width:1px;height:20px;background:var(--border2);flex-shrink:0}
-.search-box{flex:1;max-width:400px;position:relative}
-.search-box input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px 7px 32px;color:var(--text);font-size:12px;outline:none}
+.nav-tabs{display:flex;gap:2px;flex-shrink:0;overflow-x:auto;max-width:44vw}
+.nav-tab{padding:7px 10px;border-radius:6px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .2s;border:1px solid transparent;letter-spacing:0.4px;background:transparent;white-space:nowrap}
+.nav-tab:hover{color:var(--text);background:rgba(0,229,255,0.04)}
+.nav-tab.active{color:var(--cyan);background:rgba(0,229,255,0.08);border-color:var(--border2)}
+.search-box{flex:1;max-width:320px;position:relative;margin-left:auto}
+.search-box input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px 7px 30px;color:var(--text);font-size:12px;outline:none}
 .search-box input:focus{border-color:var(--cyan)}
 .search-box::before{content:'⌕';position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px}
-.view-btns{display:flex;gap:4px}
-.view-btn{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s}
-.view-btn:hover,.view-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.06)}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.source-btn{padding:5px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.5px}
-.source-btn:hover{border-color:var(--cyan);color:var(--text)}
-.source-btn.active{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan)}
-.clock{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:1px}
+.src-chips{display:flex;gap:4px;flex-shrink:0}
+.src-chip{padding:5px 9px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.4px}
+.src-chip:hover{border-color:var(--cyan);color:var(--text)}
+.src-chip.active{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan)}
+.clock{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:1px;flex-shrink:0;min-width:76px;text-align:right}
 
-/* ── Sidebar ── */
-.sidebar-header{padding:14px 16px;font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border)}
-.sidebar-scroll{flex:1;overflow-y:auto;padding:8px 0}
-.tree-section{margin-bottom:4px}
+/* ── Manager (selector de módulos) ── */
+.manager{position:relative;flex-shrink:0}
+.mgr-btn{width:34px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--cyan);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.mgr-btn:hover{border-color:var(--cyan);background:rgba(0,229,255,0.08)}
+.mgr-menu{position:absolute;top:40px;right:0;width:260px;background:var(--glass2);border:1px solid var(--border2);border-radius:10px;padding:12px;z-index:80;display:none;backdrop-filter:blur(16px);box-shadow:0 12px 40px rgba(0,0,0,.55)}
+.mgr-menu.open{display:block}
+.mgr-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-weight:700;margin-bottom:8px}
+.mgr-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px;cursor:pointer;transition:background .15s;font-size:12px;color:var(--text2)}
+.mgr-row:hover{background:rgba(0,229,255,0.04);color:var(--text)}
+.mgr-row .mgr-icon{width:18px;text-align:center}
+.mgr-row input{accent-color:var(--cyan);width:14px;height:14px;cursor:pointer}
+.mgr-row .mgr-scale{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
+.mgr-sep{height:1px;background:var(--border);margin:10px 0}
+.mgr-zoom{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);padding:4px 2px}
+.mgr-zoom input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:var(--bg4);border-radius:2px;outline:none}
+.mgr-zoom input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg2);cursor:pointer}
+.mgr-zoom b{font-family:var(--mono);font-size:10px;color:var(--cyan);min-width:38px;text-align:right}
+.mgr-reset{width:100%;padding:7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:6px}
+.mgr-reset:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── Workspace ── */
+#workspace{position:relative;flex:1;overflow:hidden}
+
+/* ── Panels (ventanas modulares) ── */
+.panel{position:absolute;min-width:300px;min-height:220px;background:var(--glass2);border:1px solid var(--border2);border-radius:9px;display:flex;flex-direction:column;box-shadow:0 10px 36px rgba(0,0,0,.5);overflow:hidden}
+.panel.drag-over{border-color:var(--cyan);box-shadow:0 10px 44px rgba(0,229,255,.25)}
+.panel .ph{height:34px;flex-shrink:0;display:flex;align-items:center;padding:0 10px;gap:8px;background:var(--bg3);border-bottom:1px solid var(--border);cursor:grab;user-select:none}
+.panel .ph:active{cursor:grabbing}
+.panel .ph .pt{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:0.6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.panel .ph .pt .dots{display:flex;gap:3px}
+.panel .ph .pt .dots i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.panel .ph .pt .dots i:nth-child(1){background:var(--red)}
+.panel .ph .pt .dots i:nth-child(2){background:var(--yellow)}
+.panel .ph .pt .dots i:nth-child(3){background:var(--green)}
+.panel .ph-btns{display:flex;gap:3px}
+.ph-btn{width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.ph-btn:hover{color:var(--cyan);border-color:var(--cyan)}
+.ph-btn.max:hover{color:var(--yellow);border-color:var(--yellow)}
+.ph-btn.close:hover{color:var(--red);border-color:var(--red)}
+.panel .pbody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.panel .presize{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:12}
+.panel .presize::after{content:'';position:absolute;right:4px;bottom:4px;width:8px;height:8px;border-right:2px solid var(--text3);border-bottom:2px solid var(--text3);opacity:.6}
+.panel.filled{inset:0;width:auto;height:auto;min-width:0;min-height:0;border-radius:0;border:none}
+
+/* ── Library ── */
+.lib-layout{display:grid;grid-template-columns:230px 1fr;height:100%;min-height:0}
+.lib-side{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.lib-side-h{padding:12px 16px;font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border)}
+.lib-tree{flex:1;overflow-y:auto;padding:6px 0}
+.tree-section{margin-bottom:2px}
 .tree-label{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s;font-weight:600;letter-spacing:0.5px}
 .tree-label:hover{color:var(--text);background:rgba(0,229,255,0.04)}
 .tree-label.active{color:var(--cyan);background:rgba(0,229,255,0.06)}
@@ -58,766 +97,1389 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .tree-item.active{color:var(--cyan)}
 .tree-item .dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
 .dot-local{background:var(--cyan)}
-.dot-fs{background:var(--purple)}
-.dot-jilo{background:var(--green)}
-
-.sidebar-stats{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text3)}
-.sidebar-stats div{display:flex;justify-content:space-between;padding:2px 0}
-.sidebar-stats span:last-child{color:var(--text2);font-family:var(--mono)}
-
-/* ── Main Area ── */
-.main-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2)}
-.main-toolbar .title{font-size:13px;font-weight:700;color:var(--text)}
-.main-toolbar .count{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.dot-zicorefs{background:var(--purple)}
+.dot-jilocomotion{background:var(--green)}
+.lib-stats{padding:11px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text3)}
+.lib-stats div{display:flex;justify-content:space-between;padding:2px 0}
+.lib-stats span:last-child{color:var(--text2);font-family:var(--mono)}
+.lib-main{display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.lib-toolbar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.lib-toolbar .title{font-size:13px;font-weight:700;color:var(--text)}
+.lib-toolbar .count{font-size:10px;color:var(--text3);font-family:var(--mono)}
 .sort-btns{display:flex;gap:4px;margin-left:auto}
-.sort-btn{padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;transition:all .2s}
+.sort-btn{padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;transition:all .2s}
 .sort-btn:hover{border-color:var(--cyan);color:var(--text)}
 .sort-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08)}
-
-.file-list{flex:1;overflow-y:auto;padding:4px 0}
-.file-list.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:12px}
-
-.file-row{display:grid;grid-template-columns:28px 1fr 80px 60px 40px;align-items:center;padding:6px 16px;font-size:12px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:background .1s}
+.view-btns{display:flex;gap:4px}
+.view-btn{width:26px;height:26px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s}
+.view-btn:hover,.view-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.06)}
+.file-scroll{flex:1;overflow-y:auto;padding:4px 0}
+.file-scroll.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:12px}
+.file-row{display:grid;grid-template-columns:28px 1fr 88px 70px 36px;align-items:center;padding:6px 14px;font-size:12px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:background .1s}
 .file-row:hover{background:rgba(0,229,255,0.04)}
 .file-row.playing{background:rgba(0,229,255,0.08)}
 .file-row .fi-icon{font-size:14px;text-align:center;color:var(--text3)}
 .file-row .fi-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.file-row .fi-name .ext{color:var(--text3);font-size:10px}
 .file-row .fi-size{font-family:var(--mono);font-size:10px;color:var(--text3);text-align:right}
-.file-row .fi-source{font-size:9px;padding:2px 6px;border-radius:3px;text-align:center;font-weight:600;letter-spacing:0.5px}
+.file-row .fi-mime{font-family:var(--mono);font-size:9px;color:var(--text3);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-row .fi-add{opacity:0;font-size:14px;color:var(--cyan);cursor:pointer;transition:opacity .15s;text-align:center}
+.file-row:hover .fi-add{opacity:1}
+.file-row .fi-share{opacity:0;font-size:11px;color:var(--purple);cursor:pointer;transition:opacity .15s;text-align:center}
+.file-row:hover .fi-share{opacity:1}
+.file-card .fc-share{display:inline-block;margin-top:6px;font-size:10px;color:var(--purple);cursor:pointer;padding:2px 8px;border:1px solid rgba(124,77,255,0.3);border-radius:3px;opacity:.85;transition:all .2s}
+.file-card .fc-share:hover{opacity:1;background:rgba(124,77,255,0.12)}
+.zmmx-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(6,8,14,.95);border:1px solid var(--cyan);color:#eee;padding:8px 16px;border-radius:6px;font-size:11px;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.zmmx-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.fi-source{font-size:9px;padding:2px 6px;border-radius:3px;text-align:center;font-weight:600;letter-spacing:0.5px}
 .fi-source.local{background:rgba(0,229,255,0.1);color:var(--cyan)}
 .fi-source.zicore_fs{background:rgba(124,77,255,0.1);color:var(--purple)}
 .fi-source.jilocomotion{background:rgba(0,255,136,0.1);color:var(--green)}
-.file-row .fi-add{opacity:0;font-size:14px;color:var(--cyan);cursor:pointer;transition:opacity .15s;text-align:center}
-.file-row:hover .fi-add{opacity:1}
-
 .file-card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;cursor:pointer;transition:all .2s;text-align:center}
 .file-card:hover{border-color:var(--cyan);transform:translateY(-2px)}
-.file-card .fc-icon{font-size:28px;margin-bottom:6px;opacity:.6}
+.file-card.playing{border-color:var(--green)}
+.file-card .fc-icon{font-size:30px;margin-bottom:6px;opacity:.65}
 .file-card .fc-name{font-size:10px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-card .fc-meta{font-size:9px;color:var(--text3);margin-top:4px}
+.load-more-row{padding:10px;text-align:center}
+.load-more-btn{padding:8px 20px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--cyan);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+.load-more-btn:hover{background:rgba(0,229,255,0.08)}
+.empty{text-align:center;padding:50px 16px;color:var(--text3);font-size:13px}
+.empty .big{font-size:40px;margin-bottom:10px;opacity:.4}
+.loading{text-align:center;padding:50px;color:var(--text3)}
+.loading::after{content:'';display:block;width:30px;height:30px;margin:14px auto;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── Playlist Panel ── */
-.pl-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.pl-header .title{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-weight:700}
-.pl-header .count{font-size:10px;color:var(--text3);font-family:var(--mono)}
+/* ── Audio module ── */
+.audio-stage{display:flex;flex-direction:column;padding:14px;gap:12px;overflow:auto;flex:1}
+.audio-vis-wrap{position:relative;flex:1;min-height:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#spectrum{position:absolute;inset:0;width:100%;height:100%;display:none}
+.audio-art{font-size:56px;opacity:.5}
+.audio-np{padding:4px}
+.audio-np .t{font-size:15px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audio-np .a{font-size:11px;color:var(--text3);margin-top:2px}
+.audio-controls{display:flex;align-items:center;justify-content:center;gap:8px;padding:6px;flex-wrap:wrap}
+.p-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
+.p-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.06)}
+.p-btn.play{width:50px;height:50px;border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1);font-size:21px}
+.p-btn.play:hover{background:rgba(0,229,255,0.18)}
+.p-btn.active{color:var(--cyan);border-color:var(--cyan)}
+.seek-wrap{display:flex;align-items:center;gap:10px;max-width:640px;width:100%;margin:0 auto}
+.progress-bar{flex:1;height:5px;background:var(--bg4);border-radius:3px;cursor:pointer;position:relative}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:3px;width:0}
+.progress-time{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:36px;text-align:center}
+
+/* ── Playlist panel ── */
+.pl-panel{background:var(--bg2);display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0}
+.pl-h{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pl-h .t{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-weight:700}
+.pl-h .c{font-size:10px;color:var(--text3);font-family:var(--mono)}
 .pl-list{flex:1;overflow-y:auto;padding:4px 0}
-.pl-item{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:11px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:background .1s}
+.pl-item{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:11px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:background .1s}
 .pl-item:hover{background:rgba(0,229,255,0.04)}
 .pl-item.active{background:rgba(0,229,255,0.08);border-left:2px solid var(--cyan)}
-.pl-item .pl-num{font-family:var(--mono);font-size:10px;color:var(--text3);width:20px;text-align:right;flex-shrink:0}
-.pl-item .pl-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
-.pl-item.active .pl-name{color:var(--cyan)}
-.pl-item .pl-dur{font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0}
-.pl-item .pl-remove{opacity:0;color:var(--red);cursor:pointer;font-size:12px;flex-shrink:0;transition:opacity .15s}
-.pl-item:hover .pl-remove{opacity:1}
+.pl-item .num{font-family:var(--mono);font-size:10px;color:var(--text3);width:18px;text-align:right;flex-shrink:0}
+.pl-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.pl-item.active .nm{color:var(--cyan)}
+.pl-item .icon{flex-shrink:0;font-size:11px;opacity:.6}
+.pl-item .rm{opacity:0;color:var(--red);cursor:pointer;font-size:12px;flex-shrink:0;transition:opacity .15s}
+.pl-item:hover .rm{opacity:1}
 .pl-empty{text-align:center;padding:40px 16px;color:var(--text3);font-size:12px}
-.pl-empty .big{font-size:32px;margin-bottom:8px;opacity:.4}
-
-.pl-actions{padding:8px 16px;border-top:1px solid var(--border);display:flex;gap:6px}
+.pl-empty .big{font-size:30px;margin-bottom:8px;opacity:.4}
+.pl-actions{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:6px}
 .pl-btn{flex:1;padding:6px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
 .pl-btn:hover{border-color:var(--cyan);color:var(--text)}
 .pl-btn.danger:hover{border-color:var(--red);color:var(--red)}
 
-/* ── Player Bar ── */
-.player-info{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
-.player-art{width:60px;height:60px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden}
-.player-art img{width:100%;height:100%;object-fit:cover}
-.player-meta{min-width:0}
-.player-title{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.player-artist{font-size:11px;color:var(--text3);margin-top:2px}
-.player-source{font-size:9px;padding:2px 6px;border-radius:3px;display:inline-block;margin-top:4px}
+/* ── EQ panel ── */
+.eq-panel{position:fixed;bottom:74px;right:16px;width:360px;background:var(--glass2);border:1px solid var(--border2);border-radius:10px;padding:14px;backdrop-filter:blur(16px);z-index:100;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.eq-panel.open{display:block}
+.eq-panel .eq-title{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--cyan);font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.eq-row{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.eq-row label{width:32px;font-size:9px;color:var(--text3);text-align:right;flex-shrink:0}
+.eq-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:var(--bg4);border-radius:2px;outline:none}
+.eq-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg2);cursor:pointer}
+.eq-row input[type=range]::-webkit-slider-thumb:hover{background:var(--purple)}
+.eq-row .eq-val{width:26px;font-size:9px;color:var(--text2);font-family:var(--mono);text-align:center;flex-shrink:0}
+.eq-presets{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.eq-presets button{padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:9px;cursor:pointer;transition:all .2s}
+.eq-presets button:hover,.eq-presets button.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08)}
+.eq-on-label{font-size:9px;color:var(--green);font-weight:700}
 
-.player-controls{display:flex;align-items:center;gap:8px}
-.p-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
-.p-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.06)}
-.p-btn.play{width:44px;height:44px;border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08);font-size:18px}
-.p-btn.play:hover{background:rgba(0,229,255,0.15)}
-.p-btn.active{color:var(--cyan);border-color:var(--cyan)}
+/* ── Video (teatro) ── */
+.video-wrap{display:flex;flex-direction:column;height:100%;background:#000}
+.video-stage{flex:1;display:flex;align-items:center;justify-content:center;background:#000;padding:8px;overflow:hidden;min-height:0}
+#videoEl{max-width:100%;max-height:100%;border-radius:6px;outline:none;background:#000}
+.video-msg{color:var(--text3);font-size:13px;text-align:center;padding:24px}
+.video-msg .big{font-size:40px;opacity:.4;margin-bottom:10px}
 
-.player-progress{display:flex;align-items:center;gap:10px;flex:1;max-width:400px}
-.progress-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;cursor:pointer;position:relative;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;transition:width .3s}
-.progress-time{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:36px;text-align:center}
+/* ── Gallery ── */
+.gallery-scroll{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.g-item{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid var(--border);background:var(--bg3)}
+.g-item img{width:100%;height:100%;object-fit:cover;transition:transform .25s}
+.g-item:hover img{transform:scale(1.05)}
+.g-item .g-name{position:absolute;bottom:0;left:0;right:0;padding:4px 6px;font-size:9px;color:var(--text);background:linear-gradient(transparent,rgba(0,0,0,.8));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column}
+.lightbox.open{display:flex}
+.lightbox img{max-width:92vw;max-height:82vh;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,.7)}
+.lightbox .lb-caption{color:var(--text2);font-size:12px;margin-top:12px;max-width:80vw;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-btn{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:1px solid var(--border2);background:rgba(0,0,0,.5);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.lb-btn:hover{color:var(--cyan);border-color:var(--cyan)}
+.lb-prev{left:20px}.lb-next{right:20px}
+.lb-close{position:absolute;top:16px;right:20px;width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);background:rgba(0,0,0,.5);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lb-close:hover{color:var(--red);border-color:var(--red)}
+.lb-count{position:absolute;top:20px;left:24px;color:var(--text3);font-family:var(--mono);font-size:12px}
 
-.player-volume{display:flex;align-items:center;gap:8px}
-.vol-icon{font-size:14px;color:var(--text3)}
-.vol-bar{width:80px;height:4px;background:var(--bg4);border-radius:2px;cursor:pointer;position:relative}
-.vol-fill{height:100%;background:var(--green);border-radius:2px}
+/* ── Docs ── */
+.docs-scroll{flex:1;overflow-y:auto;padding:10px}
+.doc-row{display:flex;align-items:center;gap:12px;padding:9px 14px;font-size:12px;border-bottom:1px solid rgba(0,229,255,0.03);cursor:pointer;transition:background .1s}
+.doc-row:hover{background:rgba(0,229,255,0.04)}
+.doc-row .di{font-size:18px;flex-shrink:0}
+.doc-row .dn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.doc-row .dm{font-size:10px;color:var(--text3);font-family:var(--mono);flex-shrink:0}
+#docFrame{flex:1;border:none;background:#fff;width:100%;height:100%}
 
-.player-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+/* ── Player bar ── */
+.playerbar{height:62px;flex-shrink:0;background:var(--glass);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:12px;z-index:30}
+.pb-info{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.pb-art{width:42px;height:42px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;overflow:hidden}
+.pb-meta{min-width:0}
+.pb-title{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.pb-controls{display:flex;align-items:center;gap:6px}
+.pb-controls .p-btn{width:32px;height:32px;font-size:14px}
+.pb-controls .p-btn.play{width:38px;height:38px;font-size:17px}
+.pb-progress{display:flex;align-items:center;gap:8px;flex:1;max-width:400px}
+.pb-progress .progress-time{min-width:32px}
+.pb-eqbar{display:flex;align-items:flex-end;gap:2px;height:16px;width:34px;flex-shrink:0}
+.pb-eqbar .b{width:3px;background:var(--cyan);border-radius:1px;height:6px;transition:height .12s}
+.pb-eqbar .b:nth-child(2){background:var(--purple)}
+.pb-eqbar .b:nth-child(3){background:var(--green)}
+.pb-eqbar .b:nth-child(4){background:var(--cyan)}
+.pb-eqbar .b:nth-child(5){background:var(--purple)}
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.2)}
 
-/* ── Loading ── */
-.loading{text-align:center;padding:60px;color:var(--text3)}
-.loading::after{content:'';display:block;width:32px;height:32px;margin:12px auto;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── Animations ── */
-@keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
-.eq-bars{display:flex;align-items:flex-end;gap:2px;height:16px}
-.eq-bar{width:3px;background:var(--cyan);border-radius:1px;animation:eq .6s ease-in-out infinite}
-.eq-bar:nth-child(2){animation-delay:.1s}
-.eq-bar:nth-child(3){animation-delay:.2s}
-.eq-bar:nth-child(4){animation-delay:.3s}
-
-/* ── Equalizer Panel ── */
-.eq-panel{position:fixed;bottom:110px;right:20px;width:340px;background:var(--glass2);border:1px solid var(--border2);border-radius:10px;padding:16px;backdrop-filter:blur(16px);z-index:100;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-.eq-panel.open{display:block}
-.eq-panel .eq-title{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--cyan);font-weight:700;margin-bottom:12px}
-.eq-row{display:flex;align-items:center;gap:8px;margin-bottom:3px}
-.eq-row label{width:28px;font-size:9px;color:var(--text3);text-align:right;flex-shrink:0}
-.eq-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:var(--bg4);border-radius:2px;outline:none}
-.eq-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg2);cursor:pointer}
-.eq-row input[type=range]::-webkit-slider-thumb:hover{background:var(--purple)}
-.eq-row .eq-val{width:28px;font-size:9px;color:var(--text2);font-family:var(--mono);text-align:center;flex-shrink:0}
-.eq-presets{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
-.eq-presets button{padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:9px;cursor:pointer;transition:all .2s}
-.eq-presets button:hover,.eq-presets button.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.08)}
-
-/* ── Responsive ── */
-@media(max-width:1000px){.app{grid-template-columns:200px 1fr 0}.playlist-panel{display:none}}
-@media(max-width:700px){.app{grid-template-columns:0 1fr 0}.sidebar{display:none}.playlist-panel{display:none}}
+@media(max-width:820px){.src-chips{display:none}.nav-tabs{max-width:60vw}.search-box{max-width:200px}}
 </style>
 </head>
 <body>
-
-<div class="app">
-  <!-- Topbar -->
-  <div class="topbar">
-    <div class="logo">
+<div id="app">
+  <header class="topbar">
+    <div class="logo" onclick="Panels.toggle('library')">
       <svg viewBox="0 0 100 100"><polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="none" stroke="url(#hg2)" stroke-width="3"/><defs><linearGradient id="hg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs></svg>
       <span>ZMMX</span>
     </div>
-    <div class="topbar-sep"></div>
+    <nav class="nav-tabs" id="navTabs"></nav>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Search all media...">
+      <input type="text" id="searchInput" placeholder="Buscar en toda la biblioteca..." oninput="ZMMX.onSearch(this.value)">
     </div>
-    <div class="view-btns">
-      <button class="view-btn active" data-view="list" title="List view">☰</button>
-      <button class="view-btn" data-view="grid" title="Grid view">⊞</button>
+    <div class="src-chips" id="srcChips"></div>
+    <div class="manager" id="manager">
+      <button class="mgr-btn" onclick="Panels.toggleMenu(event)" title="Selector de módulos">⊞</button>
+      <div class="mgr-menu" id="mgrMenu"></div>
     </div>
-    <div class="topbar-sep"></div>
-    <button class="source-btn active" data-source="all">All</button>
-    <button class="source-btn" data-source="local">Local</button>
-    <button class="source-btn" data-source="zicore_fs">zicore-fs</button>
-    <button class="source-btn" data-source="jilocomotion">jilocomotion</button>
-    <div class="topbar-sep"></div>
     <div class="clock" id="clock"></div>
-  </div>
+  </header>
 
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="sidebar-header">Categories</div>
-    <div class="sidebar-scroll" id="sidebarTree"></div>
-    <div class="sidebar-stats" id="sidebarStats"></div>
-  </div>
+  <main id="workspace"></main>
 
-  <!-- Main Area -->
-  <div class="main-area">
-    <div class="main-toolbar">
-      <span class="title" id="mainTitle">All Media</span>
-      <span class="count" id="mainCount">0 items</span>
-      <div class="sort-btns">
-        <button class="sort-btn active" data-sort="name">Name</button>
-        <button class="sort-btn" data-sort="size">Size</button>
-        <button class="sort-btn" data-sort="date">Date</button>
-        <button class="sort-btn" data-sort="source">Source</button>
+  <footer class="playerbar">
+    <div class="pb-info">
+      <div class="pb-art" id="pbArt">♪</div>
+      <div class="pb-meta">
+        <div class="pb-title" id="pbTitle">Sin pista</div>
+        <div class="pb-sub" id="pbSub">ZMMX Library</div>
       </div>
     </div>
-    <div class="file-list" id="fileList"><div class="loading">Loading media...</div></div>
-  </div>
-
-  <!-- Playlist Panel -->
-  <div class="playlist-panel">
-    <div class="pl-header">
-      <span class="title">Playlist</span>
-      <span class="count" id="plCount">0 tracks</span>
+    <div class="pb-progress">
+      <span class="progress-time" id="pbCur">0:00</span>
+      <div class="progress-bar" id="pbSeek"><div class="progress-fill" id="pbFill" style="width:0"></div></div>
+      <span class="progress-time" id="pbDur">0:00</span>
     </div>
-    <div class="pl-list" id="plList">
-      <div class="pl-empty"><div class="big">♪</div>Click a file to play it</div>
+    <div class="pb-controls">
+      <button class="p-btn" onclick="Player.prev()" title="Anterior">⏮</button>
+      <button class="p-btn play" id="pbPlay" onclick="Player.toggle()" title="Play/Pausa">▶</button>
+      <button class="p-btn" onclick="Player.next()" title="Siguiente">⏭</button>
+      <button class="p-btn" id="pbShuffle" onclick="Player.toggleShuffle()" title="Aleatorio">🔀</button>
+      <button class="p-btn" id="pbRepeat" onclick="Player.toggleRepeat()" title="Repetir">🔁</button>
     </div>
-    <div class="pl-actions">
-      <button class="pl-btn" onclick="clearPlaylist()">Clear</button>
-      <button class="pl-btn" onclick="exportPlaylist()">Export</button>
-      <button class="pl-btn danger" onclick="removeSelected()">Remove</button>
+    <div class="pb-eqbar" id="pbEqbar"><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div></div>
+    <div class="seek-wrap" style="flex:1;max-width:180px;margin:0">
+      <span style="font-size:13px;color:var(--text3)">🔊</span>
+      <div class="progress-bar" id="pbVol"><div class="progress-fill" id="pbVolFill" style="width:85%;background:var(--green)"></div></div>
     </div>
-  </div>
-
-  <!-- Player Bar -->
-  <div class="player-bar">
-    <div class="player-info">
-      <div class="player-art" id="playerArt">♪</div>
-      <div class="player-meta">
-        <div class="player-title" id="playerTitle">No track selected</div>
-        <div class="player-artist" id="playerArtist">ZMMX Library</div>
-      </div>
-    </div>
-    <div class="player-controls">
-      <button class="p-btn" onclick="prevTrack()" title="Previous">⏮</button>
-      <button class="p-btn play" id="playBtn" onclick="togglePlay()" title="Play/Pause">▶</button>
-      <button class="p-btn" onclick="nextTrack()" title="Next">⏭</button>
-      <button class="p-btn" id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle">🔀</button>
-      <button class="p-btn" id="repeatBtn" onclick="toggleRepeat()" title="Repeat">🔁</button>
-    </div>
-    <div class="player-progress">
-      <span class="progress-time" id="currentTime">0:00</span>
-      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0"></div></div>
-      <span class="progress-time" id="totalTime">0:00</span>
-    </div>
-    <div class="player-volume">
-      <span class="vol-icon">🔊</span>
-      <div class="vol-bar" id="volBar"><div class="vol-fill" id="volFill" style="width:80%"></div></div>
-    </div>
-    <div class="player-right">
-      <div class="eq-bars" id="eqBars" style="display:flex;align-items:flex-end;gap:2px;height:16px">
-        <div class="eq-bar" style="width:3px;background:var(--cyan);border-radius:1px;animation:eq .6s ease-in-out infinite;height:8px"></div>
-        <div class="eq-bar" style="width:3px;background:var(--cyan);border-radius:1px;animation:eq .6s ease-in-out infinite;animation-delay:.1s;height:12px"></div>
-        <div class="eq-bar" style="width:3px;background:var(--cyan);border-radius:1px;animation:eq .6s ease-in-out infinite;animation-delay:.2s;height:6px"></div>
-        <div class="eq-bar" style="width:3px;background:var(--cyan);border-radius:1px;animation:eq .6s ease-in-out infinite;animation-delay:.3s;height:10px"></div>
-        <div class="eq-bar" style="width:3px;background:var(--purple);border-radius:1px;animation:eq .6s ease-in-out infinite;animation-delay:.4s;height:14px"></div>
-        <div class="eq-bar" style="width:3px;background:var(--purple);border-radius:1px;animation:eq .6s ease-in-out infinite;animation-delay:.5s;height:8px"></div>
-        <div class="eq-bar" style="width:3px;background:var(--green);border-radius:1px;animation:eq .6s ease-in-out infinite;animation-delay:.6s;height:12px"></div>
-      </div>
-      <button class="p-btn" id="eqToggle" onclick="toggleEQPanel()" title="Equalizer" style="width:30px;height:30px;font-size:9px">EQ</button>
-    </div>
-  </div>
+  </footer>
 </div>
 
 <!-- Equalizer Panel -->
 <div class="eq-panel" id="eqPanel">
-  <div class="eq-title">◈ EQUALIZER</div>
+  <div class="eq-title">
+    <span>◈ ECUALIZADOR <span class="eq-on-label" id="eqOnLabel"></span></span>
+    <span style="cursor:pointer" onclick="Player.toggleEQ()">✕</span>
+  </div>
   <div id="eqSliders"></div>
   <div class="eq-presets">
-    <button onclick="setEQPreset('flat')" class="active">Flat</button>
-    <button onclick="setEQPreset('pop')">Pop</button>
-    <button onclick="setEQPreset('rock')">Rock</button>
-    <button onclick="setEQPreset('jazz')">Jazz</button>
-    <button onclick="setEQPreset('classical')">Classical</button>
-    <button onclick="setEQPreset('bass')">Bass</button>
-    <button onclick="setEQPreset('spoken')">Spoken</button>
+    <button onclick="Player.setEQPreset('flat')" class="active">Flat</button>
+    <button onclick="Player.setEQPreset('pop')">Pop</button>
+    <button onclick="Player.setEQPreset('rock')">Rock</button>
+    <button onclick="Player.setEQPreset('jazz')">Jazz</button>
+    <button onclick="Player.setEQPreset('classical')">Clásico</button>
+    <button onclick="Player.setEQPreset('bass')">Bass</button>
+    <button onclick="Player.setEQPreset('spoken')">Voz</button>
+    <button onclick="Player.setEQPreset('flat')">Reset</button>
   </div>
 </div>
 
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" onclick="Gallery.close()">✕</button>
+  <span class="lb-count" id="lbCount"></span>
+  <button class="lb-btn lb-prev" onclick="Gallery.step(-1)">‹</button>
+  <img id="lbImg" src="" alt="">
+  <button class="lb-btn lb-next" onclick="Gallery.step(1)">›</button>
+  <div class="lb-caption" id="lbCaption"></div>
+</div>
+
 <script>
-const API = '';
-let currentCategory = 'images';
-let currentSource = 'all';
-let currentSort = 'name';
-let currentOrder = 'asc';
-let currentView = 'list';
-let playlist = [];
-let currentTrack = -1;
-let isPlaying = false;
-let shuffleOn = false;
-let repeatOn = false;
-let searchQuery = '';
-let searchTimeout = null;
-let audioCtx = null, analyser = null, sourceNode = null, mediaSourceBound = false;
-let eqNodes = [];
-let visualizerRAF = null;
-let audio = new Audio();
-let video = document.createElement('video');
-let isVideo = false;
-let categories = {};
+'use strict';
+/* ════════════════════════════════════════════════════════════════════════
+   ZMMX — Librería multimedia modular estilo Winamp.
+   Cada módulo es una VENTANA independiente: arrastrable, redimensionable,
+   escalable y ocultable desde el selector (⊞). Se registran en
+   ZMMX.modules y se gestionan con Panels.
+   ════════════════════════════════════════════════════════════════════════ */
 
-function getUrl(file) {
-  if (file.url) return file.url;
-  if (file.source === 'jilocomotion') return '/api/jilocomotion/serve?path=' + encodeURIComponent(file.path);
-  if (file.path) return '/api/media/serve?path=' + encodeURIComponent(file.path);
-  return '';
-}
-
-function encFile(f) { return encodeURIComponent(JSON.stringify(f)); }
-function pickFile(el) { return JSON.parse(decodeURIComponent(el.dataset.file)); }
-
-function selectFile(f) {
-  if (!f) return;
-  var wasCurrent = currentTrack >= 0 && playlist[currentTrack] &&
-    playlist[currentTrack].path === f.path && playlist[currentTrack].source === f.source;
-  addToPlaylist(f);
-  if (wasCurrent) return;
-  if (currentTrack >= 0) {
-    var idx = playlist.findIndex(function(p){ return p.path === f.path && p.source === f.source; });
-    if (idx >= 0) { currentTrack = idx; loadTrack(idx); }
+var ZMMX = {
+  modules: {},
+  state: {
+    lib: { category: 'music', source: 'all', sort: 'name', order: 'asc', view: 'list', q: '', offset: 0, total: 0 },
+    gallery: { offset: 0, items: [], index: 0 },
+    categories: {}, grandTotal: 0,
+    vol: parseFloat(localStorage.getItem('zmmx_vol') || '0.85')
   }
-}
+};
 
-function markPlaying() {
-  var list = document.getElementById('fileList');
-  if (!list) return;
-  list.querySelectorAll('.file-row, .file-card').forEach(function(el){
-    var f;
-    try { f = pickFile(el); } catch(e){ return; }
-    var on = currentTrack >= 0 && playlist[currentTrack] &&
-      playlist[currentTrack].path === f.path && playlist[currentTrack].source === f.source;
-    el.classList.toggle('playing', !!on);
-  });
-}
-
-function getAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    if (!mediaSourceBound) {
-      try {
-        sourceNode = audioCtx.createMediaElementSource(audio);
-        mediaSourceBound = true;
-      } catch(e) { console.warn('Media element already bound:', e); }
-    }
+/* ── Utilidades ── */
+ZMMX.utils = {
+  fmtSize: function(b){
+    if (!b && b !== 0) return '?';
+    var u = ['B','KB','MB','GB','TB'], i = 0;
+    while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+    return b.toFixed(i > 0 ? 1 : 0) + ' ' + u[i];
+  },
+  fmtTime: function(s){
+    if (!isFinite(s) || s < 0) return '0:00';
+    var m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return m + ':' + String(sec).padStart(2, '0');
+  },
+  esc: function(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; },
+  ext: function(f){ return ((f.ext || '').replace(/^\./,'') || (f.name || '').split('.').pop()).toLowerCase(); },
+  mime: function(f){
+    var e = ZMMX.utils.ext(f);
+    var map = { mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', flac:'audio/flac', m4a:'audio/mp4', aac:'audio/aac',
+      mp4:'video/mp4', webm:'video/webm', mov:'video/quicktime', mkv:'video/x-matroska', avi:'video/x-msvideo', m4v:'video/mp4',
+      png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', bmp:'image/bmp', svg:'image/svg+xml',
+      pdf:'application/pdf', epub:'application/epub+zip' };
+    return map[e] || f.mime || 'application/octet-stream';
+  },
+  type: function(f){
+    var e = ZMMX.utils.ext(f);
+    if (/^(mp3|wav|ogg|flac|m4a|aac)$/.test(e)) return 'audio';
+    if (/^(mp4|webm|mov|mkv|avi|m4v|3gp)$/.test(e)) return 'video';
+    if (/^(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(e)) return 'image';
+    if (/^(pdf|epub|djvu|txt|doc|docx|mobi)$/.test(e)) return 'doc';
+    return 'other';
+  },
+  icon: function(f){
+    var t = ZMMX.utils.type(f);
+    return t === 'audio' ? '🎵' : t === 'video' ? '🎬' : t === 'image' ? '🖼️' : t === 'doc' ? '📄' : '📦';
+  },
+  getUrl: function(f){
+    if (f.url) return f.url;
+    if (f.source === 'jilocomotion') return '/api/jilocomotion/serve?path=' + encodeURIComponent(f.path);
+    if (f.path) return '/api/media/serve?path=' + encodeURIComponent(f.path);
+    return '';
   }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
+};
 
-function connectAnalyzer(el) {
-  try {
-    const ctx = getAudioContext();
-    if (!sourceNode) { sourceNode = ctx.createMediaElementSource(el); mediaSourceBound = true; }
-    // Disconnect previous connections but keep the graph alive
-    try { analyser.disconnect(); } catch(e){}
-    sourceNode.connect(analyser);
-    analyser.connect(ctx.destination);
-    startVisualizer();
-  } catch(e) { console.warn('Analyzer connect failed:', e); }
-}
-
-function disconnectAnalyzer() {
-  if (visualizerRAF) { cancelAnimationFrame(visualizerRAF); visualizerRAF = null; }
-  if (analyser) try { analyser.disconnect(); } catch(e){}
-  if (sourceNode) try { sourceNode.disconnect(); } catch(e){}
-}
-
-function startVisualizer() {
-  if (visualizerRAF) cancelAnimationFrame(visualizerRAF);
-  if (!analyser) return;
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
-  const bars = document.querySelectorAll('.eq-bar');
-  function draw() {
-    visualizerRAF = requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(dataArray);
-    bars.forEach(function(bar, i) {
-      if (i < bufferLength) {
-        var val = dataArray[i] / 255;
-        bar.style.height = (4 + val * 20) + 'px';
-        bar.style.opacity = 0.4 + val * 0.6;
-      }
-    });
-  }
-  draw();
-}
-
-async function api(path) {
-  const r = await fetch(API + path);
+ZMMX.api = async function(path){
+  var r = await fetch(path);
   return r.json();
-}
+};
 
-async function loadCategories() {
-  const r = await api('/api/zmmx/categories');
-  if (r.categories) {
-    categories = r.categories;
-    renderSidebar();
-    renderStats(r.grand_total);
-  }
-}
+ZMMX.registerModule = function(name, def){ this.modules[name] = def; };
 
-function renderSidebar() {
-  const icons = { images:'🖼️', audio:'🎵', music:'🎶', video:'🎬', ebooks:'📚' };
-  const names = { images:'Images', audio:'Audio', music:'Music', video:'Video', ebooks:'Ebooks' };
-  let html = '';
+ZMMX.toast = function(msg){
+  var t = document.createElement('div');
+  t.className = 'zmmx-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.classList.add('show'); }, 10);
+  setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.remove(); }, 300); }, 2200);
+};
 
-  for (const [cat, data] of Object.entries(categories)) {
-    const isActive = cat === currentCategory;
-    html += `<div class="tree-section">
-      <div class="tree-label ${isActive ? 'active' : ''}" onclick="selectCategory('${cat}')">
-        <span class="icon">${icons[cat] || '📁'}</span>
-        <span>${names[cat] || cat}</span>
-        <span class="count">${data.total}</span>
-      </div>
-      ${data.local > 0 ? `<div class="tree-item ${isActive ? 'active' : ''}" onclick="selectCategory('${cat}','local')"><span class="dot dot-local"></span>Local (${data.local})</div>` : ''}
-      ${data.zicore_fs > 0 ? `<div class="tree-item ${isActive ? 'active' : ''}" onclick="selectCategory('${cat}','zicore_fs')"><span class="dot dot-fs"></span>zicore-fs (${data.zicore_fs})</div>` : ''}
-      ${data.jilocomotion > 0 ? `<div class="tree-item ${isActive ? 'active' : ''}" onclick="selectCategory('${cat}','jilocomotion')"><span class="dot dot-jilo"></span>jilocomotion (${data.jilocomotion})</div>` : ''}
-    </div>`;
-  }
-  document.getElementById('sidebarTree').innerHTML = html;
-}
+ZMMX.copyText = function(text, label){
+  var ok = function(){ ZMMX.toast(label || 'Enlace copiado'); };
+  var fallback = function(){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    ta.remove(); ok();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok, fallback);
+  } else { fallback(); }
+};
 
-function renderStats(total) {
-  let html = `<div><span>Total Media</span><span>${total.toLocaleString()}</span></div>`;
-  for (const [cat, data] of Object.entries(categories)) {
-    html += `<div><span>${cat}</span><span>${data.total.toLocaleString()}</span></div>`;
-  }
-  document.getElementById('sidebarStats').innerHTML = html;
-}
-
-async function loadFiles() {
-  const list = document.getElementById('fileList');
-  list.innerHTML = '<div class="loading">Loading...</div>';
-
-  if (searchQuery) {
-    const r = await api(`/api/zmmx/search?q=${encodeURIComponent(searchQuery)}&category=${currentCategory}&source=${currentSource}&limit=200`);
-    renderFiles(r.results || []);
+ZMMX.shareFile = function(f){
+  var u = ZMMX.utils.getUrl(f);
+  if (!u) { ZMMX.toast('Sin enlace para compartir'); return; }
+  var abs;
+  try { abs = new URL(u, location.origin).href; } catch(e){ abs = location.origin + u; }
+  var name = f.name || 'ZICORE media';
+  if (navigator.share) {
+    navigator.share({ title: name, url: abs }).catch(function(e){
+      if (e.name !== 'AbortError') ZMMX.toast('No se pudo compartir');
+    });
   } else {
-    const r = await api(`/api/zmmx/browse?category=${currentCategory}&source=${currentSource}&sort=${currentSort}&order=${currentOrder}&limit=200`);
-    renderFiles(r.items || []);
-    document.getElementById('mainTitle').textContent = currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1);
+    ZMMX.copyText(abs);
   }
-}
+};
 
-function renderFiles(items) {
-  const list = document.getElementById('fileList');
-  document.getElementById('mainCount').textContent = items.length + ' items';
+/* ════════════════════════════════════════════════════════════════════════
+   PANELS — gestor de ventanas modulares (mostrar/ocultar, mover, escalar)
+   ════════════════════════════════════════════════════════════════════════ */
+var Panels = {
+  order: [],            // ids registrados
+  meta: {},             // id -> {title, icon, def}
+  win: {},              // id -> {el, head, body}
+  defs: {               // defaults de geometría por panel
+    library: { x: 0, y: 0, w: 'fill', h: 'fill' },
+    audio:   { x: 'right', y: 'bottom', w: 400, h: 430 },
+    video:   { x: 90, y: 60, w: 720, h: 460 },
+    gallery: { x: 40, y: 40, w: 760, h: 520 },
+    docs:    { x: 60, y: 50, w: 700, h: 480 }
+  },
+  state: { visible: {}, layout: {}, zoom: 1 },
+  KEY: 'zmmx_panels',
 
-  if (items.length === 0) {
-    list.innerHTML = '<div class="pl-empty"><div class="big">📁</div>No media found</div>';
-    return;
-  }
+  register: function(id, title, icon, def){
+    this.meta[id] = { title: title, icon: icon, def: def };
+    this.order.push(id);
+    if (this.state.visible[id] === undefined) this.state.visible[id] = (def.defaultVisible !== false);
+    if (id === 'library') this.state.visible[id] = true;
+  },
 
-  const enc = encFile;
-  const pick = pickFile;
+  load: function(){
+    try {
+      var s = JSON.parse(localStorage.getItem(this.KEY) || 'null');
+      if (s) { this.state.visible = s.visible || this.state.visible; this.state.layout = s.layout || {}; this.state.zoom = s.zoom || 1; }
+    } catch(e){}
+    this.applyZoom();
+  },
+  save: function(){
+    try { localStorage.setItem(this.KEY, JSON.stringify({ visible: this.state.visible, layout: this.state.layout, zoom: this.state.zoom })); } catch(e){}
+  },
 
-  if (currentView === 'grid') {
-    list.className = 'file-list grid-view';
-    const icons = { images:'🖼️', audio:'🎵', music:'🎶', video:'🎬', ebooks:'📚' };
-    list.innerHTML = items.map(f => {
-      const isAudio = /\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(f.name);
-      const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(f.name);
-      const isImage = /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(f.name);
-      const icon = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '📄';
-      return `<div class="file-card" data-file="${enc(f)}">
-        <div class="fc-icon">${icon}</div>
-        <div class="fc-name" title="${esc(f.name)}">${esc(f.name)}</div>
-        <div class="fc-meta">${formatSize(f.size)} · <span class="fi-source ${f.source}">${f.source}</span></div>
-      </div>`;
+  show: function(id, opts){
+    var meta = this.meta[id];
+    if (!meta) return;
+    this.state.visible[id] = true;
+    this.ensureWindow(id);
+    this.applyVisibility();
+    this.focus(id);
+    if (meta.def && meta.def.onShow) meta.def.onShow(opts || {});
+  },
+  hide: function(id){
+    this.state.visible[id] = false;
+    this.applyVisibility();
+    this.save();
+    this.renderTabs();
+    this.renderMenu();
+  },
+  toggle: function(id){
+    if (this.state.visible[id]) this.hide(id);
+    else this.show(id);
+  },
+
+  ensureWindow: function(id){
+    if (this.win[id]) return this.win[id].el;
+    var meta = this.meta[id];
+    var ws = document.getElementById('workspace');
+    var el = document.createElement('div');
+    el.className = 'panel' + (id === 'library' ? ' filled' : '');
+    el.dataset.panel = id;
+    el.style.zIndex = 10 + this.order.indexOf(id);
+    el.innerHTML =
+      '<div class="ph">' +
+        '<div class="pt"><span class="dots"><i></i><i></i><i></i></span>' + meta.icon + ' ' + meta.title + '</div>' +
+        '<div class="ph-btns">' +
+          '<button class="ph-btn max" title="Restaurar tamaño">▣</button>' +
+          '<button class="ph-btn close" title="Ocultar">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pbody"></div>' +
+      '<div class="presize"></div>';
+    ws.appendChild(el);
+    var body = el.querySelector('.pbody');
+    var rec = {};
+    this.win[id] = { el: el, body: body, rec: rec };
+    // header buttons
+    el.querySelector('.ph .close').addEventListener('click', function(){ Panels.hide(id); });
+    el.querySelector('.ph .max').addEventListener('click', function(){
+      var l = Panels.state.layout[id] || {};
+      if (l.maxed) { delete l.maxed; Panels.position(id, el); }
+      else { l.maxed = true; l._x = el.style.left; l._y = el.style.top; l._w = el.style.width; l._h = el.style.height; Panels.position(id, el); }
+      Panels.save();
+    });
+    el.addEventListener('mousedown', function(){ Panels.focus(id); });
+    this.makeDraggable(el, id);
+    this.makeResizable(el, id);
+    this.position(id, el);
+    // inicializa contenido del módulo
+    if (meta.def && meta.def.render) meta.def.render(body);
+    return el;
+  },
+
+  position: function(id, el){
+    var l = this.state.layout[id] || (this.state.layout[id] = {});
+    var ws = document.getElementById('workspace');
+    var ww = ws.clientWidth || 900, wh = ws.clientHeight || 600;
+    var d = this.defs[id];
+    var isFill = id === 'library';
+    var x = l.x, y = l.y, w = l.w, h = l.h;
+    if (l.maxed) {
+      el.style.left = '0'; el.style.top = '0'; el.style.width = ww + 'px'; el.style.height = wh + 'px';
+      return;
+    }
+    if (x === undefined) {
+      var pos = d && d.w === 'fill' ? { x: 0, y: 0 } : (d && d.x === 'right' ? { x: ww - (d.w + 20) } : { x: (d && d.x) || 20 });
+      x = l.x = pos.x !== undefined ? pos.x : 20;
+      y = l.y = (d && d.y === 'bottom') ? (wh - (d.h + 14)) : ((d && d.y) || 14);
+      w = l.w = (d && d.w === 'fill') ? ww : (d.w || 420);
+      h = l.h = (d && d.h === 'fill') ? wh : (d.h || 420);
+      if (w === 'fill') w = l.w = ww;
+      if (h === 'fill') h = l.h = wh;
+    }
+    x = Math.max(0, Math.min(x, ww - 60)); y = Math.max(0, Math.min(y, wh - 40));
+    if (isFill) { x = 0; y = 0; w = ww; h = wh; }
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.width = w + 'px'; el.style.height = h + 'px';
+  },
+
+  makeDraggable: function(el, id){
+    var head = el.querySelector('.ph');
+    var startX, startY, sx, sy;
+    head.addEventListener('mousedown', function(e){
+      if (e.target.classList.contains('ph-btn')) return;
+      startX = e.clientX; startY = e.clientY;
+      sx = parseInt(el.style.left, 10) || 0; sy = parseInt(el.style.top, 10) || 0;
+      el.classList.add('drag-over');
+      function move(ev){
+        el.style.left = Math.max(0, sx + ev.clientX - startX) + 'px';
+        el.style.top = Math.max(0, sy + ev.clientY - startY) + 'px';
+      }
+      function up(){
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        el.classList.remove('drag-over');
+        var l = Panels.state.layout[id] || (Panels.state.layout[id] = {});
+        l.x = parseInt(el.style.left, 10); l.y = parseInt(el.style.top, 10);
+        delete l.maxed;
+        Panels.save();
+      }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+  },
+  makeResizable: function(el, id){
+    var rz = el.querySelector('.presize');
+    var startX, startY, sw, sh;
+    rz.addEventListener('mousedown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      startX = e.clientX; startY = e.clientY;
+      sw = el.offsetWidth; sh = el.offsetHeight;
+      function move(ev){
+        var w = Math.max(320, sw + (ev.clientX - startX));
+        var h = Math.max(240, sh + (ev.clientY - startY));
+        el.style.width = w + 'px'; el.style.height = h + 'px';
+      }
+      function up(){
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        var l = Panels.state.layout[id] || (Panels.state.layout[id] = {});
+        l.w = el.offsetWidth; l.h = el.offsetHeight;
+        delete l.maxed;
+        Panels.save();
+      }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+  },
+
+  focus: function(id){
+    var w = this.win[id];
+    if (!w) return;
+    var max = 0;
+    this.order.forEach(function(o){ var ww = Panels.win[o]; if (ww) max = Math.max(max, parseInt(ww.el.style.zIndex, 10) || 0); });
+    w.el.style.zIndex = max + 1;
+  },
+
+  applyVisibility: function(){
+    var self = this;
+    this.order.forEach(function(id){
+      var w = self.win[id];
+      if (!w) return;
+      w.el.style.display = self.state.visible[id] ? 'flex' : 'none';
+    });
+    this.save();
+    this.renderTabs();
+    this.renderMenu();
+  },
+
+  renderTabs: function(){
+    document.getElementById('navTabs').innerHTML = this.order.map(function(id){
+      var m = Panels.meta[id];
+      return '<button class="nav-tab' + (Panels.state.visible[id] ? ' active' : '') + '" data-panel="' + id + '" onclick="Panels.toggle(\'' + id + '\')">' + m.icon + ' ' + m.title + '</button>';
     }).join('');
-  } else {
-    list.className = 'file-list';
-    list.innerHTML = items.map((f, i) => {
-      const isAudio = /\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(f.name);
-      const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(f.name);
-      const isImage = /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(f.name);
-      const icon = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '📄';
-      return `<div class="file-row" data-file="${enc(f)}">
-        <span class="fi-icon">${icon}</span>
-        <span class="fi-name" title="${esc(f.name)}">${esc(f.name)}</span>
-        <span class="fi-size">${formatSize(f.size)}</span>
-        <span class="fi-source ${f.source}">${f.source}</span>
-        <span class="fi-add">+</span>
-      </div>`;
-    }).join('');
-  }
+  },
 
-  list.querySelectorAll('.file-card, .file-row').forEach(function(el){
-    el.addEventListener('click', function(e){
-      if (e.target.classList && e.target.classList.contains('fi-add')) {
-        e.stopPropagation();
-        selectFile(pick(el));
+  renderMenu: function(){
+    var menu = document.getElementById('mgrMenu');
+    if (!menu) return;
+    var rows = this.order.map(function(id){
+      var m = Panels.meta[id];
+      return '<label class="mgr-row"><input type="checkbox" data-p="' + id + '"' + (Panels.state.visible[id] ? ' checked' : '') + '><span class="mgr-icon">' + m.icon + '</span>' + m.title + '</label>';
+    }).join('');
+    menu.innerHTML =
+      '<div class="mgr-title">Selector de módulos</div>' + rows +
+      '<div class="mgr-sep"></div>' +
+      '<div class="mgr-zoom"><span>Escala UI</span><input type="range" id="zoomRange" min="70" max="150" step="5" value="' + Math.round(this.state.zoom * 100) + '" oninput="Panels.setZoom(this.value)"><b id="zoomVal">' + Math.round(this.state.zoom * 100) + '%</b></div>' +
+      '<button class="mgr-reset" onclick="Panels.reset()">↺ Restaurar layout</button>';
+    menu.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      cb.addEventListener('change', function(){ Panels.toggle(cb.dataset.p); });
+    });
+  },
+
+  toggleMenu: function(e){
+    if (e) { e.stopPropagation(); }
+    var menu = document.getElementById('mgrMenu');
+    menu.classList.toggle('open');
+    this.renderMenu();
+  },
+
+  setZoom: function(v){
+    this.state.zoom = parseInt(v, 10) / 100;
+    this.applyZoom();
+    this.save();
+    var l = document.getElementById('zoomVal');
+    if (l) l.textContent = parseInt(v, 10) + '%';
+  },
+  applyZoom: function(){
+    var app = document.getElementById('app');
+    app.style.zoom = (this.state.zoom * 100) + '%';
+  },
+
+  reset: function(){
+    this.state.layout = {};
+    this.state.visible = { library: true };
+    this.order.forEach(function(id){ if (id !== 'library') Panels.state.visible[id] = (Panels.defs[id] && Panels.defs[id].defaultVisible !== false); });
+    this.state.zoom = 1;
+    this.applyZoom();
+    var l = document.getElementById('zoomRange'); if (l) l.value = 100;
+    var z = document.getElementById('zoomVal'); if (z) z.textContent = '100%';
+    this.order.forEach(function(id){
+      var w = Panels.win[id];
+      if (w) { delete Panels.state.layout[id]; Panels.position(id, w.el); }
+    });
+    this.applyVisibility();
+    this.save();
+  }
+};
+
+/* alias compatible */
+ZMMX.switchModule = function(name, opts){ Panels.show(name, opts); };
+
+ZMMX.onSearch = function(v){
+  var self = this;
+  clearTimeout(self._st);
+  self._st = setTimeout(function(){
+    self.state.lib.q = v.trim();
+    self.state.lib.offset = 0;
+    Panels.show('library');
+    if (ZMMX.modules.library && ZMMX.modules.library.load) ZMMX.modules.library.load();
+  }, 300);
+};
+
+ZMMX.renderSrcChips = function(){
+  var chips = [['all','Todo'],['local','Local'],['zicore_fs','zicore-fs'],['jilocomotion','jilocomotion']];
+  document.getElementById('srcChips').innerHTML = chips.map(function(c){
+    return '<button class="src-chip' + (ZMMX.state.lib.source === c[0] ? ' active' : '') + '" data-src="' + c[0] + '" onclick="ZMMX.setSource(\'' + c[0] + '\')">' + c[1] + '</button>';
+  }).join('');
+};
+
+ZMMX.setSource = function(src){
+  this.state.lib.source = src;
+  this.state.lib.offset = 0;
+  this.renderSrcChips();
+  Panels.show('library');
+  if (ZMMX.modules.library && ZMMX.modules.library.load) ZMMX.modules.library.load();
+};
+
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO: Biblioteca
+   ════════════════════════════════════════════════════════════════════════ */
+ZMMX.registerModule('library', {
+  render: function(body){
+    body.innerHTML =
+      '<div class="lib-layout">' +
+        '<aside class="lib-side">' +
+          '<div class="lib-side-h">Categorías</div>' +
+          '<div class="lib-tree" id="libTree"></div>' +
+          '<div class="lib-stats" id="libStats"></div>' +
+        '</aside>' +
+        '<section class="lib-main">' +
+          '<div class="lib-toolbar">' +
+            '<span class="title" id="libTitle">Música</span>' +
+            '<span class="count" id="libCount">0</span>' +
+            '<div class="sort-btns">' +
+              '<button class="sort-btn active" data-sort="name" onclick="ZMMX.modules.library.setSort(\'name\')">Nombre</button>' +
+              '<button class="sort-btn" data-sort="size" onclick="ZMMX.modules.library.setSort(\'size\')">Tamaño</button>' +
+              '<button class="sort-btn" data-sort="date" onclick="ZMMX.modules.library.setSort(\'date\')">Fecha</button>' +
+            '</div>' +
+            '<div class="view-btns">' +
+              '<button class="view-btn active" data-view="list" onclick="ZMMX.modules.library.setView(\'list\')" title="Lista">☰</button>' +
+              '<button class="view-btn" data-view="grid" onclick="ZMMX.modules.library.setView(\'grid\')" title="Cuadrícula">⊞</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="file-scroll" id="libFiles"><div class="loading">Cargando biblioteca...</div></div>' +
+        '</section>' +
+      '</div>';
+    this.renderTree();
+    this.load();
+  },
+  renderTree: function(){
+    var icons = { images:'🖼️', audio:'🎵', music:'🎶', video:'🎬', ebooks:'📚' };
+    var names = { images:'Imágenes', audio:'Audio', music:'Música', video:'Vídeo', ebooks:'Ebooks' };
+    var cats = ZMMX.state.categories, html = '';
+    Object.keys(cats).forEach(function(cat){
+      var data = cats[cat];
+      if (!data.total) return;
+      var active = cat === ZMMX.state.lib.category;
+      html += '<div class="tree-section">' +
+        '<div class="tree-label' + (active ? ' active' : '') + '" onclick="ZMMX.modules.library.pick(\'' + cat + '\')">' +
+          '<span class="icon">' + (icons[cat] || '📁') + '</span><span>' + (names[cat] || cat) + '</span>' +
+          '<span class="count">' + data.total + '</span>' +
+        '</div>';
+      ['local','zicore_fs','jilocomotion'].forEach(function(s){
+        if (data[s] > 0) html += '<div class="tree-item' + (active && ZMMX.state.lib.source === s ? ' active' : '') + '" onclick="ZMMX.modules.library.pick(\'' + cat + '\',\'' + s + '\')"><span class="dot dot-' + s.replace('_','') + '"></span>' + s + ' (' + data[s] + ')</div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById('libTree').innerHTML = html || '<div class="empty"><div class="big">📁</div>Sin categorías</div>';
+    document.getElementById('libStats').innerHTML =
+      '<div><span>Total</span><span>' + ZMMX.state.grandTotal.toLocaleString() + '</span></div>' +
+      Object.keys(cats).map(function(c){ return '<div><span>' + c + '</span><span>' + cats[c].total.toLocaleString() + '</span></div>'; }).join('');
+  },
+  pick: function(cat, src){
+    ZMMX.state.lib.category = cat;
+    if (src) ZMMX.state.lib.source = src;
+    ZMMX.state.lib.offset = 0;
+    ZMMX.renderSrcChips();
+    this.renderTree();
+    this.load();
+  },
+  setSort: function(s){
+    ZMMX.state.lib.sort = s;
+    ZMMX.state.lib.offset = 0;
+    document.querySelectorAll('.sort-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.sort === s); });
+    this.load();
+  },
+  setView: function(v){
+    ZMMX.state.lib.view = v;
+    document.querySelectorAll('.view-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.view === v); });
+    var sc = document.getElementById('libFiles');
+    if (sc) sc.classList.toggle('grid-view', v === 'grid');
+  },
+  load: function(){
+    var self = this, st = ZMMX.state.lib;
+    var list = document.getElementById('libFiles');
+    if (!list) return;
+    if (st.offset === 0) list.innerHTML = '<div class="loading">Cargando...</div>';
+    document.getElementById('libTitle').textContent = (st.category.charAt(0).toUpperCase() + st.category.slice(1)) + (st.q ? ' · "' + st.q + '"' : '');
+    document.getElementById('libCount').textContent = '…';
+    var url;
+    if (st.q) {
+      url = '/api/zmmx/search?q=' + encodeURIComponent(st.q) + '&category=' + st.category + '&source=' + st.source + '&offset=' + st.offset + '&limit=100';
+    } else {
+      url = '/api/zmmx/browse?category=' + st.category + '&source=' + st.source + '&sort=' + st.sort + '&order=' + st.order + '&offset=' + st.offset + '&limit=100';
+    }
+    ZMMX.api(url).then(function(r){
+      var items = st.q ? (r.results || []) : (r.items || []);
+      st.total = r.total || items.length;
+      if (st.offset === 0) {
+        list.innerHTML = '';
+        list.classList.toggle('grid-view', st.view === 'grid');
+      }
+      if (!items.length && st.offset === 0) {
+        list.innerHTML = '<div class="empty"><div class="big">📁</div>Sin resultados</div>';
+        document.getElementById('libCount').textContent = '0';
         return;
       }
-      selectFile(pick(el));
+      self.appendRows(list, items);
+      if (st.offset + items.length < st.total) {
+        var more = document.createElement('div');
+        more.className = 'load-more-row';
+        more.innerHTML = '<button class="load-more-btn">Cargar más (' + Math.min(100, st.total - st.offset - items.length) + ' más)</button>';
+        more.querySelector('button').addEventListener('click', function(){ st.offset += items.length; self.load(); });
+        list.appendChild(more);
+      }
+      document.getElementById('libCount').textContent = st.total.toLocaleString() + ' elementos';
+    }).catch(function(){ list.innerHTML = '<div class="empty"><div class="big">⚠️</div>Error cargando</div>'; });
+  },
+  appendRows: function(list, items){
+    var self = this, st = ZMMX.state.lib;
+    items.forEach(function(f){
+      var el = document.createElement('div');
+      var icon = ZMMX.utils.icon(f);
+      if (st.view === 'grid') {
+        el.className = 'file-card';
+        el.innerHTML = '<div class="fc-icon">' + icon + '</div><div class="fc-name" title="' + ZMMX.utils.esc(f.name) + '">' + ZMMX.utils.esc(f.name) + '</div><div class="fc-meta">' + ZMMX.utils.fmtSize(f.size) + ' · <span class="fi-source ' + f.source + '">' + f.source + '</span></div><div class="fc-share" title="Compartir">🔗 Compartir</div>';
+      } else {
+        el.className = 'file-row';
+        el.innerHTML = '<span class="fi-icon">' + icon + '</span>' +
+          '<span class="fi-name" title="' + ZMMX.utils.esc(f.name) + '">' + ZMMX.utils.esc(f.name) + '</span>' +
+          '<span class="fi-size">' + ZMMX.utils.fmtSize(f.size) + '</span>' +
+          '<span class="fi-mime">' + ZMMX.utils.mime(f).split('/')[1] + '</span>' +
+          '<span class="fi-share" title="Compartir">🔗</span>' +
+          '<span class="fi-add" title="Añadir a playlist">+</span>';
+      }
+      el._file = f;
+      el.addEventListener('click', function(e){
+        var t = e.target;
+        if (t.classList && (t.classList.contains('fi-share') || t.classList.contains('fc-share'))) { e.stopPropagation(); ZMMX.shareFile(f); return; }
+        if (t.classList && t.classList.contains('fi-add')) { e.stopPropagation(); Player.enqueue(f); return; }
+        self.activate(f);
+      });
+      list.appendChild(el);
     });
-    el.addEventListener('dblclick', function(){
-      selectFile(pick(el));
+    Player.markPlaying();
+  },
+  activate: function(f){
+    var t = ZMMX.utils.type(f);
+    if (t === 'image') { Panels.show('gallery', { file: f }); }
+    else if (t === 'doc') { Panels.show('docs', { file: f }); }
+    else { Player.playFile(f, true); }
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO: Reproductor de audio
+   ════════════════════════════════════════════════════════════════════════ */
+ZMMX.registerModule('audio', {
+  render: function(body){
+    body.innerHTML =
+      '<div class="audio-stage" style="flex:1;min-height:0">' +
+        '<div class="audio-vis-wrap">' +
+          '<canvas id="spectrum" width="800" height="260"></canvas>' +
+          '<div class="audio-art" id="audioArt">🎵</div>' +
+        '</div>' +
+        '<div class="audio-np"><div class="t" id="npTitle">Sin pista</div><div class="a" id="npArtist"></div></div>' +
+        '<div class="audio-controls">' +
+          '<button class="p-btn" onclick="Player.prev()">⏮</button>' +
+          '<button class="p-btn play" id="bigPlay" onclick="Player.toggle()">▶</button>' +
+          '<button class="p-btn" onclick="Player.next()">⏭</button>' +
+          '<button class="p-btn" id="bigShuffle" onclick="Player.toggleShuffle()">🔀</button>' +
+          '<button class="p-btn" id="bigRepeat" onclick="Player.toggleRepeat()">🔁</button>' +
+          '<button class="p-btn" id="bigEQ" onclick="Player.toggleEQ()" style="font-size:10px;font-weight:700">EQ</button>' +
+          '<button class="p-btn" id="bigViz" onclick="Player.toggleViz()" style="font-size:10px;font-weight:700">VU</button>' +
+        '</div>' +
+        '<div class="seek-wrap">' +
+          '<span class="progress-time" id="bigCur">0:00</span>' +
+          '<div class="progress-bar" id="bigSeek"><div class="progress-fill" id="bigFill" style="width:0"></div></div>' +
+          '<span class="progress-time" id="bigDur">0:00</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pl-panel">' +
+        '<div class="pl-h"><span class="t">Playlist</span><span class="c" id="plCount">0</span></div>' +
+        '<div class="pl-list" id="plList"></div>' +
+        '<div class="pl-actions">' +
+          '<button class="pl-btn" onclick="Player.clearPlaylist()">Limpiar</button>' +
+          '<button class="pl-btn" onclick="Player.exportM3U()">Exportar</button>' +
+          '<button class="pl-btn danger" onclick="Player.removeCurrent()">Quitar</button>' +
+        '</div>' +
+      '</div>';
+    this.refresh();
+  },
+  refresh: function(){ Player.renderPlaylist(); Player.refreshUI(); }
+});
+
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO: Video (teatro)
+   ════════════════════════════════════════════════════════════════════════ */
+ZMMX.registerModule('video', {
+  current: null,
+  render: function(body){
+    body.innerHTML =
+      '<div class="video-wrap">' +
+        '<div class="video-stage"><div class="video-msg" id="vidMsg"><div class="big">🎬</div>Selecciona un vídeo en la biblioteca</div></div>' +
+      '</div>';
+  },
+  onShow: function(opts){
+    if (opts && opts.file) this.play(opts.file, opts.autoplay !== false);
+  },
+  play: function(f, autoplay){
+    this.current = f;
+    var stage = document.querySelector('.video-stage');
+    if (!stage) return;
+    stage.innerHTML = '<video id="videoEl" controls preload="metadata" autoplay></video>';
+    var v = document.getElementById('videoEl');
+    v.src = ZMMX.utils.getUrl(f);
+    v.addEventListener('ended', function(){ Player.next(); });
+    v.addEventListener('error', function(){
+      stage.innerHTML = '<div class="video-msg"><div class="big">⚠️</div>No se puede reproducir este formato en el navegador.<br><button class="load-more-btn" style="margin-top:12px" onclick="ZMMX.modules.video.download()">Descargar archivo</button></div>';
     });
-  });
-  markPlaying();
-}
-
-function addToPlaylist(file) {
-  if (!playlist.find(p => p.path === file.path && p.source === file.source)) {
-    playlist.push(file);
-    renderPlaylist();
+    if (!autoplay) v.play().catch(function(){});
+  },
+  download: function(){
+    if (!this.current) return;
+    var a = document.createElement('a');
+    a.href = ZMMX.utils.getUrl(this.current);
+    a.download = this.current.name || 'video';
+    a.target = '_blank';
+    a.click();
   }
-  if (playlist.length === 1 && currentTrack === -1) {
-    currentTrack = 0;
-    loadTrack(0);
+});
+
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO: Galería
+   ════════════════════════════════════════════════════════════════════════ */
+var Gallery = {
+  open: function(f){
+    var items = ZMMX.state.gallery.items, idx = items.indexOf(f);
+    ZMMX.state.gallery.index = idx >= 0 ? idx : 0;
+    Gallery.show();
+  },
+  show: function(){
+    var items = ZMMX.state.gallery.items, i = ZMMX.state.gallery.index;
+    if (!items.length) return;
+    var lb = document.getElementById('lightbox');
+    document.getElementById('lbImg').src = ZMMX.utils.getUrl(items[i]);
+    document.getElementById('lbCaption').textContent = items[i].name;
+    document.getElementById('lbCount').textContent = (i + 1) + ' / ' + items.length;
+    lb.classList.add('open');
+  },
+  step: function(d){
+    var items = ZMMX.state.gallery.items;
+    if (!items.length) return;
+    ZMMX.state.gallery.index = (ZMMX.state.gallery.index + d + items.length) % items.length;
+    Gallery.show();
+  },
+  close: function(){ document.getElementById('lightbox').classList.remove('open'); }
+};
+
+ZMMX.registerModule('gallery', {
+  render: function(body){
+    body.innerHTML =
+      '<div class="lib-toolbar" style="flex-shrink:0">' +
+        '<span class="title">Galería de imágenes</span>' +
+        '<span class="count" id="galCount">0</span>' +
+        '<button class="sort-btn" style="margin-left:auto" onclick="ZMMX.modules.gallery.loadMore()">Cargar más</button>' +
+      '</div>' +
+      '<div class="gallery-scroll" id="galGrid"><div class="loading">Cargando...</div></div>';
+    ZMMX.state.gallery.offset = 0;
+    ZMMX.state.gallery.items = [];
+    this.loadMore();
+  },
+  onShow: function(opts){
+    if (opts && opts.file) Gallery.open(opts.file);
+  },
+  loadMore: function(){
+    var st = ZMMX.state.gallery;
+    ZMMX.api('/api/zmmx/browse?category=images&source=' + ZMMX.state.lib.source + '&sort=name&order=asc&offset=' + st.offset + '&limit=60').then(function(r){
+      st.items = st.items.concat(r.items || []);
+      st.offset += (r.items || []).length;
+      document.getElementById('galCount').textContent = (r.total || st.items.length) + ' imágenes';
+      var grid = document.getElementById('galGrid');
+      grid.classList.remove('loading');
+      (r.items || []).forEach(function(f){
+        var div = document.createElement('div');
+        div.className = 'g-item';
+        div.innerHTML = '<img loading="lazy" src="' + ZMMX.utils.getUrl(f) + '" alt=""><div class="g-name">' + ZMMX.utils.esc(f.name) + '</div>';
+        div.addEventListener('click', function(){ Gallery.open(f); });
+        grid.appendChild(div);
+      });
+    });
   }
-}
+});
 
-function renderPlaylist() {
-  const el = document.getElementById('plList');
-  document.getElementById('plCount').textContent = playlist.length + ' tracks';
-
-  if (playlist.length === 0) {
-    el.innerHTML = '<div class="pl-empty"><div class="big">♪</div>Click a file to play it</div>';
+document.addEventListener('keydown', function(e){
+  var lb = document.getElementById('lightbox');
+  if (lb.classList.contains('open')) {
+    if (e.key === 'Escape') Gallery.close();
+    if (e.key === 'ArrowLeft') Gallery.step(-1);
+    if (e.key === 'ArrowRight') Gallery.step(1);
     return;
   }
+  if (document.getElementById('searchInput') === document.activeElement) return;
+  if (e.key === ' ') { e.preventDefault(); Player.toggle(); }
+  if (e.key === 'ArrowRight') Player.seekBy(10);
+  if (e.key === 'ArrowLeft') Player.seekBy(-10);
+});
 
-  el.innerHTML = playlist.map((f, i) => `
-    <div class="pl-item ${i === currentTrack ? 'active' : ''}" onclick="loadTrack(${i})">
-      <span class="pl-num">${i + 1}</span>
-      <span class="pl-name">${esc(f.name)}</span>
-      <span class="pl-remove" onclick="event.stopPropagation();removeFromPlaylist(${i})">✕</span>
-    </div>
-  `).join('');
-}
+/* ════════════════════════════════════════════════════════════════════════
+   MÓDULO: Documentos
+   ════════════════════════════════════════════════════════════════════════ */
+ZMMX.registerModule('docs', {
+  current: null,
+  render: function(body){
+    body.innerHTML =
+      '<div class="lib-toolbar" style="flex-shrink:0">' +
+        '<span class="title">Documentos y ebooks</span>' +
+        '<span class="count" id="docsCount">0</span>' +
+        '<div class="sort-btns"><button class="sort-btn" onclick="ZMMX.modules.docs.back()">← Atrás</button></div>' +
+      '</div>' +
+      '<div class="docs-scroll" id="docsList"><div class="loading">Cargando...</div></div>';
+    var self = this;
+    ZMMX.api('/api/zmmx/browse?category=ebooks&source=' + ZMMX.state.lib.source + '&sort=name&order=asc&limit=100').then(function(r){
+      document.getElementById('docsCount').textContent = (r.total || 0) + ' documentos';
+      var list = document.getElementById('docsList');
+      if (!list) return;
+      list.innerHTML = '';
+      (r.items || []).forEach(function(f){
+        var div = document.createElement('div');
+        div.className = 'doc-row';
+        div.innerHTML = '<span class="di">' + ZMMX.utils.icon(f) + '</span><span class="dn">' + ZMMX.utils.esc(f.name) + '</span><span class="dm">' + ZMMX.utils.fmtSize(f.size) + '</span>';
+        div.addEventListener('click', function(){ self.open(f); });
+        list.appendChild(div);
+      });
+      if (!(r.items || []).length) list.innerHTML = '<div class="empty"><div class="big">📚</div>Sin documentos</div>';
+    });
+  },
+  onShow: function(opts){
+    if (opts && opts.file) this.open(opts.file);
+  },
+  open: function(f){
+    this.current = f;
+    var body = Panels.win['docs'].body;
+    var e = ZMMX.utils.ext(f);
+    if (e === 'pdf') {
+      body.innerHTML =
+        '<div class="lib-toolbar" style="flex-shrink:0">' +
+          '<span class="title">' + ZMMX.utils.esc(f.name) + '</span>' +
+          '<div class="sort-btns"><button class="sort-btn" onclick="ZMMX.modules.docs.back()">← Volver a lista</button><button class="sort-btn" onclick="ZMMX.modules.docs.download()">⬇ Descargar</button></div>' +
+        '</div>' +
+        '<iframe id="docFrame" src="' + ZMMX.utils.getUrl(f) + '"></iframe>';
+    } else {
+      body.innerHTML =
+        '<div class="lib-toolbar" style="flex-shrink:0">' +
+          '<span class="title">' + ZMMX.utils.esc(f.name) + '</span>' +
+          '<div class="sort-btns"><button class="sort-btn" onclick="ZMMX.modules.docs.back()">← Volver a lista</button><button class="sort-btn" onclick="ZMMX.modules.docs.download()">⬇ Descargar</button></div>' +
+        '</div>' +
+        '<div class="empty" style="flex:1"><div class="big">📄</div>Formato no embebible. Usa "Descargar".</div>';
+    }
+  },
+  back: function(){ Panels.show('docs'); },
+  download: function(){
+    if (!this.current) return;
+    var a = document.createElement('a');
+    a.href = ZMMX.utils.getUrl(this.current);
+    a.download = this.current.name || 'doc';
+    a.target = '_blank';
+    a.click();
+  }
+});
 
-function loadTrack(idx) {
-  if (idx < 0 || idx >= playlist.length) return;
-  currentTrack = idx;
-  const f = playlist[idx];
-  const url = getUrl(f);
-  if (!url) return;
+/* ════════════════════════════════════════════════════════════════════════
+   REPRODUCTOR (núcleo)
+   ════════════════════════════════════════════════════════════════════════ */
+var Player = {
+  audio: new Audio(),
+  playlist: [],
+  track: -1,
+  playing: false,
+  shuffle: false,
+  repeat: false,
+  mode: 'audio',
+  vizOn: false,
+  eqOn: false,
+  eqGains: [0,0,0,0,0,0,0,0,0,0],
+  ctx: null, sourceNode: null, analyser: null, filters: [], graphBound: false, graphConnected: false,
+  EQ_FREQS: [60,170,310,600,1000,3000,6000,12000,14000,16000],
+  EQ_PRESETS: {
+    flat:      [0,0,0,0,0,0,0,0,0,0],
+    pop:       [1,2,3,4,3,0,-1,-1,1,2],
+    rock:      [4,3,2,1,-1,-2,0,2,3,4],
+    jazz:      [3,2,1,2,1,0,-1,0,2,3],
+    classical: [4,3,2,1,0,0,-1,-2,-1,0],
+    bass:      [5,4,3,1,0,-1,-2,-3,-2,-1],
+    spoken:    [-2,-1,0,2,3,4,3,1,0,-1]
+  },
 
-  const isAudio = /\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(f.name);
-  isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(f.name);
+  init: function(){
+    var a = this.audio;
+    a.preload = 'metadata';
+    a.volume = ZMMX.state.vol;
+    a.addEventListener('timeupdate', this.onProgress.bind(this));
+    a.addEventListener('ended', function(){ Player.onEnded(); });
+    a.addEventListener('play', function(){ Player.playing = true; Player.refreshUI(); });
+    a.addEventListener('pause', function(){ Player.playing = false; Player.refreshUI(); });
+    a.addEventListener('error', function(){ Player.refreshUI(); });
+    document.getElementById('pbSeek').addEventListener('click', function(e){
+      if (Player.audio.duration) Player.audio.currentTime = (e.clientX - this.getBoundingClientRect().left) / this.offsetWidth * Player.audio.duration;
+    });
+    document.getElementById('pbVol').addEventListener('click', function(e){
+      var v = Math.max(0, Math.min(1, (e.clientX - this.getBoundingClientRect().left) / this.offsetWidth));
+      Player.setVolume(v);
+    });
+    var self = this;
+    var bigSeek = document.getElementById('bigSeek');
+    if (bigSeek) bigSeek.addEventListener('click', function(e){
+      if (Player.audio.duration) Player.audio.currentTime = (e.clientX - this.getBoundingClientRect().left) / this.offsetWidth * Player.audio.duration;
+    });
+  },
 
-  document.getElementById('playerTitle').textContent = f.name;
-  document.getElementById('playerArtist').textContent = f.source;
-  const art = document.getElementById('playerArt');
-  art.textContent = isVideo ? '🎬' : isAudio ? '🎵' : '📄';
+  playFile: function(f, enqueue){
+    if (enqueue) this.enqueue(f);
+    if (ZMMX.utils.type(f) === 'video') {
+      this.mode = 'video';
+      Panels.show('video', { file: f, autoplay: true });
+      document.getElementById('pbTitle').textContent = f.name;
+      document.getElementById('pbSub').textContent = f.source + ' · ' + ZMMX.utils.fmtSize(f.size);
+      document.getElementById('pbArt').textContent = '🎬';
+      this.markPlaying();
+      return;
+    }
+    this.mode = 'audio';
+    var url = ZMMX.utils.getUrl(f);
+    if (!url) return;
+    if (this.graphConnected) {
+      this.connectGraph();
+      this.audio.src = url;
+      this.audio.play();
+    } else {
+      this.audio.src = url;
+      this.audio.play().catch(function(){});
+    }
+    document.getElementById('pbTitle').textContent = f.name;
+    document.getElementById('pbSub').textContent = f.source + ' · ' + ZMMX.utils.fmtSize(f.size);
+    document.getElementById('pbArt').textContent = '🎵';
+    var np = document.getElementById('npTitle'); if (np) np.textContent = f.name;
+    var na = document.getElementById('npArtist'); if (na) na.textContent = f.source;
+    var art = document.getElementById('audioArt'); if (art) art.textContent = '🎵';
+    this.markPlaying();
+  },
 
-  // Stop previous
-  audio.pause(); audio.src = '';
-  video.pause(); video.src = ''; video.style.display = 'none';
-  disconnectAnalyzer();
+  enqueue: function(f){
+    var self = this;
+    if (!this.playlist.some(function(p){ return p.path === f.path && p.source === f.source; })) {
+      this.playlist.push(f);
+      this.renderPlaylist();
+      this.save();
+    }
+    if (this.playlist.length === 1 && this.track === -1) { this.track = 0; this.playFile(f); }
+  },
 
-  if (isVideo) {
-    video.src = url;
-    video.style.display = 'block';
-    video.style.maxHeight = '240px';
-    video.style.borderRadius = '6px';
-    art.innerHTML = '';
-    art.appendChild(video);
-    video.play().then(function(){ isPlaying = true; document.getElementById('playBtn').textContent = '⏸'; }).catch(function(){});
-    // Track video events
-    video.ontimeupdate = function(){
-      if (video.duration) {
-        document.getElementById('progressFill').style.width = (video.currentTime / video.duration * 100) + '%';
-        document.getElementById('currentTime').textContent = formatTime(video.currentTime);
-        document.getElementById('totalTime').textContent = formatTime(video.duration);
+  toggle: function(){
+    if (this.playlist.length === 0) return;
+    if (Panels.state.visible['video']) {
+      var v = document.getElementById('videoEl');
+      if (v) { if (v.paused) v.play(); else v.pause(); return; }
+    }
+    if (this.playing) { this.audio.pause(); }
+    else { if (this.audio.src) this.audio.play().catch(function(){}); else if (this.track >= 0) this.playFile(this.playlist[this.track]); }
+  },
+
+  next: function(){
+    if (this.playlist.length === 0) return;
+    var ni;
+    if (this.shuffle && this.playlist.length > 1) { do { ni = Math.floor(Math.random() * this.playlist.length); } while (ni === this.track); }
+    else { ni = (this.track + 1) % this.playlist.length; }
+    this.track = ni;
+    this.load(this.playlist[ni]);
+  },
+  prev: function(){
+    if (this.playlist.length === 0) return;
+    if (this.audio.currentTime > 3) { this.audio.currentTime = 0; return; }
+    this.track = (this.track - 1 + this.playlist.length) % this.playlist.length;
+    this.load(this.playlist[this.track]);
+  },
+  load: function(f){ this.playFile(f, true); },
+  onEnded: function(){
+    if (this.repeat) { this.audio.currentTime = 0; this.audio.play(); return; }
+    this.next();
+  },
+  toggleShuffle: function(){
+    this.shuffle = !this.shuffle;
+    document.getElementById('pbShuffle').classList.toggle('active', this.shuffle);
+    var b = document.getElementById('bigShuffle'); if (b) b.classList.toggle('active', this.shuffle);
+  },
+  toggleRepeat: function(){
+    this.repeat = !this.repeat;
+    document.getElementById('pbRepeat').classList.toggle('active', this.repeat);
+    var b = document.getElementById('bigRepeat'); if (b) b.classList.toggle('active', this.repeat);
+  },
+  setVolume: function(v){
+    v = Math.max(0, Math.min(1, v));
+    this.audio.volume = v;
+    ZMMX.state.vol = v;
+    try { localStorage.setItem('zmmx_vol', String(v)); } catch(e){}
+    document.getElementById('pbVolFill').style.width = (v * 100) + '%';
+  },
+  seekBy: function(s){
+    if (this.audio.duration) this.audio.currentTime = Math.max(0, Math.min(this.audio.duration, this.audio.currentTime + s));
+  },
+  onProgress: function(){
+    var d = this.audio.duration, c = this.audio.currentTime;
+    if (!d) return;
+    var pct = (c / d * 100).toFixed(2) + '%';
+    document.getElementById('pbFill').style.width = pct;
+    document.getElementById('pbCur').textContent = ZMMX.utils.fmtTime(c);
+    document.getElementById('pbDur').textContent = ZMMX.utils.fmtTime(d);
+    var bf = document.getElementById('bigFill'); if (bf) bf.style.width = pct;
+    var bc = document.getElementById('bigCur'); if (bc) bc.textContent = ZMMX.utils.fmtTime(c);
+    var bd = document.getElementById('bigDur'); if (bd) bd.textContent = ZMMX.utils.fmtTime(d);
+    if (this.vizOn) this.drawVU();
+  },
+  markPlaying: function(){
+    document.querySelectorAll('[data-panel="library"] .file-row, [data-panel="library"] .file-card').forEach(function(el){
+      var f = el._file;
+      var on = Player.track >= 0 && f && Player.playlist[Player.track] &&
+        Player.playlist[Player.track].path === f.path && Player.playlist[Player.track].source === f.source;
+      el.classList.toggle('playing', !!on);
+    });
+  },
+  renderPlaylist: function(){
+    var el = document.getElementById('plList');
+    var c = document.getElementById('plCount');
+    if (c) c.textContent = this.playlist.length + ' pistas';
+    if (!el) return;
+    if (this.playlist.length === 0) { el.innerHTML = '<div class="pl-empty"><div class="big">♪</div>Haz clic en un archivo para añadirlo</div>'; return; }
+    var self = this;
+    el.innerHTML = this.playlist.map(function(f, i){
+      return '<div class="pl-item' + (i === self.track ? ' active' : '') + '" data-i="' + i + '">' +
+        '<span class="num">' + (i + 1) + '</span>' +
+        '<span class="icon">' + ZMMX.utils.icon(f) + '</span>' +
+        '<span class="nm">' + ZMMX.utils.esc(f.name) + '</span>' +
+        '<span class="rm">✕</span></div>';
+    }).join('');
+    el.querySelectorAll('.pl-item').forEach(function(it){
+      var i = parseInt(it.dataset.i, 10);
+      it.addEventListener('click', function(){ Player.track = i; Player.playFile(self.playlist[i]); Player.renderPlaylist(); });
+      it.querySelector('.rm').addEventListener('click', function(e){ e.stopPropagation(); Player.removeAt(i); });
+    });
+  },
+  removeAt: function(i){
+    this.playlist.splice(i, 1);
+    if (this.track >= this.playlist.length) this.track = this.playlist.length - 1;
+    if (this.track >= 0 && i <= this.track) this.playFile(this.playlist[this.track], false);
+    else if (this.playlist.length === 0) { this.stopAll(); }
+    this.renderPlaylist(); this.save();
+  },
+  removeCurrent: function(){ if (this.track < 0) return; this.removeAt(this.track); },
+  clearPlaylist: function(){
+    this.playlist = []; this.track = -1; this.stopAll();
+    this.renderPlaylist(); this.save();
+  },
+  stopAll: function(){
+    this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load();
+    this.playing = false;
+    document.getElementById('pbTitle').textContent = 'Sin pista';
+    document.getElementById('pbFill').style.width = '0';
+    document.getElementById('pbCur').textContent = '0:00';
+    document.getElementById('pbDur').textContent = '0:00';
+    this.refreshUI();
+  },
+  exportM3U: function(){
+    if (!this.playlist.length) return;
+    var m = '#EXTM3U\n';
+    this.playlist.forEach(function(f){ m += '#EXTINF:-1,' + f.name + '\n' + ZMMX.utils.getUrl(f) + '\n'; });
+    var blob = new Blob([m], { type: 'audio/x-mpegurl' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'zmmx-playlist.m3u'; a.click();
+  },
+  save: function(){
+    try { localStorage.setItem('zmmx_playlist', JSON.stringify(this.playlist)); localStorage.setItem('zmmx_track', String(this.track)); } catch(e){}
+  },
+  loadSaved: function(){
+    try {
+      var p = JSON.parse(localStorage.getItem('zmmx_playlist') || '[]');
+      var t = parseInt(localStorage.getItem('zmmx_track') || '-1', 10);
+      if (p.length) { this.playlist = p; this.track = t >= 0 && t < p.length ? t : 0; this.renderPlaylist(); }
+    } catch(e){}
+  },
+
+  bindGraph: function(){
+    if (this.graphBound || this.ctx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      this.sourceNode = this.ctx.createMediaElementSource(this.audio);
+      this.graphBound = true;
+      this.filters = this.EQ_FREQS.map(function(f){
+        var flt = this.ctx.createBiquadFilter();
+        flt.type = 'peaking'; flt.frequency.value = f; flt.Q.value = 1; flt.gain.value = 0;
+        flt.connect(this.ctx.destination);
+        return flt;
+      }, this);
+      this.applyEQ();
+    } catch(e) { console.warn('WebAudio bind failed:', e); }
+  },
+  connectGraph: function(){
+    if (!this.graphBound) return;
+    try {
+      var node = this.sourceNode;
+      node.disconnect();
+      this.filters.forEach(function(f){ node.connect(f); });
+      if (this.vizOn) {
+        if (!this.analyser) { this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 512; }
+        this.filters[this.filters.length - 1].connect(this.analyser);
       }
-    };
-    video.onended = function(){ if (repeatOn) { video.currentTime = 0; video.play(); } else { nextTrack(); } };
-  } else if (isAudio) {
-    audio.src = url;
-    video.style.display = 'none';
-    audio.play().then(function(){
-      isPlaying = true;
-      document.getElementById('playBtn').textContent = '⏸';
-      connectAnalyzer(audio);
-    }).catch(function(){});
+      this.graphConnected = true;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+    } catch(e) { console.warn('Graph connect failed:', e); }
+  },
+  toggleEQ: function(){
+    this.eqOn = !this.eqOn;
+    var panel = document.getElementById('eqPanel');
+    if (panel) {
+      if (this.eqOn) { this.buildEQ(); panel.classList.add('open'); }
+      else panel.classList.remove('open');
+    }
+    var lbl = document.getElementById('eqOnLabel');
+    if (lbl) lbl.textContent = this.eqOn ? '· EQ ACTIVO' : '';
+    if (this.eqOn) { this.bindGraph(); this.connectGraph(); }
+    this.refreshUI();
+  },
+  toggleViz: function(){
+    this.vizOn = !this.vizOn;
+    var sp = document.getElementById('spectrum');
+    if (sp) sp.style.display = this.vizOn ? 'block' : 'none';
+    if (this.vizOn) { this.bindGraph(); this.connectGraph(); }
+    else if (this.analyser) { try { this.analyser.disconnect(); } catch(e){} this.analyser = null; }
+    this.refreshUI();
+  },
+  buildEQ: function(){
+    var c = document.getElementById('eqSliders');
+    if (!c) return;
+    var self = this, h = '';
+    this.EQ_FREQS.forEach(function(f, i){
+      var label = f >= 1000 ? (f / 1000) + 'K' : f;
+      h += '<div class="eq-row"><label>' + label + '</label>' +
+        '<input type="range" min="-12" max="12" value="' + self.eqGains[i] + '" step="1" data-i="' + i + '" oninput="Player.onEQ(this)">' +
+        '<span class="eq-val" id="eqVal' + i + '">' + self.eqGains[i] + '</span></div>';
+    });
+    c.innerHTML = h;
+    document.querySelectorAll('.eq-presets button').forEach(function(b){ b.classList.remove('active'); });
+  },
+  onEQ: function(el){
+    var i = parseInt(el.dataset.i, 10);
+    this.eqGains[i] = parseInt(el.value, 10);
+    document.getElementById('eqVal' + i).textContent = this.eqGains[i];
+    this.applyEQ();
+  },
+  applyEQ: function(){
+    if (!this.filters || !this.filters.length) return;
+    this.filters.forEach(function(f, i){ f.gain.value = this.eqGains[i] || 0; }, this);
+  },
+  setEQPreset: function(name){
+    var p = this.EQ_PRESETS[name];
+    if (!p) return;
+    this.eqGains = p.slice();
+    document.querySelectorAll('.eq-presets button').forEach(function(b){ b.classList.toggle('active', b.textContent.toLowerCase() === name); });
+    this.buildEQ();
+    this.applyEQ();
+  },
+  drawVU: function(){
+    var canvas = document.getElementById('spectrum');
+    if (!canvas || !this.analyser) return;
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    var bins = new Uint8Array(this.analyser.frequencyBinCount);
+    this.analyser.getByteFrequencyData(bins);
+    var bars = 48, bw = w / bars;
+    ctx.fillStyle = 'rgba(0,229,255,0.05)';
+    ctx.fillRect(0, 0, w, h);
+    for (var i = 0; i < bars; i++) {
+      var idx = Math.floor(i / bars * bins.length * 0.7);
+      var v = bins[idx] / 255;
+      var bh = v * h * 0.9;
+      var grad = ctx.createLinearGradient(0, h - bh, 0, h);
+      grad.addColorStop(0, '#00e5ff');
+      grad.addColorStop(0.5, '#7c4dff');
+      grad.addColorStop(1, '#00ff88');
+      ctx.fillStyle = grad;
+      ctx.fillRect(i * bw + 1, h - bh, bw - 2, bh);
+    }
+    var eqbar = document.getElementById('pbEqbar');
+    if (eqbar) {
+      var els = eqbar.querySelectorAll('.b');
+      for (var j = 0; j < els.length; j++) {
+        var vv = bins[Math.floor(j / els.length * bins.length * 0.7)] / 255;
+        els[j].style.height = (3 + vv * 14) + 'px';
+      }
+    }
+  },
+  refreshUI: function(){
+    var pb = document.getElementById('pbPlay');
+    if (pb) pb.textContent = this.playing ? '⏸' : '▶';
+    var bp = document.getElementById('bigPlay');
+    if (bp) bp.textContent = this.playing ? '⏸' : '▶';
+    document.getElementById('pbShuffle').classList.toggle('active', this.shuffle);
+    document.getElementById('pbRepeat').classList.toggle('active', this.repeat);
+    var bs = document.getElementById('bigShuffle'); if (bs) bs.classList.toggle('active', this.shuffle);
+    var br = document.getElementById('bigRepeat'); if (br) br.classList.toggle('active', this.repeat);
   }
-
-  renderPlaylist();
-  markPlaying();
-  savePlaylist();
-}
-
-function removeFromPlaylist(idx) {
-  playlist.splice(idx, 1);
-  if (currentTrack >= playlist.length) currentTrack = playlist.length - 1;
-  if (currentTrack >= 0) loadTrack(currentTrack);
-  else {
-    currentTrack = -1;
-    audio.src = ''; video.src = ''; video.style.display = 'none'; isPlaying = false; disconnectAnalyzer();
-    document.getElementById('playerTitle').textContent = 'No track selected';
-    document.getElementById('playBtn').textContent = '▶';
-  }
-  renderPlaylist();
-  savePlaylist();
-}
-
-function clearPlaylist() { playlist = []; currentTrack = -1; audio.src = ''; video.src = ''; video.style.display = 'none'; isPlaying = false; disconnectAnalyzer(); document.getElementById('playBtn').textContent = '▶'; document.getElementById('playerTitle').textContent = 'No track selected'; renderPlaylist(); markPlaying(); savePlaylist(); }
-
-function removeSelected() {
-  if (currentTrack < 0 || playlist.length === 0) return;
-  removeFromPlaylist(currentTrack);
-}
-
-function exportPlaylist() {
-  if (playlist.length === 0) return;
-  let m3u = '#EXTM3U\n';
-  playlist.forEach(f => { m3u += `#EXTINF:-1,${f.name}\n${f.url || f.path}\n`; });
-  const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'zmmx-playlist.m3u'; a.click();
-}
-
-function togglePlay() {
-  if (currentTrack < 0 || playlist.length === 0) return;
-  var el = isVideo ? video : audio;
-  if (isPlaying) { el.pause(); isPlaying = false; document.getElementById('playBtn').textContent = '▶'; }
-  else { el.play().then(function(){ isPlaying = true; document.getElementById('playBtn').textContent = '⏸'; }).catch(function(){}); }
-}
-
-function prevTrack() { if (playlist.length === 0) return; currentTrack = (currentTrack - 1 + playlist.length) % playlist.length; loadTrack(currentTrack); }
-function nextTrack() {
-  if (playlist.length === 0) return;
-  if (shuffleOn) { var ni; do { ni = Math.floor(Math.random() * playlist.length); } while (ni === currentTrack && playlist.length > 1); currentTrack = ni; }
-  else { currentTrack = (currentTrack + 1) % playlist.length; }
-  loadTrack(currentTrack);
-}
-function toggleShuffle() { shuffleOn = !shuffleOn; document.getElementById('shuffleBtn').classList.toggle('active', shuffleOn); }
-function toggleRepeat() { repeatOn = !repeatOn; document.getElementById('repeatBtn').classList.toggle('active', repeatOn); }
-
-audio.addEventListener('timeupdate', function(){
-  if (isVideo) return;
-  if (audio.duration) {
-    document.getElementById('progressFill').style.width = (audio.currentTime / audio.duration * 100) + '%';
-    document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
-    document.getElementById('totalTime').textContent = formatTime(audio.duration);
-  }
-});
-audio.addEventListener('ended', function(){ if (repeatOn) { audio.currentTime = 0; audio.play(); } else { nextTrack(); } });
-
-function selectCategory(cat, source) {
-  currentCategory = cat;
-  if (source) currentSource = source;
-  searchQuery = '';
-  document.getElementById('searchInput').value = '';
-  renderSidebar();
-  loadFiles();
-}
-
-document.getElementById('searchInput').addEventListener('input', e => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    searchQuery = e.target.value.trim();
-    loadFiles();
-  }, 300);
-});
-
-document.querySelectorAll('.source-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentSource = btn.dataset.source;
-    loadFiles();
-  });
-});
-
-document.querySelectorAll('.sort-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentSort = btn.dataset.sort;
-    loadFiles();
-  });
-});
-
-document.querySelectorAll('.view-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentView = btn.dataset.view;
-    loadFiles();
-  });
-});
-
-document.getElementById('progressBar').addEventListener('click', function(e){
-  var el = isVideo ? video : audio;
-  if (el.duration) {
-    var rect = e.currentTarget.getBoundingClientRect();
-    el.currentTime = (e.clientX - rect.left) / rect.width * el.duration;
-  }
-});
-
-document.getElementById('volBar').addEventListener('click', function(e){
-  var rect = e.currentTarget.getBoundingClientRect();
-  var vol = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  audio.volume = vol;
-  if (video) video.volume = vol;
-  document.getElementById('volFill').style.width = (vol * 100) + '%';
-});
-
-// ── Playlist Persistence ──
-function savePlaylist() {
-  try { localStorage.setItem('zmmx_playlist', JSON.stringify(playlist)); localStorage.setItem('zmmx_track', currentTrack); } catch(e){}
-}
-function loadPlaylist() {
-  try {
-    var p = JSON.parse(localStorage.getItem('zmmx_playlist') || '[]');
-    var t = parseInt(localStorage.getItem('zmmx_track')) || -1;
-    if (p.length) { playlist = p; currentTrack = t >= 0 && t < p.length ? t : 0; renderPlaylist(); loadTrack(currentTrack); }
-  } catch(e){}
-}
-
-// ── Equalizer ──
-var EQ_FREQS = ['60','170','310','600','1K','3K','6K','12K','14K','16K'];
-var EQ_PRESETS = {
-  flat:      [0,0,0,0,0,0,0,0,0,0],
-  pop:       [1,2,3,4,3,0,-1,-1,1,2],
-  rock:      [4,3,2,1,-1,-2,0,2,3,4],
-  jazz:      [3,2,1,2,1,0,-1,0,2,3],
-  classical: [4,3,2,1,0,0,-1,-2,-1,0],
-  bass:      [5,4,3,1,0,-1,-2,-3,-2,-1],
-  spoken:    [-2,-1,0,2,3,4,3,1,0,-1]
 };
-var eqGains = [0,0,0,0,0,0,0,0,0,0];
 
-function initEQ() {
-  var c = document.getElementById('eqSliders');
-  if (!c) return;
-  var h = '';
-  EQ_FREQS.forEach(function(f, i){
-    h += '<div class="eq-row"><label>' + f + '</label>' +
-      '<input type="range" min="-12" max="12" value="0" step="1" data-idx="' + i + '" oninput="onEQChange(this)">' +
-      '<span class="eq-val" id="eqVal' + i + '">0</span></div>';
+/* ════════════════════════════════════════════════════════════════════════
+   Arranque
+   ════════════════════════════════════════════════════════════════════════ */
+(function init(){
+  // registrar módulos como paneles
+  ['library','audio','video','gallery','docs'].forEach(function(id){
+    Panels.register(id, ZMMX.modules[id].panelTitle, ZMMX.modules[id].panelIcon, { def: ZMMX.modules[id], defaultVisible: id !== 'video' && id !== 'gallery' && id !== 'docs' });
   });
-  c.innerHTML = h;
-}
+  // metadatos de título/icono de cada módulo
+  var meta = {
+    library: { title: 'Biblioteca', icon: '🎛️' },
+    audio:   { title: 'Reproductor', icon: '🎧' },
+    video:   { title: 'Video', icon: '🎬' },
+    gallery: { title: 'Galería', icon: '🖼️' },
+    docs:    { title: 'Docs', icon: '📚' }
+  };
+  Panels.order.forEach(function(id){ Panels.meta[id].title = meta[id].title; Panels.meta[id].icon = meta[id].icon; });
 
-function onEQChange(el) {
-  var i = parseInt(el.dataset.idx);
-  eqGains[i] = parseInt(el.value);
-  document.getElementById('eqVal' + i).textContent = eqGains[i];
-  applyEQ();
-}
+  ZMMX.renderSrcChips();
+  Panels.load();
+  Panels.renderTabs();
+  Panels.renderMenu();
 
-function applyEQ() {
-  document.querySelectorAll('.eq-presets button').forEach(function(b){ b.classList.remove('active'); });
-}
+  Player.init();
+  Player.loadSaved();
+  Player.refreshUI();
+  document.getElementById('pbVolFill').style.width = (ZMMX.state.vol * 100) + '%';
 
-function toggleEQPanel() {
-  var p = document.getElementById('eqPanel');
-  p.classList.toggle('open');
-  if (p.classList.contains('open')) initEQ();
-}
-
-function setEQPreset(name) {
-  var preset = EQ_PRESETS[name];
-  if (!preset) return;
-  document.querySelectorAll('.eq-presets button').forEach(function(b){ b.classList.toggle('active', b.textContent.toLowerCase() === name); });
-  document.querySelectorAll('#eqSliders input[type=range]').forEach(function(el, i){
-    el.value = preset[i];
-    eqGains[i] = preset[i];
-    document.getElementById('eqVal' + i).textContent = preset[i];
+  ZMMX.api('/api/zmmx/categories').then(function(r){
+    ZMMX.state.categories = r.categories || {};
+    ZMMX.state.grandTotal = r.grand_total || 0;
+    Panels.show('library');
+    Panels.show('audio');
   });
-}
 
-function formatSize(bytes) {
-  if (!bytes) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0;
-  while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
-  return bytes.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
-}
+  function clock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); }
+  setInterval(clock, 1000); clock();
 
-function formatTime(s) {
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return m + ':' + String(sec).padStart(2, '0');
-}
-
-function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-
-function updateClock() {
-  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// Init
-initEQ();
-loadCategories().then(function(){ loadFiles(); });
-loadPlaylist();
+  document.addEventListener('click', function(e){
+    var menu = document.getElementById('mgrMenu');
+    if (menu && menu.classList.contains('open') && !e.target.closest('.manager')) menu.classList.remove('open');
+  });
+})();
 </script>
 </body>
 </html>

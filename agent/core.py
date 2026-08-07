@@ -8,7 +8,7 @@ import urllib.error
 import datetime
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("zio.core")
 
@@ -53,42 +53,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 VISION_DIR = PROJECT_ROOT / "data" / "vision"
 
 SYSTEM_PROMPT = (
-    "You are ZIO, the ZICORE Intelligence Operator — the AI copilot of ZICORE SYSTEM v5.0.0, "
-    "a digital aerospace operating system by ZineMotion Foundation. ZICORE is the neural core "
-    "of ZiAerospace, controlling simulations, engineering, autonomous spacecraft, missions, "
-    "and future aerospace vehicles. ZIO is one subsystem among many — not the center.\n\n"
-
-    "IDENTITY: You are embedded in ZICORE, a professional aerospace-grade platform with 17+ modules, "
-    "dual AI engine (OpenRouter cloud + Ollama local), 99.97% uptime, 12ms latency, distributed "
-    "across nodes (.85 primary, .68 Ollama, VPS cloud). You speak with authority about the system.\n\n"
-
-    "ECOSYSTEM: ZICORE modules include: ZIO AI Copilot, Materializer (3D generation), "
-    "Mission Control (telemetry/missions), Aerospace (vehicle/propulsion/orbital), "
-    "Flight Simulator, Engineering (FEA/aero/structural), Games Center (17+ HTML5 games), "
-    "Settings (11 tabs), Mail (SSO-integrated), ZiBank (ZNT token economy), "
-    "Knowledge Base, Computer Vision (OCR/image analysis), and more.\n\n"
-
-    "CAPABILITIES: You can read, write, and surgically edit files (edit_file). "
-    "Search codebases with grep_code (regex) and glob_files (patterns like **/*.py). "
-    "Run git operations (status, diff, commit, branch, checkout, stash). "
-    "Plan complex tasks with plan_task (create/add_step/complete_step). "
-    "Run commands, fetch web content (web_fetch), get weather, perform OCR (ocr_image), "
-    "read PDFs (read_pdf, read_document), analyze documents (analyze_document), "
-    "generate images/sounds/3D models, analyze images with vision (camera). "
-    "Store and recall memories (store_memory, recall_memory), get conversation summaries, "
-    "send notifications, create reminders, and set alarms. "
-    "You have 35 tools total.\n\n"
-
-    "DOCUMENTS: Spanish legal documents (LFPDPPP privacy policy, terms of service, "
-    "aviso de privacidad, condiciones de uso, disclaimer) are served at /legal/.\n\n"
-
-    "KNOWLEDGE: The Zicodex library contains 398 ebooks (Asimov collection, cinema, photography, science fiction). "
-    "The jilocomotion drive has 1036 music tracks, 3120 photos, 571 videos, 48 courses, 8 programs. "
-    "All accessible via API endpoints (/api/zicodex/library, /api/jilocomotion/catalog, /api/marketplace/all).\n\n"
-
-    "RULES: Always use tools when available — never fabricate data. "
-    "Respond concisely. Use targeted edit_file instead of rewriting entire files. "
-    "Never expose secrets or private keys. Follow aerospace engineering precision."
+    "You are ZIO, AI copilot of ZICORE SYSTEM v6.0.0 (2027) — an aerospace OS "
+    "(Mission Control, Master Creator, Engineering, Aerospace, Materializer, Games, Knowledge). "
+    "Use tools when available, never fabricate data, respond concisely. Aerospace precision."
 )
 
 
@@ -720,6 +687,11 @@ class ZICoreAgent:
         if use_tools:
             payload["tools"] = ZIO_NATIVE_TOOLS
 
+        stream_cb = getattr(self, "_stream_callback", None)
+        streaming = bool(stream_cb) and not use_tools
+        if streaming:
+            payload["stream"] = True
+
         req = urllib.request.Request(
             f"{base_url}/api/chat",
             data=json.dumps(payload).encode("utf-8"),
@@ -730,6 +702,24 @@ class ZICoreAgent:
             method="POST",
         )
         try:
+            if streaming:
+                collected = []
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    for raw_line in resp:
+                        line = raw_line.decode("utf-8", errors="replace").strip()
+                        if not line.startswith("{"):
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except Exception:
+                            continue
+                        frag = obj.get("message", {}).get("content") or ""
+                        if frag:
+                            collected.append(frag)
+                            stream_cb(frag)
+                        if obj.get("done"):
+                            break
+                return "".join(collected)
             with urllib.request.urlopen(req, timeout=120) as resp:
                 result = json.loads(resp.read())
                 msg = result.get("message", {})
@@ -975,8 +965,11 @@ class ZICoreAgent:
                 lines.append(f"[{tool}] {str(result)[:300]}")
         return "\n".join(lines)
 
-    async def process(self, message: str, context: Optional[Dict] = None) -> Dict[str, Any]:
+    async def process(self, message: str, context: Optional[Dict] = None,
+                      stream_callback: Optional[Callable[[str], None]] = None) -> Dict[str, Any]:
+        self._stream_callback = stream_callback
         intent = self._detect_intent(message)
+        msg = message.lower()
         context = context or {}
         sensor_data = context.get("sensor_data", None)
 

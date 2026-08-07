@@ -139,6 +139,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 #sidebar .ollama-status .dot{width:6px;height:6px;border-radius:50%}
 #sidebar .ollama-status .dot.online{background:#0f6}
 #sidebar .ollama-status .dot.offline{background:#f44}
+#sidebar .portal-card{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;
+  font-size:10px;color:#899;background:rgba(0,0,0,0.25);
+  border:1px solid rgba(0,229,255,0.08);border-radius:4px;
+  cursor:pointer;text-decoration:none;transition:all .2s;
+}
+#sidebar .portal-card:hover{color:var(--glow);border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06);transform:translateX(2px)}
+#sidebar .portal-card .p-icon{font-size:12px;width:16px;text-align:center}
+#sidebar .portal-card .p-arrow{margin-left:auto;opacity:0;transition:opacity .2s}
+#sidebar .portal-card:hover .p-arrow{opacity:1}
 #sidebar .param-group{margin:4px 0}
 #sidebar .param-label{font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:2px}
 #sidebar .param-slider{
@@ -161,6 +171,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
 .msg.user{margin-left:auto;text-align:right}
 .msg.user .bubble{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12);display:inline-block;padding:8px 12px;border-radius:4px 4px 0 4px;text-align:left}
 .msg.zio .bubble{background:rgba(124,77,255,0.05);border:1px solid rgba(124,77,255,0.1);display:inline-block;padding:8px 12px;border-radius:4px 4px 4px 0;text-align:left}
+.msg.zio .bubble:empty::after{content:'...';letter-spacing:2px;color:rgba(124,77,255,0.7);animation:zioTyping 1s steps(4) infinite}
+@keyframes zioTyping{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
 .msg .label{font-size:8px;letter-spacing:2px;margin-bottom:2px}
 .msg.user .label{color:rgba(0,229,255,0.6)}
 .msg.zio .label{color:rgba(124,77,255,0.6)}
@@ -451,6 +463,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:
             <input type="range" class="param-slider" id="topPSlider" min="0" max="100" value="90" oninput="var v=(this.value/100).toFixed(2);document.getElementById('topPVal').textContent=v;saveParam('top_p',parseFloat(v));">
           </div>
         </div>
+      </div>
+      <div class="section">
+        <div class="section-title">PORTALES</div>
+        <a class="portal-card" href="https://aerospace.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🚀</span>Aerospace<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://materializer.zicore.space" target="_blank" rel="noopener"><span class="p-icon">✨</span>Materializer<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://zcs.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🌍</span>Mission Control<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://engineering.zicore.space" target="_blank" rel="noopener"><span class="p-icon">⚙️</span>Engineering<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://games.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🎮</span>Games<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://zmmx.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🎛️</span>ZMMX Media<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://mail.zicore.space" target="_blank" rel="noopener"><span class="p-icon">📧</span>Mail<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://mc.zicore.space/master-creator" target="_blank" rel="noopener"><span class="p-icon">🎨</span>Master Creator<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://zicodex.zicore.space" target="_blank" rel="noopener"><span class="p-icon">📚</span>Zicodex<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="/zivault" target="_blank" rel="noopener"><span class="p-icon">🛡️</span>ZiVault<span class="p-arrow">→</span></a>
       </div>
       <div class="section">
         <div class="section-title">ACTIONS</div>

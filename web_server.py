@@ -10,6 +10,7 @@ import re
 import hashlib
 import secrets
 import logging
+import shutil
 import sqlite3
 import time
 import uuid
@@ -244,6 +245,34 @@ DEFAULT_CONFIG = {
                 "opencode/qwen-2.5-72b",
             ],
         },
+        "gemini": {
+            "name": "Google Gemini (Nano Banana)",
+            "enabled": False,
+            "api_key": "",
+            "base_url": "https://generativelanguage.googleapis.com/v1beta",
+            "default_model": "gemini-2.5-flash-image",
+            "models": [
+                "gemini-2.5-flash-image",
+                "gemini-2.5-pro",
+                "gemini-2.5-flash",
+            ],
+        },
+        "rodin": {
+            "name": "Rodin Gen-1 (Image to 3D)",
+            "enabled": False,
+            "api_key": "",
+            "base_url": "https://hyper3d.rodin.hyper.com/api/v1",
+            "default_model": "",
+            "models": [],
+        },
+        "nightcafe": {
+            "name": "NightCafe Creator",
+            "enabled": False,
+            "api_key": "",
+            "base_url": "https://api.nightcafe.studio",
+            "default_model": "",
+            "models": [],
+        },
     },
     "zio_engine": {
         "active_provider": "zicore_native",
@@ -359,6 +388,26 @@ def _provider_headers(provider: str, api_key: str) -> dict:
         headers["x-api-key"] = api_key
         headers["anthropic-version"] = "2023-06-01"
     return headers
+
+
+def _provider_api_key(config: dict, name: str) -> str:
+    """API key for a provider from settings config (Settings → Providers)."""
+    return config.get("providers", {}).get(name, {}).get("api_key", "")
+
+
+def _inject_ai3d_api_keys(config: dict):
+    """Feed settings-configured keys to the ai3d engines (env fallback)."""
+    env_map = {
+        "tripo3d": "TRIPO_API_KEY",
+        "meshy": "MESHY_API_KEY",
+        "rodin": "RODIN_API_KEY",
+        "hunyuan": "HUNYUAN_API_KEY",
+    }
+    for provider_name, env_name in env_map.items():
+        if not os.environ.get(env_name):
+            key = _provider_api_key(config, provider_name)
+            if key:
+                os.environ[env_name] = key
 
 
 def _extract_model_ids(provider: str, data: dict) -> list:
@@ -764,6 +813,7 @@ class SSOAuthMiddleware:
         "/ziounified",
         "/aerospace-system",
         "/master-creator",
+        "/subsystems",
         "/metropolis",
         "/whitepaper",
         "/ecosystem",
@@ -867,6 +917,10 @@ class SSOAuthMiddleware:
         "/provider",
         "/global/health",
         "/event",
+        "/api/chat", # ZIO Chat (frontends call without token)
+        "/api/chat/stream", # ZIO Chat streaming (SSE)
+        "/api/knowledge/conversations", # Chat history for CHATS tab
+        "/api/diagnostics/run", # System diagnostics (public)
     }
 
     # Prefijos publicos (static files necesarios para login)
@@ -908,6 +962,7 @@ class SSOAuthMiddleware:
         "/session/", # OpenCode native sessions API proxy (public)
         "/api/aerospace/", # Aerospace AI calculation API (public)
         "/api/ai3d/", # AI 3D generation (public for materializer)
+        "/api/creator/", # Creator Studios API (Master Creator, public)
         "/api/system/", # System auto-update API (public, admin check in handler)
         "/downloads/", # Distribution files (public, whitelisted)
     )
@@ -944,6 +999,11 @@ class SSOAuthMiddleware:
 
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
+        # API token via X-API-Key header
+        if not token:
+            api_key = headers.get(b"x-api-key", b"").decode("utf-8", "replace")
+            if api_key:
+                token = api_key
         # Token in query string DISABLED for security (tokens logged in browser history)
         # elif "token=" in query_string:
         #     for param in query_string.split("&"):
@@ -963,6 +1023,9 @@ class SSOAuthMiddleware:
         # Validate token
         if token and sso:
             result = sso.verify_token(token)
+            if not (result.get("success") and result.get("user")):
+                # Fallback: universal per-user API token
+                result = sso.verify_api_token(token)
             if result.get("success") and result.get("user"):
                 # Token valid — attach user to scope
                 scope["state"] = scope.get("state", {})
@@ -1050,7 +1113,31 @@ async def serve_main_menu(request: Request):
     if "zicore-os.zicore.space" in host:
         # ZICORE Master Creator OS — kernel launcher
         return FileResponse(str(FRONTEND_DIR / "zicore-os.html"))
-    if "zcs.zicore.space" in host or "zicore.space" in host:
+    if "zio.zicore.space" in host:
+        # ZIO module only — dedicated chat page
+        return FileResponse(str(FRONTEND_DIR / "zio.html"))
+    if "aerospace.zicore.space" in host:
+        # Aerospace module only
+        return FileResponse(str(FRONTEND_DIR / "aerospace.html"))
+    if "materializer.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "materializer.html"))
+    if "engineering.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "engineering.html"))
+    if "games.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "games.html"))
+    if "zmmx.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "zmmx.html"))
+    if "mail.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "mail.html"))
+    if "zicodex.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "zicodex.html"))
+    if "zivault.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "zivault.html"))
+    if "mc.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "master-creator.html"))
+    if "zcs.zicore.space" in host:
+        return FileResponse(str(FRONTEND_DIR / "mission-control.html"))
+    if "zicore.space" in host:
         return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
@@ -1078,6 +1165,11 @@ async def serve_zicore():
 @app.get("/frontpage")
 async def serve_frontpage():
     return FileResponse(str(FRONTEND_DIR / "frontpage.html"))
+
+
+@app.get("/subsystems")
+async def serve_subsystems():
+    return FileResponse(str(FRONTEND_DIR / "subsystems.html"))
 
 
 @app.get("/zicore-os")
@@ -2204,6 +2296,125 @@ async def media_list():
     return result
 
 
+@app.get("/api/media/library")
+async def api_media_library(request: Request):
+    """Unified media catalog with shareable absolute URLs.
+
+    Query params:
+      category : audio | music | video | images | ebooks
+      source   : local | zicore_fs | jilocomotion | all (default)
+      sort     : name | size | date
+      order    : asc | desc
+      offset / limit : pagination (limit max 200)
+    Returns items with a relative `url` and an absolute `share_url`.
+    """
+    import mimetypes
+    q = request.query_params
+    cat = q.get("category", "")
+    source = q.get("source", "all")
+    sort = q.get("sort", "name")
+    order = q.get("order", "asc")
+    try:
+        limit = min(int(q.get("limit", "50")), 200)
+    except (TypeError, ValueError):
+        limit = 50
+    try:
+        offset = max(int(q.get("offset", "0")), 0)
+    except (TypeError, ValueError):
+        offset = 0
+
+    base = f"{request.url.scheme}://{request.headers.get('host', 'localhost:4000')}"
+    items = []
+    cats_to_scan = [cat] if cat else list(MEDIA_CATEGORIES.keys())
+
+    for c in cats_to_scan:
+        exts = MEDIA_CATEGORIES.get(c, [])
+
+        # Local media
+        if source in ("local", "all"):
+            cat_dir = MEDIA_DIR / c
+            if cat_dir.exists():
+                try:
+                    for f in cat_dir.iterdir():
+                        if f.is_file() and f.suffix.lower() in exts:
+                            rel = f"{c}/{f.name}"
+                            u = f"/api/media/serve?path={quote(rel)}"
+                            items.append({
+                                "name": f.name, "path": rel, "category": c, "source": "local",
+                                "size": f.stat().st_size, "ext": f.suffix.lower().lstrip("."),
+                                "mime": mimetypes.guess_type(f.name)[0] or "application/octet-stream",
+                                "url": u, "share_url": f"{base}{u}",
+                            })
+                except (OSError, PermissionError):
+                    pass
+
+        # zicore-fs media
+        if ZICORE_FS_MEDIA.exists() and source in ("zicore_fs", "all"):
+            fs_dirs = {
+                "audio": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music", "Movies/Media/Music/")],
+                "music": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Music", "Movies/Media/Music/")],
+                "video": [(ZICORE_FS_MEDIA / "Movies" / "Media" / "Movies", "Movies/Media/Movies/")],
+                "images": [
+                    (ZICORE_FS_MEDIA / "Movies" / "Media" / "Photo", "Movies/Media/Photo/"),
+                    (ZICORE_FS_MEDIA / "Movies" / "Media" / "Fotos", "Movies/Media/Fotos/"),
+                ],
+            }
+            for d, prefix in fs_dirs.get(c, []):
+                if d.exists():
+                    try:
+                        for item in _scan_media_tree(d, exts, url_prefix=prefix, max_depth=3):
+                            rel = item["path"]
+                            u = f"/media-fs/{quote(rel)}"
+                            items.append({
+                                "name": item["name"], "path": f"{prefix}{rel}", "category": c, "source": "zicore_fs",
+                                "size": item["size"], "ext": item["ext"], "mime": item["mime"],
+                                "url": u, "share_url": f"{base}{u}",
+                            })
+                    except (OSError, PermissionError):
+                        pass
+
+        # Jilocomotion catalog
+        if source in ("jilocomotion", "all"):
+            catalog = _load_jilocomotion_catalog()
+            jilo_map = {"audio": "music", "music": "music", "video": "videos", "images": "photos", "ebooks": "ebooks"}
+            jcat = jilo_map.get(c, "")
+            if jcat:
+                for item in catalog.get(jcat, []):
+                    file_path = item.get("file", "")
+                    name = item.get("title", item.get("name", file_path))
+                    ext = item.get("ext", "") or (os.path.splitext(file_path)[1] if file_path else "")
+                    if ext and not name.lower().endswith(ext.lower()):
+                        name = name + ext
+                    u = f"/api/jilocomotion/serve?path={quote(file_path)}" if file_path else ""
+                    items.append({
+                        "name": name, "path": file_path, "category": c, "source": "jilocomotion",
+                        "size": item.get("size", item.get("size_mb", 0) * 1024 * 1024),
+                        "ext": ext.lstrip(".") if ext else "",
+                        "mime": mimetypes.guess_type(name)[0] or "application/octet-stream",
+                        "free": item.get("free", True),
+                        "url": u, "share_url": f"{base}{u}" if u else "",
+                    })
+
+    # Sort
+    reverse = order == "desc"
+    if sort == "size":
+        items.sort(key=lambda x: x.get("size", 0), reverse=reverse)
+    elif sort == "date":
+        items.sort(key=lambda x: x.get("modified", 0), reverse=reverse)
+    else:
+        items.sort(key=lambda x: x.get("name", "").lower(), reverse=reverse)
+
+    total = len(items)
+    paged = items[offset:offset + limit]
+    return {
+        "status": "ok",
+        "total": total, "offset": offset, "limit": limit,
+        "category": cat, "source": source,
+        "items": paged,
+        "categories": list(MEDIA_CATEGORIES.keys()),
+    }
+
+
 # ─── JILOCOMOTION CATALOG (from .68 drive) ──────────────────────────────────
 JILOCOMOTION_CATALOG = Path(__file__).parent / "data" / "jilocomotion_catalog.json"
 
@@ -2455,16 +2666,20 @@ async def zmmx_search(request: Request):
             if cat and cat != "all" and cat != mcat and cat != jcat:
                 continue
             for item in catalog.get(jcat, []):
-                name = item.get("title", item.get("name", item.get("file", "")))
+                file_path = item.get("file", "")
+                name = item.get("title", item.get("name", file_path))
+                ext = item.get("ext", "") or (os.path.splitext(file_path)[1] if file_path else "")
+                if ext and not name.lower().endswith(ext.lower()):
+                    name = name + ext
                 if q and q not in name.lower():
                     continue
                 results.append({
                     "name": name,
-                    "path": item.get("file", ""),
+                    "path": file_path,
                     "url": item.get("url", ""),
                     "size": item.get("size", item.get("size_mb", 0) * 1024 * 1024),
-                    "ext": name.rsplit(".", 1)[-1] if "." in name else "",
-                    "mime": "application/octet-stream",
+                    "ext": ext.lstrip(".") if ext else "",
+                    "mime": mimetypes.guess_type(name)[0] or "application/octet-stream",
                     "category": mcat,
                     "source": "jilocomotion",
                     "free": item.get("free", True),
@@ -2600,15 +2815,19 @@ async def zmmx_browse(request: Request):
         jcat = jilo_map.get(cat, "")
         if jcat:
             for item in catalog.get(jcat, []):
-                name = item.get("title", item.get("name", item.get("file", "")))
                 file_path = item.get("file", "")
+                name = item.get("title", item.get("name", file_path))
+                ext = item.get("ext", "") or (os.path.splitext(file_path)[1] if file_path else "")
+                if ext and not name.lower().endswith(ext.lower()):
+                    name = name + ext
+                mime = mimetypes.guess_type(name)[0] or "application/octet-stream"
                 items.append({
                     "name": name,
                     "path": file_path,
                     "url": f"/api/jilocomotion/serve?path={quote(file_path)}" if file_path else "",
                     "size": item.get("size", item.get("size_mb", 0) * 1024 * 1024),
-                    "ext": name.rsplit(".", 1)[-1] if "." in name else "",
-                    "mime": "application/octet-stream",
+                    "ext": ext.lstrip(".") if ext else "",
+                    "mime": mime,
                     "category": cat, "source": "jilocomotion",
                     "modified": 0,
                     "free": item.get("free", True),
@@ -5961,6 +6180,8 @@ async def api_ai3d_generate(data: dict = {}):
         tmp.close()
         image_path = tmp.name
 
+    _inject_ai3d_api_keys(load_config())
+
     result = ai3d.generate(
         engine_key=engine_key,
         prompt=prompt,
@@ -6172,6 +6393,193 @@ cylinder(r={r*20}, h=5, $fn={teeth*2});''',
         "cone": f'''cylinder(r1={r*20}, r2=0, h={h*30}, $fn=64);''',
     }
     return templates.get(ptype, templates["cube"])
+
+
+# ─── CREATOR STUDIOS API ─────────────────────────────────────────────────────
+# Master Creator — estudios embebidos (Nano Banana, Rodin, NightCafe) y
+# proxy al sistema Engineering Node.js (/opt/zicore-os, puerto 3000) para
+# el pipeline Noyron → PicoGK → slice → print (salidas abribles en Blender).
+
+CREATOR_OUTPUTS = Path(__file__).parent / "data" / "creator_outputs"
+ENGINEERING_BASE = os.environ.get("ZICORE_ENGINEERING_BASE", "http://127.0.0.1:3000")
+NIGHTCAFE_STUDIO_URL = "https://creator.nightcafe.studio"
+
+
+@app.get("/api/creator/file/{filename}")
+async def api_creator_file(filename: str):
+    """Serve a generated file from the creator outputs dir."""
+    import mimetypes
+    safe = Path(filename).name
+    p = CREATOR_OUTPUTS / safe
+    if not p.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    mime = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+    return FileResponse(str(p), media_type=mime)
+
+
+@app.get("/api/creator/status")
+async def api_creator_status():
+    """Provider key status + engineering service health (for studio badges)."""
+    config = load_config()
+    keys = {}
+    for name in ("gemini", "rodin", "tripo3d", "meshy", "nightcafe"):
+        keys[name] = bool(_provider_api_key(config, name))
+    eng_ok = False
+    eng_err = ""
+    try:
+        urllib.request.urlopen(f"{ENGINEERING_BASE}/api/engineering/noyron/templates", timeout=5)
+        eng_ok = True
+    except Exception as e:
+        eng_err = str(e)
+    return {
+        "status": "ok",
+        "keys": keys,
+        "engineering_online": eng_ok,
+        "engineering_error": eng_err,
+        "engineering_base": ENGINEERING_BASE,
+        "nightcafe_studio_url": NIGHTCAFE_STUDIO_URL,
+    }
+
+
+@app.post("/api/creator/nanobanana")
+async def api_creator_nanobanana(data: dict = {}):
+    """Nano Banana = Google Gemini 2.5 Flash Image. Text → imagen."""
+    import base64 as _b64
+    prompt = (data.get("prompt") or "").strip()
+    if not prompt:
+        return {"status": "error", "error": "prompt required"}
+    config = load_config()
+    api_key = _provider_api_key(config, "gemini")
+    if not api_key:
+        return {"status": "no_api_key", "error": "Gemini (Nano Banana) API key no configurada. Settings → Providers → gemini."}
+    prov = config.get("providers", {}).get("gemini", {})
+    base = (prov.get("base_url") or "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
+    model = prov.get("default_model") or "gemini-2.5-flash-image"
+    aspect = data.get("aspect", "1:1")
+    num = max(1, min(int(data.get("num", 1) or 1), 4))
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": {"aspectRatio": aspect, "imageSize": "auto"},
+            "candidateCount": num,
+        },
+    }
+    try:
+        result = _request_json(
+            f"{base}/models/{model}:generateContent",
+            method="POST",
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            payload=payload,
+            timeout=240,
+        )
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+    CREATOR_OUTPUTS.mkdir(parents=True, exist_ok=True)
+    images = []
+    for cand in result.get("candidates", []) or []:
+        for part in (cand.get("content") or {}).get("parts", []) or []:
+            inline = part.get("inlineData") or {}
+            if inline.get("data"):
+                mime = inline.get("mimeType", "image/png")
+                ext = "png" if "png" in mime else "jpg"
+                fname = f"nanobanana_{int(time.time() * 1000)}_{len(images)}.{ext}"
+                (CREATOR_OUTPUTS / fname).write_bytes(_b64.b64decode(inline["data"]))
+                images.append({
+                    "file": fname,
+                    "url": f"/api/creator/file/{fname}",
+                    "mime": mime,
+                })
+    if not images:
+        return {"status": "error", "error": "Gemini no devolvió imagen", "raw": result}
+    return {"status": "ok", "engine": "nanobanana", "model": model, "n": len(images), "images": images}
+
+
+@app.post("/api/creator/nightcafe")
+async def api_creator_nightcafe(data: dict = {}):
+    """NightCafe Creator — best-effort API + fallback al estudio web.
+    La integración API no está 100% verificada; el estudio siempre ofrece
+    el enlace directo a https://creator.nightcafe.studio."""
+    prompt = (data.get("prompt") or "").strip()
+    if not prompt:
+        return {"status": "error", "error": "prompt required"}
+    config = load_config()
+    api_key = _provider_api_key(config, "nightcafe")
+    if not api_key:
+        return {
+            "status": "no_api_key",
+            "error": "NightCafe API key no configurada. Configúrala en Settings → Providers → nightcafe o continúa en el estudio web.",
+            "studio_url": NIGHTCAFE_STUDIO_URL,
+        }
+    prov = config.get("providers", {}).get("nightcafe", {})
+    base = (prov.get("base_url") or "https://api.nightcafe.studio").rstrip("/")
+    style = data.get("style", "none")
+    aspect = data.get("aspect", "1:1")
+    num = max(1, min(int(data.get("num", 1) or 1), 4))
+    payload = {
+        "prompt": prompt,
+        "model": data.get("model", "stable-diffusion-xl-1024-v1-0"),
+        "numImages": num,
+        "aspectRatio": aspect,
+    }
+    if style and style != "none":
+        payload["presetStyle"] = style
+    try:
+        result = _request_json(
+            f"{base}/v1/creations",
+            method="POST",
+            headers={"Content-Type": "application/json", "X-API-KEY": api_key},
+            payload=payload,
+            timeout=120,
+        )
+    except Exception as e:
+        return {"status": "error", "error": f"NightCafe API: {e}", "studio_url": NIGHTCAFE_STUDIO_URL}
+    return {"status": "ok", "engine": "nightcafe", "result": result, "studio_url": NIGHTCAFE_STUDIO_URL}
+
+
+# ─── Engineering (Noyron → PicoGK → slice → print) proxy ─────────────────────
+
+@app.get("/api/creator/engineering/templates")
+async def api_creator_engineering_templates():
+    try:
+        return _request_json(f"{ENGINEERING_BASE}/api/engineering/noyron/templates", timeout=15)
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/creator/engineering/generate")
+async def api_creator_engineering_generate(data: dict = {}):
+    try:
+        return _request_json(
+            f"{ENGINEERING_BASE}/api/engineering/generate",
+            method="POST",
+            headers={"Content-Type": "application/json"},
+            payload=data,
+            timeout=30,
+        )
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/creator/engineering/status/{task_id}")
+async def api_creator_engineering_status(task_id: str):
+    try:
+        return _request_json(f"{ENGINEERING_BASE}/api/engineering/status/{task_id}", timeout=15)
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/creator/engineering/download/{task_id}/{file_type}")
+async def api_creator_engineering_download(task_id: str, file_type: str):
+    try:
+        with urllib.request.urlopen(
+            f"{ENGINEERING_BASE}/api/engineering/download/{task_id}/{file_type}", timeout=120
+        ) as resp:
+            data = resp.read()
+        from fastapi.responses import Response
+        return Response(content=data, media_type=resp.headers.get("Content-Type", "application/octet-stream"))
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
 @app.post("/api/code/execute")
@@ -6483,15 +6891,49 @@ async def zio_websocket(websocket: WebSocket):
 
                     t0 = __import__("time").time()
 
+                    # Emit stream_start immediately so the UI shows feedback right away.
+                    await websocket.send_json({"type": "stream_start", "message": ""})
+
+                    streamed = {"count": 0}
+                    reply = ""
+                    intent = "general"
+                    generation = None
+                    media_url = ""
+                    media_type = ""
+
                     if provider_name == "zicore_native":
                         sys.path.insert(0, str(Path(__file__).parent))
                         from agent.core import ZICoreAgent
                         agent = ZICoreAgent(session_id=session_id)
-                        import asyncio
-                        result = await agent.process(
-                            user_msg,
-                            {"source": "zio_webui", "knowledge_context": context}
-                        )
+
+                        loop = asyncio.get_running_loop()
+                        chunks = asyncio.Queue()
+
+                        def _feed_chunk(tok):
+                            if tok:
+                                streamed["count"] += 1
+                                loop.call_soon_threadsafe(chunks.put_nowait, tok)
+
+                        async def _pump_chunks():
+                            while True:
+                                tok = await chunks.get()
+                                if tok is None:
+                                    break
+                                await websocket.send_json({"type": "stream_chunk", "chunk": tok})
+
+                        pump_task = asyncio.create_task(_pump_chunks())
+                        try:
+                            def _run_agent_in_thread():
+                                return asyncio.run(agent.process(
+                                    user_msg,
+                                    {"source": "zio_webui", "knowledge_context": context},
+                                    stream_callback=_feed_chunk,
+                                ))
+                            result = await asyncio.to_thread(_run_agent_in_thread)
+                        finally:
+                            loop.call_soon_threadsafe(chunks.put_nowait, None)
+                            await pump_task
+
                         reply = result.get("outputs", {}).get("text",
                             result.get("outputs", {}).get("zio_msg", str(result.get("outputs", ""))))
                         intent = result.get("intent", "general")
@@ -6513,11 +6955,13 @@ async def zio_websocket(websocket: WebSocket):
                     if generation:
                         await websocket.send_json({"type": "generated", "result": generation})
 
-                    await websocket.send_json({"type": "stream_start", "message": ""})
-                    words = reply.split(" ")
-                    for word in words:
-                        await websocket.send_json({"type": "stream_chunk", "chunk": word + " "})
-                        await asyncio.sleep(0.02)
+                    # Real-time chunks already streamed; otherwise replay the reply word by word.
+                    if not streamed["count"] and reply:
+                        words = reply.split(" ")
+                        for word in words:
+                            await websocket.send_json({"type": "stream_chunk", "chunk": word + " "})
+                            await asyncio.sleep(0.02)
+
                     await websocket.send_json({
                         "type": "stream_end",
                         "intent": intent,
@@ -8666,17 +9110,22 @@ SSO_PLANS = {
 
 
 async def get_current_user(request: Request) -> Optional[dict]:
-    """Extract Bearer token from Authorization header and verify via SSO.
+    """Resolve the authenticated user via SSO session token or universal API token.
 
+    Checks Authorization: Bearer <token> and X-API-Key headers.
     Returns user dict on success, or None if unauthenticated.
     """
     if sso is None:
         return None
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    if not token:
+        token = request.headers.get("X-API-Key", "")
+    if not token:
         return None
-    token = auth[7:]
     result = sso.verify_token(token)
+    if not (result.get("success") and result.get("user")):
+        result = sso.verify_api_token(token)
     if result.get("success"):
         return result.get("user")
     return None
@@ -8790,6 +9239,67 @@ async def sso_logout(request: Request):
         token = auth[7:] if auth.startswith("Bearer ") else ""
         if token:
             sso.logout(token)
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def _sso_identity(request: Request):
+    """Resolve the authenticated user via middleware scope, session token, or API token."""
+    user = request.scope.get("state", {}).get("sso_user")
+    if user:
+        return user
+    if sso is None:
+        return None
+    auth = request.headers.get("Authorization", "")
+    api_key = request.headers.get("X-API-Key", "")
+    token = auth[7:] if auth.startswith("Bearer ") else (api_key or "")
+    if not token:
+        return None
+    result = sso.verify_token(token)
+    if not (result.get("success") and result.get("user")):
+        result = sso.verify_api_token(token)
+    return result.get("user") if result.get("success") else None
+
+
+@app.get("/api/sso/token")
+async def sso_api_token_get(request: Request):
+    """Get the current universal API token for the authenticated user (or null)."""
+    try:
+        user = await _sso_identity(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Authentication required"}, status_code=401)
+        res = sso.get_api_token(user["id"])
+        return {"status": "ok", "token": res.get("token"), "created_at": res.get("created_at")}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/token/generate")
+async def sso_api_token_generate(request: Request):
+    """Generate or rotate the universal API token for the authenticated user."""
+    try:
+        user = await _sso_identity(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Authentication required"}, status_code=401)
+        res = sso.generate_api_token(user["id"])
+        if not res.get("success"):
+            return {"status": "error", "error": res.get("error")}
+        return {"status": "ok", "token": res["token"], "created_at": res["created_at"]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/sso/token/revoke")
+async def sso_api_token_revoke(request: Request):
+    """Revoke the universal API token for the authenticated user."""
+    try:
+        user = await _sso_identity(request)
+        if not user:
+            return JSONResponse({"status": "error", "error": "Authentication required"}, status_code=401)
+        res = sso.revoke_api_token(user["id"])
+        if not res.get("success"):
+            return {"status": "error", "error": res.get("error")}
         return {"status": "ok"}
     except Exception as e:
         return {"status": "error", "error": str(e)}

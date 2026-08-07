@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Space Agency — Agencia Espacial</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--orange:#ff8800;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+#starfield{position:fixed;inset:0;z-index:0}
+.content{position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto}
+h1{font-size:clamp(32px,5vw,56px);font-weight:300;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text),var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:16px}
+.sub{font-size:14px;color:var(--text-dim);line-height:1.8;max-width:620px;margin-bottom:48px}
+h2{font-size:20px;font-weight:500;letter-spacing:1px;margin-bottom:20px;color:var(--text)}
+h2 span{color:var(--cyan);font-family:var(--mono);font-size:12px;letter-spacing:3px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:56px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all 0.4s;display:block}
+.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.15);transform:translateY(-2px)}
+.card-icon{font-size:28px;margin-bottom:12px;color:var(--cyan)}
+.card-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.card-desc{font-size:11px;color:var(--text-dim);line-height:1.7}
+.card-tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;color:var(--cyan);padding:3px 10px;border:1px solid rgba(0,229,255,0.15);border-radius:2px}
+.purple .card-icon{color:var(--purple)}.purple .card-tag{color:var(--purple);border-color:rgba(124,77,255,0.15)}
+.green .card-icon{color:var(--green)}.green .card-tag{color:var(--green);border-color:rgba(0,255,136,0.15)}
+.orange .card-icon{color:var(--orange)}.orange .card-tag{color:var(--orange);border-color:rgba(255,136,0,0.15)}
+.kernel{background:linear-gradient(135deg,rgba(0,229,255,0.04),rgba(124,77,255,0.04));border:1px solid rgba(0,229,255,0.12)}
+.kernel .card-title{color:var(--cyan)}
+.kernel .card-desc{color:var(--text-dim)}
+.status-bar{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:16px 32px;background:rgba(6,8,16,0.7);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase}
+.status-bar a{color:var(--cyan);text-decoration:none;margin-left:20px}
+.status-bar a:hover{text-decoration:underline}
+.back{display:inline-block;margin-top:32px;padding:12px 28px;border:1px solid var(--border);color:var(--text-dim);text-decoration:none;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:all 0.4s}
+.back:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.divider{height:1px;background:var(--border);margin:48px 0}
+@media(max-width:700px){.content{padding:80px 20px}.status-bar{padding:12px 16px;flex-wrap:wrap;gap:8px}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="status-bar">
+  <span>ZICORE Space Agency — <b style="color:var(--cyan)">AGENCY</b></span>
+  <span>
+    <a href="https://zicore.space">ZICORE</a>
+    <a href="https://aerospace.zicore.space">AEROSPACE</a>
+    <a href="https://aerospace.zicore.space">SISTEMA</a>
+  </span>
+</div>
+
+<div class="content">
+  <div class="eyebrow">ZiAerospace · División de Agencia</div>
+  <h1>Agencia Espacial ZICORE</h1>
+  <p class="sub">
+    El punto de contacto entre ZICORE y el ecosistema aeroespacial global. La Agencia coordina
+    misiones, integra proveedores de servicio certificados y opera a través del Kernel Hub como
+    núcleo de servicios del sistema.
+  </p>
+
+  <h2><span>//</span> PROVEEDORES DE SERVICIO</h2>
+  <div class="grid">
+    <a class="card orange" href="https://aerospace.zicore.space">
+      <div class="card-icon">🛰️</div>
+      <div class="card-title">NASA</div>
+      <div class="card-desc">Integración con datos de misiones, ciencia planetaria y acceso al catálogo de misiones históricas y activas.</div>
+      <span class="card-tag">EXPLORACIÓN</span>
+    </a>
+    <a class="card" href="https://aerospace.zicore.space">
+      <div class="card-icon">🚀</div>
+      <div class="card-title">SPACEX</div>
+      <div class="card-desc">Referencias de lanzadores Falcon y Starship, perfiles de vuelo y operaciones de lanzamiento reutilizables.</div>
+      <span class="card-tag">LANZAMIENTO</span>
+    </a>
+    <a class="card purple" href="https://aerospace.zicore.space">
+      <div class="card-icon">🪐</div>
+      <div class="card-title">BLUE ORIGIN</div>
+      <div class="card-desc">New Shepard y New Glenn, turismo suborbital e infraestructura lunar en la órbita cislunar.</div>
+      <span class="card-tag">SUSTENTABLE</span>
+    </a>
+    <a class="card green" href="https://aerospace.zicore.space">
+      <div class="card-icon">🛩️</div>
+      <div class="card-title">VIRGIN GALACTIC</div>
+      <div class="card-desc">Vuelo espacial suborbital con SpaceShipTwo, acceso al borde del espacio y microgravedad.</div>
+      <span class="card-tag">SUBORBITAL</span>
+    </a>
+  </div>
+
+  <h2><span>//</span> SISTEMAS DE LA AGENCIA</h2>
+  <div class="grid">
+    <a class="card" href="https://aerospace.zicore.space">
+      <div class="card-icon">🛸</div>
+      <div class="card-title">ZiAerospace</div>
+      <div class="card-desc">Vehículos, misiones, infraestructura e ingeniería del sistema aeroespacial.</div>
+      <span class="card-tag">aerospace.zicore.space</span>
+    </a>
+    <a class="card" href="https://mc.zicore.space">
+      <div class="card-icon">🧊</div>
+      <div class="card-title">Master Creator</div>
+      <div class="card-desc">Generación procedural de vehículos, componentes y misiones 3D en tiempo real.</div>
+      <span class="card-tag">mc.zicore.space</span>
+    </a>
+    <a class="card purple" href="https://engineering.zicore.space">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">Engineering Hub</div>
+      <div class="card-desc">Motores de diseño paramétrico, análisis estructural y fabricación.</div>
+      <span class="card-tag">engineering.zicore.space</span>
+    </a>
+    <a class="card green" href="https://zitelemetry.zicore.space">
+      <div class="card-icon">📡</div>
+      <div class="card-title">Telemetría</div>
+      <div class="card-desc">Streams de datos en tiempo real, visualización y monitoreo de misión.</div>
+      <span class="card-tag">zitelemetry.zicore.space</span>
+    </a>
+  </div>
+
+  <div class="divider"></div>
+
+  <h2><span>//</span> NÚCLEO DE SERVICIOS</h2>
+  <div class="grid">
+    <a class="card kernel" href="https://vps.zicore.space">
+      <div class="card-icon">🧠</div>
+      <div class="card-title">Kernel Hub</div>
+      <div class="card-desc">
+        El kernel del sistema: REST API, WebSocket, State Engine y todos los motores de creación.
+        Cada subsistema se conecta al backend a través del Kernel Hub.
+      </div>
+      <span class="card-tag">vps.zicore.space · :8000</span>
+    </a>
+    <a class="card kernel" href="https://zicore.space">
+      <div class="card-icon">🖥️</div>
+      <div class="card-title">ZICORE Exhibidor</div>
+      <div class="card-desc">Productos, servicios, sistemas y módulos del ecosistema con acceso a todos los portales.</div>
+      <span class="card-tag">zicore.space</span>
+    </a>
+    <a class="card" href="https://zcs.zicore.space">
+      <div class="card-icon">🎛️</div>
+      <div class="card-title">Mission Control</div>
+      <div class="card-desc">Consola de operaciones de misión — estado de vehículos, telemetría y subsistemas.</div>
+      <span class="card-tag">zcs.zicore.space</span>
+    </a>
+    <a class="card" href="https://zio.zicore.space">
+      <div class="card-icon">🤖</div>
+      <div class="card-title">ZIO AI</div>
+      <div class="card-desc">Copiloto de IA del sistema con motores duales y contexto de misión.</div>
+      <span class="card-tag">zio.zicore.space</span>
+    </a>
+  </div>
+
+  <a class="back" href="https://zicore.space">← Volver al exhibidor</a>
+</div>
+
+<script>
+(function(){
+  var c=document.getElementById('starfield'),x=c.getContext('2d');
+  function size(){c.width=innerWidth;c.height=innerHeight}
+  size();addEventListener('resize',size);
+  var n=140,s=[];
+  for(var i=0;i<n;i++){s.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+0.2,v:Math.random()*0.3+0.05})}
+  function draw(){
+    x.clearRect(0,0,c.width,c.height);
+    for(var i=0;i<n;i++){
+      var p=s[i];
+      x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);
+      x.fillStyle='rgba(200,216,236,'+(0.2+Math.random()*0.4)+')';x.fill();
+      p.y-=p.v;if(p.y<-2){p.y=c.height;p.x=Math.random()*c.width}
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

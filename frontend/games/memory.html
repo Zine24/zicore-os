@@ -91,11 +91,11 @@ body{background:#04060c;display:flex;flex-direction:column;align-items:center;ju
 <div class="controls-help"><span>CLICK</span> FLIP CARDS <span>MATCH ALL PAIRS</span></div>
 
 <script>
-const SYMBOLS=['🚀','🛰️','🌍','🌙','☀️','⭐','🛸','👨‍🚀','🌌','☄️','🔭','🪐','👽','🤖','🌌','⚡','💎','🔮','🎯','🎲','🎮','🃏','🎪','🎭'];
+const SYMBOLS=['🚀','🛰️','🌍','🌙','☀️','⭐','🛸','👨‍🚀','🌌','☄️','🔭','🪐','👽','🤖','🌕','⚡','💎','🔮','🎯','🎲','🎮','🃏','🎪','🎭'];
 const LEVELS=[];
 for(let i=0;i<20;i++){
-  const cols=4+Math.floor(i/4);
-  const rows=4+Math.floor(i/5);
+  const cols=[4,4,6,6][i%4];
+  const rows=4+Math.floor(i/4);
   const pairs=Math.floor(cols*rows/2);
   LEVELS.push({cols,rows,pairs});
 }

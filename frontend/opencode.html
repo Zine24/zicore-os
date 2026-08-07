@@ -331,6 +331,9 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <label>Model</label>
         <select id="promptModel" onchange="onPromptModelChange(this.value)"></select>
         <div class="pm-sep"></div>
+        <label>Root</label>
+        <input type="text" id="projectRoot" placeholder="/path/to/project" onchange="saveProjectRoot(this.value)" style="flex:1;min-width:140px">
+        <div class="pm-sep"></div>
         <div class="pm-info">Active: <span class="pm-active" id="pmActiveModel">—</span></div>
       </div>
       <div class="prompt-hints">
@@ -471,10 +474,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         Quick Models
       </div>
-      <div class="model-chip" onclick="quickModel('zicore_native','gemma4:12b')"><div class="dot" style="background:var(--green)"></div><span class="mn">Gemma4 12B</span><span class="mp">VPS</span></div>
-      <div class="model-chip" onclick="quickModel('groq','llama-3.3-70b-versatile')"><div class="dot" style="background:var(--cyan)"></div><span class="mn">Llama 3.3 70B</span><span class="mp">Groq</span></div>
-      <div class="model-chip" onclick="quickModel('openrouter','nvidia/nemotron-3-super-120b-a12b:free')"><div class="dot" style="background:var(--purple)"></div><span class="mn">Nemotron 120B</span><span class="mp">Free</span></div>
-      <div class="model-chip" onclick="quickModel('openrouter','google/gemini-2.5-flash')"><div class="dot" style="background:var(--orange)"></div><span class="mn">Gemini 2.5 Flash</span><span class="mp">Free</span></div>
+      <div id="quickModelChips"></div>
     </div>
 
     <!-- Quick Actions -->
@@ -600,6 +600,7 @@ async function loadProviders(){
       renderPromptProviderSelect(cfg);
       updateProviderStat();
       refreshVPSModels();
+      renderQuickModels();
       return;
     }
   }catch(e){console.log('Config load failed, using fallback:',e.message);}
@@ -617,6 +618,7 @@ async function loadProviders(){
   renderPromptProviderSelect();
   updateProviderStat();
   refreshVPSModels();
+  renderQuickModels();
 }
 
 async function refreshVPSModels(){
@@ -1246,6 +1248,32 @@ async function checkOllamaHealth(){
   }
 }
 
+// ── Quick Models ──
+var QUICK_MODEL_RANK=[
+  // Local/free first: [providerID, modelID, label, tag, color]
+  ['zicore_native','granite4.1:3b','Granite 4.1 3B','VPS','var(--green)'],
+  ['ollama_cloud','gpt-oss:20b-cloud','GPT-OSS 20B Cloud','Free','var(--cyan)'],
+  ['ollama_cloud','gpt-oss:120b-cloud','GPT-OSS 120B Cloud','Free','var(--cyan)'],
+  ['openrouter','nvidia/nemotron-3-super-120b-a12b:free','Nemotron 120B','Free','var(--purple)'],
+  ['openrouter','google/gemini-2.5-flash','Gemini 2.5 Flash','Free','var(--orange)'],
+  ['groq','llama-3.3-70b-versatile','Llama 3.3 70B','Groq','var(--orange)']
+];
+var _chipRenderedFor='';
+
+function renderQuickModels(){
+  var box=document.getElementById('quickModelChips');
+  if(!box)return;
+  var provIds={};providers.forEach(function(p){provIds[p.id]=true;});
+  var avail=QUICK_MODEL_RANK.filter(function(q){return provIds[q[0]];});
+  if(!avail.length)avail=QUICK_MODEL_RANK;
+  var key=avail.map(function(q){return q[0]+'/'+q[1];}).join('|');
+  if(key===_chipRenderedFor)return;
+  _chipRenderedFor=key;
+  box.innerHTML=avail.map(function(q){
+    return '<div class="model-chip" onclick="quickModel('+"'"+q[0]+"'"+','+"'"+q[1]+"'"+')"><div class="dot" style="background:'+q[4]+'"></div><span class="mn">'+esc(q[2])+'</span><span class="mp">'+esc(q[3])+'</span></div>';
+  }).join('');
+}
+
 function quickModel(provider,model){
   document.getElementById('statModel').textContent=model;
   document.getElementById('statProvider').textContent=provider;
@@ -1253,7 +1281,7 @@ function quickModel(provider,model){
   var ps=document.getElementById('promptProvider');
   var ms=document.getElementById('promptModel');
   if(ps){ps.value=provider;onPromptProviderChange(provider);}
-  if(ms){ms.value=model;}
+  if(ms){ms.value=model;onPromptModelChange(model);}
   document.getElementById('pmActiveModel').textContent=model;
 }
 
@@ -1336,9 +1364,28 @@ function currentModelObj(){
   return {providerID:pid,modelID:mid};
 }
 
+// ── Project Root ──
+function loadProjectRoot(){
+  var el=document.getElementById('projectRoot');
+  if(!el)return;
+  var v=localStorage.getItem('zicore_project_root')||'';
+  try{
+    var t=localStorage.getItem('zicore_sso_token')||'';
+    if(!v)v=sessionStorage.getItem('zicore_project_root')||'';
+  }catch(e){}
+  if(v)el.value=v;
+  return v;
+}
+function saveProjectRoot(v){
+  try{localStorage.setItem('zicore_project_root',v||'');}catch(e){}
+  document.getElementById('projectRoot').value=v||'';
+}
+
 async function ensureSession(){
   if(activeSessionId)return activeSessionId;
   var body={title:'New session',agent:agentMode};
+  var root=(document.getElementById('projectRoot')?document.getElementById('projectRoot').value:'')||localStorage.getItem('zicore_project_root')||'';
+  if(root)body.directory=root;
   var r=await ocFetch('/session',{method:'POST',body:JSON.stringify(body)});
   var s=await r.json();
   if(s&&s.id){
@@ -1446,6 +1493,8 @@ loadImported();
 connectLive();
 pollSystemStatus();
 setInterval(pollSystemStatus,30000);
+loadProjectRoot();
+renderQuickModels();
 // Auto-connect SSE after short delay
 setTimeout(function(){if(!liveOn)connectLive();},3000);
 </script>

@@ -266,7 +266,7 @@ function draw(){
   for(let i=0;i<snake.length;i++){
     const s=snake[i];
     const t=1-i/snake.length;
-    const r=Math.floor(0+t*0);
+    const r=Math.floor(255-t*100);
     const g=Math.floor(255-t*100);
     const b=Math.floor(136+t*100);
     ctx.fillStyle=i===0?'#00ff88':`rgb(${r},${g},${b})`;
