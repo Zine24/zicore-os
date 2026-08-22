@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ZICORE Display Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#04060c;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--text:#c8d6e5;--text2:#667788;--border:#2a3555}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',system-ui,sans-serif}
+#displayCanvas{width:100vw;height:100vh;display:block;background:#000}
+
+/* Minimal HUD — fades out after 3s */
+.hud{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:8px 16px;background:linear-gradient(180deg,rgba(4,6,12,.85),transparent);z-index:10;transition:opacity .5s}
+.hud.hidden{opacity:0;pointer-events:none}
+.hud .brand{font-size:10px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hud .sep{width:1px;height:14px;background:var(--border)}
+.hud .info{font-size:9px;color:var(--text2);letter-spacing:.5px}
+.hud .status{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:9px}
+.hud .dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Bottom bar — always visible in non-fullscreen */
+.bar{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:6px 16px;background:linear-gradient(0deg,rgba(4,6,12,.85),transparent);z-index:10;transition:opacity .5s}
+.bar.hidden{opacity:0;pointer-events:none}
+.bar .ctrl-btn{padding:3px 8px;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--text2);cursor:pointer;font-size:8px;letter-spacing:1px;transition:all .15s;font-family:inherit}
+.bar .ctrl-btn:hover{border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.bar .ctrl-btn.active{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan)}
+.bar .ctrl-btn.green{border-color:rgba(0,255,136,.3);color:var(--green)}
+.bar .ctrl-btn.green:hover{background:rgba(0,255,136,.1)}
+.bar .ctrl-btn.danger{border-color:rgba(255,51,51,.3);color:var(--red)}
+.bar select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:3px;font-size:8px;outline:none;font-family:inherit}
+.bar .sep{width:1px;height:14px;background:var(--border)}
+.bar .stat{font-size:8px;color:var(--text2)}
+.bar .stat b{color:var(--cyan)}
+
+/* Connection dialog */
+.conn-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;background:rgba(4,6,12,.95);border:1px solid var(--border);border-radius:8px;padding:24px;backdrop-filter:blur(20px);display:block;min-width:320px}
+.conn-dialog h2{font-size:13px;font-weight:300;letter-spacing:4px;text-align:center;margin-bottom:16px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.conn-dialog label{display:block;font-size:9px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;margin-top:10px}
+.conn-dialog input,.conn-dialog select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:11px;outline:none;font-family:inherit}
+.conn-dialog input:focus{border-color:var(--cyan)}
+.conn-dialog .btn-row{display:flex;gap:8px;margin-top:16px}
+.conn-dialog .btn{flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;font-size:10px;letter-spacing:1px;transition:all .15s;font-family:inherit}
+.conn-dialog .btn:hover{border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.conn-dialog .btn.primary{background:rgba(0,229,255,.1);border-color:var(--cyan);color:var(--cyan)}
+.conn-dialog .btn.primary:hover{background:rgba(0,229,255,.2)}
+.conn-dialog.hidden{display:none}
+</style>
+</head>
+<body>
+
+<canvas id="displayCanvas"></canvas>
+
+<!-- HUD -->
+<div class="hud" id="hud">
+  <div class="brand">ZICORE DISPLAY</div>
+  <div class="sep"></div>
+  <div class="info" id="sessionInfo">Sin sesion</div>
+  <div class="status">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText" style="color:var(--text2)">DESCONECTADO</span>
+  </div>
+</div>
+
+<!-- Bottom Bar -->
+<div class="bar" id="bottomBar">
+  <button class="ctrl-btn green" onclick="showDialog()">CONECTAR</button>
+  <button class="ctrl-btn danger" onclick="disconnect()" id="btnDisconnect" disabled>DESCONECTAR</button>
+  <div class="sep"></div>
+  <button class="ctrl-btn" onclick="toggleFullscreen()">FULLSCREEN</button>
+  <div class="sep"></div>
+  <span class="stat">FRAME: <b id="statFrame">0</b></span>
+  <span class="stat">FPS: <b id="statFps">0</b></span>
+</div>
+
+<!-- Connection Dialog -->
+<div class="conn-dialog" id="connDialog">
+  <h2>ZICORE DISPLAY</h2>
+  <label>MODo DE CONEXION</label>
+  <select id="connMode">
+    <option value="subscribe">Suscibir a sesion VR existente</option>
+    <option value="auto">Crear sesion automatica</option>
+  </select>
+  <label>SESSION ID (para suscribir)</label>
+  <input type="text" id="sessionIdInput" placeholder="Dejar vacio para auto-detectar">
+  <label>ESCENA (para auto-crear)</label>
+  <select id="sceneSelect">
+    <option value="planetary_surface">Superficie Planetaria</option>
+    <option value="space_station">Estacion Espacial</option>
+    <option value="lunar_base">Base Lunar</option>
+    <option value="launch_pad">Plataforma de Lanzamiento</option>
+    <option value="cockpit">Cockpit</option>
+    <option value="landscape">Paisaje</option>
+  </select>
+  <label>RESOLUCION</label>
+  <select id="resSelect">
+    <option value="320x240">320x240</option>
+    <option value="480x320">480x320</option>
+    <option value="640x480" selected>640x480</option>
+    <option value="800x600">800x600</option>
+  </select>
+  <div class="btn-row">
+    <button class="btn" onclick="hideDialog()">CANCELAR</button>
+    <button class="btn primary" onclick="connect()">CONECTAR</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('displayCanvas');
+const ctx = canvas.getContext('2d');
+let ws = null;
+let connected = false;
+let frameCount = 0;
+let lastFrameTime = 0;
+let fps = 0;
+let hudTimeout = null;
+
+// Resize
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.fillStyle = '#04060c';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Show HUD briefly
+function flashHud() {
+  const hud = document.getElementById('hud');
+  const bar = document.getElementById('bottomBar');
+  hud.classList.remove('hidden');
+  bar.classList.remove('hidden');
+  clearTimeout(hudTimeout);
+  hudTimeout = setTimeout(() => {
+    if (connected) {
+      hud.classList.add('hidden');
+      bar.classList.add('hidden');
+    }
+  }, 3000);
+}
+document.addEventListener('mousemove', flashHud);
+document.addEventListener('touchstart', flashHud);
+
+function showDialog() {
+  document.getElementById('connDialog').classList.remove('hidden');
+  flashHud();
+}
+
+function hideDialog() {
+  document.getElementById('connDialog').classList.add('hidden');
+}
+
+function setStatus(text, ok) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusText').style.color = ok ? 'var(--green)' : 'var(--text2)';
+  document.getElementById('statusDot').style.background = ok ? 'var(--green)' : 'var(--red)';
+  document.getElementById('statusDot').style.boxShadow = ok ? '0 0 6px var(--green)' : '0 0 6px var(--red)';
+}
+
+function connect() {
+  if (ws) ws.close();
+
+  const mode = document.getElementById('connMode').value;
+  const sessionId = document.getElementById('sessionIdInput').value.trim();
+  const scene = document.getElementById('sceneSelect').value;
+  const res = document.getElementById('resSelect').value.split('x');
+  const w = parseInt(res[0]);
+  const h = parseInt(res[1]);
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host + '/ws/display-stream');
+
+  ws.onopen = () => {
+    setStatus('CONECTADO', true);
+    if (mode === 'subscribe' && sessionId) {
+      ws.send(JSON.stringify({ action: 'subscribe', session_id: sessionId }));
+    } else {
+      ws.send(JSON.stringify({
+        action: 'subscribe',
+        session_id: sessionId || '',
+        scene: scene,
+        width: w,
+        height: h,
+      }));
+    }
+    connected = true;
+    document.getElementById('btnDisconnect').disabled = false;
+    document.getElementById('sessionInfo').textContent = sessionId || scene;
+    frameCount = 0;
+    hideDialog();
+    flashHud();
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'frame') {
+        renderFrame(data);
+      } else if (data.type === 'subscribed') {
+        document.getElementById('sessionInfo').textContent = data.session_id;
+      } else if (data.type === 'sessions') {
+        // List available sessions
+      }
+    } catch (err) {}
+  };
+
+  ws.onclose = () => {
+    setStatus('DESCONECTADO', false);
+    connected = false;
+    document.getElementById('btnDisconnect').disabled = true;
+    flashHud();
+  };
+
+  ws.onerror = () => setStatus('ERROR', false);
+}
+
+function disconnect() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'unsubscribe' }));
+  }
+  if (ws) ws.close();
+  connected = false;
+  document.getElementById('btnDisconnect').disabled = true;
+  flashHud();
+}
+
+function renderFrame(data) {
+  const now = performance.now();
+  if (lastFrameTime > 0) fps = Math.round(1000 / (now - lastFrameTime));
+  lastFrameTime = now;
+  frameCount++;
+
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  };
+  img.src = 'data:image/png;base64,' + data.data;
+
+  document.getElementById('statFrame').textContent = data.frame || frameCount;
+  document.getElementById('statFps').textContent = fps;
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Auto-hide HUD
+flashHud();
+
+// Keepalive
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'ping' }));
+  }
+}, 15000);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  if (e.key === 'Escape' && connected) disconnect();
+  if (e.key === 'c' || e.key === 'C') showDialog();
+});
+</script>
+</body>
+</html>

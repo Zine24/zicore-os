@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propulsion Lab — ZICORE Command System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1528;--bg4:#151d35;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d3d;--orange:#ff9800;--yellow:#ffd740;
+  --text:#c8d6e5;--text2:#8899aa;--border:rgba(0,229,255,0.15);
+  --glass:rgba(10,14,26,0.85);--glass2:rgba(15,21,40,0.9);
+}
+@font-face{font-family:'Mono';src:local('Consolas'),local('Monaco'),local('Courier New')}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.mono{font-family:'Mono',monospace}
+
+/* Header */
+.header{height:48px;background:var(--glass2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100;flex-shrink:0}
+.header .logo{display:flex;align-items:center;gap:8px}
+.header .logo svg{width:28px;height:28px}
+.header .logo span{font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:2px}
+.header .title{font-size:13px;color:var(--text2);border-left:1px solid var(--border);padding-left:16px}
+.header .status{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text2)}
+.header .status .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* Sidebar */
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;background:var(--glass2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar .nav-label{font-size:10px;letter-spacing:2px;color:var(--text2);padding:16px 16px 8px;text-transform:uppercase}
+.sidebar .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.2s;border-left:3px solid transparent}
+.sidebar .nav-item:hover{background:rgba(0,229,255,0.05);color:var(--text)}
+.sidebar .nav-item.active{background:rgba(0,229,255,0.08);color:var(--cyan);border-left-color:var(--cyan)}
+.sidebar .nav-item svg{width:16px;height:16px;opacity:0.7}
+.sidebar .nav-item.active svg{opacity:1}
+.sidebar .sidebar-stats{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.sidebar .sidebar-stats .stat{font-size:11px;color:var(--text2);margin-bottom:6px}
+.sidebar .sidebar-stats .stat span{color:var(--cyan);font-family:'Mono',monospace}
+
+/* Main Content */
+.main{flex:1;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--bg4) transparent}
+.main::-webkit-scrollbar{width:6px}
+.main::-webkit-scrollbar-track{background:transparent}
+.main::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* Tab Panels */
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Cards */
+.card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;backdrop-filter:blur(10px)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600;color:var(--cyan)}
+.card-subtitle{font-size:11px;color:var(--text2)}
+
+/* Search */
+.search-bar{display:flex;gap:8px;margin-bottom:16px}
+.search-bar input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s}
+.search-bar input:focus{border-color:var(--cyan)}
+.search-bar input::placeholder{color:var(--text2)}
+.search-bar select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;cursor:pointer;min-width:140px}
+.search-bar select option{background:var(--bg2)}
+
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg3);color:var(--cyan);font-weight:600;text-align:left;padding:10px 14px;white-space:nowrap;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+td{padding:9px 14px;border-bottom:1px solid rgba(0,229,255,0.06);white-space:nowrap}
+tr:hover td{background:rgba(0,229,255,0.03)}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase}
+.status-active{background:rgba(0,255,136,0.12);color:var(--green)}
+.status-retired{background:rgba(255,61,61,0.12);color:var(--red)}
+.status-planned{background:rgba(255,152,0,0.12);color:var(--orange)}
+.fuel-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:rgba(124,77,255,0.12);color:var(--purple)}
+.clickable-row{cursor:pointer;transition:background 0.2s}
+.clickable-row:hover{background:rgba(0,229,255,0.06)!important}
+.clickable-row.selected{background:rgba(0,229,255,0.1)!important;border-left:3px solid var(--cyan)}
+
+/* Calculator */
+.calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.calc-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:18px}
+.calc-card h3{font-size:14px;color:var(--cyan);margin-bottom:4px}
+.calc-card .formula{font-family:'Mono',monospace;font-size:11px;color:var(--purple);background:rgba(124,77,255,0.08);padding:6px 10px;border-radius:6px;margin-bottom:14px;display:inline-block}
+.calc-field{margin-bottom:10px}
+.calc-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+.calc-field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s}
+.calc-field input:focus{border-color:var(--cyan)}
+.calc-result{margin-top:12px;padding:12px;border-radius:8px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15)}
+.calc-result .label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+.calc-result .value{font-family:'Mono',monospace;font-size:22px;font-weight:700;color:var(--cyan);margin-top:2px}
+.calc-result .unit{font-size:12px;color:var(--text2);margin-left:4px}
+.calc-result.warn .value{color:var(--orange)}
+.calc-result.danger .value{color:var(--red)}
+.calc-result.good .value{color:var(--green)}
+
+/* Comparison */
+.compare-select{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.compare-select select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;min-width:180px}
+.compare-btn{background:var(--cyan);color:var(--bg);border:none;border-radius:8px;padding:8px 20px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity 0.2s}
+.compare-btn:hover{opacity:0.85}
+.compare-result{display:none}
+.compare-result.active{display:block}
+.compare-grid{display:grid;gap:16px}
+.bar-chart{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{width:80px;font-size:11px;color:var(--text2);text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;display:flex;align-items:center;padding-left:8px;font-size:10px;font-family:'Mono',monospace;color:var(--bg);font-weight:600}
+.bar-value{width:60px;font-size:11px;font-family:'Mono',monospace;color:var(--text);text-align:right;flex-shrink:0}
+.recommendation{margin-top:16px;padding:14px;background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-size:12px}
+.recommendation strong{color:var(--green)}
+
+/* 3D Viewer */
+.viewer-3d{width:100%;height:320px;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative}
+.viewer-3d canvas{width:100%!important;height:100%!important}
+.viewer-controls{position:absolute;bottom:10px;right:10px;display:flex;gap:6px}
+.viewer-controls button{background:var(--glass);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all 0.2s}
+.viewer-controls button:hover{border-color:var(--cyan);color:var(--cyan)}
+.viewer-controls button.active{background:rgba(0,229,255,0.15);border-color:var(--cyan);color:var(--cyan)}
+.viewer-info{position:absolute;top:10px;left:10px;font-size:11px;color:var(--text2)}
+
+/* Section header */
+.section-header{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.section-header h2{font-size:18px;color:var(--text)}
+.section-header .badge{background:rgba(0,229,255,0.1);color:var(--cyan);padding:2px 8px;border-radius:10px;font-size:11px;font-family:'Mono',monospace}
+
+/* Multi-stage */
+.stage-row{display:flex;gap:8px;align-items:end;margin-bottom:8px;flex-wrap:wrap}
+.stage-row .calc-field{flex:1;min-width:100px}
+.stage-num{font-size:11px;color:var(--purple);font-weight:600;margin-bottom:4px}
+.add-stage{background:rgba(124,77,255,0.12);color:var(--purple);border:1px dashed rgba(124,77,255,0.3);border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;margin-top:4px}
+.add-stage:hover{background:rgba(124,77,255,0.2)}
+
+/* Responsive */
+@media(max-width:768px){.sidebar{display:none}.calc-grid{grid-template-columns:1fr}}
+
+/* Scrollbar for table */
+.table-scroll{max-height:500px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--bg4) transparent}
+.table-scroll::-webkit-scrollbar{width:5px}
+.table-scroll::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* Tooltip */
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:var(--bg4);color:var(--text);padding:4px 8px;border-radius:4px;font-size:10px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.tip:hover::after{opacity:1}
+
+/* Engine detail modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{color:var(--cyan);margin-bottom:12px}
+.modal .close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer}
+.modal-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.modal-stat{background:var(--bg3);padding:10px;border-radius:8px;border:1px solid var(--border)}
+.modal-stat .lbl{font-size:10px;color:var(--text2);text-transform:uppercase}
+.modal-stat .val{font-family:'Mono',monospace;font-size:16px;color:var(--cyan);margin-top:2px}
+
+/* Radar chart */
+.radar-wrap{display:flex;justify-content:center;margin:16px 0}
+.radar{position:relative;width:260px;height:260px}
+.radar-bg{position:absolute;inset:0}
+.radar svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <svg viewBox="0 0 40 40" fill="none"><polygon points="20,2 38,14 38,30 20,38 2,30 2,14" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.08)"/><polygon points="20,8 32,16 32,28 20,34 8,28 8,16" stroke="#7c4dff" stroke-width="1" fill="none"/><circle cx="20" cy="20" r="3" fill="#00e5ff"/></svg>
+    <span>ZICORE</span>
+  </div>
+  <div class="title">Propulsion Lab</div>
+  <div class="status">
+    <span>Engine DB: <span id="engineCount">53</span> engines</span>
+    <span>|</span>
+    <span class="dot"></span>
+    <span>System Online</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="nav-label">Modules</div>
+    <div class="nav-item active" onclick="switchTab('database')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Engine Database
+    </div>
+    <div class="nav-item" onclick="switchTab('calculator')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+      Calculator
+    </div>
+    <div class="nav-item" onclick="switchTab('compare')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Compare
+    </div>
+    <div class="nav-item" onclick="switchTab('viewer')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      3D Viewer
+    </div>
+    <div class="sidebar-stats">
+      <div class="stat">Chemical: <span>20</span></div>
+      <div class="stat">Electric: <span>10</span></div>
+      <div class="stat">Nuclear: <span>3</span></div>
+      <div class="stat">Advanced: <span>3</span></div>
+      <div class="stat">Active: <span>39</span></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- ========== TAB 1: ENGINE DATABASE ========== -->
+    <div class="tab-panel active" id="panel-database">
+      <div class="section-header">
+        <h2>Engine Database</h2>
+        <span class="badge" id="filteredCount">53 engines</span>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search engines..." oninput="filterEngines()">
+        <select id="filterCategory" onchange="filterEngines()">
+          <option value="all">All Categories</option>
+          <option value="Chemical">Chemical</option>
+          <option value="Electric">Electric</option>
+          <option value="Nuclear">Nuclear</option>
+          <option value="Advanced">Advanced</option>
+        </select>
+        <select id="filterStatus" onchange="filterEngines()">
+          <option value="all">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Retired">Retired</option>
+          <option value="Planned">Planned</option>
+        </select>
+        <select id="filterFuel" onchange="filterEngines()">
+          <option value="all">All Fuels</option>
+          <option value="LOX/RP1">LOX/RP1</option>
+          <option value="Methalox">Methalox</option>
+          <option value="LOX/LH2">LOX/LH2</option>
+          <option value="NTO/Aerozine">NTO/Aerozine</option>
+          <option value="NTO/UDMH">NTO/UDMH</option>
+          <option value="Ion">Ion</option>
+          <option value="Hall">Hall</option>
+          <option value="VASIMR">VASIMR</option>
+          <option value="NTR">NTR</option>
+          <option value="NEP">NEP</option>
+          <option value="Fusion">Fusion</option>
+          <option value="Antimatter">Antimatter</option>
+          <option value="Photon">Photon</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <div class="table-scroll">
+            <table id="engineTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable(0)" style="cursor:pointer">Engine ↕</th>
+                  <th onclick="sortTable(1)" style="cursor:pointer">Category ↕</th>
+                  <th onclick="sortTable(2)" style="cursor:pointer">Isp (vac) ↕</th>
+                  <th onclick="sortTable(3)" style="cursor:pointer">Thrust ↕</th>
+                  <th onclick="sortTable(4)" style="cursor:pointer">Mass ↕</th>
+                  <th>Fuel</th>
+                  <th>Type</th>
+                  <th onclick="sortTable(7)" style="cursor:pointer">Status ↕</th>
+                </tr>
+              </thead>
+              <tbody id="engineBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TAB 2: CALCULATOR ========== -->
+    <div class="tab-panel" id="panel-calculator">
+      <div class="section-header">
+        <h2>Propulsion Calculator</h2>
+        <span class="badge">7 tools</span>
+      </div>
+
+      <div class="calc-grid">
+        <!-- Isp Calculator -->
+        <div class="calc-card">
+          <h3>Isp Calculator</h3>
+          <div class="formula">Isp = F / (ṁ × g₀)</div>
+          <div class="calc-field"><label>Thrust (N)</label><input type="number" id="isp_thrust" oninput="calcIsp()" placeholder="845000"></div>
+          <div class="calc-field"><label>Mass Flow Rate (kg/s)</label><input type="number" id="isp_mdot" oninput="calcIsp()" placeholder="273.7"></div>
+          <div class="calc-result" id="isp_result"><div class="label">Specific Impulse</div><div class="value">—<span class="unit">s</span></div></div>
+        </div>
+
+        <!-- Delta-V Calculator -->
+        <div class="calc-card">
+          <h3>Delta-V Calculator</h3>
+          <div class="formula">Δv = Isp × g₀ × ln(mᵢ / m_f)</div>
+          <div class="calc-field"><label>Isp (s)</label><input type="number" id="dv_isp" oninput="calcDv()" placeholder="311"></div>
+          <div class="calc-field"><label>Initial Mass (kg)</label><input type="number" id="dv_mi" oninput="calcDv()" placeholder="540000"></div>
+          <div class="calc-field"><label>Final Mass (kg)</label><input type="number" id="dv_mf" oninput="calcDv()" placeholder="22000"></div>
+          <div class="calc-result" id="dv_result"><div class="label">Delta-V</div><div class="value">—<span class="unit">m/s</span></div></div>
+        </div>
+
+        <!-- TWR Calculator -->
+        <div class="calc-card">
+          <h3>Thrust-to-Weight Ratio</h3>
+          <div class="formula">TWR = F / (m × g₀)</div>
+          <div class="calc-field"><label>Thrust (N)</label><input type="number" id="twr_thrust" oninput="calcTwr()" placeholder="7607000"></div>
+          <div class="calc-field"><label>Mass (kg)</label><input type="number" id="twr_mass" oninput="calcTwr()" placeholder="540000"></div>
+          <div class="calc-field"><label>Gravity (m/s²)</label><input type="number" id="twr_g" oninput="calcTwr()" value="9.81" placeholder="9.81"></div>
+          <div class="calc-result" id="twr_result"><div class="label">TWR</div><div class="value">—</div></div>
+        </div>
+
+        <!-- Mass Flow Calculator -->
+        <div class="calc-card">
+          <h3>Mass Flow Rate</h3>
+          <div class="formula">ṁ = F / (Isp × g₀)</div>
+          <div class="calc-field"><label>Thrust (N)</label><input type="number" id="mdot_thrust" oninput="calcMdot()" placeholder="845000"></div>
+          <div class="calc-field"><label>Isp (s)</label><input type="number" id="mdot_isp" oninput="calcMdot()" placeholder="311"></div>
+          <div class="calc-result" id="mdot_result"><div class="label">Mass Flow Rate</div><div class="value">—<span class="unit">kg/s</span></div></div>
+        </div>
+
+        <!-- Burn Time Calculator -->
+        <div class="calc-card">
+          <h3>Burn Time</h3>
+          <div class="formula">t = (mᵢ × g₀ × Isp / F) × (1 − e^(−Δv/(g₀×Isp)))</div>
+          <div class="calc-field"><label>Delta-V (m/s)</label><input type="number" id="bt_dv" oninput="calcBurnTime()" placeholder="3200"></div>
+          <div class="calc-field"><label>Thrust (N)</label><input type="number" id="bt_thrust" oninput="calcBurnTime()" placeholder="845000"></div>
+          <div class="calc-field"><label>Initial Mass (kg)</label><input type="number" id="bt_mass" oninput="calcBurnTime()" placeholder="540000"></div>
+          <div class="calc-field"><label>Isp (s)</label><input type="number" id="bt_isp" oninput="calcBurnTime()" placeholder="311"></div>
+          <div class="calc-result" id="bt_result"><div class="label">Burn Time</div><div class="value">—<span class="unit">s</span></div></div>
+        </div>
+
+        <!-- Payload Fraction -->
+        <div class="calc-card">
+          <h3>Payload Fraction</h3>
+          <div class="formula">PF = m_payload / m_total × 100%</div>
+          <div class="calc-field"><label>Payload Mass (kg)</label><input type="number" id="pf_payload" oninput="calcPayload()" placeholder="22800"></div>
+          <div class="calc-field"><label>Total Mass (kg)</label><input type="number" id="pf_total" oninput="calcPayload()" placeholder="540000"></div>
+          <div class="calc-result" id="pf_result"><div class="label">Payload Fraction</div><div class="value">—<span class="unit">%</span></div></div>
+        </div>
+
+        <!-- Multi-Stage Delta-V -->
+        <div class="calc-card" style="grid-column:1/-1">
+          <h3>Multi-Stage Delta-V</h3>
+          <div class="formula">Δv_total = Σ (Isp_i × g₀ × ln(m_i / m_f))</div>
+          <div id="stagesContainer"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="add-stage" onclick="addStage()">+ Add Stage</button>
+            <button class="compare-btn" onclick="calcMultiStage()" style="margin-left:auto">Calculate Total Δv</button>
+          </div>
+          <div class="calc-result" id="ms_result" style="margin-top:12px"><div class="label">Total Delta-V</div><div class="value">—<span class="unit">m/s</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TAB 3: COMPARISON ========== -->
+    <div class="tab-panel" id="panel-compare">
+      <div class="section-header">
+        <h2>Engine Comparison</h2>
+        <span class="badge">side-by-side</span>
+      </div>
+
+      <div class="card">
+        <div class="compare-select">
+          <select id="cmp1" onchange="updateCompare()"></select>
+          <select id="cmp2" onchange="updateCompare()"></select>
+          <select id="cmp3" onchange="updateCompare()"><option value="">— Optional 3rd —</option></select>
+          <select id="cmp4" onchange="updateCompare()"><option value="">— Optional 4th —</option></select>
+          <button class="compare-btn" onclick="runCompare()">Compare</button>
+        </div>
+      </div>
+
+      <div class="compare-result" id="compareResult">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Specifications Comparison</span></div>
+          <div class="table-wrap"><table id="compareTable"><thead id="cmpThead"></thead><tbody id="cmpTbody"></tbody></table></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Isp Comparison</span></div>
+            <div class="bar-chart" id="ispBars"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Thrust Comparison</span></div>
+            <div class="bar-chart" id="thrustBars"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Mass Comparison</span></div>
+            <div class="bar-chart" id="massBars"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Thrust-to-Weight</span></div>
+            <div class="bar-chart" id="twrBars"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Multi-Attribute Radar</span></div>
+          <div class="radar-wrap"><canvas id="radarCanvas" width="520" height="400"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Mission Recommendation</span></div>
+          <div id="recommendationBox"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TAB 4: 3D VIEWER ========== -->
+    <div class="tab-panel" id="panel-viewer">
+      <div class="section-header">
+        <h2>3D Engine Viewer</h2>
+        <span class="badge">Three.js</span>
+      </div>
+
+      <div class="card">
+        <div class="search-bar">
+          <select id="viewerEngine" onchange="updateViewer3D()">
+            <option value="merlin">Merlin 1D</option>
+            <option value="raptor">Raptor 2</option>
+            <option value="rs25">RS-25</option>
+            <option value="f1">F-1</option>
+            <option value="be4">BE-4</option>
+            <option value="rd180">RD-180</option>
+          </select>
+          <button class="compare-btn" onclick="resetCamera3D()">Reset View</button>
+        </div>
+        <div class="viewer-3d" id="viewer3d">
+          <div class="viewer-info" id="viewer3dInfo">Merlin 1D — LOX/RP1</div>
+          <div class="viewer-controls">
+            <button id="btnWireframe" onclick="toggleWireframe()" class="tip" data-tip="Wireframe">Wire</button>
+            <button id="btnRotate" onclick="toggleAutoRotate()" class="active tip" data-tip="Auto Rotate">Spin</button>
+            <button id="btnExplode" onclick="toggleExplode()" class="tip" data-tip="Exploded View">Explode</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Engine Cross-Section</span></div>
+        <div id="engineSpecs" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Engine Detail Modal -->
+<div class="modal-overlay" id="engineModal">
+  <div class="modal">
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2 id="modalTitle"></h2>
+    <p id="modalSubtitle" style="color:var(--text2);font-size:12px;margin-bottom:12px"></p>
+    <div class="modal-stats" id="modalStats"></div>
+  </div>
+</div>
+
+<script>
+// ===== ENGINE DATABASE =====
+const engines = [
+  // Chemical
+  {name:"Merlin 1D",isp:311,thrust:845,mass:470,fuel:"LOX/RP1",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"SpaceX",country:"USA",diameter:0.91,length:1.8,ttf:162,tc:97,cost:1},
+  {name:"Merlin 1D Vac",isp:348,thrust:981,mass:470,fuel:"LOX/RP1",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"SpaceX",country:"USA",diameter:1.27,length:2.9,ttf:162,tc:97,cost:1},
+  {name:"Raptor 2",isp:350,thrust:2300,mass:1600,fuel:"Methalox",type:"Full Flow Staged",status:"Active",category:"Chemical",manufacturer:"SpaceX",country:"USA",diameter:1.3,length:3.1,ttf:100,tc:99,cost:2},
+  {name:"Raptor 3",isp:350,thrust:2800,mass:1525,fuel:"Methalox",type:"Full Flow Staged",status:"Active",category:"Chemical",manufacturer:"SpaceX",country:"USA",diameter:1.2,length:2.8,ttf:100,tc:99,cost:2},
+  {name:"RS-25",isp:452,thrust:2279,mass:3527,fuel:"LOX/LH2",type:"Staged Combustion",status:"Active",category:"Chemical",manufacturer:"Aerojet Rocketdyne",country:"USA",diameter:2.4,length:4.3,ttf:2600,tc:100,cost:50},
+  {name:"F-1",isp:304,thrust:6770,mass:8390,fuel:"LOX/RP1",type:"Gas Generator",status:"Retired",category:"Chemical",manufacturer:"Rocketdyne",country:"USA",diameter:3.7,length:5.6,ttf:165,tc:95,cost:5},
+  {name:"SSME",isp:452,thrust:2090,mass:3177,fuel:"LOX/LH2",type:"Staged Combustion",status:"Retired",category:"Chemical",manufacturer:"Rocketdyne",country:"USA",diameter:1.6,length:4.2,ttf:2600,tc:100,cost:55},
+  {name:"RD-180",isp:338,thrust:4152,mass:2200,fuel:"LOX/RP1",type:"Staged Combustion",status:"Active",category:"Chemical",manufacturer:"NPO Energomash",country:"Russia",diameter:2.0,length:3.6,ttf:150,tc:98,cost:10},
+  {name:"RD-170",isp:337,thrust:7887,mass:9750,fuel:"LOX/RP1",type:"Staged Combustion",status:"Retired",category:"Chemical",manufacturer:"NPO Energomash",country:"Russia",diameter:2.7,length:4.0,ttf:150,tc:97,cost:8},
+  {name:"RD-171",isp:337,thrust:8180,mass:9750,fuel:"LOX/RP1",type:"Staged Combustion",status:"Active",category:"Chemical",manufacturer:"NPO Energomash",country:"Russia",diameter:2.7,length:4.0,ttf:150,tc:97,cost:8},
+  {name:"BE-3",isp:310,thrust:490,mass:600,fuel:"LOX/LH2",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"Blue Origin",country:"USA",diameter:1.0,length:2.0,ttf:110,tc:95,cost:3},
+  {name:"BE-4",isp:340,thrust:2400,mass:2000,fuel:"Methalox",type:"Oxidizer Rich Staged",status:"Active",category:"Chemical",manufacturer:"Blue Origin",country:"USA",diameter:1.8,length:3.4,ttf:100,tc:96,cost:6},
+  {name:"Vulcain 2",isp:434,thrust:1350,mass:2040,fuel:"LOX/LH2",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"Snecma/Safran",country:"France",diameter:1.6,length:3.2,ttf:500,tc:96,cost:15},
+  {name:"Vinci",isp:465,thrust:180,mass:550,fuel:"LOX/LH2",type:"Expander Cycle",status:"Active",category:"Chemical",manufacturer:"Snecma/Safran",country:"France",diameter:0.9,length:1.8,ttf:600,tc:97,cost:8},
+  {name:"RL10B-2",isp:462,thrust:110,mass:277,fuel:"LOX/LH2",type:"Expander Cycle",status:"Active",category:"Chemical",manufacturer:"Aerojet Rocketdyne",country:"USA",diameter:0.9,length:1.2,ttf:700,tc:99,cost:5},
+  {name:"AJ10",isp:320,thrust:35,mass:80,fuel:"NTO/Aerozine",type:"Pressure Fed",status:"Retired",category:"Chemical",manufacturer:"Aerojet",country:"USA",diameter:0.5,length:0.9,ttf:200,tc:98,cost:2},
+  {name:"YF-77",isp:430,thrust:700,mass:3000,fuel:"LOX/LH2",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"AALP",country:"China",diameter:1.8,length:3.0,ttf:300,tc:92,cost:4},
+  {name:"YF-100",isp:300,thrust:1200,mass:1100,fuel:"LOX/RP1",type:"Staged Combustion",status:"Active",category:"Chemical",manufacturer:"AALP",country:"China",diameter:1.0,length:2.2,ttf:150,tc:93,cost:3},
+  {name:"YF-100K",isp:310,thrust:1340,mass:1150,fuel:"LOX/RP1",type:"Staged Combustion",status:"Active",category:"Chemical",manufacturer:"AALP",country:"China",diameter:1.0,length:2.2,ttf:150,tc:94,cost:3},
+  {name:"RD-0120",isp:455,thrust:1960,mass:3450,fuel:"LOX/LH2",type:"Staged Combustion",status:"Active",category:"Chemical",manufacturer:"KB KhA",country:"Russia",diameter:2.0,length:4.0,ttf:500,tc:96,cost:12},
+  {name:"CE-20",isp:443,thrust:200,mass:600,fuel:"LOX/LH2",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"ISRO",country:"India",diameter:1.0,length:2.0,ttf:300,tc:90,cost:3},
+  {name:"Viking 5C",isp:296,thrust:690,mass:826,fuel:"NTO/UDMH",type:"Gas Generator",status:"Retired",category:"Chemical",manufacturer:"Snecma",country:"France",diameter:1.0,length:2.0,ttf:100,tc:94,cost:4},
+  {name:"HM7B",isp:443,thrust:64.8,mass:165,fuel:"LOX/LH2",type:"Gas Generator",status:"Active",category:"Chemical",manufacturer:"Snecma/Safran",country:"France",diameter:0.8,length:1.1,ttf:500,tc:96,cost:4},
+  {name:"Nozzle 2",isp:340,thrust:29,mass:25,fuel:"NTO/UDMH",type:"Pressure Fed",status:"Active",category:"Chemical",manufacturer:"Aerospazio",country:"Italy",diameter:0.3,length:0.5,ttf:100,tc:95,cost:1},
+  {name:"SRMU",isp:269,thrust:14680,mass:34000,fuel:"HTPB Solid",type:"Solid",status:"Retired",category:"Chemical",manufacturer:"ATK",country:"USA",diameter:3.4,length:12,ttf:0,tc:98,cost:20},
+
+  // Electric
+  {name:"NSTAR",isp:3100,thrust:0.092,mass:8.2,fuel:"Xenon",type:"Ion",status:"Active",category:"Electric",manufacturer:"NASA/JPL",country:"USA",diameter:0.4,length:0.3,power:2.3,ttf:0,tc:99,cost:5},
+  {name:"NEXT",isp:4190,thrust:0.236,mass:12.7,fuel:"Xenon",type:"Ion",status:"Active",category:"Electric",manufacturer:"NASA/GRC",country:"USA",diameter:0.4,length:0.4,power:6.9,ttf:0,tc:98,cost:8},
+  {name:"BHT-200",isp:1380,thrust:0.011,mass:0.8,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"Busek",country:"USA",diameter:0.2,length:0.15,power:0.3,ttf:0,tc:95,cost:1},
+  {name:"BHT-600",isp:1720,thrust:0.039,mass:1.5,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"Busek",country:"USA",diameter:0.2,length:0.2,power:1.5,ttf:0,tc:95,cost:2},
+  {name:"T-160",isp:2900,thrust:0.081,mass:2.8,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"Fakel",country:"Russia",diameter:0.25,length:0.25,power:4.0,ttf:0,tc:94,cost:2},
+  {name:"VASIMR",isp:3000,thrust:6.0,mass:230,fuel:"Argon",type:"VASIMR",status:"Planned",category:"Electric",manufacturer:"Ad Astra",country:"USA",diameter:0.4,length:1.5,power:200,ttf:0,tc:85,cost:50},
+  {name:"PPS-1350",isp:1660,thrust:0.090,mass:2.0,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"Safran",country:"France",diameter:0.2,length:0.2,power:2.5,ttf:0,tc:96,cost:3},
+  {name:"SPT-100",isp:1600,thrust:0.083,mass:3.5,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"Fakel",country:"Russia",diameter:0.1,length:0.15,power:1.5,ttf:0,tc:93,cost:1},
+  {name:"RIT-10",isp:3280,thrust:0.029,mass:1.0,fuel:"Xenon",type:"Ion",status:"Active",category:"Electric",manufacturer:"ArianeGroup",country:"Germany",diameter:0.2,length:0.2,power:1.2,ttf:0,tc:96,cost:2},
+  {name:"AEPS",isp:2700,thrust:0.500,mass:12.0,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"NASA/Aerojet",country:"USA",diameter:0.4,length:0.4,power:12.5,ttf:0,tc:94,cost:10},
+  {name:"X3",isp:2650,thrust:0.540,mass:12.5,fuel:"Xenon",type:"Hall",status:"Active",category:"Electric",manufacturer:"JPL/Michigan",country:"USA",diameter:0.5,length:0.5,power:10.2,ttf:0,tc:92,cost:8},
+
+  // Nuclear
+  {name:"NERVA",isp:841,thrust:334,mass:10116,fuel:"LH2",type:"NTR",status:"Retired",category:"Nuclear",manufacturer:"AEC/NASA",country:"USA",diameter:1.5,length:4.0,ttf:0,tc:88,cost:100},
+  {name:"RD-0410",isp:910,thrust:35.3,mass:2000,fuel:"LH2",type:"NTR",status:"Retired",category:"Nuclear",manufacturer:"KB KhA",country:"Russia",diameter:0.7,length:2.5,ttf:0,tc:85,cost:50},
+  {name:"TRITON",isp:1500,thrust:10,mass:500,fuel:"LH2",type:"NEP",status:"Planned",category:"Nuclear",manufacturer:"NASA/DARPA",country:"USA",diameter:0.5,length:2.0,power:50,ttf:0,tc:70,cost:200},
+
+  // Advanced
+  {name:"D-85",isp:5000,thrust:100,mass:3000,fuel:"D-He3",type:"Fusion",status:"Planned",category:"Advanced",manufacturer:"—",country:"—",diameter:2.0,length:5.0,power:1000,ttf:0,tc:30,cost:999},
+  {name:"AIMStar",isp:10000,thrust:0.001,mass:1500,fuel:"Antiproton",type:"Antimatter",status:"Planned",category:"Advanced",manufacturer:"Penn State",country:"USA",diameter:1.0,length:3.0,power:0.0001,ttf:0,tc:10,cost:9999},
+  {name:"Solar Sail",isp:null,thrust:0.009,mass:50,fuel:"Photons",type:"Photon",status:"Planned",category:"Advanced",manufacturer:"Various",country:"Various",diameter:40,length:0.001,power:0,ttf:0,tc:50,cost:10}
+];
+
+const G0 = 9.80665;
+const colors = {cyan:'#00e5ff',purple:'#7c4dff',green:'#00ff88',red:'#ff3d3d',orange:'#ff9800',yellow:'#ffd740'};
+
+// ===== TAB NAVIGATION =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  const map = {database:0,calculator:1,compare:2,viewer:3};
+  if (map[tab] !== undefined) navItems[map[tab]].classList.add('active');
+  if (tab === 'viewer' && !viewerInitialized) init3DViewer();
+}
+
+// ===== ENGINE TABLE =====
+function renderEngines(list) {
+  const tbody = document.getElementById('engineBody');
+  tbody.innerHTML = list.map((e, i) => {
+    const statusCls = e.status === 'Active' ? 'status-active' : e.status === 'Retired' ? 'status-retired' : 'status-planned';
+    let thrustStr = '';
+    if (e.category === 'Electric') {
+      thrustStr = e.thrust >= 1 ? (e.thrust*1000).toFixed(0) + ' mN' : (e.thrust*1000).toFixed(1) + ' mN';
+    } else {
+      thrustStr = e.thrust.toLocaleString() + ' kN';
+    }
+    const ispStr = e.isp ? e.isp + ' s' : 'N/A';
+    const massStr = e.mass ? e.mass.toLocaleString() + ' kg' : '—';
+    const typeStr = e.type || '';
+    return `<tr class="clickable-row" onclick="showEngineDetail(${engines.indexOf(e)})">
+      <td style="color:var(--cyan);font-weight:600">${e.name}</td>
+      <td><span class="fuel-badge">${e.category}</span></td>
+      <td class="mono">${ispStr}</td>
+      <td class="mono">${thrustStr}</td>
+      <td class="mono">${massStr}</td>
+      <td class="mono" style="color:var(--purple)">${e.fuel}</td>
+      <td style="color:var(--text2)">${typeStr}</td>
+      <td><span class="status-badge ${statusCls}">${e.status}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('filteredCount').textContent = list.length + ' engines';
+  document.getElementById('engineCount').textContent = list.length;
+}
+
+function filterEngines() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const cat = document.getElementById('filterCategory').value;
+  const st = document.getElementById('filterStatus').value;
+  const fu = document.getElementById('filterFuel').value;
+  const filtered = engines.filter(e => {
+    if (q && !e.name.toLowerCase().includes(q) && !e.fuel.toLowerCase().includes(q) && !(e.type||'').toLowerCase().includes(q) && !(e.manufacturer||'').toLowerCase().includes(q)) return false;
+    if (cat !== 'all' && e.category !== cat) return false;
+    if (st !== 'all' && e.status !== st) return false;
+    if (fu !== 'all' && e.fuel !== fu) return false;
+    return true;
+  });
+  renderEngines(filtered);
+}
+
+let sortCol = -1, sortAsc = true;
+function sortTable(col) {
+  if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+  const keys = ['name','category','isp','thrust','mass','fuel','type','status'];
+  const key = keys[col];
+  const sorted = [...engines].sort((a, b) => {
+    let va = a[key], vb = b[key];
+    if (va == null) va = -Infinity; if (vb == null) vb = -Infinity;
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+  renderEngines(sorted);
+}
+
+// ===== ENGINE DETAIL MODAL =====
+function showEngineDetail(idx) {
+  const e = engines[idx];
+  document.getElementById('modalTitle').textContent = e.name;
+  document.getElementById('modalSubtitle').textContent = `${e.manufacturer} (${e.country}) — ${e.category} ${e.type}`;
+  const stats = [
+    {lbl:'Isp (vac)',val:e.isp?e.isp+' s':'N/A'},
+    {lbl:'Thrust',val:e.category==='Electric'?((e.thrust*1000).toFixed(1)+' mN'):(e.thrust.toLocaleString()+' kN')},
+    {lbl:'Mass',val:e.mass?e.mass.toLocaleString()+' kg':'—'},
+    {lbl:'Fuel',val:e.fuel},
+    {lbl:'Diameter',val:e.diameter?e.diameter+' m':'—'},
+    {lbl:'Length',val:e.length?e.length+' m':'—'},
+    {lbl:'TTF',val:e.ttf?e.ttf+' hr':'—'},
+    {lbl:'Thrust/Weight',val:e.mass&&e.thrust?(e.category==='Electric'?((e.thrust*1000)/(e.mass*G0)).toExponential(2):((e.thrust*1000)/(e.mass*G0)).toFixed(2)):'—'},
+    {lbl:'Status',val:e.status},
+    {lbl:'Power',val:e.power?e.power+' kW':'—'},
+    {lbl:'Cost Index',val:e.cost?e.cost+'/10':'—'},
+    {lbl:'Reliability',val:e.tc?e.tc+'%':'—'}
+  ];
+  document.getElementById('modalStats').innerHTML = stats.map(s=>`<div class="modal-stat"><div class="lbl">${s.lbl}</div><div class="val">${s.val}</div></div>`).join('');
+  document.getElementById('engineModal').classList.add('active');
+}
+
+function closeModal() { document.getElementById('engineModal').classList.remove('active'); }
+document.getElementById('engineModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+// ===== CALCULATORS =====
+function fmt(v,dec=2) { return isFinite(v)?v.toFixed(dec):'—'; }
+function setColor(id, val, good, warn) {
+  const el = document.getElementById(id);
+  el.classList.remove('warn','danger','good');
+  if (val > good) el.classList.add('good');
+  else if (val > warn) el.classList.add('warn');
+  else el.classList.add('danger');
+}
+
+function calcIsp() {
+  const F = parseFloat(document.getElementById('isp_thrust').value);
+  const mdot = parseFloat(document.getElementById('isp_mdot').value);
+  const r = document.getElementById('isp_result');
+  if (!F||!mdot||mdot<=0) { r.innerHTML='<div class="label">Specific Impulse</div><div class="value">—<span class="unit">s</span></div>'; return; }
+  const isp = F / (mdot * G0);
+  r.innerHTML = `<div class="label">Specific Impulse</div><div class="value">${fmt(isp,1)}<span class="unit">s</span></div>`;
+  r.className = 'calc-result' + (isp>400?' good':isp>250?'':' warn');
+}
+
+function calcDv() {
+  const isp = parseFloat(document.getElementById('dv_isp').value);
+  const mi = parseFloat(document.getElementById('dv_mi').value);
+  const mf = parseFloat(document.getElementById('dv_mf').value);
+  const r = document.getElementById('dv_result');
+  if (!isp||!mi||!mf||mf<=0||mi<=mf) { r.innerHTML='<div class="label">Delta-V</div><div class="value">—<span class="unit">m/s</span></div>'; return; }
+  const dv = isp * G0 * Math.log(mi / mf);
+  r.innerHTML = `<div class="label">Delta-V</div><div class="value">${dv>=1000?fmt(dv/1000,2)+'<span class="unit">km/s</span>':fmt(dv,0)+'<span class="unit">m/s</span>'}</div>`;
+  r.className = 'calc-result' + (dv>5000?' good':dv>2000?'':' warn');
+}
+
+function calcTwr() {
+  const F = parseFloat(document.getElementById('twr_thrust').value);
+  const m = parseFloat(document.getElementById('twr_mass').value);
+  const g = parseFloat(document.getElementById('twr_g').value) || G0;
+  const r = document.getElementById('twr_result');
+  if (!F||!m) { r.innerHTML='<div class="label">TWR</div><div class="value">—</div>'; return; }
+  const twr = F / (m * g);
+  let status = '', cls = '';
+  if (twr > 1.5) { status = ' — Thrusts well'; cls = ' good'; }
+  else if (twr > 1.0) { status = ' — Marginal'; cls = ' warn'; }
+  else { status = ' — Insufficient'; cls = ' danger'; }
+  r.innerHTML = `<div class="label">TWR</div><div class="value">${fmt(twr,3)}${status}</div>`;
+  r.className = 'calc-result' + cls;
+}
+
+function calcMdot() {
+  const F = parseFloat(document.getElementById('mdot_thrust').value);
+  const isp = parseFloat(document.getElementById('mdot_isp').value);
+  const r = document.getElementById('mdot_result');
+  if (!F||!isp||isp<=0) { r.innerHTML='<div class="label">Mass Flow Rate</div><div class="value">—<span class="unit">kg/s</span></div>'; return; }
+  const mdot = F / (isp * G0);
+  r.innerHTML = `<div class="label">Mass Flow Rate</div><div class="value">${fmt(mdot,2)}<span class="unit">kg/s</span> <span style="font-size:12px;color:var(--text2)">(${fmt(mdot*3600,0)} kg/hr)</span></div>`;
+  r.className = 'calc-result';
+}
+
+function calcBurnTime() {
+  const dv = parseFloat(document.getElementById('bt_dv').value);
+  const F = parseFloat(document.getElementById('bt_thrust').value);
+  const m = parseFloat(document.getElementById('bt_mass').value);
+  const isp = parseFloat(document.getElementById('bt_isp').value);
+  const r = document.getElementById('bt_result');
+  if (!dv||!F||!m||!isp) { r.innerHTML='<div class="label">Burn Time</div><div class="value">—<span class="unit">s</span></div>'; return; }
+  const mf = m * Math.exp(-dv / (isp * G0));
+  const t = (m - mf) * isp * G0 / F;
+  const min = Math.floor(t/60), sec = Math.round(t%60);
+  r.innerHTML = `<div class="label">Burn Time</div><div class="value">${fmt(t,1)}<span class="unit">s</span> <span style="font-size:12px;color:var(--text2)">(${min}m ${sec}s)</span></div>`;
+  r.className = 'calc-result';
+}
+
+function calcPayload() {
+  const p = parseFloat(document.getElementById('pf_payload').value);
+  const t = parseFloat(document.getElementById('pf_total').value);
+  const r = document.getElementById('pf_result');
+  if (!p||!t||t<=0) { r.innerHTML='<div class="label">Payload Fraction</div><div class="value">—<span class="unit">%</span></div>'; return; }
+  const pf = (p / t) * 100;
+  r.innerHTML = `<div class="label">Payload Fraction</div><div class="value">${fmt(pf,2)}<span class="unit">%</span></div>`;
+  r.className = 'calc-result' + (pf>10?' good':pf>2?'':' warn');
+}
+
+// Multi-stage
+let stages = [{isp:'',mi:'',mf:''},{isp:'',mi:'',mf:''}];
+function renderStages() {
+  const c = document.getElementById('stagesContainer');
+  c.innerHTML = stages.map((s,i)=>`
+    <div class="stage-row">
+      <div style="width:40px"><div class="stage-num">Stage ${i+1}</div></div>
+      <div class="calc-field"><label>Isp (s)</label><input type="number" value="${s.isp}" oninput="stages[${i}].isp=this.value" placeholder="311"></div>
+      <div class="calc-field"><label>Mass Initial (kg)</label><input type="number" value="${s.mi}" oninput="stages[${i}].mi=this.value" placeholder="540000"></div>
+      <div class="calc-field"><label>Mass Final (kg)</label><input type="number" value="${s.mf}" oninput="stages[${i}].mf=this.value" placeholder="22000"></div>
+    </div>`).join('');
+}
+function addStage() { stages.push({isp:'',mi:'',mf:''}); renderStages(); }
+function calcMultiStage() {
+  let total = 0;
+  stages.forEach(s => {
+    const isp = parseFloat(s.isp), mi = parseFloat(s.mi), mf = parseFloat(s.mf);
+    if (isp && mi && mf && mi > mf) total += isp * G0 * Math.log(mi / mf);
+  });
+  const r = document.getElementById('ms_result');
+  r.innerHTML = `<div class="label">Total Delta-V</div><div class="value">${total>=1000?fmt(total/1000,2)+'<span class="unit">km/s</span>':fmt(total,0)+'<span class="unit">m/s</span>'}</div>`;
+  r.className = 'calc-result' + (total>9000?' good':total>5000?'':' warn');
+}
+renderStages();
+
+// ===== COMPARISON =====
+function populateCompareSelects() {
+  const opts = engines.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');
+  ['cmp1','cmp2','cmp3','cmp4'].forEach(id => {
+    const sel = document.getElementById(id);
+    const first = sel.options[0]?.value === '';
+    sel.innerHTML = (first?'<option value="">— Select —</option>':'') + opts;
+  });
+  document.getElementById('cmp1').value = '0';
+  document.getElementById('cmp2').value = '2';
+}
+
+function runCompare() {
+  const ids = ['cmp1','cmp2','cmp3','cmp4'].map(id => document.getElementById(id).value).filter(v=>v!=='').map(Number);
+  if (ids.length < 2) return alert('Select at least 2 engines');
+  const sel = ids.map(i => engines[i]);
+
+  // Table
+  const specs = ['Isp (s)','Thrust','Mass (kg)','T/W Ratio','Fuel','Type','Status','Manufacturer'];
+  document.getElementById('cmpThead').innerHTML = '<tr><th>Spec</th>' + sel.map(e=>`<th style="color:var(--cyan)">${e.name}</th>`).join('') + '</tr>';
+  document.getElementById('cmpTbody').innerHTML = specs.map((sp,i) => {
+    return '<tr><td style="color:var(--text2)">' + sp + '</td>' + sel.map(e => {
+      switch(i) {
+        case 0: return `<td class="mono">${e.isp||'N/A'}</td>`;
+        case 1: return `<td class="mono">${e.category==='Electric'?(e.thrust*1000).toFixed(1)+' mN':e.thrust.toLocaleString()+' kN'}</td>`;
+        case 2: return `<td class="mono">${e.mass?e.mass.toLocaleString():'—'}</td>`;
+        case 3: return `<td class="mono">${e.mass&&e.thrust?(e.category==='Electric'?((e.thrust*1000)/(e.mass*G0)).toExponential(1):((e.thrust*1000)/(e.mass*G0)).toFixed(2)):'—'}</td>`;
+        case 4: return `<td class="mono" style="color:var(--purple)">${e.fuel}</td>`;
+        case 5: return `<td>${e.type}</td>`;
+        case 6: return `<td><span class="status-badge ${e.status==='Active'?'status-active':e.status==='Retired'?'status-retired':'status-planned'}">${e.status}</span></td>`;
+        case 7: return `<td>${e.manufacturer||'—'}</td>`;
+      }
+    }).join('') + '</tr>';
+  }).join('');
+
+  // Bar charts
+  const barColors = [colors.cyan, colors.purple, colors.green, colors.orange];
+  function makeBars(containerId, values, unit, maxOverride) {
+    const max = maxOverride || Math.max(...values.map(v=>v.v));
+    document.getElementById(containerId).innerHTML = values.map((v,i) => {
+      const pct = max>0?(v.v/max*100):0;
+      return `<div class="bar-row">
+        <div class="bar-label">${v.name}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,2)}%;background:${barColors[i%4]}">${pct>15?v.v.toLocaleString():''}</div></div>
+        <div class="bar-value">${v.v.toLocaleString()}${unit}</div>
+      </div>`;
+    }).join('');
+  }
+  makeBars('ispBars', sel.map((e,i)=>({name:e.name,v:e.isp||0})), ' s');
+  makeBars('thrustBars', sel.map((e,i)=>({name:e.name,v:e.category==='Electric'?e.thrust*1000:e.thrust})), sel[0].category==='Electric'?' mN':' kN');
+  makeBars('massBars', sel.map((e,i)=>({name:e.name,v:e.mass||0})), ' kg');
+  makeBars('twrBars', sel.map((e,i)=>({name:e.name,v:e.mass&&e.thrust?(e.category==='Electric'?((e.thrust*1000)/(e.mass*G0)):((e.thrust*1000)/(e.mass*G0))):0})), '', null);
+
+  // Radar chart
+  drawRadar(sel);
+
+  // Recommendation
+  const recs = [];
+  const active = sel.filter(e=>e.status==='Active');
+  if (active.length) {
+    const bestIsp = active.reduce((a,b)=>(a.isp||0)>(b.isp||0)?a:b);
+    const bestThrust = active.reduce((a,b)=>(a.thrust||0)>(b.thrust||0)?a:b);
+    const bestTwr = active.reduce((a,b)=>{
+      const twra = a.mass&&a.thrust?(a.thrust*1000)/(a.mass*G0):0;
+      const twrb = b.mass&&b.thrust?(b.thrust*1000)/(b.mass*G0):0;
+      return twra>twrb?a:b;
+    });
+    recs.push(`<strong>Best Efficiency:</strong> ${bestIsp.name} (Isp ${bestIsp.isp}s) — ideal for upper stages, long-duration burns, deep space missions.`);
+    recs.push(`<strong>Best Thrust:</strong> ${bestThrust.name} (${bestThrust.thrust.toLocaleString()} kN) — best for first stage, heavy lift, Earth departure.`);
+    recs.push(`<strong>Best T/W:</strong> ${bestTwr.name} (${((bestThrust.thrust*1000)/(bestThrust.mass*G0)).toFixed(2)}) — fastest acceleration, responsive maneuvers.`);
+  }
+  const electric = sel.filter(e=>e.category==='Electric');
+  if (electric.length) recs.push(`<strong>Electric Propulsion:</strong> ${electric.map(e=>e.name).join(', ')} — use for station-keeping, deep space, low-thrust spiral transfers.`);
+  document.getElementById('recommendationBox').innerHTML = `<div class="recommendation">${recs.join('<br><br>')}</div>`;
+
+  document.getElementById('compareResult').classList.add('active');
+}
+function updateCompare() {}
+
+// ===== RADAR CHART (Canvas) =====
+function drawRadar(enginesSel) {
+  const canvas = document.getElementById('radarCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2, R = Math.min(W,H)/2 - 50;
+  const labels = ['Isp','Thrust','Mass (low)','Reliability','Cost (low)'];
+  const n = labels.length;
+  const angleStep = (Math.PI*2)/n;
+
+  // Background rings
+  for (let ring = 1; ring <= 5; ring++) {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = i * angleStep - Math.PI/2;
+      const r = R * ring / 5;
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,229,255,0.1)';
+    ctx.stroke();
+  }
+
+  // Axes + labels
+  for (let i = 0; i < n; i++) {
+    const a = i * angleStep - Math.PI/2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(a)*R, cy+Math.sin(a)*R);
+    ctx.strokeStyle = 'rgba(0,229,255,0.15)';
+    ctx.stroke();
+    ctx.fillStyle = '#8899aa';
+    ctx.font = '11px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], cx+Math.cos(a)*(R+25), cy+Math.sin(a)*(R+25)+4);
+  }
+
+  // Normalize values
+  const radarColors = [colors.cyan, colors.purple, colors.green, colors.orange];
+  const maxIsp = Math.max(...enginesSel.map(e=>e.isp||0))||1;
+  const maxThrust = Math.max(...enginesSel.map(e=>e.thrust||0))||1;
+  const maxMass = Math.max(...enginesSel.map(e=>e.mass||0))||1;
+
+  enginesSel.forEach((e,ei) => {
+    const vals = [
+      (e.isp||0)/maxIsp,
+      (e.thrust||0)/maxThrust,
+      1 - ((e.mass||0)/maxMass),
+      (e.tc||50)/100,
+      1 - Math.min((e.cost||1)/50, 1)
+    ];
+    ctx.beginPath();
+    vals.forEach((v,i) => {
+      const a = i * angleStep - Math.PI/2;
+      const r = R * Math.max(v, 0.02);
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = radarColors[ei%4];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = radarColors[ei%4].replace(')',',0.12)').replace('rgb','rgba');
+    ctx.fill();
+
+    // Dots
+    vals.forEach((v,i) => {
+      const a = i * angleStep - Math.PI/2;
+      const r = R * Math.max(v, 0.02);
+      ctx.beginPath();
+      ctx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r, 3, 0, Math.PI*2);
+      ctx.fillStyle = radarColors[ei%4];
+      ctx.fill();
+    });
+  });
+
+  // Legend
+  enginesSel.forEach((e,i) => {
+    ctx.fillStyle = radarColors[i%4];
+    ctx.fillRect(10, H - 20 - (enginesSel.length-1-i)*18, 10, 10);
+    ctx.fillStyle = '#c8d6e5';
+    ctx.font = '11px Segoe UI';
+    ctx.textAlign = 'left';
+    ctx.fillText(e.name, 26, H - 12 - (enginesSel.length-1-i)*18);
+  });
+}
+
+// ===== 3D ENGINE VIEWER (Three.js) =====
+let viewerInitialized = false, scene, camera, renderer, engineMesh, wireframeMode = false, autoRotate = true, exploded = false;
+
+const engineDefs = {
+  merlin: {name:'Merlin 1D',fuel:'LOX/RP1',color:0x00aaff,bellR:0.5,bellH:1.2,throatR:0.12,chamberR:0.35,chamberH:0.6},
+  raptor: {name:'Raptor 2',fuel:'Methalox',color:0x00cc88,bellR:0.6,bellH:1.5,throatR:0.15,chamberR:0.4,chamberH:0.7},
+  rs25: {name:'RS-25',fuel:'LOX/LH2',color:0x7c4dff,bellR:0.9,bellH:2.0,throatR:0.2,chamberR:0.5,chamberH:0.9},
+  f1: {name:'F-1',fuel:'LOX/RP1',color:0xff4444,bellR:1.5,bellH:2.5,throatR:0.35,chamberR:0.8,chamberH:1.2},
+  be4: {name:'BE-4',fuel:'Methalox',color:0x00e5ff,bellR:0.7,bellH:1.6,throatR:0.17,chamberR:0.42,chamberH:0.75},
+  rd180: {name:'RD-180',fuel:'LOX/RP1',color:0xff9800,bellR:0.85,bellH:1.8,throatR:0.2,chamberR:0.5,chamberH:0.85}
+};
+
+function init3DViewer() {
+  const container = document.getElementById('viewer3d');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+  camera.position.set(2, 1.5, 3);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  container.insertBefore(renderer.domElement, container.firstChild);
+
+  const ambLight = new THREE.AmbientLight(0x334455, 0.8);
+  scene.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  dirLight.position.set(3, 5, 4);
+  scene.add(dirLight);
+  const pointLight = new THREE.PointLight(0x00e5ff, 0.5, 10);
+  pointLight.position.set(-2, 2, -2);
+  scene.add(pointLight);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(6, 20, 0x00e5ff, 0x112233);
+  scene.add(gridHelper);
+
+  createEngine('merlin');
+  viewerInitialized = true;
+  animate3D();
+
+  window.addEventListener('resize', () => {
+    if (!renderer) return;
+    const w = container.clientWidth, h = container.clientHeight;
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w,h);
+  });
+
+  // Mouse orbit
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let spherical = {theta:0.8, phi:1.0, r:4};
+  container.addEventListener('mousedown', e => { isDragging=true; prevMouse={x:e.clientX,y:e.clientY}; });
+  window.addEventListener('mouseup', () => isDragging=false);
+  container.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+    spherical.theta -= dx*0.005;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI-0.1, spherical.phi - dy*0.005));
+    prevMouse = {x:e.clientX, y:e.clientY};
+    updateCamera();
+  });
+  container.addEventListener('wheel', e => {
+    spherical.r = Math.max(1.5, Math.min(10, spherical.r + e.deltaY*0.005));
+    updateCamera();
+    e.preventDefault();
+  }, {passive:false});
+
+  function updateCamera() {
+    camera.position.x = spherical.r * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+    camera.position.y = spherical.r * Math.cos(spherical.phi);
+    camera.position.z = spherical.r * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+    camera.lookAt(0, 0, 0);
+  }
+}
+
+function createEngine(key) {
+  if (engineMesh) scene.remove(engineMesh);
+  const d = engineDefs[key];
+  const group = new THREE.Group();
+
+  // Bell nozzle (lathe geometry)
+  const bellPts = [];
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    const r = d.throatR + (d.bellR - d.throatR) * Math.pow(t, 0.6);
+    const y = -t * d.bellH;
+    bellPts.push(new THREE.Vector2(r, y));
+  }
+  const bellGeom = new THREE.LatheGeometry(bellPts, 32);
+  const bellMat = new THREE.MeshPhongMaterial({color:d.color, transparent:true, opacity:0.85, side:THREE.DoubleSide, wireframe:wireframeMode});
+  const bell = new THREE.Mesh(bellGeom, bellMat);
+  group.add(bell);
+
+  // Chamber
+  const chamberGeom = new THREE.CylinderGeometry(d.chamberR, d.chamberR, d.chamberH, 32);
+  const chamberMat = new THREE.MeshPhongMaterial({color:d.color, transparent:true, opacity:0.7, wireframe:wireframeMode});
+  const chamber = new THREE.Mesh(chamberGeom, chamberMat);
+  chamber.position.y = d.chamberH/2;
+  group.add(chamber);
+
+  // Injector plate
+  const injGeom = new THREE.CylinderGeometry(d.chamberR*0.9, d.chamberR*0.9, 0.05, 32);
+  const injMat = new THREE.MeshPhongMaterial({color:0x333333, wireframe:wireframeMode});
+  const inj = new THREE.Mesh(injGeom, injMat);
+  inj.position.y = d.chamberH;
+  group.add(inj);
+
+  // Turbopump
+  const tpGeom = new THREE.BoxGeometry(d.chamberR*0.6, 0.2, d.chamberR*0.6);
+  const tpMat = new THREE.MeshPhongMaterial({color:0x555555, wireframe:wireframeMode});
+  const tp = new THREE.Mesh(tpGeom, tpMat);
+  tp.position.set(d.chamberR*0.5, d.chamberH*0.7, 0);
+  group.add(tp);
+
+  // Glow ring at throat
+  const glowGeom = new THREE.TorusGeometry(d.throatR+0.02, 0.015, 8, 32);
+  const glowMat = new THREE.MeshBasicMaterial({color:0xff6600});
+  const glow = new THREE.Mesh(glowGeom, glowMat);
+  glow.rotation.x = Math.PI/2;
+  group.add(glow);
+
+  engineMesh = group;
+  scene.add(engineMesh);
+
+  document.getElementById('viewer3dInfo').textContent = `${d.name} — ${d.fuel}`;
+
+  // Specs
+  const e = engines.find(en=>en.name===d.name);
+  if (e) {
+    document.getElementById('engineSpecs').innerHTML = [
+      {l:'Isp',v:e.isp+' s'},{l:'Thrust',v:e.thrust+' kN'},{l:'Mass',v:e.mass+' kg'},
+      {l:'Fuel',v:e.fuel},{l:'Type',v:e.type},{l:'T/W',v:((e.thrust*1000)/(e.mass*G0)).toFixed(2)}
+    ].map(s=>`<div class="modal-stat"><div class="lbl">${s.l}</div><div class="val">${s.v}</div></div>`).join('');
+  }
+}
+
+function updateViewer3D() {
+  const key = document.getElementById('viewerEngine').value;
+  createEngine(key);
+}
+
+function toggleWireframe() {
+  wireframeMode = !wireframeMode;
+  document.getElementById('btnWireframe').classList.toggle('active');
+  createEngine(document.getElementById('viewerEngine').value);
+}
+
+function toggleAutoRotate() {
+  autoRotate = !autoRotate;
+  document.getElementById('btnRotate').classList.toggle('active');
+}
+
+function toggleExplode() {
+  exploded = !exploded;
+  document.getElementById('btnExplode').classList.toggle('active');
+  if (engineMesh) {
+    const children = engineMesh.children;
+    if (exploded) {
+      if (children[1]) children[1].position.y += 0.5;
+      if (children[2]) children[2].position.y += 1.0;
+      if (children[3]) children[3].position.x += 0.8;
+    } else {
+      const d = engineDefs[document.getElementById('viewerEngine').value];
+      if (children[1]) children[1].position.y = d.chamberH/2;
+      if (children[2]) children[2].position.y = d.chamberH;
+      if (children[3]) children[3].position.x = d.chamberR*0.5;
+    }
+  }
+}
+
+function resetCamera3D() {
+  camera.position.set(2, 1.5, 3);
+  camera.lookAt(0, 0, 0);
+}
+
+function animate3D() {
+  requestAnimationFrame(animate3D);
+  if (!renderer) return;
+  if (autoRotate && engineMesh) engineMesh.rotation.y += 0.008;
+  renderer.render(scene, camera);
+}
+
+// ===== INIT =====
+renderEngines(engines);
+populateCompareSelects();
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>

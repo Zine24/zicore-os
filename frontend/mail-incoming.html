@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Mail — Correo Entrante</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080c14;--card:#0d1520;--border:#1a2535;--accent:#00e5ff;--accent2:#7c4dff;--green:#00ff88;--red:#ff3860;--text:#e0e6ed;--text2:#8899aa}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:rgba(8,12,20,0.95);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.topbar h1{font-size:18px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar .nav-links{display:flex;gap:12px}
+.topbar .nav-links a{color:var(--text2);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;transition:all 0.2s}
+.topbar .nav-links a:hover,.topbar .nav-links a.active{color:var(--accent);background:rgba(0,229,255,0.1)}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.status-bar{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.status-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;flex:1;min-width:200px}
+.status-card .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+.status-card .value{font-size:24px;font-weight:700;margin-top:4px}
+.status-card .value.green{color:var(--green)}
+.status-card .value.cyan{color:var(--accent)}
+.email-list{display:flex;flex-direction:column;gap:8px}
+.email-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all 0.2s}
+.email-item:hover{border-color:rgba(0,229,255,0.3)}
+.email-item .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.email-item .from{font-weight:600;font-size:14px}
+.email-item .date{font-size:11px;color:var(--text2)}
+.email-item .to{font-size:12px;color:var(--accent);margin-bottom:4px}
+.email-item .subject{font-size:13px;color:var(--text)}
+.email-item .preview{font-size:12px;color:var(--text2);margin-top:4px;max-height:40px;overflow:hidden}
+.email-detail{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-top:16px}
+.email-detail h2{font-size:16px;margin-bottom:16px}
+.email-detail .meta{display:grid;grid-template-columns:100px 1fr;gap:8px;font-size:13px;margin-bottom:16px}
+.email-detail .meta .label{color:var(--text2)}
+.email-detail .body{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto}
+.empty{text-align:center;padding:48px;color:var(--text2)}
+.empty .icon{font-size:48px;margin-bottom:16px;opacity:0.5}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:rgba(0,229,255,0.1);color:var(--accent);border:1px solid rgba(0,229,255,0.3)}
+.btn:hover{background:rgba(0,229,255,0.2)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📥 ZICORE Mail — Correo Entrante</h1>
+  <div class="nav-links">
+    <a href="/mail-portal">Portal</a>
+    <a href="/mail">Bandeja</a>
+    <a href="/mail-accounts">Cuentas</a>
+    <a href="/mail-incoming" class="active">Entrante</a>
+  </div>
+</div>
+<div class="container">
+  <div class="status-bar">
+    <div class="status-card"><div class="label">Total recibidos</div><div class="value cyan" id="totalCount">0</div></div>
+    <div class="status-card"><div class="label">Hoy</div><div class="value green" id="todayCount">0</div></div>
+    <div class="status-card"><div class="label">Estado Worker</div><div class="value green">Activo</div></div>
+    <div class="status-card"><div class="label"> ultimo check</div><div class="value" id="lastCheck" style="font-size:14px">--</div></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2 style="font-size:16px">Correo Recibido via Cloudflare Worker</h2>
+    <button class="btn" onclick="loadEmails()">&#x21bb; Actualizar</button>
+  </div>
+  <div id="emailList" class="email-list">
+    <div class="empty"><div class="icon">📭</div><p>Cargando...</p></div>
+  </div>
+  <div id="emailDetail" style="display:none"></div>
+</div>
+<script>
+async function loadEmails(){
+  try{
+    const r=await fetch('/api/mail/incoming?limit=100');
+    const d=await r.json();
+    const emails=d.emails||[];
+    document.getElementById('totalCount').textContent=d.total||0;
+    const today=new Date().toISOString().split('T')[0];
+    document.getElementById('todayCount').textContent=emails.filter(e=>e.timestamp&&e.timestamp.startsWith(today)).length;
+    document.getElementById('lastCheck').textContent=new Date().toLocaleTimeString();
+    if(!emails.length){
+      document.getElementById('emailList').innerHTML='<div class="empty"><div class="icon">📭</div><p>No hay correos entrantes aun.<br>Configura Cloudflare Email Routing + Worker para recibir correo.</p></div>';
+      return;
+    }
+    document.getElementById('emailList').innerHTML=emails.reverse().map((e,i)=>`
+      <div class="email-item" onclick="showDetail(${i})">
+        <div class="header"><span class="from">${e.from}</span><span class="date">${new Date(e.timestamp).toLocaleString()}</span></div>
+        <div class="to">Para: ${e.to}</div>
+        <div class="subject">${e.subject}</div>
+      </div>
+    `).join('');
+    window._emails=emails;
+  }catch(e){document.getElementById('emailList').innerHTML='<div class="empty"><div class="icon">❌</div><p>Error cargando correos</p></div>'}
+}
+function showDetail(i){
+  const e=window._emails[i];if(!e)return;
+  document.getElementById('emailDetail').style.display='block';
+  document.getElementById('emailDetail').innerHTML=`<div class="email-detail">
+    <h2>${e.subject}</h2>
+    <div class="meta">
+      <span class="label">De:</span><span>${e.from}</span>
+      <span class="label">Para:</span><span>${e.to}</span>
+      <span class="label">Fecha:</span><span>${new Date(e.timestamp).toLocaleString()}</span>
+      <span class="label">Tamano:</span><span>${e.size||0} bytes</span>
+    </div>
+    <div class="body">${e.body||'(sin contenido)'}</div>
+  </div>`;
+  document.getElementById('emailDetail').scrollIntoView({behavior:'smooth'});
+}
+loadEmails();
+setInterval(loadEmails,30000);
+</script>
+</body>
+</html>

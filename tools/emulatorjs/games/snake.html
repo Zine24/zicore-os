@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZICORE Snake Game</title>
+<style>
+body{background:#0a0a1a;color:#0f6;font-family:monospace;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center}
+canvas{border:2px solid #0f6;background:#000}
+h1{text-shadow:0 0 10px #0f6}
+.info{color:#888;font-size:12px;margin:10px}
+</style>
+</head>
+<body>
+<h1>Snake</h1>
+<div class="info">Arrow Keys or WASD | Space=Pause | R=Restart</div>
+<canvas id="c" width="400" height="400"></canvas>
+<div class="info">Score: <span id="score">0</span> | High: <span id="high">0</span></div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const S=20,W=20,H=20;
+let snake,food,score,highScore=0,dir,nextDir,running,speed,timer;
+function init(){
+  snake=[{x:10,y:10}];
+  dir={x:1,y:0};nextDir={x:1,y:0};
+  score=0;speed=120;
+  document.getElementById('score').textContent=0;
+  placeFood();running=true;
+  if(timer)clearInterval(timer);
+  timer=setInterval(tick,speed);
+}
+function placeFood(){
+  do{food={x:Math.floor(Math.random()*W),y:Math.floor(Math.random()*H)};}
+  while(snake.some(s=>s.x===food.x&&s.y===food.y));
+}
+function tick(){
+  if(!running)return;
+  dir=nextDir;
+  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  if(head.x<0||head.x>=W||head.y<0||head.y>=H||snake.some(s=>s.x===head.x&&s.y===head.y)){
+    running=false;clearInterval(timer);
+    if(score>highScore){highScore=score;document.getElementById('high').textContent=highScore;}
+    ctx.fillStyle='#f00';ctx.font='30px monospace';ctx.fillText('GAME OVER',120,200);
+    return;
+  }
+  snake.unshift(head);
+  if(head.x===food.x&&head.y===food.y){
+    score++;document.getElementById('score').textContent=score;
+    placeFood();if(speed>60){speed-=2;clearInterval(timer);timer=setInterval(tick,speed);}
+  }else snake.pop();
+  draw();
+}
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,400,400);
+  ctx.fillStyle='#0f6';
+  snake.forEach((s,i)=>{
+    ctx.fillStyle=i===0?'#0f6':'#084';
+    ctx.fillRect(s.x*S+1,s.y*S+1,S-2,S-2);
+  });
+  ctx.fillStyle='#f44';ctx.fillRect(food.x*S+1,food.y*S+1,S-2,S-2);
+  ctx.fillStyle='#444';ctx.font='10px monospace';
+  for(let x=0;x<W;x++)for(let y=0;y<H;y++){
+    ctx.strokeStyle='#111';ctx.strokeRect(x*S,y*S,S,S);
+  }
+}
+document.onkeydown=e=>{
+  const k=e.key.toLowerCase();
+  if(k==' '){running=!running;return;}
+  if(k=='r'){init();return;}
+  if((k=='arrowup'||k=='w')&&dir.y!==1)nextDir={x:0,y:-1};
+  if((k=='arrowdown'||k=='s')&&dir.y!==-1)nextDir={x:0,y:1};
+  if((k=='arrowleft'||k=='a')&&dir.x!==1)nextDir={x:-1,y:0};
+  if((k=='arrowright'||k=='d')&&dir.x!==-1)nextDir={x:1,y:0};
+};
+init();draw();
+</script>
+</body>
+</html>

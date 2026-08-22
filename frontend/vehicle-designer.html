@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Vehicle Designer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0f1a;--bg3:#101828;--bg4:#1a2540;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff4444;
+  --orange:#ff9100;--yellow:#ffd600;--text:#c8d6e5;--text2:#8899aa;
+  --glass:rgba(10,20,40,0.7);--glass2:rgba(0,229,255,0.05);
+  --border:rgba(0,229,255,0.15);--border2:rgba(124,77,255,0.2);
+  --mono:'Courier New',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
+
+.app{display:flex;flex-direction:column;height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:42px;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:15px;font-weight:700;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,0.3)}
+.logo span{color:var(--purple)}
+.topbar-title{font-size:12px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.topbar-center{display:flex;gap:4px}
+.topbar-btn{background:transparent;border:1px solid var(--border);color:var(--text2);padding:4px 12px;border-radius:4px;font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+.topbar-btn:hover,.topbar-btn.active{background:var(--glass2);border-color:var(--cyan);color:var(--cyan)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.topbar-time{font-family:var(--mono);font-size:11px;color:var(--text2)}
+
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar-left{width:300px;min-width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-right{width:320px;min-width:280px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.viewport{flex:1;position:relative;background:var(--bg);overflow:hidden}
+
+.panel-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--cyan);font-weight:600;display:flex;align-items:center;justify-content:space-between;min-height:36px;background:rgba(0,229,255,0.03)}
+.panel-header .badge{background:var(--purple);color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:400}
+.panel-body{flex:1;overflow-y:auto;padding:10px}
+
+.section{margin-bottom:12px}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--purple);margin-bottom:6px;font-weight:600;display:flex;align-items:center;gap:6px}
+.section-title::before{content:'';width:3px;height:10px;background:var(--purple);border-radius:2px}
+
+.template-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.template-card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.template-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));opacity:0;transition:opacity .2s}
+.template-card:hover{border-color:var(--cyan);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,229,255,0.1)}
+.template-card:hover::before{opacity:1}
+.template-card.selected{border-color:var(--cyan);background:rgba(0,229,255,0.08)}
+.template-card.selected::before{opacity:1}
+.template-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
+.template-type{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.template-mass{font-family:var(--mono);font-size:9px;color:var(--cyan);margin-top:4px}
+
+.form-group{margin-bottom:8px}
+.form-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;display:block}
+.form-input,.form-select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:12px;font-family:var(--mono);transition:border-color .2s}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,229,255,0.1)}
+.form-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300e5ff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.form-input.sm{padding:4px 6px;font-size:11px}
+
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.calc-card{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center}
+.calc-value{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--cyan);text-shadow:0 0 8px rgba(0,229,255,0.2)}
+.calc-label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.calc-card.warn .calc-value{color:var(--orange)}
+.calc-card.danger .calc-value{color:var(--red)}
+.calc-card.good .calc-value{color:var(--green)}
+
+.btn{padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:var(--bg3);color:var(--text);letter-spacing:.5px;font-weight:500}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-primary{background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(124,77,255,0.15));border-color:var(--cyan);color:var(--cyan)}
+.btn-primary:hover{background:linear-gradient(135deg,rgba(0,229,255,0.25),rgba(124,77,255,0.25))}
+.btn-danger{border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:rgba(255,68,68,0.1)}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+.btn-sm{padding:4px 8px;font-size:10px}
+
+.viewport-overlay{position:absolute;top:10px;left:10px;right:10px;pointer-events:none;z-index:10}
+.viewport-info{display:flex;justify-content:space-between;pointer-events:auto}
+.vi-box{background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:10px;color:var(--text2)}
+.vi-box span{color:var(--cyan)}
+
+.viewport-controls{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+.vc-btn{background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text2);cursor:pointer;font-size:10px;transition:all .2s;letter-spacing:.5px}
+.vc-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.vc-btn.active{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan)}
+
+.stage-list{display:flex;flex-direction:column;gap:4px}
+.stage-item{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:11px;cursor:pointer;transition:all .2s}
+.stage-item:hover{border-color:var(--cyan)}
+.stage-item.selected{border-color:var(--cyan);background:rgba(0,229,255,0.05)}
+.stage-color{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.stage-info{flex:1;min-width:0}
+.stage-name{font-weight:600;color:var(--text)}
+.stage-detail{font-family:var(--mono);font-size:9px;color:var(--text2)}
+.stage-actions{display:flex;gap:4px}
+.stage-btn{background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:2px}
+.stage-btn:hover{color:var(--cyan)}
+
+.capability-bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-top:4px}
+.capability-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.cap-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cap-label{font-size:10px;color:var(--text2)}
+.cap-value{font-family:var(--mono);font-size:10px;color:var(--cyan)}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--cyan);border-radius:8px;padding:10px 20px;color:var(--cyan);font-size:12px;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:500px;max-height:80vh;overflow:hidden}
+.modal-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:14px;font-weight:600;color:var(--cyan)}
+.modal-close{background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:18px}
+.modal-close:hover{color:var(--cyan)}
+.modal-body{padding:18px;overflow-y:auto;max-height:60vh}
+.modal-body textarea{width:100%;height:300px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:6px;font-family:var(--mono);font-size:11px;resize:vertical}
+.modal-body textarea:focus{outline:none;border-color:var(--cyan)}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+.saved-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+.saved-item{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 10px;cursor:pointer;transition:all .2s}
+.saved-item:hover{border-color:var(--cyan)}
+.saved-name{font-size:12px;color:var(--text)}
+.saved-type{font-size:9px;color:var(--text2);text-transform:uppercase}
+
+.progress-ring{position:relative;width:60px;height:60px}
+.progress-ring svg{transform:rotate(-90deg)}
+.progress-ring circle{fill:none;stroke-width:3}
+.progress-ring .bg{stroke:var(--bg4)}
+.progress-ring .fg{stroke:var(--cyan);stroke-linecap:round;transition:stroke-dashoffset .5s}
+.progress-ring .label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.scanline{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.1),transparent);animation:scanline 4s linear infinite;pointer-events:none;z-index:5}
+
+.tab-bar{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2)}
+.tab{padding:8px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tab-content{display:none}.tab-content.active{display:block}
+
+.color-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">ZI<span>CORE</span></div>
+      <div class="topbar-title">Vehicle Designer v1.0</div>
+    </div>
+    <div class="topbar-center">
+      <button class="topbar-btn active" onclick="setView('design')">Design</button>
+      <button class="topbar-btn" onclick="setView('analysis')">Analysis</button>
+      <button class="topbar-btn" onclick="setView('export')">Export</button>
+    </div>
+    <div class="topbar-right">
+      <div class="status-dot"></div>
+      <div class="topbar-time" id="clock">00:00:00 UTC</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar-left">
+      <div class="panel-header">Templates <span class="badge" id="templateCount">10</span></div>
+      <div class="panel-body">
+        <div class="section">
+          <div class="section-title">Vehicle Templates</div>
+          <div class="template-grid" id="templateGrid"></div>
+        </div>
+        <div class="section">
+          <div class="section-title">Saved Vehicles</div>
+          <div class="btn-group" style="margin-bottom:8px">
+            <button class="btn btn-sm" onclick="showSaveModal()">💾 Save</button>
+            <button class="btn btn-sm" onclick="showLoadModal()">📂 Load</button>
+            <button class="btn btn-sm" onclick="showImportModal()">⬇ Import</button>
+          </div>
+          <div class="saved-list" id="savedList"></div>
+        </div>
+      </div>
+
+      <div class="panel-header">Stages <span class="badge" id="stageCount">0</span></div>
+      <div class="panel-body" style="flex:0.6">
+        <div class="btn-group" style="margin-bottom:8px">
+          <button class="btn btn-sm btn-primary" onclick="addStage()">+ Add Stage</button>
+        </div>
+        <div class="stage-list" id="stageList"></div>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <div class="scanline"></div>
+      <div class="viewport-overlay">
+        <div class="viewport-info">
+          <div class="vi-box">VERT: <span id="vi-alt">0</span> m</div>
+          <div class="vi-box">MASS: <span id="vi-mass">0</span> t</div>
+          <div class="vi-box">THRUST: <span id="vi-thrust">0</span> kN</div>
+          <div class="vi-box">TWR: <span id="vi-twr">0</span></div>
+        </div>
+      </div>
+      <div id="threeContainer" style="width:100%;height:100%"></div>
+      <div class="viewport-controls">
+        <button class="vc-btn active" onclick="toggleWireframe(this)">Wireframe</button>
+        <button class="vc-btn" onclick="toggleGrid(this)">Grid</button>
+        <button class="vc-btn" onclick="toggleAxes(this)">Axes</button>
+        <button class="vc-btn" onclick="resetCamera()">Reset View</button>
+        <button class="vc-btn" onclick="cycleColorScheme(this)">Color Scheme</button>
+      </div>
+    </div>
+
+    <div class="sidebar-right">
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab(this,'tabProps')">Properties</div>
+        <div class="tab" onclick="switchTab(this,'tabCalc')">Calculations</div>
+        <div class="tab" onclick="switchTab(this,'tabCapabilities')">Capabilities</div>
+      </div>
+
+      <div class="tab-content active" id="tabProps" style="flex:1;overflow-y:auto;padding:10px">
+        <div class="section">
+          <div class="section-title">General</div>
+          <div class="form-group">
+            <label class="form-label">Vehicle Name</label>
+            <input class="form-input" id="vName" value="Untitled Vehicle" oninput="onParamChange()">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-select" id="vType" onchange="onParamChange()">
+                <option>Launch</option><option>Crew</option><option>Cargo</option>
+                <option>Lunar</option><option>Mars</option><option>Orbital</option>
+                <option>Deep Space</option><option>Recon</option><option>VTOL</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reusability</label>
+              <select class="form-select" id="vReuse" onchange="onParamChange()">
+                <option>Expendable</option><option>Reusable</option><option>Fully Reusable</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Mass</div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Dry (t)</label>
+              <input class="form-input sm" type="number" id="vDryMass" value="22" step="0.1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fuel (t)</label>
+              <input class="form-input sm" type="number" id="vFuelMass" value="430" step="0.1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Payload (t)</label>
+              <input class="form-input sm" type="number" id="vPayload" value="22.8" step="0.1" oninput="onParamChange()">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Wet Mass (t) — auto</label>
+            <input class="form-input sm" id="vWetMass" readonly style="opacity:0.6">
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Dimensions</div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Height (m)</label>
+              <input class="form-input sm" type="number" id="vHeight" value="70" step="0.1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Diameter (m)</label>
+              <input class="form-input sm" type="number" id="vDiameter" value="3.7" step="0.1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stages</label>
+              <input class="form-input sm" type="number" id="vStageCount" value="2" min="1" max="6" oninput="onParamChange()">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Propulsion</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Fuel Type</label>
+              <select class="form-select" id="vFuelType" onchange="onParamChange()">
+                <option>LOX/RP1</option><option>LOX/LH2</option><option>Methalox</option>
+                <option>Hypergolic</option><option>Solid</option><option>Hybrid</option>
+                <option>Ion</option><option>Nuclear Thermal</option><option>Fusion</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Engines</label>
+              <input class="form-input sm" type="number" id="vEngines" value="9" min="1" oninput="onParamChange()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Isp (s)</label>
+              <input class="form-input sm" type="number" id="vIsp" value="282" step="1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Thrust (kN)</label>
+              <input class="form-input sm" type="number" id="vThrust" value="7607" step="1" oninput="onParamChange()">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Payload</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Volume (m³)</label>
+              <input class="form-input sm" type="number" id="vPayloadVol" value="145" step="1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Destination</label>
+              <select class="form-select" id="vDestination" onchange="onParamChange()">
+                <option>LEO</option><option>GTO</option><option>TLI</option>
+                <option>Lunar Orbit</option><option>Mars Transfer</option><option>Deep Space</option>
+                <option>Sun-Earth L2</option><option>Jupiter Transfer</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Crew & Life Support</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Crew Capacity</label>
+              <input class="form-input sm" type="number" id="vCrew" value="0" min="0" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Life Support</label>
+              <select class="form-select" id="vLifeSupport" onchange="onParamChange()">
+                <option>None</option><option>Basic</option><option>Extended</option>
+                <option>Closed Loop</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Power & Thermal</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Solar (m²)</label>
+              <input class="form-input sm" type="number" id="vSolar" value="0" step="1" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Battery (kWh)</label>
+              <input class="form-input sm" type="number" id="vBattery" value="0" step="1" oninput="onParamChange()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Heat Shield</label>
+              <select class="form-select" id="vHeatShield" onchange="onParamChange()">
+                <option>None</option><option>PICA-X</option><option>SLA-561V</option>
+                <option>AVCOAT</option><option>TPS Tiles</option><option>Carbon-Carbon</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Radiators (m²)</label>
+              <input class="form-input sm" type="number" id="vRadiators" value="0" step="1" oninput="onParamChange()">
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Appearance</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Body Color</label>
+              <input class="form-input sm" type="color" id="vBodyColor" value="#e0e0e0" oninput="onParamChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Accent Color</label>
+              <input class="form-input sm" type="color" id="vAccentColor" value="#1a1a2e" oninput="onParamChange()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tabCalc" style="flex:1;overflow-y:auto;padding:10px">
+        <div class="section">
+          <div class="section-title">Live Calculations</div>
+          <div class="calc-grid">
+            <div class="calc-card" id="calcTWR"><div class="calc-value">—</div><div class="calc-label">TWR</div></div>
+            <div class="calc-card" id="calcDv"><div class="calc-value">—</div><div class="calc-label">ΔV (m/s)</div></div>
+            <div class="calc-card" id="calcMassRatio"><div class="calc-value">—</div><div class="calc-label">Mass Ratio</div></div>
+            <div class="calc-card" id="calcPayloadFrac"><div class="calc-value">—</div><div class="calc-label">Payload %</div></div>
+            <div class="calc-card" id="calcBurnTime"><div class="calc-value">—</div><div class="calc-label">Burn Time (s)</div></div>
+            <div class="calc-card" id="calcMaxQ"><div class="calc-value">—</div><div class="calc-label">Max Q (kPa)</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Equations</div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:10px;color:var(--text2);line-height:1.8">
+            <div>ΔV = Isp × g₀ × ln(m₀/mf)</div>
+            <div>TWR = Thrust / (mass × g₀)</div>
+            <div>g₀ = 9.80665 m/s²</div>
+            <div>Mass Ratio = m₀ / mf</div>
+            <div>Burn Time = fuel_mass × 1000 / (thrust × 1000 / (Isp × g₀))</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Launch Capability</div>
+          <div id="capabilityList"></div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tabCapabilities" style="flex:1;overflow-y:auto;padding:10px">
+        <div class="section">
+          <div class="section-title">Orbit Delivery</div>
+          <div id="orbitCapabilities"></div>
+        </div>
+        <div class="section">
+          <div class="section-title">Vehicle Summary</div>
+          <div id="vehicleSummary" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:10px;color:var(--text2);line-height:2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Save Vehicle</div><button class="modal-close" onclick="closeModal('saveModal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Vehicle Name</label>
+        <input class="form-input" id="saveName">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('saveModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="loadModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Load Vehicle</div><button class="modal-close" onclick="closeModal('loadModal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="saved-list" id="loadList"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('loadModal')">Cancel</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Import JSON</div><button class="modal-close" onclick="closeModal('importModal')">&times;</button></div>
+    <div class="modal-body"><textarea id="importJson" placeholder='Paste vehicle JSON here...'></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('importModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="importVehicle()">Import</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Export Vehicle</div><button class="modal-close" onclick="closeModal('exportModal')">&times;</button></div>
+    <div class="modal-body"><textarea id="exportJson" readonly></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('exportModal')">Close</button>
+      <button class="btn btn-primary" onclick="copyExport()">Copy</button>
+      <button class="btn btn-primary" onclick="downloadExport()">Download</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G0=9.80665;
+const VEHICLE_TEMPLATES=[
+  {name:"Falcon 9",type:"Launch",reuse:"Reusable",dryMass:22,fuelMass:430,payload:22.8,height:70,diameter:3.7,stages:2,fuelType:"LOX/RP1",engines:9,isp:282,thrust:7607,payloadVol:145,destination:"LEO",crew:0,bodyColor:"#e0e0e0",accentColor:"#1a1a2e"},
+  {name:"Starship",type:"Launch",reuse:"Fully Reusable",dryMass:200,fuelMass:4800,payload:100,height:121,diameter:9,stages:2,fuelType:"Methalox",engines:33,isp:350,thrust:72000,payloadVol:1100,destination:"Mars Transfer",crew:100,bodyColor:"#b0b0b0",accentColor:"#2d2d2d"},
+  {name:"SLS Block 1",type:"Launch",reuse:"Expendable",dryMass:875,fuelMass:1733,payload:95,height:98.1,diameter:8.4,stages:2,fuelType:"LOX/LH2",engines:4,isp:366,thrust:39920,payloadVol:200,destination:"TLI",crew:0,bodyColor:"#f0f0f0",accentColor:"#003366"},
+  {name:"Orion Capsule",type:"Crew",reuse:"Expendable",dryMass:8.9,fuelMass:16.9,payload:0,height:8,diameter:5,stages:1,fuelType:"Hypergolic",engines:4,isp:318,thrust:53,crew:4,bodyColor:"#e8e8e8",accentColor:"#333333",heatShield:"PICA-X",solar:11,battery:30},
+  {name:"Soyuz",type:"Crew",reuse:"Expendable",dryMass:31,fuelMass:281,payload:0,height:49.5,diameter:2.7,stages:3,fuelType:"LOX/RP1",engines:20,isp:263,thrust:4122,payloadVol:35,destination:"LEO",crew:3,bodyColor:"#d0d0d0",accentColor:"#cc3333"},
+  {name:"Dragon 2",type:"Crew",reuse:"Reusable",dryMass:6.5,fuelMass:5.5,payload:0,height:8.1,diameter:4,stages:1,fuelType:"Hypergolic",engines:8,isp:300,thrust:71,crew:7,bodyColor:"#f5f5f5",accentColor:"#1a1a1a",heatShield:"PICA-X"},
+  {name:"New Glenn",type:"Launch",reuse:"Reusable",dryMass:80,fuelMass:1320,payload:45,height:98,diameter:7,stages:2,fuelType:"LOX/LH2",engines:7,isp:340,thrust:16900,payloadVol:450,destination:"GTO",crew:0,bodyColor:"#e0e0e0",accentColor:"#ff6600"},
+  {name:"Vulcan Centaur",type:"Launch",reuse:"Expendable",dryMass:46,fuelMass:500,payload:27.2,height:61.6,diameter:5.4,stages:2,fuelType:"LOX/LH2",engines:2,isp:360,thrust:5100,payloadVol:200,destination:"GTO",crew:0,bodyColor:"#d0d0d0",accentColor:"#0066cc"},
+  {name:"Ariane 6",type:"Launch",reuse:"Expendable",dryMass:50,fuelMass:480,payload:21.6,height:63,diameter:5.4,stages:2,fuelType:"LOX/LH2",engines:4,isp:350,thrust:9600,payloadVol:180,destination:"GTO",crew:0,bodyColor:"#f0f0f0",accentColor:"#003399"},
+  {name:"Electron",type:"Launch",reuse:"Expendable",dryMass:0.16,fuelMass:0.25,payload:0.3,height:17,diameter:1.2,stages:2,fuelType:"LOX/RP1",engines:9,isp:311,thrust:224,payloadVol:1.5,destination:"LEO",crew:0,bodyColor:"#1a1a1a",accentColor:"#00cc66"}
+];
+
+let vehicle={};
+let stages=[];
+let selectedTemplate=-1;
+let scene,camera,renderer,vehicleGroup,gridHelper,axesHelper;
+let wireframeMode=true,showGrid=true,showAxes=false;
+let colorSchemes=["Default","Neon","Monochrome","Military"];
+let colorSchemeIdx=0;
+let savedVehicles=JSON.parse(localStorage.getItem('zicore_vehicles')||'[]');
+
+function init(){
+  loadTemplate(0);
+  renderTemplates();
+  renderSavedList();
+  initThree();
+  animate();
+  updateClock();
+  setInterval(updateClock,1000);
+}
+
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=n.toISOString().slice(11,19)+' UTC';
+}
+
+function loadTemplate(idx){
+  selectedTemplate=idx;
+  const t=VEHICLE_TEMPLATES[idx];
+  vehicle={...t};
+  document.getElementById('vName').value=t.name;
+  document.getElementById('vType').value=t.type;
+  document.getElementById('vReuse').value=t.reuse;
+  document.getElementById('vDryMass').value=t.dryMass;
+  document.getElementById('vFuelMass').value=t.fuelMass;
+  document.getElementById('vPayload').value=t.payload;
+  document.getElementById('vHeight').value=t.height;
+  document.getElementById('vDiameter').value=t.diameter;
+  document.getElementById('vStageCount').value=t.stages;
+  document.getElementById('vFuelType').value=t.fuelType;
+  document.getElementById('vEngines').value=t.engines;
+  document.getElementById('vIsp').value=t.isp;
+  document.getElementById('vThrust').value=t.thrust;
+  document.getElementById('vPayloadVol').value=t.payloadVol||0;
+  document.getElementById('vDestination').value=t.destination||'LEO';
+  document.getElementById('vCrew').value=t.crew||0;
+  document.getElementById('vLifeSupport').value=t.crew>0?'Extended':'None';
+  document.getElementById('vSolar').value=t.solar||0;
+  document.getElementById('vBattery').value=t.battery||0;
+  document.getElementById('vHeatShield').value=t.heatShield||'None';
+  document.getElementById('vRadiators').value=t.radiators||0;
+  document.getElementById('vBodyColor').value=t.bodyColor||'#e0e0e0';
+  document.getElementById('vAccentColor').value=t.accentColor||'#1a1a2e';
+
+  stages=[];
+  const stageColors=['#4fc3f7','#81c784','#ffb74d','#e57373','#ba68c8','#4db6ac'];
+  for(let i=0;i<t.stages;i++){
+    const isLast=i===t.stages-1;
+    stages.push({
+      name:`Stage ${i+1}`,
+      mass:isLast?t.dryMass+t.payload*0.3:t.dryMass/(t.stages)*1.5,
+      fuel:isLast?t.fuelMass*0.15:t.fuelMass/(t.stages),
+      thrust:t.thrust*(isLast?0.3:1),
+      isp:isLast?t.isp+30:t.isp,
+      color:stageColors[i%stageColors.length]
+    });
+  }
+  renderStages();
+  onParamChange();
+  renderTemplates();
+}
+
+function renderTemplates(){
+  const grid=document.getElementById('templateGrid');
+  grid.innerHTML=VEHICLE_TEMPLATES.map((t,i)=>`
+    <div class="template-card ${i===selectedTemplate?'selected':''}" onclick="loadTemplate(${i})">
+      <div class="template-name">${t.name}</div>
+      <div class="template-type">${t.type} · ${t.reuse}</div>
+      <div class="template-mass">${t.dryMass+t.fuelMass}t · ${t.thrust}kN</div>
+    </div>
+  `).join('');
+  document.getElementById('templateCount').textContent=VEHICLE_TEMPLATES.length;
+}
+
+function renderStages(){
+  document.getElementById('stageList').innerHTML=stages.map((s,i)=>`
+    <div class="stage-item" onclick="selectStage(${i})">
+      <div class="stage-color" style="background:${s.color}"></div>
+      <div class="stage-info">
+        <div class="stage-name">${s.name}</div>
+        <div class="stage-detail">${s.mass.toFixed(1)}t · ${s.fuel.toFixed(1)}t fuel · ${s.thrust}kN</div>
+      </div>
+      <div class="stage-actions">
+        <button class="stage-btn" onclick="event.stopPropagation();removeStage(${i})" title="Remove">✕</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('stageCount').textContent=stages.length;
+}
+
+function selectStage(idx){
+  document.querySelectorAll('.stage-item').forEach((el,i)=>el.classList.toggle('selected',i===idx));
+}
+
+function addStage(){
+  const stageColors=['#4fc3f7','#81c784','#ffb74d','#e57373','#ba68c8','#4db6ac'];
+  stages.push({
+    name:`Stage ${stages.length+1}`,mass:10,fuel:50,thrust:1000,isp:300,
+    color:stageColors[stages.length%stageColors.length]
+  });
+  renderStages();
+  onParamChange();
+}
+
+function removeStage(idx){
+  stages.splice(idx,1);
+  renderStages();
+  onParamChange();
+}
+
+function readParams(){
+  return{
+    name:document.getElementById('vName').value,
+    type:document.getElementById('vType').value,
+    reuse:document.getElementById('vReuse').value,
+    dryMass:parseFloat(document.getElementById('vDryMass').value)||0,
+    fuelMass:parseFloat(document.getElementById('vFuelMass').value)||0,
+    payload:parseFloat(document.getElementById('vPayload').value)||0,
+    height:parseFloat(document.getElementById('vHeight').value)||70,
+    diameter:parseFloat(document.getElementById('vDiameter').value)||3.7,
+    stageCount:parseInt(document.getElementById('vStageCount').value)||1,
+    fuelType:document.getElementById('vFuelType').value,
+    engines:parseInt(document.getElementById('vEngines').value)||1,
+    isp:parseFloat(document.getElementById('vIsp').value)||300,
+    thrust:parseFloat(document.getElementById('vThrust').value)||1000,
+    payloadVol:parseFloat(document.getElementById('vPayloadVol').value)||0,
+    destination:document.getElementById('vDestination').value,
+    crew:parseInt(document.getElementById('vCrew').value)||0,
+    lifeSupport:document.getElementById('vLifeSupport').value,
+    solar:parseFloat(document.getElementById('vSolar').value)||0,
+    battery:parseFloat(document.getElementById('vBattery').value)||0,
+    heatShield:document.getElementById('vHeatShield').value,
+    radiators:parseFloat(document.getElementById('vRadiators').value)||0,
+    bodyColor:document.getElementById('vBodyColor').value,
+    accentColor:document.getElementById('vAccentColor').value
+  };
+}
+
+function onParamChange(){
+  vehicle=readParams();
+  document.getElementById('vWetMass').value=(vehicle.dryMass+vehicle.fuelMass+vehicle.payload).toFixed(1);
+  calculate();
+  update3D();
+}
+
+function calculate(){
+  const v=readParams();
+  const wetMass=v.dryMass+v.fuelMass+v.payload;
+  const dryMass=v.dryMass+v.payload;
+  const massRatio=wetMass>0&&dryMass>0?wetMass/dryMass:0;
+  const dv=massRatio>0?v.isp*G0*Math.log(massRatio):0;
+  const twr=v.thrust*1000/(wetMass*1000*G0);
+  const payloadFrac=wetMass>0?(v.payload/wetMass*100):0;
+  const burnTime=v.fuelMass>0&&v.thrust>0?(v.fuelMass*1000/(v.thrust*1000/(v.isp*G0))):0;
+
+  setCalcCard('calcTWR',twr.toFixed(2),twr<1?'danger':twr<1.2?'warn':'good');
+  setCalcCard('calcDv',formatDv(dv),dv<5000?'danger':dv<9000?'warn':'good');
+  setCalcCard('calcMassRatio',massRatio.toFixed(2),massRatio>10?'warn':'');
+  setCalcCard('calcPayloadFrac',payloadFrac.toFixed(1)+'%',payloadFrac<1?'danger':payloadFrac<3?'warn':'good');
+  setCalcCard('calcBurnTime',burnTime.toFixed(1),burnTime>300?'warn':'');
+  const maxQ=(0.5*1.225*Math.pow(300,2)*2.2*3.14*v.diameter*v.diameter/4/1000);
+  setCalcCard('calcMaxQ',maxQ.toFixed(0),maxQ>60?'danger':maxQ>30?'warn':'good');
+
+  document.getElementById('vi-mass').textContent=wetMass.toFixed(0);
+  document.getElementById('vi-thrust').textContent=v.thrust.toFixed(0);
+  document.getElementById('vi-twr').textContent=twr.toFixed(2);
+
+  updateCapabilities(v,dv,wetMass);
+  updateSummary(v,wetMass);
+}
+
+function setCalcCard(id,val,cls){
+  const el=document.getElementById(id);
+  el.querySelector('.calc-value').textContent=val;
+  el.className='calc-card'+(cls?' '+cls:'');
+}
+
+function formatDv(dv){
+  if(dv>=1000)return(dv/1000).toFixed(2)+' km/s';
+  return dv.toFixed(0)+' m/s';
+}
+
+function updateCapabilities(v,dv,wetMass){
+  const orbitDv={LEO:9400,GTO:10200,TLI:11800,'Lunar Orbit':13000,'Mars Transfer':14500,'Deep Space':16000};
+  let html='';
+  for(const[orbit,reqDv]of Object.entries(orbitDv)){
+    const pct=Math.min(100,(dv/reqDv*100));
+    const color=pct>=100?'var(--green)':pct>=80?'var(--yellow)':pct>=50?'var(--orange)':'var(--red)';
+    html+=`<div class="cap-row">
+      <div class="cap-label">${orbit}</div>
+      <div class="cap-value">${pct.toFixed(0)}%</div>
+    </div>
+    <div class="capability-bar"><div class="capability-fill" style="width:${pct}%;background:${color}"></div></div>`;
+  }
+  document.getElementById('capabilityList').innerHTML=html;
+  document.getElementById('orbitCapabilities').innerHTML=html;
+
+  let orbitHtml='<div style="margin-top:4px">';
+  for(const[orbit,reqDv]of Object.entries(orbitDv)){
+    const ok=dv>=reqDv;
+    orbitHtml+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="color:${ok?'var(--green)':'var(--red)'};font-size:10px">${ok?'✓':'✗'}</span>
+      <span style="font-size:10px;color:var(--text2)">${orbit}: ${(reqDv/1000).toFixed(1)} km/s needed</span>
+    </div>`;
+  }
+  orbitHtml+='</div>';
+  document.getElementById('orbitCapabilities').innerHTML=orbitHtml;
+}
+
+function updateSummary(v,wetMass){
+  const html=`
+    <div><span style="color:var(--cyan)">Name:</span> ${v.name}</div>
+    <div><span style="color:var(--cyan)">Type:</span> ${v.type} · ${v.reuse}</div>
+    <div><span style="color:var(--cyan)">Mass:</span> ${wetMass.toFixed(1)}t (dry ${v.dryMass}t + fuel ${v.fuelMass}t + payload ${v.payload}t)</div>
+    <div><span style="color:var(--cyan)">Size:</span> ${v.height}m × ${v.diameter}m</div>
+    <div><span style="color:var(--cyan)">Propulsion:</span> ${v.engines}× ${v.fuelType} (${v.isp}s Isp)</div>
+    <div><span style="color:var(--cyan)">Thrust:</span> ${v.thrust}kN (${(v.thrust/wetMass).toFixed(1)} kN/t)</div>
+    <div><span style="color:var(--cyan)">Crew:</span> ${v.crew||'None'}</div>
+    <div><span style="color:var(--cyan)">Power:</span> Solar ${v.solar}m² · Battery ${v.battery}kWh</div>
+    <div><span style="color:var(--cyan)">Thermal:</span> ${v.heatShield||'None'} · Radiators ${v.radiators}m²</div>
+  `;
+  document.getElementById('vehicleSummary').innerHTML=html;
+}
+
+function switchTab(el,tabId){
+  el.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.sidebar-right').querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+function setView(view){
+  document.querySelectorAll('.topbar-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function showSaveModal(){
+  document.getElementById('saveName').value=vehicle.name||'Untitled';
+  document.getElementById('saveModal').classList.add('show');
+}
+function showLoadModal(){
+  const list=document.getElementById('loadList');
+  list.innerHTML=savedVehicles.length?savedVehicles.map((v,i)=>`
+    <div class="saved-item" onclick="loadSaved(${i})">
+      <div><div class="saved-name">${v.name}</div><div class="saved-type">${v.type}</div></div>
+      <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteSaved(${i})">✕</button>
+    </div>
+  `).join(''):'<div style="color:var(--text2);font-size:12px;text-align:center;padding:20px">No saved vehicles</div>';
+  document.getElementById('loadModal').classList.add('show');
+}
+function showImportModal(){document.getElementById('importModal').classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+function saveVehicle(){
+  const name=document.getElementById('saveName').value||'Untitled';
+  const v=readParams();
+  v.name=name;
+  v.stages=[...stages];
+  savedVehicles.push(v);
+  localStorage.setItem('zicore_vehicles',JSON.stringify(savedVehicles));
+  renderSavedList();
+  closeModal('saveModal');
+  showToast('Vehicle saved: '+name);
+
+  fetch('/api/vehicle/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)}).catch(()=>{});
+}
+
+function loadSaved(idx){
+  const v=savedVehicles[idx];
+  vehicle={...v};
+  document.getElementById('vName').value=v.name;
+  document.getElementById('vType').value=v.type;
+  document.getElementById('vReuse').value=v.reuse||'Expendable';
+  document.getElementById('vDryMass').value=v.dryMass;
+  document.getElementById('vFuelMass').value=v.fuelMass;
+  document.getElementById('vPayload').value=v.payload;
+  document.getElementById('vHeight').value=v.height;
+  document.getElementById('vDiameter').value=v.diameter;
+  document.getElementById('vStageCount').value=v.stages?v.stages.length:v.stageCount||2;
+  document.getElementById('vFuelType').value=v.fuelType;
+  document.getElementById('vEngines').value=v.engines;
+  document.getElementById('vIsp').value=v.isp;
+  document.getElementById('vThrust').value=v.thrust;
+  document.getElementById('vPayloadVol').value=v.payloadVol||0;
+  document.getElementById('vDestination').value=v.destination||'LEO';
+  document.getElementById('vCrew').value=v.crew||0;
+  document.getElementById('vLifeSupport').value=v.lifeSupport||'None';
+  document.getElementById('vSolar').value=v.solar||0;
+  document.getElementById('vBattery').value=v.battery||0;
+  document.getElementById('vHeatShield').value=v.heatShield||'None';
+  document.getElementById('vRadiators').value=v.radiators||0;
+  document.getElementById('vBodyColor').value=v.bodyColor||'#e0e0e0';
+  document.getElementById('vAccentColor').value=v.accentColor||'#1a1a2e';
+  if(v.stages){stages=v.stages.map(s=>({...s}));renderStages();}
+  selectedTemplate=-1;renderTemplates();
+  onParamChange();
+  closeModal('loadModal');
+  showToast('Loaded: '+v.name);
+}
+
+function deleteSaved(idx){
+  savedVehicles.splice(idx,1);
+  localStorage.setItem('zicore_vehicles',JSON.stringify(savedVehicles));
+  renderSavedList();showLoadModal();
+  showToast('Vehicle deleted');
+}
+
+function renderSavedList(){
+  const el=document.getElementById('savedList');
+  el.innerHTML=savedVehicles.slice(-5).map((v,i)=>`
+    <div class="saved-item" onclick="loadSaved(${savedVehicles.length-5+i})">
+      <div class="saved-name" style="font-size:10px">${v.name}</div>
+      <div class="saved-type">${v.type}</div>
+    </div>
+  `).join('');
+}
+
+function importVehicle(){
+  try{
+    const json=document.getElementById('importJson').value;
+    const v=JSON.parse(json);
+    loadSaved(-1);
+    Object.assign(vehicle,v);
+    for(const[key,val]of Object.entries(v)){
+      const el=document.getElementById('v'+key.charAt(0).toUpperCase()+key.slice(1));
+      if(el)el.value=val;
+    }
+    closeModal('importModal');
+    showToast('Vehicle imported');
+    onParamChange();
+  }catch(e){showToast('Invalid JSON: '+e.message);}
+}
+
+function showExportModal(){
+  const v=readParams();
+  v.stages=stages;
+  document.getElementById('exportJson').value=JSON.stringify(v,null,2);
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function copyExport(){
+  navigator.clipboard.writeText(document.getElementById('exportJson').value);
+  showToast('Copied to clipboard');
+}
+
+function downloadExport(){
+  const blob=new Blob([document.getElementById('exportJson').value],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(vehicle.name||'vehicle')+'.json';
+  a.click();
+  showToast('Downloaded');
+}
+
+function setView(view){
+  document.querySelectorAll('.topbar-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  if(view==='export')showExportModal();
+}
+
+// Three.js
+let rotationAngle=0;
+let targetRotation=0;
+let mouseDown=false,mouseX=0,mouseY=0;
+let cameraDistance=80,cameraTheta=Math.PI/6,cameraPhi=Math.PI/4;
+
+function initThree(){
+  const container=document.getElementById('threeContainer');
+  const w=container.clientWidth,h=container.clientHeight;
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x04060c);
+  scene.fog=new THREE.FogExp2(0x04060c,0.003);
+
+  camera=new THREE.PerspectiveCamera(45,w/h,0.1,1000);
+  updateCameraPosition();
+
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setSize(w,h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  container.appendChild(renderer.domElement);
+
+  const ambLight=new THREE.AmbientLight(0x334466,0.6);
+  scene.add(ambLight);
+  const dirLight=new THREE.DirectionalLight(0xffffff,0.8);
+  dirLight.position.set(20,30,20);
+  scene.add(dirLight);
+  const dirLight2=new THREE.DirectionalLight(0x4488cc,0.3);
+  dirLight2.position.set(-10,20,-10);
+  scene.add(dirLight2);
+  const pointLight=new THREE.PointLight(0x00e5ff,0.4,100);
+  pointLight.position.set(0,40,0);
+  scene.add(pointLight);
+
+  gridHelper=new THREE.GridHelper(100,20,0x0a1a30,0x061020);
+  scene.add(gridHelper);
+
+  axesHelper=new THREE.AxesHelper(15);
+  axesHelper.visible=false;
+  scene.add(axesHelper);
+
+  vehicleGroup=new THREE.Group();
+  scene.add(vehicleGroup);
+
+  const cv=renderer.domElement;
+  cv.addEventListener('mousedown',e=>{mouseDown=true;mouseX=e.clientX;mouseY=e.clientY;});
+  cv.addEventListener('mousemove',e=>{
+    if(!mouseDown)return;
+    const dx=e.clientX-mouseX,dy=e.clientY-mouseY;
+    cameraTheta-=dx*0.005;
+    cameraPhi=Math.max(0.1,Math.min(Math.PI-0.1,cameraPhi-dy*0.005));
+    mouseX=e.clientX;mouseY=e.clientY;
+    updateCameraPosition();
+  });
+  cv.addEventListener('mouseup',()=>mouseDown=false);
+  cv.addEventListener('mouseleave',()=>mouseDown=false);
+  cv.addEventListener('wheel',e=>{
+    cameraDistance=Math.max(10,Math.min(300,cameraDistance+e.deltaY*0.1));
+    updateCameraPosition();
+  });
+
+  window.addEventListener('resize',()=>{
+    const w2=container.clientWidth,h2=container.clientHeight;
+    camera.aspect=w2/h2;camera.updateProjectionMatrix();
+    renderer.setSize(w2,h2);
+  });
+
+  update3D();
+}
+
+function updateCameraPosition(){
+  if(!camera)return;
+  camera.position.set(
+    cameraDistance*Math.sin(cameraPhi)*Math.cos(cameraTheta),
+    cameraDistance*Math.cos(cameraPhi),
+    cameraDistance*Math.sin(cameraPhi)*Math.sin(cameraTheta)
+  );
+  camera.lookAt(0,vehicle.height?vehicle.height/2:15,0);
+}
+
+function update3D(){
+  if(!vehicleGroup)return;
+  while(vehicleGroup.children.length)vehicleGroup.remove(vehicleGroup.children[0]);
+
+  const h=vehicle.height||70;
+  const d=vehicle.diameter||3.7;
+  const bodyColor=new THREE.Color(vehicle.bodyColor||'#e0e0e0');
+  const accentColor=new THREE.Color(vehicle.accentColor||'#1a1a2e');
+  const stageColors=[0x4fc3f7,0x81c784,0xffb74d,0xe57373,0xba68c8,0x4db6ac];
+
+  const numStages=stages.length||1;
+  const stageHeight=h/numStages;
+
+  for(let i=0;i<numStages;i++){
+    const sGroup=new THREE.Group();
+    const sH=stageHeight*0.92;
+    const sD=d*(1-i*0.05);
+    const sColor=new THREE.Color(stages[i]?stages[i].color:'#4fc3f7');
+
+    const bodyGeo=new THREE.CylinderGeometry(sD/2,sD/2,sH,16);
+    const bodyMat=new THREE.MeshPhongMaterial({color:sColor,wireframe:wireframeMode,transparent:!wireframeMode,opacity:wireframeMode?1:0.85,shininess:60});
+    const body=new THREE.Mesh(bodyGeo,bodyMat);
+    body.position.y=i*stageHeight+sH/2;
+    sGroup.add(body);
+
+    const ringGeo=new THREE.TorusGeometry(sD/2+0.05,0.08,8,16);
+    const ringMat=new THREE.MeshPhongMaterial({color:accentColor,wireframe:wireframeMode});
+    const ring=new THREE.Mesh(ringGeo,ringMat);
+    ring.rotation.x=Math.PI/2;
+    ring.position.y=i*stageHeight;
+    sGroup.add(ring);
+
+    if(i===numStages-1){
+      const coneH=d*1.8;
+      const coneGeo=new THREE.ConeGeometry(sD/2,coneH,16);
+      const coneMat=new THREE.MeshPhongMaterial({color:bodyColor,wireframe:wireframeMode,transparent:!wireframeMode,opacity:wireframeMode?1:0.9});
+      const cone=new THREE.Mesh(coneGeo,coneMat);
+      cone.position.y=h+coneH/2;
+      sGroup.add(cone);
+
+      if(vehicle.crew>0){
+        const capGeo=new THREE.SphereGeometry(sD/2*0.8,16,12,0,Math.PI*2,0,Math.PI/2);
+        const capMat=new THREE.MeshPhongMaterial({color:0xaaaaaa,wireframe:wireframeMode});
+        const cap=new THREE.Mesh(capGeo,capMat);
+        cap.position.y=h+coneH;
+        sGroup.add(cap);
+      }
+    }
+
+    if(i===0){
+      const finW=d*0.8,finH=stageHeight*0.35,finD=0.15;
+      for(let f=0;f<4;f++){
+        const finGeo=new THREE.BoxGeometry(finD,finH,finW);
+        const finMat=new THREE.MeshPhongMaterial({color:accentColor,wireframe:wireframeMode});
+        const fin=new THREE.Mesh(finGeo,finMat);
+        const angle=f*Math.PI/2;
+        fin.position.set(Math.sin(angle)*(sD/2+finW/2),finH/2,Math.cos(angle)*(sD/2+finW/2));
+        fin.rotation.y=angle;
+        sGroup.add(fin);
+      }
+    }
+
+    if(i===0&&vehicle.engines){
+      const engCount=Math.min(vehicle.engines,9);
+      for(let e=0;e<engCount;e++){
+        const eGeo=new THREE.CylinderGeometry(0.15,0.25,0.6,8);
+        const eMat=new THREE.MeshPhongMaterial({color:0x333333,wireframe:wireframeMode});
+        const eng=new THREE.Mesh(eGeo,eMat);
+        const ring2=e===0?0:Math.floor(e/3)+1;
+        const angle=(e%3)*Math.PI*2/3+(i*0.3);
+        const radius=sD/2*0.5*ring2;
+        eng.position.set(Math.sin(angle)*radius,-0.3,Math.cos(angle)*radius);
+        sGroup.add(eng);
+
+        const flameGeo=new THREE.ConeGeometry(0.12,1.2,6);
+        const flameMat=new THREE.MeshBasicMaterial({color:0xff6600,wireframe:wireframeMode,transparent:true,opacity:0.7});
+        const flame=new THREE.Mesh(flameGeo,flameMat);
+        flame.position.set(Math.sin(angle)*radius,-1,Math.cos(angle)*radius);
+        flame.rotation.x=Math.PI;
+        sGroup.add(flame);
+      }
+    }
+
+    vehicleGroup.add(sGroup);
+  }
+
+  if(vehicle.solar>0){
+    const panelW=vehicle.solar/5;
+    for(let side=-1;side<=1;side+=2){
+      const panelGeo=new THREE.BoxGeometry(panelW,0.05,3);
+      const panelMat=new THREE.MeshPhongMaterial({color:0x1a237e,wireframe:wireframeMode});
+      const panel=new THREE.Mesh(panelGeo,panelMat);
+      panel.position.set(side*(d/2+panelW/2+0.2),h*0.7,0);
+      vehicleGroup.add(panel);
+    }
+  }
+
+  document.getElementById('vi-alt').textContent=h.toFixed(0);
+}
+
+function toggleWireframe(btn){
+  wireframeMode=!wireframeMode;
+  btn.classList.toggle('active');
+  update3D();
+}
+
+function toggleGrid(btn){
+  showGrid=!showGrid;
+  btn.classList.toggle('active');
+  gridHelper.visible=showGrid;
+}
+
+function toggleAxes(btn){
+  showAxes=!showAxes;
+  btn.classList.toggle('active');
+  axesHelper.visible=showAxes;
+}
+
+function resetCamera(){
+  cameraDistance=80;cameraTheta=Math.PI/6;cameraPhi=Math.PI/4;
+  updateCameraPosition();
+}
+
+function cycleColorScheme(btn){
+  colorSchemeIdx=(colorSchemeIdx+1)%colorSchemes.length;
+  btn.textContent=colorSchemes[colorSchemeIdx];
+  showToast('Color scheme: '+colorSchemes[colorSchemeIdx]);
+  update3D();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(vehicleGroup){
+    vehicleGroup.rotation.y+=0.003;
+  }
+  if(renderer&&scene&&camera)renderer.render(scene,camera);
+}
+
+fetch('/api/vehicle/list').then(r=>r.json()).then(data=>{
+  if(Array.isArray(data)&&data.length){
+    savedVehicles=data;
+    localStorage.setItem('zicore_vehicles',JSON.stringify(savedVehicles));
+    renderSavedList();
+  }
+}).catch(()=>{});
+
+init();
+</script>
+</body>
+</html>

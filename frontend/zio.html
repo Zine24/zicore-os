@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE ZIO — AI Copilot</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+THREE.STLLoader=function(){};
+THREE.STLLoader.prototype.load=function(url,onLoad,onProgress,onError){
+  var scope=this;
+  var xhr=new XMLHttpRequest();
+  if(onProgress)xhr.addEventListener('progress',onProgress);
+  xhr.addEventListener('load',function(){
+    if(xhr.status===200||xhr.status===0){
+      var buffer=xhr.response||xhr.responseText;
+      var geometry=scope.parse(buffer);
+      onLoad(geometry);
+    }else if(onError){onError(xhr);}
+  });
+  xhr.addEventListener('error',function(){if(onError)onError(xhr);});
+  xhr.open('GET',url,true);
+  xhr.responseType='arraybuffer';
+  xhr.send();
+};
+THREE.STLLoader.prototype.parse=function(buffer){
+  var binary=false;
+  var reader=new DataView(new Uint8Array(buffer));
+  var header='';
+  for(var i=0;i<80;i++){header+=String.fromCharCode(reader.getUint8(i,true));}
+  if(header.indexOf('solid')===0&&header.indexOf('facet')>-1){binary=false;}
+  else{binary=true;}
+  if(binary){
+    var offset=80;
+    var numTriangles=reader.getUint32(offset,true);offset+=4;
+    var vertices=[];var normals=[];
+    for(var i=0;i<numTriangles;i++){
+      var nx=reader.getFloat32(offset,true);offset+=4;
+      var ny=reader.getFloat32(offset,true);offset+=4;
+      var nz=reader.getFloat32(offset,true);offset+=4;
+      for(var j=0;j<3;j++){
+        var x=reader.getFloat32(offset,true);offset+=4;
+        var y=reader.getFloat32(offset,true);offset+=4;
+        var z=reader.getFloat32(offset,true);offset+=4;
+        vertices.push(x,y,z);normals.push(nx,ny,nz);
+      }
+      offset+=2;
+    }
+    var geometry=new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+    return geometry;
+  }else{
+    var data=new TextDecoder().decode(new Uint8Array(buffer));
+    var vertices=[];var normals=[];
+    var lines=data.split('\n');
+    for(var i=0;i<lines.length;i++){
+      var line=lines[i].trim();
+      if(line.indexOf('facet normal')===0){
+        var parts=line.split(/\s+/);
+        var nx=parseFloat(parts[2])||0;var ny=parseFloat(parts[3])||0;var nz=parseFloat(parts[4])||0;
+        normals.push(nx,ny,nz,nx,ny,nz,nx,ny,nz);
+      }else if(line.indexOf('vertex')===0){
+        var parts=line.split(/\s+/);
+        vertices.push(parseFloat(parts[1])||0,parseFloat(parts[2])||0,parseFloat(parts[3])||0);
+      }
+    }
+    var geometry=new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals.length>=vertices.length?normals:new Array(vertices.length).fill(0),3));
+    return geometry;
+  }
+};
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#06080e;font-family:'Segoe UI',system-ui,sans-serif;color:#c8d0dc}
+
+:root{--glow:#00e5ff;--glow2:#7c4dff;--text2:#607080}
+
+#app{display:flex;height:100vh;flex-direction:column}
+
+/* TOP NAV */
+.zio-topnav{display:flex;align-items:center;gap:0;background:rgba(6,8,14,0.95);border-bottom:1px solid rgba(0,229,255,0.08);padding:0 16px;height:42px;backdrop-filter:blur(16px);flex-shrink:0}
+.zio-topnav-brand{display:flex;align-items:center;gap:8px;padding-right:16px;border-right:1px solid rgba(0,229,255,0.08);margin-right:4px;cursor:pointer;text-decoration:none}
+.zio-topnav-brand svg{width:20px;height:20px;flex-shrink:0}
+.zio-topnav-brand span{font-size:10px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--glow),var(--glow2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.zio-topnav-items{display:flex;align-items:center;gap:0;flex:1;overflow-x:auto}
+.zio-topnav-items::-webkit-scrollbar{display:none}
+.ztn-btn{display:flex;align-items:center;gap:5px;padding:6px 11px;font-size:10px;letter-spacing:0.5px;color:#607080;cursor:pointer;border:none;background:none;transition:all .15s;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
+.ztn-btn:hover{color:#c8d0dc;background:rgba(255,255,255,0.02)}
+.ztn-btn.active{color:var(--glow);border-bottom-color:var(--glow)}
+.ztn-btn svg{width:12px;height:12px;flex-shrink:0}
+.ztn-sep{width:1px;height:16px;background:rgba(0,229,255,0.08);flex-shrink:0}
+.zio-topnav-right{display:flex;align-items:center;gap:10px;margin-left:auto;padding-left:12px;border-left:1px solid rgba(0,229,255,0.08)}
+.ztn-status{font-size:9px;color:#607080;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+.ztn-status.online{color:#0f6}
+.ztn-status.offline{color:#f44}
+.ztn-back{font-size:10px;color:#607080;cursor:pointer;padding:4px 8px;border:1px solid rgba(0,229,255,0.08);border-radius:4px;transition:all .15s;background:none;font-family:inherit;white-space:nowrap}
+.ztn-back:hover{border-color:rgba(0,229,255,0.3);color:var(--glow)}
+
+
+#main{flex:1;display:flex;overflow:hidden}
+
+#sidebar{
+  width:220px;min-width:220px;background:rgba(6,8,14,0.5);
+  border-right:1px solid rgba(0,229,255,0.08);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#sidebar .section{padding:10px;border-bottom:1px solid rgba(0,229,255,0.06)}
+#sidebar .section-title{font-size:7px;letter-spacing:2px;color:var(--text2);margin-bottom:6px;text-transform:uppercase}
+#sidebar .provider-item{
+  padding:5px 8px;margin:2px 0;font-size:10px;color:#899;cursor:pointer;
+  border:1px solid transparent;transition:all .2s;display:flex;align-items:center;gap:8px;
+}
+#sidebar .provider-item:hover{border-color:rgba(0,229,255,0.15);color:#ccc}
+#sidebar .provider-item.active{border-color:rgba(0,229,255,0.3);color:var(--glow);background:rgba(0,229,255,0.05)}
+#sidebar .provider-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+#sidebar .provider-dot.enabled{background:#0f6}
+#sidebar .provider-dot.disabled{background:#555}
+#sidebar .model-select{
+  flex:1;min-width:0;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:4px 6px;font-size:10px;font-family:inherit;outline:none;
+}
+#sidebar .model-refresh{
+  display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;
+  background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);border-radius:3px;
+  color:var(--glow);font-size:12px;cursor:pointer;margin-left:4px;transition:all .2s;
+}
+#sidebar .model-refresh:hover{background:rgba(0,229,255,0.25);border-color:var(--glow)}
+#sidebar .model-row{display:flex;align-items:center;margin-top:4px}
+#sidebar .ollama-btn{
+  display:flex;align-items:center;justify-content:center;gap:4px;width:100%;
+  background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:3px;
+  color:var(--glow);font-size:9px;cursor:pointer;padding:6px 8px;margin-top:6px;transition:all .2s;
+}
+#sidebar .ollama-btn:hover{background:rgba(0,229,255,0.1);border-color:var(--glow)}
+#sidebar .ollama-status{font-size:8px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:4px}
+#sidebar .ollama-status .dot{width:6px;height:6px;border-radius:50%}
+#sidebar .ollama-status .dot.online{background:#0f6}#sidebar .ollama-status .dot.offline{background:#f44}
+#sidebar .zctrl-status{display:flex;align-items:center;gap:6px;font-size:8px;color:var(--text2);margin-bottom:6px;padding:5px 6px;background:rgba(0,0,0,0.25);border:1px solid rgba(0,229,255,0.08);border-radius:3px}
+#sidebar .zctrl-dot{width:7px;height:7px;border-radius:50%;background:#555;flex-shrink:0}
+#sidebar .zctrl-meta{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sidebar .zctrl-row{display:flex;gap:4px;margin-bottom:5px;align-items:center}
+#sidebar .zctrl-row input,#sidebar .zctrl-row select{flex:1;min-width:0;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);color:var(--glow);padding:4px 6px;font-size:9px;font-family:inherit;outline:none;border-radius:3px}
+#sidebar .zctrl-row input:focus,#sidebar .zctrl-row select:focus{border-color:rgba(0,229,255,0.35)}
+#sidebar .zctrl-btn{flex-shrink:0;padding:4px 8px;font-size:8px;letter-spacing:1px;cursor:pointer;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--glow);border-radius:3px;transition:all .2s}
+#sidebar .zctrl-btn:hover{background:rgba(0,229,255,0.15)}
+#sidebar .zctrl-btn.primary{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.35)}
+#sidebar .zctrl-btn.danger{border-color:rgba(255,80,80,0.3);color:#f66}
+#sidebar .zctrl-btn.danger:hover{background:rgba(255,80,80,0.12)}
+#sidebar .zctrl-out{background:rgba(0,0,0,0.35);border:1px solid rgba(0,229,255,0.08);border-radius:3px;padding:6px;font-family:monospace;font-size:8px;color:var(--text2);max-height:140px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;line-height:1.5}
+#sidebar .zctrl-out .ok{color:#0f6}
+#sidebar .zctrl-out .err{color:#f66}
+#sidebar .portal-card{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;margin:2px 0;
+  font-size:10px;color:#899;background:rgba(0,0,0,0.25);
+  border:1px solid rgba(0,229,255,0.08);border-radius:4px;
+  cursor:pointer;text-decoration:none;transition:all .2s;
+}
+#sidebar .portal-card:hover{color:var(--glow);border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06);transform:translateX(2px)}
+#sidebar .portal-card .p-icon{font-size:12px;width:16px;text-align:center}
+#sidebar .portal-card .p-arrow{margin-left:auto;opacity:0;transition:opacity .2s}
+#sidebar .portal-card:hover .p-arrow{opacity:1}
+#sidebar .param-group{margin:4px 0}
+#sidebar .param-label{font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:2px}
+#sidebar .param-slider{
+  width:100%;-webkit-appearance:none;height:3px;background:rgba(0,229,255,0.1);
+  border-radius:2px;outline:none;
+}
+#sidebar .param-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;background:var(--glow);border-radius:50%;cursor:pointer;
+}
+#sidebar .param-val{font-size:10px;color:var(--glow);text-align:right}
+
+#chatArea{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+#messages{
+  flex:1;overflow-y:auto;padding:16px;font-size:12px;line-height:1.6;
+}
+#messages::-webkit-scrollbar{width:3px}
+#messages::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.12)}
+.msg{margin:8px 0;max-width:85%}
+.msg.user{margin-left:auto;text-align:right}
+.msg.user .bubble{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12);display:inline-block;padding:8px 12px;border-radius:4px 4px 0 4px;text-align:left}
+.msg.zio .bubble{background:rgba(124,77,255,0.05);border:1px solid rgba(124,77,255,0.1);display:inline-block;padding:8px 12px;border-radius:4px 4px 4px 0;text-align:left}
+.msg.zio .bubble:empty::after{content:'...';letter-spacing:2px;color:rgba(124,77,255,0.7);animation:zioTyping 1s steps(4) infinite}
+@keyframes zioTyping{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
+.msg .label{font-size:8px;letter-spacing:2px;margin-bottom:2px}
+.msg.user .label{color:rgba(0,229,255,0.6)}
+.msg.zio .label{color:rgba(124,77,255,0.6)}
+.msg .meta{font-size:8px;color:var(--text2);margin-top:2px}
+.msg.system{max-width:100%;text-align:center}
+.msg.system .bubble{color:var(--text2);font-size:9px;padding:2px 8px}
+.msg.error{max-width:100%;text-align:center}
+.msg.error .bubble{color:#f44;font-size:9px;padding:2px 8px;background:rgba(255,60,60,0.05);border:1px solid rgba(255,60,60,0.1)}
+.msg.meta{display:none}
+
+#inputArea{
+  padding:10px 16px;background:rgba(6,8,14,0.95);
+  border-top:1px solid rgba(0,229,255,0.08);
+  display:flex;gap:8px;align-items:flex-end;
+}
+#chatInput{
+  flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:8px 12px;font-size:12px;font-family:inherit;outline:none;
+  resize:none;max-height:100px;min-height:36px;
+}
+#chatInput:focus{border-color:rgba(0,229,255,0.25)}
+#sendBtn{
+  padding:8px 20px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);
+  color:var(--glow);cursor:pointer;font-size:10px;letter-spacing:2px;transition:all .2s;
+  height:36px;clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);
+}
+#sendBtn:hover{background:rgba(0,229,255,0.12)}
+.quick-cmd{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--cyan,#00e5ff);padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.quick-cmd:hover{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.3)}
+#sendBtn:disabled{opacity:0.4;cursor:not-allowed}
+
+#genPanel{
+  display:none;padding:10px 16px;background:rgba(6,8,14,0.95);
+  border-top:1px solid rgba(0,229,255,0.08);
+}
+#genPanel.active{display:flex;gap:8px;align-items:center}
+#genPanel select{
+  background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+#genPanel input{
+  flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:5px 8px;font-size:10px;font-family:inherit;outline:none;
+}
+#genPanel button{
+  padding:5px 16px;background:rgba(124,77,255,0.08);border:1px solid rgba(124,77,255,0.2);
+  color:var(--glow2);cursor:pointer;font-size:9px;letter-spacing:2px;transition:all .2s;
+}
+#genPanel button:hover{background:rgba(124,77,255,0.15)}
+
+#outputPreview{
+  display:none;padding:8px 16px;background:rgba(0,0,0,0.5);
+  border-top:1px solid rgba(0,229,255,0.06);text-align:center;
+}
+#outputPreview.active{display:block}
+#outputPreview img,#outputPreview video{max-width:100%;max-height:200px;border:1px solid rgba(0,229,255,0.1)}
+#outputPreview .output-path{font-size:9px;color:var(--text2);margin-top:4px}
+.mesh-preview{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px}
+.mesh-preview canvas{width:280px;height:200px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);border-radius:4px}
+.mesh-preview .mesh-actions{display:flex;gap:6px}
+.mesh-preview .mesh-btn{padding:5px 14px;font-size:9px;letter-spacing:1px;cursor:pointer;border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.04);color:var(--glow);transition:all .2s}
+.mesh-preview .mesh-btn:hover{background:rgba(0,229,255,0.1)}
+.mesh-preview .mesh-btn.accent{border-color:rgba(124,77,255,0.2);color:var(--glow2)}
+
+#meshModal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center}
+#meshModal.active{display:flex}
+#meshModalInner{width:80vw;max-width:800px;height:70vh;background:rgba(10,14,22,0.98);border:1px solid rgba(0,229,255,0.15);border-radius:4px;display:flex;flex-direction:column;overflow:hidden}
+#meshModalHeader{padding:10px 16px;border-bottom:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:space-between}
+#meshModalHeader span{font-size:10px;letter-spacing:2px;color:var(--glow)}
+#meshModalHeader button{padding:4px 12px;font-size:9px;letter-spacing:1px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--glow);cursor:pointer}
+#meshModalCanvas{flex:1;width:100%;background:rgba(0,0,0,0.5)}
+#meshModalFooter{padding:8px 16px;border-top:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:space-between}
+#meshModalFooter .mesh-info{font-size:9px;color:var(--text2)}
+#meshModalFooter .mesh-actions{display:flex;gap:6px}
+
+#bottomBar{
+  height:22px;min-height:22px;background:rgba(6,8,14,0.96);
+  border-top:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 12px;font-size:8px;color:var(--text2);gap:16px;
+}
+
+/* Ollama Modal */
+#ollamaModal{
+  display:none;position:fixed;inset:0;z-index:6000;
+  background:rgba(0,0,0,0.85);align-items:center;justify-content:center;
+}
+#ollamaModal.active{display:flex}
+#ollamaContent{
+  width:420px;max-height:80vh;background:rgba(10,14,22,0.98);
+  border:1px solid rgba(0,229,255,0.2);border-radius:6px;overflow:hidden;
+  box-shadow:0 0 40px rgba(0,229,255,0.1);
+}
+#ollamaHeader{
+  padding:12px 16px;border-bottom:1px solid rgba(0,229,255,0.1);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,229,255,0.03);
+}
+#ollamaHeader .title{font-size:10px;letter-spacing:3px;color:var(--glow);font-weight:700}
+#ollamaHeader .close-btn{
+  padding:4px 10px;font-size:9px;letter-spacing:1px;
+  background:rgba(255,60,60,0.1);border:1px solid rgba(255,60,60,0.2);
+  color:#f44;cursor:pointer;border-radius:3px;transition:all .2s;
+}
+#ollamaHeader .close-btn:hover{background:rgba(255,60,60,0.2)}
+#ollamaBody{padding:16px;max-height:60vh;overflow-y:auto}
+#ollamaBody .status-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.08);
+  border-radius:4px;margin-bottom:12px;
+}
+#ollamaBody .status-info{display:flex;align-items:center;gap:8px}
+#ollamaBody .status-dot{width:8px;height:8px;border-radius:50%}
+#ollamaBody .status-dot.online{background:#0f6;box-shadow:0 0 6px #0f6}
+#ollamaBody .status-dot.offline{background:#f44;box-shadow:0 0 6px #f44}
+#ollamaBody .status-text{font-size:10px;color:var(--glow)}
+#ollamaBody .status-host{font-size:8px;color:var(--text2)}
+#ollamaBody .action-btns{display:flex;gap:6px}
+#ollamaBody .action-btn{
+  padding:5px 12px;font-size:9px;letter-spacing:1px;cursor:pointer;
+  border-radius:3px;transition:all .2s;border:1px solid;
+}
+#ollamaBody .action-btn.start{background:rgba(0,255,100,0.1);border-color:rgba(0,255,100,0.3);color:#0f6}
+#ollamaBody .action-btn.start:hover{background:rgba(0,255,100,0.2)}
+#ollamaBody .action-btn.stop{background:rgba(255,60,60,0.1);border-color:rgba(255,60,60,0.3);color:#f44}
+#ollamaBody .action-btn.stop:hover{background:rgba(255,60,60,0.2)}
+#ollamaBody .section-title{font-size:8px;letter-spacing:2px;color:var(--text2);margin:12px 0 8px;text-transform:uppercase}
+#ollamaBody .model-list{display:flex;flex-direction:column;gap:4px}
+#ollamaBody .model-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.08);
+  border-radius:4px;cursor:pointer;transition:all .2s;
+}
+#ollamaBody .model-item:hover{border-color:rgba(0,229,255,0.2);background:rgba(0,229,255,0.03)}
+#ollamaBody .model-item.active{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.08)}
+#ollamaBody .model-name{font-size:10px;color:var(--glow)}
+#ollamaBody .model-size{font-size:8px;color:var(--text2)}
+#ollamaBody .model-actions{display:flex;gap:4px}
+#ollamaBody .model-btn{
+  padding:3px 8px;font-size:8px;letter-spacing:1px;cursor:pointer;
+  border:1px solid rgba(0,229,255,0.15);background:rgba(0,229,255,0.05);
+  color:var(--glow);border-radius:2px;transition:all .2s;
+}
+#ollamaBody .model-btn:hover{background:rgba(0,229,255,0.12)}
+#ollamaBody .model-btn.use{border-color:rgba(0,255,100,0.3);color:#0f6}
+#ollamaBody .model-btn.delete{border-color:rgba(255,60,60,0.3);color:#f44}
+#ollamaBody .pull-section{
+  margin-top:12px;padding:10px;background:rgba(0,0,0,0.3);
+  border:1px solid rgba(0,229,255,0.08);border-radius:4px;
+}
+#ollamaBody .pull-row{display:flex;gap:6px;align-items:center}
+#ollamaBody .pull-input{
+  flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.1);
+  color:var(--glow);padding:6px 10px;font-size:10px;font-family:inherit;outline:none;
+}
+#ollamaBody .pull-input:focus{border-color:rgba(0,229,255,0.25)}
+#ollamaBody .pull-btn{
+  padding:6px 14px;font-size:9px;letter-spacing:1px;cursor:pointer;
+  background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.3);
+  color:var(--glow2);border-radius:3px;transition:all .2s;white-space:nowrap;
+}
+#ollamaBody .pull-btn:hover{background:rgba(124,77,255,0.2)}
+#ollamaBody .pull-btn:disabled{opacity:0.4;cursor:not-allowed}
+#ollamaBody .pull-status{margin-top:8px;font-size:9px;color:var(--text2);min-height:14px}
+#ollamaBody .loading{color:var(--glow);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* Unified Config Box */
+.cfg-unified{display:flex;flex-direction:column;gap:8px}
+.cfg-unified .param-group{margin:0}
+.cfg-unified .param-label{display:flex;justify-content:space-between;align-items:center}
+.cfg-unified .param-val{color:var(--glow);font-weight:600}
+.cfg-unified .model-select{
+  width:100%;padding:5px 8px;background:rgba(0,0,0,0.4);
+  border:1px solid rgba(0,229,255,0.08);color:var(--glow);
+  font-size:10px;font-family:inherit;cursor:pointer;
+}
+.cfg-unified .model-select:focus{border-color:rgba(0,229,255,0.25);outline:none}
+
+/* ---- Task Monitor ---- */
+#taskPanel{position:fixed;right:0;top:44px;bottom:0;width:360px;background:#080c14;border-left:1px solid #1e2330;z-index:200;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
+#taskPanel.open{transform:translateX(0)}
+.tp-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #1e2330;flex-shrink:0}
+.tp-head .tp-title{color:var(--glow);font-size:11px;font-weight:bold;letter-spacing:1px}
+.tp-head .tp-close{background:none;border:none;color:#889;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
+.tp-head .tp-close:hover{background:#161b22;color:#e0e0e0}
+.tp-filters{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid #1e2330;flex-shrink:0}
+.tp-filter{background:#161b22;border:1px solid #2a2e3a;color:#889;padding:3px 10px;border-radius:12px;font-size:9px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.tp-filter.active{border-color:var(--glow);color:var(--glow);background:rgba(0,229,255,0.08)}
+.tp-filter:hover{border-color:#3a3e4a;color:#bbb}
+.tp-type-filter{background:none;border:1px solid transparent;color:#5a6070;padding:2px 6px;border-radius:4px;font-size:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;letter-spacing:0.5px}
+.tp-type-filter.active{border-color:rgba(255,255,255,0.15);color:#e0e0e0;background:rgba(255,255,255,0.04)}
+.tp-type-filter:hover{color:#bbb}
+.tp-list{flex:1;overflow-y:auto;padding:8px}
+.tp-empty{text-align:center;color:#4a5060;font-size:11px;padding:40px 16px;line-height:1.6}
+.task-item{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:10px 12px;margin-bottom:6px;transition:border-color 0.3s}
+.task-item:hover{border-color:#2a2e3a}
+.task-item .ti-row{display:flex;align-items:center;justify-content:space-between}
+.task-item .ti-name{color:#e0e0e0;font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-item .ti-status{font-size:8px;padding:2px 8px;border-radius:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;margin-left:8px}
+.ti-status.running{background:rgba(0,229,255,0.12);color:#00e5ff}
+.ti-status.queued{background:rgba(255,170,0,0.12);color:#ffaa00}
+.ti-status.done{background:rgba(0,255,136,0.12);color:#00ff88}
+.ti-status.error{background:rgba(255,68,68,0.12);color:#ff4444}
+.task-item .ti-meta{color:#5a6070;font-size:9px;margin-top:4px;display:flex;align-items:center;gap:8px}
+.task-item .ti-bar{height:3px;background:#1a1e28;border-radius:2px;margin-top:6px;overflow:hidden}
+.task-item .ti-bar-fill{height:100%;border-radius:2px;transition:width 0.4s;background:linear-gradient(90deg,var(--glow),var(--accent))}
+.task-item .ti-result{margin-top:6px;padding:6px 8px;background:#0a0e18;border:1px solid #1a1e28;border-radius:6px;font-size:10px;color:#889;max-height:60px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;font-family:monospace}
+.task-item .ti-cancel{background:none;border:1px solid #333;color:#666;font-size:9px;padding:2px 8px;border-radius:4px;cursor:pointer;margin-top:4px;transition:all 0.2s}
+.task-item .ti-cancel:hover{border-color:#ff4444;color:#ff4444}
+
+/* ---- Project Slider ---- */
+#projectSlider{position:fixed;left:260px;top:44px;bottom:0;width:320px;background:#080c14;border-right:1px solid #1e2330;z-index:190;transform:translateX(calc(-100% - 260px));transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden;box-shadow:4px 0 20px rgba(0,0,0,0.5)}
+#projectSlider.open{transform:translateX(0)}
+.ps-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #1e2330;flex-shrink:0}
+.ps-head .ps-title{color:var(--accent);font-size:11px;font-weight:bold;letter-spacing:1px}
+.ps-head .ps-tabs{display:flex;gap:4px;margin-left:auto;margin-right:10px}
+.ps-head .ps-tab{background:#161b22;border:1px solid #2a2e3a;color:#889;padding:3px 10px;border-radius:10px;font-size:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;letter-spacing:0.5px}
+.ps-head .ps-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(124,77,255,0.08)}
+.ps-head .ps-tab:hover{border-color:#3a3e4a;color:#bbb}
+.ps-head .ps-close{background:none;border:none;color:#889;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
+.ps-head .ps-close:hover{background:#161b22;color:#e0e0e0}
+.ps-list{flex:1;overflow-y:auto;padding:8px}
+.ps-empty{text-align:center;color:#4a5060;font-size:11px;padding:40px 16px;line-height:1.6}
+.project-item{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+.project-item:hover{border-color:var(--accent);background:#0f1320}
+.project-item.active{border-color:var(--accent);background:rgba(124,77,255,0.06)}
+.project-item .pi-row{display:flex;align-items:center;justify-content:space-between}
+.project-item .pi-name{color:#e0e0e0;font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-item .pi-badge{font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(124,77,255,0.12);color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.project-item .pi-path{color:#5a6070;font-size:9px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace}
+.project-item .pi-desc{color:#6a7080;font-size:10px;margin-top:4px;line-height:1.4}
+.project-item .pi-modified{color:#3a3e4a;font-size:9px;margin-top:3px}
+.session-item{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+.session-item:hover{border-color:var(--glow);background:#0f1320}
+.session-item.active{border-color:var(--glow);background:rgba(0,229,255,0.06)}
+.session-item .si-row{display:flex;align-items:center;justify-content:space-between}
+.session-item .si-id{color:#e0e0e0;font-size:10px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace}
+.session-item .si-count{font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(0,229,255,0.12);color:var(--glow);font-weight:600;flex-shrink:0;margin-left:8px}
+.session-item .si-preview{color:#6a7080;font-size:10px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.session-item .si-time{color:#3a3e4a;font-size:9px;margin-top:3px}
+.ps-create{display:flex;align-items:center;justify-content:center;gap:6px;background:#161b22;border:1px dashed #2a2e3a;color:#889;padding:10px;border-radius:8px;cursor:pointer;font-size:11px;transition:all 0.2s;margin-top:4px;font-family:inherit}
+.ps-create:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,77,255,0.04)}
+
+/* System Health */
+.sys-health{display:flex;flex-direction:column;gap:4px}
+.sys-health-row{display:flex;justify-content:space-between;align-items:center;font-size:9px}
+.sys-health-label{color:var(--text2)}
+.sys-health-val{color:var(--glow);font-family:'JetBrains Mono',monospace;font-weight:600}
+.sys-health-bar{width:100%;height:3px;background:rgba(0,229,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px}
+.sys-health-fill{height:100%;border-radius:2px;transition:width 0.5s ease}
+.sys-health-fill.ok{background:linear-gradient(90deg,#0f6,#0fa)}
+.sys-health-fill.warn{background:linear-gradient(90deg,#fa0,#f60)}
+.sys-health-fill.crit{background:linear-gradient(90deg,#f60,#f00)}
+
+</style>
+<link rel="stylesheet" href="/css/zicore-library.css">
+</head>
+<body>
+<div id="app">
+  <nav class="zio-topnav">
+    <a class="zio-topnav-brand" href="/">
+      <svg viewBox="0 0 36 42"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#zb)" stroke-width="1.5"/><defs><linearGradient id="zb" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#zb)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
+      <span>ZIO</span>
+    </a>
+    <div class="zio-topnav-items">
+      <button class="ztn-btn active" onclick="void(0)"><svg viewBox="0 0 14 14"><path d="M2 2h10v8H2z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 12l3-2 3 2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Chat</button>
+      <div class="ztn-sep"></div>
+      <button class="ztn-btn" onclick="window.open('/zicore','_blank')"><svg viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Portal</button>
+      <button class="ztn-btn" onclick="window.open('/dashboard','_blank')"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>Visualizer</button>
+      <button class="ztn-btn" onclick="window.open('/materializer','_blank')"><svg viewBox="0 0 14 14"><path d="M7 1L12 4v6L7 13L2 10V4L7 1z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M7 7L12 4M7 7L2 4M7 7v6" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>Materializer</button>
+      <button class="ztn-btn" onclick="window.open('/zivault','_blank')"><svg viewBox="0 0 14 14"><path d="M7 1L2 4v4c0 3 2.2 5.5 5 6 2.8-0.5 5-3 5-6V4L7 1z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>ZiVault</button>
+      <button class="ztn-btn" onclick="window.open('/settings','_blank')"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2" fill="none" stroke="currentColor" stroke-width="1"/></svg>Settings</button>
+    </div>
+    <div class="zio-topnav-right">
+      <div class="ztn-status" id="connStatus">CONNECTING...</div>
+      <button id="projectSliderBtn" onclick="toggleProjectSlider()" title="Projects">&#9776;</button>
+      <button id="taskMonitorBtn" onclick="toggleTaskPanel()" title="Task Monitor">
+        <svg viewBox="0 0 14 14" style="width:14px;height:14px"><rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 4h6M4 7h6M4 10h4" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+        <span class="badge" id="taskBadge">0</span>
+      </button>
+      <button class="ztn-back" onclick="window.location.href='/'"><svg viewBox="0 0 14 14" style="width:10px;height:10px"><path d="M9 2L4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Portal</button>
+    </div>
+  </nav>
+
+  <div id="main">
+    <div id="sidebar">
+      <div class="section">
+        <div class="section-title">CONFIGURATION</div>
+        <div class="cfg-unified">
+          <div class="param-group">
+            <div class="param-label">Provider</div>
+            <select class="model-select" id="providerSelect" onchange="switchProvider(this.value)" style="width:100%"></select>
+          </div>
+          <div class="param-group">
+            <div class="param-label">Model</div>
+            <select class="model-select" id="modelSelect" onchange="switchModel(this.value)" style="width:100%"><option>Loading...</option></select>
+          </div>
+          <div class="ollama-status" id="ollamaStatus">
+            <div class="dot offline" id="ollamaDot"></div>
+            <span id="ollamaStatusText">Checking...</span>
+          </div>
+          <div class="param-group">
+            <div class="param-label">Temperature <span class="param-val" id="tempVal">0.70</span></div>
+            <input type="range" class="param-slider" id="tempSlider" min="0" max="200" value="70" oninput="var v=(this.value/100).toFixed(2);document.getElementById('tempVal').textContent=v;saveParam('temperature',parseFloat(v));">
+          </div>
+          <div class="param-group">
+            <div class="param-label">Max Tokens <span class="param-val" id="maxTokVal">4096</span></div>
+            <input type="range" class="param-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256" oninput="document.getElementById('maxTokVal').textContent=this.value;saveParam('max_tokens',parseInt(this.value));">
+          </div>
+          <div class="param-group">
+            <div class="param-label">Top P <span class="param-val" id="topPVal">0.90</span></div>
+            <input type="range" class="param-slider" id="topPSlider" min="0" max="100" value="90" oninput="var v=(this.value/100).toFixed(2);document.getElementById('topPVal').textContent=v;saveParam('top_p',parseFloat(v));">
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">SYSTEM HEALTH</div>
+        <div class="sys-health" id="sysHealth">
+          <div class="sys-health-row"><span class="sys-health-label">CPU</span><span class="sys-health-val" id="shCpu">--%</span></div>
+          <div class="sys-health-bar"><div class="sys-health-fill ok" id="shCpuBar" style="width:0%"></div></div>
+          <div class="sys-health-row"><span class="sys-health-label">RAM</span><span class="sys-health-val" id="shRam">--/--GB</span></div>
+          <div class="sys-health-bar"><div class="sys-health-fill ok" id="shRamBar" style="width:0%"></div></div>
+          <div class="sys-health-row"><span class="sys-health-label">Disk</span><span class="sys-health-val" id="shDisk">--/--GB</span></div>
+          <div class="sys-health-bar"><div class="sys-health-fill ok" id="shDiskBar" style="width:0%"></div></div>
+          <div class="sys-health-row"><span class="sys-health-label">CPU Temp</span><span class="sys-health-val" id="shTemp">--°C</span></div>
+          <div class="sys-health-row"><span class="sys-health-label">Uptime</span><span class="sys-health-val" id="shUptime">--</span></div>
+          <div class="sys-health-row"><span class="sys-health-label">Ollama</span><span class="sys-health-val" id="shOllama">--</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">PORTALES</div>
+        <a class="portal-card" href="https://aerospace.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🚀</span>Aerospace<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://materializer.zicore.space" target="_blank" rel="noopener"><span class="p-icon">✨</span>Materializer<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://zcs.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🌍</span>Mission Control<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://engineering.zicore.space" target="_blank" rel="noopener"><span class="p-icon">⚙️</span>Engineering<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://games.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🎮</span>Games<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://zmmx.zicore.space" target="_blank" rel="noopener"><span class="p-icon">🎛️</span>ZMMX Media<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://mail.zicore.space" target="_blank" rel="noopener"><span class="p-icon">📧</span>Mail<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://mc.zicore.space/master-creator" target="_blank" rel="noopener"><span class="p-icon">🎨</span>Master Creator<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="https://zicodex.zicore.space" target="_blank" rel="noopener"><span class="p-icon">📚</span>Zicodex<span class="p-arrow">→</span></a>
+        <a class="portal-card" href="/zivault" target="_blank" rel="noopener"><span class="p-icon">🛡️</span>ZiVault<span class="p-arrow">→</span></a>
+      </div>
+      <div class="section">
+        <div class="section-title">ACTIONS</div>
+        <div class="provider-item" id="btnToggleGen">
+          <div class="provider-dot enabled"></div>Media Generator
+        </div>
+        <div class="provider-item" id="btnClearChat">
+          <div class="provider-dot disabled"></div>Clear Chat
+        </div>
+        <div class="provider-item" id="btnExportChat">
+          <div class="provider-dot disabled"></div>Export Chat
+        </div>
+        <div class="provider-item" id="btnImportChat">
+          <div class="provider-dot disabled"></div>Import Chat
+        </div>
+        <div class="provider-item" id="btnImportAssets">
+          <div class="provider-dot enabled" style="background:#00ff88"></div>Import Assets
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">ZIO CONTROL</div>
+        <div class="zctrl-status"><span class="zctrl-dot" id="zctrlDot"></span><span class="zctrl-meta" id="zctrlMeta">checking...</span></div>
+        <div class="zctrl-row">
+          <input id="zctrlChat" placeholder="Message ZIO...">
+          <button id="zctrlSend" class="zctrl-btn primary">SEND</button>
+        </div>
+        <div class="zctrl-row">
+          <select id="zctrlCmd"><option value="">-- command --</option></select>
+          <button id="zctrlExec" class="zctrl-btn" title="Execute registered command">EXEC</button>
+        </div>
+        <div class="zctrl-row">
+          <select id="zctrlSys"></select>
+          <input id="zctrlSysArgs" placeholder="args" style="flex:0 0 54px">
+          <button id="zctrlRun" class="zctrl-btn danger" title="Run allowlisted system command">RUN</button>
+        </div>
+        <div class="zctrl-out" id="zctrlOut">ZIO Control ready.</div>
+      </div>
+    </div>
+
+    <div id="chatArea">
+      <div id="messages">
+        <div class="msg zio"><div class="label">ZIO</div><div class="bubble">ZIO online. Remote inference ready. Send a message to begin.</div></div>
+      </div>
+      <div id="outputPreview"><div id="outputContent"></div><div class="output-path" id="outputPath"></div></div>
+      <div id="genPanel">
+        <select id="genTypeSelect">
+          <option value="image">Image</option>
+          <option value="sound">Sound</option>
+          <option value="video">Video</option>
+          <option value="3d">3D Mesh</option>
+        </select>
+        <input id="genPromptInput" placeholder="Describe what to generate...">
+        <button id="genBtn">GENERATE</button>
+      </div>
+      <div id="inputArea">
+        <div id="quickCmds" style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <button class="quick-cmd" onclick="quickCmd('write code for ')">Write Code</button>
+          <button class="quick-cmd" onclick="quickCmd('debug this code: ')">Debug</button>
+          <button class="quick-cmd" onclick="quickCmd('explain this code: ')">Explain</button>
+          <button class="quick-cmd" onclick="quickCmd('simulate ')">Simulate</button>
+          <button class="quick-cmd" onclick="quickCmd('run code: ')">Run Code</button>
+        </div>
+        <textarea id="chatInput" rows="1" placeholder="Type message... (Enter to send, Shift+Enter for new line)"></textarea>
+        <button id="camBtn" title="Open camera" onclick="toggleCamera()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">📷</button>
+        <button id="voiceBtn" title="Auto-speak responses" onclick="toggleAutoSpeak()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">🔇</button>
+        <button id="micBtn" title="Voice input" onclick="toggleMic()" style="background:none;border:1px solid rgba(0,229,255,0.15);color:var(--text2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;transition:all .2s">🎤</button>
+        <button id="sendBtn">SEND</button>
+      </div>
+      <div id="cameraPanel" style="display:none;position:fixed;right:16px;bottom:64px;z-index:5000;width:250px;height:250px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,229,255,0.25);background:#000;box-shadow:0 10px 50px rgba(0,0,0,0.8)">
+        <video id="cameraFeed" autoplay playsinline style="width:250px;height:250px;object-fit:cover;display:block"></video>
+        <canvas id="cameraCanvas" style="display:none"></canvas>
+        <div style="position:absolute;top:6px;left:8px;font-size:9px;color:var(--glow);letter-spacing:1px;text-transform:uppercase;background:rgba(0,0,0,0.6);padding:2px 8px;border-radius:4px">📷 ZIO VISION</div>
+        <div style="position:absolute;bottom:6px;right:8px;display:flex;gap:6px">
+          <button onclick="captureAndAnalyze()" style="background:var(--glow);color:#000;border:none;padding:5px 12px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer">ANALYZE</button>
+          <button onclick="toggleCamera()" style="background:rgba(255,85,85,0.8);color:#fff;border:none;padding:5px 10px;border-radius:4px;font-size:10px;cursor:pointer">CLOSE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottomBar">
+    <span>Provider: <span id="footerProvider">zicore_native</span></span>
+    <span>Model: <span id="footerModel">local</span></span>
+    <span>Latency: <span id="footerLatency">0ms</span></span>
+    <span>Messages: <span id="footerMsgCount">0</span></span>
+  </div>
+</div>
+
+<div id="ollamaModal">
+  <div id="ollamaContent">
+    <div id="ollamaHeader">
+      <span class="title">&#9881; OLLAMA SETTINGS</span>
+      <button class="close-btn" id="closeOllama">CLOSE</button>
+    </div>
+    <div id="ollamaBody">
+      <div class="status-row">
+        <div class="status-info">
+          <div class="status-dot offline" id="ollamaModalDot"></div>
+          <div>
+            <div class="status-text" id="ollamaModalStatus">Checking...</div>
+            <div class="status-host" id="ollamaModalHost">127.0.0.1:11434</div>
+          </div>
+        </div>
+        <div class="action-btns">
+          <button class="action-btn start" id="ollamaStartBtn">START</button>
+          <button class="action-btn stop" id="ollamaStopBtn" style="display:none">STOP</button>
+        </div>
+      </div>
+      <div class="section-title">INSTALLED MODELS</div>
+      <div class="model-list" id="ollamaModelList">
+        <div style="font-size:9px;color:var(--text2)">Loading...</div>
+      </div>
+      <div class="pull-section">
+        <div class="section-title">PULL NEW MODEL</div>
+        <div class="pull-row">
+          <input class="pull-input" id="pullModelInput" placeholder="e.g. llama3.1:8b, mistral, gemma3:2b">
+          <button class="pull-btn" id="pullModelBtn">PULL</button>
+        </div>
+        <div class="pull-status" id="pullStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="meshModal">
+  <div id="meshModalInner">
+    <div id="meshModalHeader">
+      <span id="meshModalTitle">3D VIEWER</span>
+      <button id="meshModalClose">CLOSE</button>
+    </div>
+    <canvas id="meshModalCanvas"></canvas>
+    <div id="meshModalFooter">
+      <div class="mesh-info" id="meshModalInfo">Loading...</div>
+      <div class="mesh-actions">
+        <button class="mesh-btn" id="meshModalDownload">DOWNLOAD</button>
+        <button class="mesh-btn accent" id="meshModalExportSTL">EXPORT STL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
+(function(){
+  var ws=null;
+  var config={providers:{},zio_engine:{},theme:'midnight'};
+  var activeProvider='';
+  var msgCount=0;
+  var sessionId=localStorage.getItem('zio_session_id');
+  if(!sessionId){sessionId='zio_'+Date.now()+'_'+Math.random().toString(36).substr(2,8);localStorage.setItem('zio_session_id',sessionId);}
+  var providers=[
+    {id:'zicore_native',name:'ZiCore',color:'#0ff'},
+    {id:'openrouter',name:'OpenRouter',color:'#f0f'},
+    {id:'uncensored_68',name:'ZiCore .68',color:'#f60'},
+    {id:'zicore_vps_tunnel',name:'ZICORE Tunnel',color:'#0fa'},
+    {id:'ollama',name:'Ollama (Local)',color:'#0a0'},
+    {id:'openai',name:'OpenAI',color:'#0f6'},
+    {id:'anthropic',name:'Anthropic',color:'#f80'},
+    {id:'groq',name:'Groq',color:'#ff0'},
+    {id:'deepseek',name:'DeepSeek',color:'#08f'},
+    {id:'together',name:'Together AI',color:'#a0f'},
+    {id:'opencode',name:'OpenCode',color:'#0fc'},
+  ];
+
+  function getToken(){
+    return localStorage.getItem('zicore_sso_token')||'';
+  }
+  /* ── Per-user ZIO prefs (localStorage keyed by user) ── */
+  function getPrefsUser(){
+    try{
+      var u=JSON.parse(localStorage.getItem('zicore_sso_user')||'null');
+      return (u&&u.username)?u.username:'guest';
+    }catch(e){return 'guest';}
+  }
+  function loadZioPrefs(){
+    try{return JSON.parse(localStorage.getItem('zc_zio_prefs_'+getPrefsUser())||'{}');}
+    catch(e){return {};}
+  }
+  function setZioPref(k,v){
+    try{
+      var p=loadZioPrefs();p[k]=v;
+      localStorage.setItem('zc_zio_prefs_'+getPrefsUser(),JSON.stringify(p));
+    }catch(e){}
+  }
+  function applyUserZioPrefs(){
+    var p=loadZioPrefs();
+    if(p.provider){
+      var provCfg=config.providers&&config.providers[p.provider];
+      if(!provCfg||provCfg.enabled!==false){
+        activeProvider=p.provider;
+      }
+    }
+    if(p.model){
+      if(!config.providers)config.providers={};
+      if(!config.providers[activeProvider])config.providers[activeProvider]={};
+      config.providers[activeProvider].default_model=p.model;
+    }
+    if(p.provider||p.model){
+      if(!config.zio_engine)config.zio_engine={};
+      config.zio_engine.active_provider=activeProvider;
+      config.zio_engine.active_model=(p.model||(config.providers[activeProvider]&&config.providers[activeProvider].default_model));
+    }
+  }
+  function apiFetch(path, opts){
+    opts=opts||{};
+    opts.headers=opts.headers||{};
+    if(!opts.headers['Authorization']){
+      var t=getToken();
+      if(t)opts.headers['Authorization']='Bearer '+t;
+    }
+    return fetch(path,opts);
+  }
+
+  function init(){
+    var steps=[renderProviderSelect,connectWS,loadConfig,setupInput,setupButtons,setupSliders,setupGenPanel,loadChatHistory,zctrlStatus,zctrlLoadCmds];
+    steps.forEach(function(fn){
+      try{fn();}catch(e){console.error('Init error in '+fn.name+':',e);}
+    });
+    setInterval(zctrlStatus,10000);
+    function refreshSysHealth(){
+    fetch('/api/system/stats').then(function(r){return r.json();}).then(function(d){
+      var cpu=d.cpu_percent||0;
+      var ramP=d.memory_percent||0;
+      var ramUsed=(d.memory_used_mb/1024).toFixed(1);
+      var ramTot=(d.memory_total_mb/1024).toFixed(1);
+      var diskP=d.disk_percent||0;
+      var diskUsed=d.disk_used_gb||0;
+      var diskTot=d.disk_total_gb||0;
+      document.getElementById('shCpu').textContent=cpu.toFixed(1)+'%';
+      document.getElementById('shRam').textContent=ramUsed+'/'+ramTot+'GB';
+      document.getElementById('shDisk').textContent=diskUsed+'/'+diskTot+'GB';
+      document.getElementById('shUptime').textContent=d.uptime||'--';
+      document.getElementById('shOllama').textContent=d.ollama_status?'Online':'Offline';
+      var temp=d.cpu_temp;
+      document.getElementById('shTemp').textContent=temp?temp+'°C':'N/A';
+      var setBar=function(id,pct){var el=document.getElementById(id);if(!el)return;el.style.width=Math.min(pct,100)+'%';el.className='sys-health-fill '+(pct>80?'crit':pct>60?'warn':'ok');};
+      setBar('shCpuBar',cpu);
+      setBar('shRamBar',ramP);
+      setBar('shDiskBar',diskP);
+    }).catch(function(){});
+  }
+  setInterval(refreshSysHealth,5000);
+  refreshSysHealth();
+  }
+
+  function renderProviderSelect(){
+    var sel=document.getElementById('providerSelect');
+    if(!sel)return;
+    sel.innerHTML='';
+    providers.forEach(function(p){
+      var o=document.createElement('option');
+      o.value=p.id;o.textContent=p.name;
+      if(p.id===activeProvider)o.selected=true;
+      sel.appendChild(o);
+    });
+  }
+
+  function switchProvider(pid){
+    activeProvider=pid;
+    setZioPref('provider',pid);
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine.active_provider=pid;
+    var provCfg=config.providers[pid]||{};
+    if(provCfg.default_model){
+      config.zio_engine.active_model=provCfg.default_model;
+      setZioPref('model',provCfg.default_model);
+    }
+    apiFetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
+    .then(function(){
+      updateModelSelect();
+      addMsg('system','Switched to provider: '+pid);
+    }).catch(function(){});
+  }
+
+  function switchModel(model){
+    if(!config.providers)config.providers={};
+    if(!config.providers[activeProvider])config.providers[activeProvider]={};
+    config.providers[activeProvider].default_model=model;
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine.active_model=model;
+    setZioPref('model',model);
+    apiFetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
+    .then(function(){
+      document.getElementById('footerModel').textContent=model;
+      addMsg('system','Model: '+model);
+    }).catch(function(){});
+  }
+
+  function setupGenPanel(){
+    document.getElementById('genBtn').addEventListener('click',function(){
+      var type=document.getElementById('genTypeSelect').value;
+      var prompt=document.getElementById('genPromptInput').value.trim();
+      if(!prompt)return;
+      if(ws&&ws.readyState===WebSocket.OPEN){
+        ws.send(JSON.stringify({command:'generate',payload:{type:type,prompt:prompt}}));
+        addMsg('user','[GEN '+type.toUpperCase()+'] '+prompt);
+      }
+    });
+  }
+  function speakText(text, lang){
+    if(!window.speechSynthesis)return;
+    window.speechSynthesis.cancel();
+    var utter=new SpeechSynthesisUtterance(text);
+    utter.rate=1.0;utter.pitch=1.0;
+    utter.lang=lang||'es';
+    var voices=speechSynthesis.getVoices();
+    var best=voices.find(function(v){return v.lang&&v.lang.startsWith(utter.lang)});
+    if(best)utter.voice=best;
+    speechSynthesis.speak(utter);
+  }
+  var _micRecognition=null;
+  function toggleMic(){
+    if(_micRecognition){_micRecognition.stop();_micRecognition=null;return;}
+    var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SpeechRecognition){alert('Reconocimiento de voz no soportado. Usa Chrome o Edge.');return;}
+    var micBtn=document.getElementById('micBtn');
+    _micRecognition=new SpeechRecognition();
+    _micRecognition.continuous=false;_micRecognition.interimResults=true;
+    _micRecognition.lang=(typeof ZICORE_TRANSLATE!=='undefined')?ZICORE_TRANSLATE.getSourceLang():'es';
+    micBtn.textContent='🔴';micBtn.style.borderColor='var(--red)';micBtn.style.color='var(--red)';
+    _micRecognition.onresult=function(event){
+      var text='';
+      for(var i=event.resultIndex;i<event.results.length;i++)text+=event.results[i][0].transcript;
+      document.getElementById('chatInput').value=text;
+    };
+    _micRecognition.onend=function(){micBtn.textContent='🎤';micBtn.style.borderColor='';micBtn.style.color='';_micRecognition=null;};
+    _micRecognition.onerror=function(e){
+      micBtn.textContent='🎤';micBtn.style.borderColor='';micBtn.style.color='';_micRecognition=null;
+      if(e.error==='not-allowed')addMsg('error','Permiso de micrófono denegado. Activa el micrófono en la config del navegador.');
+      else if(e.error==='no-speech')addMsg('error','No se detectó voz. Intenta de nuevo.');
+      else if(e.error==='network')addMsg('error','Error de red en reconocimiento de voz.');
+      else addMsg('error','Error de voz: '+e.error);
+    };
+    _micRecognition.start();
+  }
+
+  /* ── Auto-speak mode ─────────────────────────── */
+  var _autoSpeak=false;
+  function toggleAutoSpeak(){
+    _autoSpeak=!_autoSpeak;
+    var btn=document.getElementById('voiceBtn');
+    if(_autoSpeak){btn.textContent='🔊';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';}
+    else{btn.textContent='🔇';btn.style.borderColor='rgba(0,229,255,0.15)';btn.style.color='var(--text2)';}
+  }
+
+  /* ── Camera (Webcam) ─────────────────────────── */
+  var _cameraStream=null;
+  function toggleCamera(){
+    var panel=document.getElementById('cameraPanel');
+    var video=document.getElementById('cameraFeed');
+    var camBtn=document.getElementById('camBtn');
+    if(_cameraStream){
+      _cameraStream.getTracks().forEach(function(t){t.stop();});
+      _cameraStream=null;
+      video.srcObject=null;
+      panel.style.display='none';
+      camBtn.style.borderColor='rgba(0,229,255,0.15)';camBtn.style.color='var(--text2)';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}}).then(function(stream){
+      _cameraStream=stream;
+      video.srcObject=stream;
+      panel.style.display='block';
+      camBtn.style.borderColor='var(--glow)';camBtn.style.color='var(--glow)';
+    }).catch(function(e){
+      addMsg('error','Camera access denied: '+e.message);
+    });
+  }
+
+  function captureAndAnalyze(){
+    var video=document.getElementById('cameraFeed');
+    var canvas=document.getElementById('cameraCanvas');
+    if(!video.srcObject){addMsg('error','Open camera first');return;}
+    canvas.width=video.videoWidth||640;canvas.height=video.videoHeight||480;
+    canvas.getContext('2d').drawImage(video,0,0);
+    var base64=canvas.toDataURL('image/jpeg',0.7);
+    document.getElementById('chatInput').value='Analyze this image';
+    quickCmd('analyze image from camera');
+    fetch(API_BASE+'/api/vision/analyze',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},
+      body:JSON.stringify({image:base64})
+    }).then(function(r){return r.json();}).then(function(d){
+      var result=d.result||d;
+      var labels=(result.labels||[]).join(', ');
+      var desc=result.analysis||result.description||JSON.stringify(result).substring(0,300);
+      addMsg('ai','📷 **Vision Analysis**\nLabels: '+labels+'\n'+desc);
+    }).catch(function(e){addMsg('error','Vision analysis failed: '+e.message);});
+  }
+
+  /* ── ZIO Control (sidebar) ─────────────────────── */
+  function zctrlOut(html){
+    var el=document.getElementById('zctrlOut');
+    if(el)el.innerHTML=html;
+  }
+  function zctrlStatus(){
+    apiFetch('/api/agent/status').then(function(r){return r.json();}).then(function(d){
+      var meta=document.getElementById('zctrlMeta');
+      var dot=document.getElementById('zctrlDot');
+      if(!meta||!dot)return;
+      if(d.error){meta.textContent='offline';dot.style.background='#f44';return;}
+      meta.textContent=String(d.status||'online').toUpperCase()+' · '+(d.provider||'')+' · v'+(d.version||'');
+      dot.style.background='#0f6';
+    }).catch(function(){});
+  }
+  function zctrlLoadCmds(){
+    apiFetch('/api/agent/commands').then(function(r){return r.json();}).then(function(d){
+      var sel=document.getElementById('zctrlCmd');
+      if(!sel)return;
+      var cmds=d.commands||[];
+      sel.innerHTML='<option value="">-- command --</option>'+cmds.map(function(c){
+        return '<option value="'+c.name+'">'+c.name+' ['+c.permission+']</option>';
+      }).join('');
+      var sys=document.getElementById('zctrlSys');
+      if(sys){
+        var presets=['uptime','uname -a','hostname','whoami','date','df -h','free -h','ps aux','ls -la','ping -c 3','ip -4 addr','ss -tulpn','ver','systeminfo','tasklist','netstat -an','ipconfig'];
+        sys.innerHTML=presets.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+      }
+    }).catch(function(){});
+  }
+  function zctrlSendChat(){
+    var inp=document.getElementById('zctrlChat');
+    var msg=(inp.value||'').trim();
+    if(!msg)return;
+    zctrlOut('<span class="ok">&gt;</span> '+msg.replace(/</g,'&lt;'));
+    inp.value='';
+    apiFetch('/api/agent/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})})
+      .then(function(r){return r.json();}).then(function(d){
+        if(d.error==='Authentication required'){zctrlOut('<span class="err">Login required</span>');return;}
+        var resp=d.response||JSON.stringify(d);
+        zctrlOut('<span class="ok">ZIO:</span> '+resp.replace(/</g,'&lt;').replace(/\n/g,'<br>'));
+      }).catch(function(e){zctrlOut('<span class="err">ERROR: '+e.message+'</span>');});
+  }
+  function zctrlRunCmd(){
+    var sel=document.getElementById('zctrlCmd');
+    if(!sel||!sel.value)return;
+    var name=sel.value;
+    zctrlOut('EXEC ['+name+'] ...');
+    apiFetch('/api/agent/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:name,params:{},permission:'action'})})
+      .then(function(r){return r.json();}).then(function(d){
+        if(d.error==='Authentication required'){zctrlOut('<span class="err">Login required</span>');return;}
+        if(d.ok)zctrlOut('<span class="ok">OK ('+d.elapsed_ms+'ms):</span> '+JSON.stringify(d.result,null,1).replace(/</g,'&lt;'));
+        else zctrlOut('<span class="err">FAIL:</span> '+((d.error)||JSON.stringify(d)).replace(/</g,'&lt;'));
+      }).catch(function(e){zctrlOut('<span class="err">ERROR: '+e.message+'</span>');});
+  }
+  function zctrlRunSys(){
+    var sys=document.getElementById('zctrlSys');
+    if(!sys||!sys.value)return;
+    var full=sys.value.split(' ');
+    var cmd=full[0];
+    var defArgs=full.slice(1).join(' ');
+    var args=(document.getElementById('zctrlSysArgs').value||'').trim()||defArgs;
+    zctrlOut('RUN ['+cmd+(args?' '+args:'')+'] ...');
+    apiFetch('/api/agent/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:'system_exec',params:{cmd:cmd,args:args},permission:'action'})})
+      .then(function(r){return r.json();}).then(function(d){
+        if(d.error==='Authentication required'){zctrlOut('<span class="err">Login required</span>');return;}
+        if(d.ok&&d.result){
+          var out=d.result.stdout||'';var err=d.result.stderr||'';
+          zctrlOut('<span class="ok">exit '+d.result.returncode+':</span>\n'+out.replace(/</g,'&lt;')+(err?'\n<span class="err">[stderr]</span>\n'+err.replace(/</g,'&lt;'):''));
+        }else{
+          var m=(d.error)||(d.result&&d.result.error)||JSON.stringify(d);
+          zctrlOut('<span class="err">FAIL:</span> '+String(m).replace(/</g,'&lt;'));
+        }
+      }).catch(function(e){zctrlOut('<span class="err">ERROR: '+e.message+'</span>');});
+  }
+
+  function renderProviders(){
+    var pl=document.getElementById('providerList');
+    var html='';
+    providers.forEach(function(p){
+      var active=p.id===activeProvider?'active':'';
+      var enabled=config.providers[p.id]&&config.providers[p.id].enabled;
+      html+='<div class="provider-item '+active+'" data-provider="'+p.id+'">';
+      html+='<div class="provider-dot '+(enabled?'enabled':'disabled')+'" style="background:'+(enabled?p.color:'#555')+'"></div>';
+      html+=p.name+'</div>';
+    });
+    pl.innerHTML=html;
+    pl.querySelectorAll('.provider-item').forEach(function(el){
+      el.addEventListener('click',function(){
+        activeProvider=el.dataset.provider;
+        renderProviders();
+        updateModelSelect();
+        document.getElementById('footerProvider').textContent=activeProvider;
+      });
+    });
+  }
+
+  function loadOllamaStatus(){
+    fetch('/api/ollama/status').then(function(r){return r.json();}).then(function(d){
+      var dot=document.getElementById('ollamaModalDot');
+      var status=document.getElementById('ollamaModalStatus');
+      var host=document.getElementById('ollamaModalHost');
+      var startBtn=document.getElementById('ollamaStartBtn');
+      var stopBtn=document.getElementById('ollamaStopBtn');
+      var sidebarDot=document.getElementById('ollamaDot');
+      var sidebarText=document.getElementById('ollamaStatusText');
+      host.textContent=d.host||'127.0.0.1:11434';
+      if(d.status==='online'){
+        dot.className='status-dot online';
+        status.textContent='ONLINE';
+        startBtn.style.display='none';
+        stopBtn.style.display='inline-block';
+        stopBtn.textContent='STOP';
+        stopBtn.disabled=false;
+        sidebarDot.className='dot online';
+        sidebarText.textContent='Online ('+d.models.length+' models)';
+      }else{
+        dot.className='status-dot offline';
+        status.textContent='OFFLINE';
+        startBtn.style.display='inline-block';
+        startBtn.textContent='START';
+        startBtn.disabled=false;
+        stopBtn.style.display='none';
+        sidebarDot.className='dot offline';
+        sidebarText.textContent='Offline';
+      }
+      loadOllamaModels();
+    }).catch(function(){
+      document.getElementById('ollamaModalDot').className='status-dot offline';
+      document.getElementById('ollamaModalStatus').textContent='Error';
+      document.getElementById('ollamaDot').className='dot offline';
+      document.getElementById('ollamaStatusText').textContent='Error';
+    });
+  }
+
+  function loadOllamaModels(){
+    var list=document.getElementById('ollamaModelList');
+    list.innerHTML='<div style="font-size:9px;color:var(--text2)" class="loading">Loading models...</div>';
+    fetch('/api/ollama/status').then(function(r){return r.json();}).then(function(d){
+      var models=d.models||[];
+      if(models.length===0){
+        list.innerHTML='<div style="font-size:9px;color:var(--text2)">No models installed. Pull a model below.</div>';
+        return;
+      }
+      var html='';
+      models.forEach(function(m){
+        var isActive=m===(config.providers&&config.providers.ollama&&config.providers.ollama.default_model);
+        html+='<div class="model-item'+(isActive?' active':'')+'" data-model="'+m+'">';
+        html+='<div><div class="model-name">'+m+'</div></div>';
+        html+='<div class="model-actions">';
+        html+='<button class="model-btn use" onclick="useOllamaModel(\''+m+'\')">USE</button>';
+        html+='</div></div>';
+      });
+      list.innerHTML=html;
+      updateModelSelect();
+    }).catch(function(){
+      list.innerHTML='<div style="font-size:9px;color:#f44">Error loading models</div>';
+    });
+  }
+
+  function useOllamaModel(model){
+    if(!config.providers)config.providers={};
+    if(!config.providers.zicore_native)config.providers.zicore_native={};
+    config.providers.zicore_native.default_model=model;
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine.active_provider='zicore_native';
+    config.zio_engine.active_model=model;
+    activeProvider='zicore_native';
+    apiFetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)})
+    .then(function(){
+      renderProviders();
+      updateModelSelect();
+      loadOllamaModels();
+      addMsg('system','Switched to ZICORE Native model: '+model);
+    });
+  }
+
+  function updateModelSelect(){
+    var ms=document.getElementById('modelSelect');
+    ms.innerHTML='<option>Loading models...</option>';
+    var provCfg=config.providers[activeProvider];
+    if(!provCfg||!provCfg.enabled){
+      ms.innerHTML='<option>Provider not enabled</option>';
+      document.getElementById('footerModel').textContent='none';
+      return;
+    }
+    var apiProvider=activeProvider;
+    apiFetch('/api/provider/models/'+apiProvider)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var models=d.models||[];
+      if(models.length===0){models=provCfg.models||[];}
+      _populateModelSelect(ms,models,provCfg);
+    })
+    .catch(function(){
+      var models=provCfg.models||[];
+      _populateModelSelect(ms,models,provCfg);
+    });
+  }
+
+  function _populateModelSelect(ms,models,provCfg){
+    ms.innerHTML='';
+    if(models.length===0){
+      ms.innerHTML='<option>No models available</option>';
+      document.getElementById('footerModel').textContent='none';
+      return;
+    }
+    var currentDefault=(activeProvider==='zicore_native')
+      ?(config.zio_engine&&config.zio_engine.active_model)
+      :(provCfg.default_model||config.zio_engine&&config.zio_engine.active_model||'');
+    models.forEach(function(m){
+      var o=document.createElement('option');
+      o.value=m;
+      o.textContent=m+(m===currentDefault?' (active)':'');
+      if(m===currentDefault)o.selected=true;
+      ms.appendChild(o);
+    });
+    document.getElementById('footerModel').textContent=currentDefault||models[0]||activeProvider;
+  }
+
+  function loadConfig(){
+    apiFetch('/api/config').then(function(r){return r.json();}).then(function(c){
+      config=c;
+      if(c.theme)applyTheme(c.theme);
+      if(c.zio_engine){
+        var te=c.zio_engine;
+        if(te.temperature!=null){document.getElementById('tempSlider').value=te.temperature*100;document.getElementById('tempVal').textContent=te.temperature.toFixed(2);}
+        if(te.max_tokens!=null){document.getElementById('maxTokSlider').value=te.max_tokens;document.getElementById('maxTokVal').textContent=te.max_tokens;}
+        if(te.top_p!=null){document.getElementById('topPSlider').value=te.top_p*100;document.getElementById('topPVal').textContent=te.top_p.toFixed(2);}
+      }
+      updateModelSelect();
+      renderProviderSelect();
+      renderProviders();
+      applyUserZioPrefs();
+      updateModelSelect();
+      renderProviderSelect();
+    }).catch(function(){});
+  }
+
+  function applyTheme(id){
+    var themes={
+      midnight:{bg:'#0a0a0f',p:'#00ffff',s:'#ff00ff'},
+      cyber:{bg:'#0d0221',p:'#0ff',s:'#f0f'},
+      matrix:{bg:'#000000',p:'#00ff00',s:'#008800'},
+      solar:{bg:'#1a0a00',p:'#ff8800',s:'#ff4400'},
+      arctic:{bg:'#0a1520',p:'#88ddff',s:'#4488cc'},
+      blood:{bg:'#0f0505',p:'#ff2222',s:'#880000'},
+      forest:{bg:'#051008',p:'#22cc66',s:'#0a5530'},
+    };
+    var t=themes[id]||themes.midnight;
+    document.body.style.background=t.bg;
+    document.documentElement.style.setProperty('--p',t.p);
+  }
+
+  function connectWS(){
+    var proto=location.protocol==='https:'?'wss':'ws';
+    ws=new WebSocket(proto+'://'+location.host+'/ws/zio');
+    ws.onopen=function(){
+      document.getElementById('connStatus').textContent='ONLINE';
+      document.getElementById('connStatus').className='ztn-status online';
+    };
+    ws.onmessage=function(evt){
+      try{handleMessage(JSON.parse(evt.data));}catch(e){}
+    };
+    ws.onclose=function(){
+      document.getElementById('connStatus').textContent='OFFLINE';
+      document.getElementById('connStatus').className='ztn-status';
+      setTimeout(connectWS,3000);
+    };
+    ws.onerror=function(){ws.close();};
+  }
+
+  function handleMessage(data){
+    if(data.type==='welcome'){
+      addMsg('zio',data.message);
+    }else if(data.type==='response'){
+      var outputs=data.outputs||{};
+      var reply='';
+      if(outputs.text)reply=outputs.text;
+      else if(outputs.zio_msg)reply=outputs.zio_msg;
+      else if(outputs.inference)reply='Inference ['+outputs.inference.engine+'] conf='+outputs.inference.confidence;
+      else if(outputs.trajectory)reply='Trajectory: '+outputs.trajectory.type+' dV='+outputs.trajectory.delta_v_ms+'m/s';
+      else if(outputs.aircraft)reply='Aircraft: '+outputs.aircraft.name;
+      else reply=JSON.stringify(outputs).substring(0,500);
+      addMsg('zio',reply,data.intent,data.latency_ms);
+      document.getElementById('footerLatency').textContent=(data.latency_ms||0)+'ms';      if(window._activeTaskId){updateTask(window._activeTaskId,{status:'done',progress:100,result:'intent='+(data.intent||'unknown')+' | '+(data.latency_ms||0)+'ms'});window._activeTaskId=null;}
+    }else if(data.type==='generating'){
+      addMsg('system','Generating '+data.generating_type+'...');
+      var genToolMap={image:'image',sound:'sound',video:'video','3d':'mesh',mesh:'mesh'};
+      window._genTaskId=addTask('Generate: '+data.generating_type,'running','media',genToolMap[data.generating_type]||'system');
+    }else if(data.type==='generated'){
+      var r=data.result||{};
+      var file=r.file||r.path||'';
+      var mediaType=r.media_type||'';
+      var mediaUrl=r.media_url||'';
+      // Add inline media to chat
+      var lastMsg=document.querySelector('.msg.zio:last-child');
+      if(lastMsg){
+        var bubble=lastMsg.querySelector('.bubble');
+        if(bubble&&file){
+          var fname=file.split(/[/\\]/).pop();
+          var ext=(fname.split('.').pop()||'').toLowerCase();
+          var mediaHtml='';
+          if(['png','jpg','jpeg','gif','bmp','webp'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><img src="'+escHtml(mediaUrl||'/output/'+fname)+'" alt="'+escHtml(fname)+'" style="max-width:300px;max-height:200px;border-radius:8px;margin-top:8px;cursor:pointer" onclick="window.open(this.src)"><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp3','wav','ogg','flac','m4a','aac'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><audio controls src="'+escHtml(mediaUrl||'/output/'+fname)+'" style="max-width:100%;margin-top:8px"></audio><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp4','avi','mkv','mov','webm'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><video controls src="'+escHtml(mediaUrl||'/output/'+fname)+'" style="max-width:300px;margin-top:8px"></video><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['stl','obj','glb','gltf'].indexOf(ext)>=0){
+            mediaHtml='<div class="inline-media"><div style="background:#1a1a2e;border-radius:8px;padding:8px;margin-top:8px;text-align:center"><canvas id="inlineMesh_'+Date.now()+'" width="280" height="200" style="border-radius:4px"></canvas><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div><button onclick="downloadMesh(\''+escHtml(mediaUrl||'/output/'+fname)+'\',\''+escHtml(fname)+'\')" style="margin-top:4px;padding:4px 12px;background:#00e5ff;color:#000;border:none;border-radius:4px;cursor:pointer;font-size:11px">DOWNLOAD</button></div></div>';
+          }else{
+            mediaHtml='<div class="inline-media"><div style="background:#1a1a2e;border-radius:8px;padding:8px;margin-top:8px"><a href="'+escHtml(mediaUrl||'/output/'+fname)+'" target="_blank" style="color:#00e5ff">'+escHtml(fname)+'</a></div></div>';
+          }
+          bubble.insertAdjacentHTML('beforeend', mediaHtml);
+        }
+      }else{
+        // No previous zio message, create a new one
+        var m=addMsg('zio','');
+        if(m){
+          var bubble=m.querySelector('.bubble');
+          if(bubble&&file){
+            var fname=file.split(/[/\\]/).pop();
+            bubble.innerHTML='<div class="inline-media"><a href="'+escHtml(mediaUrl||'/output/'+fname)+'" target="_blank" style="color:#00e5ff">'+escHtml(fname)+'</a></div>';
+          }
+        }
+      }
+      if(window._genTaskId){updateTask(window._genTaskId,{status:'done',progress:100,result:r.filename||r.file||'done'});window._genTaskId=null;}
+    }else if(data.type==='stream_start'){
+      var el=addMsg('zio','');
+    }else if(data.type==='stream_chunk'){
+      var last=document.querySelector('.msg.zio:last-child .bubble');
+      if(last)last.textContent+=data.chunk||'';
+      scrollChat();
+    }else if(data.type==='stream_end'){
+      var last=document.querySelector('.msg.zio:last-child');
+      if(last&&data.outputs&&data.outputs.text&&data.degenerate){
+        // Model looped (e.g. "S S S ..."): replace the streamed garbage with the clean reply.
+        var bubble=last.querySelector('.bubble');
+        if(bubble)bubble.textContent=data.outputs.text;
+      }
+      if(last&&data.intent){
+        var metaEl=document.createElement('div');
+        metaEl.className='meta';
+        metaEl.textContent='intent='+data.intent+(data.latency_ms?' latency='+data.latency_ms+'ms':'');
+        last.appendChild(metaEl);
+      }
+      // Add inline media if media_url present
+      if(last&&data.outputs&&data.outputs.media_url){
+        var bubble=last.querySelector('.bubble');
+        if(bubble){
+          var mUrl=data.outputs.media_url;
+          var mType=data.outputs.media_type||'';
+          var fname=mUrl.split('/').pop();
+          var ext=(fname.split('.').pop()||'').toLowerCase();
+          var mediaHtml='';
+          if(['png','jpg','jpeg','gif','bmp','webp'].indexOf(ext)>=0||mType==='image'){
+            mediaHtml='<div class="inline-media"><img src="'+escHtml(mUrl)+'" alt="'+escHtml(fname)+'" style="max-width:300px;max-height:200px;border-radius:8px;margin-top:8px;cursor:pointer" onclick="window.open(this.src)"><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp3','wav','ogg','flac','m4a','aac'].indexOf(ext)>=0||mType==='audio'){
+            mediaHtml='<div class="inline-media"><audio controls src="'+escHtml(mUrl)+'" style="max-width:100%;margin-top:8px"></audio><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['mp4','avi','mkv','mov','webm'].indexOf(ext)>=0||mType==='video'){
+            mediaHtml='<div class="inline-media"><video controls src="'+escHtml(mUrl)+'" style="max-width:300px;margin-top:8px"></video><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div></div>';
+          }else if(['stl','obj','glb','gltf'].indexOf(ext)>=0||mType==='3d'){
+            mediaHtml='<div class="inline-media"><div style="background:#1a1a2e;border-radius:8px;padding:8px;margin-top:8px;text-align:center"><canvas id="inlineMesh_'+Date.now()+'" width="280" height="200" style="border-radius:4px"></canvas><div style="font-size:11px;color:#888;margin-top:4px">'+escHtml(fname)+'</div><button onclick="downloadMesh(\''+escHtml(mUrl)+'\',\''+escHtml(fname)+'\')" style="margin-top:4px;padding:4px 12px;background:#00e5ff;color:#000;border:none;border-radius:4px;cursor:pointer;font-size:11px">DOWNLOAD</button></div></div>';
+          }
+          if(mediaHtml) bubble.insertAdjacentHTML('beforeend', mediaHtml);
+        }
+      }
+      if(window._activeTaskId){updateTask(window._activeTaskId,{status:'done',progress:100,result:'stream done | intent='+(data.intent||'unknown')});window._activeTaskId=null;}
+      saveChatLocal();
+    }else if(data.type==='error'){
+      addMsg('error',data.message);
+      if(window._activeTaskId){updateTask(window._activeTaskId,{status:'error',result:data.message});window._activeTaskId=null;}
+    }else if(data.type==='config'){
+      config=data.config;
+      updateModelSelect();
+      renderProviders();
+    }
+  }
+
+  function addMsg(type,text,intent,latency,skipSave){
+    var m=document.getElementById('messages');
+    var d=document.createElement('div');
+    d.className='msg '+type;
+    var label=type==='user'?'YOU':type==='zio'?'ZIO':type==='system'?'SYS':'INFO';
+    var meta='';
+    if(intent)meta='intent='+intent;
+    if(latency)meta+=' latency='+latency+'ms';
+    d.innerHTML='<div class="label">'+label+'</div><div class="bubble">'+((type==='zio'||type==='ai')?renderMd(text):escHtml(text))+'</div>'+(meta?'<div class="meta">'+meta+'</div>':'');
+    m.appendChild(d);
+    scrollChat();
+    msgCount++;
+    document.getElementById('footerMsgCount').textContent=msgCount;
+    if(!skipSave)saveChatLocal();
+    // Auto-speak AI responses when enabled
+    if(_autoSpeak && (type==='ai'||type==='zio') && text && text.length>2){
+      var clean=text.replace(/[*_`#\[\]]/g,'').replace(/\[.*?\]/g,'').substring(0,500);
+      speakText(clean);
+    }
+    return d;
+  }
+
+  function scrollChat(){
+    var m=document.getElementById('messages');
+    m.scrollTop=m.scrollHeight;
+  }
+
+  function escHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function renderMd(text){
+    if(!text)return '';
+    var s=escHtml(text);
+    s=s.replace(/^### (.+)$/gm,'<h4>$1</h4>');
+    s=s.replace(/^## (.+)$/gm,'<h3>$1</h3>');
+    s=s.replace(/^# (.+)$/gm,'<h2>$1</h2>');
+    s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    s=s.replace(/\*(.+?)\*/g,'<em>$1</em>');
+    s=s.replace(/`([^`\n]+)`/g,'<code style="background:rgba(0,229,255,0.1);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>');
+    s=s.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre style="background:#0a0a1a;border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:10px;overflow-x:auto;margin:8px 0;font-size:12px"><code>$2</code></pre>');
+    s=s.replace(/^\- (.+)$/gm,'<li>$1</li>');
+    s=s.replace(/(<li>.*<\/li>)/s,'<ul style="margin:4px 0;padding-left:20px">$1</ul>');
+    s=s.replace(/\n/g,'<br>');
+    return s;
+  }
+
+  function saveChatLocal(){
+    try{
+      var msgs=[];
+      var els=document.querySelectorAll('#messages .msg');
+      for(var i=0;i<els.length;i++){
+        var el=els[i];
+        var b=el.querySelector('.bubble');
+        var l=el.querySelector('.label');
+        msgs.push({type:el.className.replace('msg ',''),label:l?l.textContent:'',text:b?b.textContent:'',intent:(el.querySelector('.meta')||{}).textContent||''});
+      }
+      localStorage.setItem('zio_chat_'+sessionId,JSON.stringify(msgs.slice(-100)));
+    }catch(e){}
+  }
+
+  function loadChatLocal(){
+    try{
+      var raw=localStorage.getItem('zio_chat_'+sessionId);
+      if(!raw)return false;
+      var msgs=JSON.parse(raw);
+      if(!Array.isArray(msgs)||!msgs.length)return false;
+      var m=document.getElementById('messages');
+      m.innerHTML='';
+      msgCount=0;
+      for(var i=0;i<msgs.length;i++){
+        var mm=msgs[i];
+        var type=mm.type==='user'?'user':(mm.type==='error'?'error':'zio');
+        if(type!=='user'&&isDegenerateMsg(mm.text))continue; // drop stale "S S S" loops
+        addMsg(type,mm.text,mm.intent||'',0,true);
+      }
+      return true;
+    }catch(e){return false;}
+  }
+
+  function isDegenerateMsg(text){
+    if(!text||text.length<16)return false;
+    var words=text.split(/\s+/);
+    var single=words.filter(function(w){return w.length>0;});
+    if(single.length>=6&&single.every(function(w){return w===single[0];}))return true;
+    var letters=text.replace(/\s/g,'').split('');
+    if(letters.length>=24){
+      var counts={};
+      for(var i=0;i<letters.length;i++)counts[letters[i]]=(counts[letters[i]]||0)+1;
+      var top=0;
+      for(var k in counts)if(counts[k]>top)top=counts[k];
+      if(top>=0.7*letters.length)return true;
+    }
+    return false;
+  }
+
+  function loadChatHistory(){
+    // Server is the source of truth (it now persists every stream message).
+    // Only fall back to the localStorage copy if the server has nothing.
+    fetch('/api/knowledge/conversations?limit=50&session_id='+encodeURIComponent(sessionId))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var convs=data.conversations||data;
+        if(!Array.isArray(convs)||convs.length===0)return loadChatLocal();
+        var m=document.getElementById('messages');
+        m.innerHTML='';
+        msgCount=0;
+        for(var i=0;i<convs.length;i++){
+          var c=convs[i];
+          addMsg(c.role==='user'?'user':'zio',c.content,c.intent||'',c.latency_ms||0,true);
+        }
+      })
+      .catch(function(){loadChatLocal();});
+  }
+
+  function quickCmd(prefix){
+    var inp=document.getElementById('chatInput');
+    inp.value=prefix;
+    inp.focus();
+    inp.style.height='36px';
+    inp.style.height=Math.min(inp.scrollHeight,100)+'px';
+  }
+
+  function sendMsg(){
+    var inp=document.getElementById('chatInput');
+    var msg=inp.value.trim();
+    if(!msg)return;
+    inp.value='';
+    inp.style.height='36px';
+    addMsg('user',msg);
+    window._activeTaskId=addTask('Chat: '+msg.substring(0,40)+(msg.length>40?'...':''),'running',activeProvider,'chat');
+    if(ws&&ws.readyState===WebSocket.OPEN){
+      ws.send(JSON.stringify({command:'stream',payload:{message:msg,module:activeProvider,session_id:sessionId}}));
+    }else{
+      addMsg('error','Not connected to server');
+      updateTask(window._activeTaskId,{status:'error',result:'Not connected'});
+    }
+  }
+
+  function setupInput(){
+    var inp=document.getElementById('chatInput');
+    var btn=document.getElementById('sendBtn');
+    btn.addEventListener('click',sendMsg);
+    inp.addEventListener('keydown',function(e){
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}
+    });
+    inp.addEventListener('input',function(){
+      this.style.height='36px';
+      this.style.height=Math.min(this.scrollHeight,100)+'px';
+    });
+  }
+
+  function setupButtons(){
+    document.getElementById('openOllama').addEventListener('click',function(){
+      document.getElementById('ollamaModal').classList.add('active');
+      loadOllamaStatus();
+    });
+    document.getElementById('closeOllama').addEventListener('click',function(){
+      document.getElementById('ollamaModal').classList.remove('active');
+    });
+    document.getElementById('ollamaModal').addEventListener('click',function(e){
+      if(e.target===this)this.classList.remove('active');
+    });
+    document.getElementById('ollamaStartBtn').addEventListener('click',function(){
+      this.textContent='STARTING...';
+      this.disabled=true;
+      fetch('/api/ollama/start',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+        loadOllamaStatus();
+      });
+    });
+    document.getElementById('ollamaStopBtn').addEventListener('click',function(){
+      this.textContent='STOPPING...';
+      this.disabled=true;
+      fetch('/api/ollama/stop',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+        loadOllamaStatus();
+      });
+    });
+    document.getElementById('pullModelBtn').addEventListener('click',function(){
+      var model=document.getElementById('pullModelInput').value.trim();
+      if(!model)return;
+      this.textContent='PULLING...';
+      this.disabled=true;
+      document.getElementById('pullStatus').innerHTML='<span class="loading">Downloading '+model+'...</span>';
+      var self=this;
+      fetch('/api/ollama/pull',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model})})
+      .then(function(r){return r.json();}).then(function(d){
+        self.textContent='PULL';
+        self.disabled=false;
+        if(d.status==='ok'){
+          document.getElementById('pullStatus').innerHTML='<span style="color:#0f6">'+model+' pulled successfully</span>';
+          loadOllamaModels();
+        }else{
+          document.getElementById('pullStatus').innerHTML='<span style="color:#f44">Error: '+(d.error||'Unknown error')+'</span>';
+        }
+      }).catch(function(e){
+        self.textContent='PULL';
+        self.disabled=false;
+        document.getElementById('pullStatus').innerHTML='<span style="color:#f44">Network error</span>';
+      });
+    });
+    document.getElementById('meshModalClose').addEventListener('click',function(){
+      document.getElementById('meshModal').classList.remove('active');
+    });
+    document.getElementById('meshModal').addEventListener('click',function(e){
+      if(e.target===this)this.classList.remove('active');
+    });
+    document.getElementById('btnToggleGen').addEventListener('click',function(){
+      document.getElementById('genPanel').classList.toggle('active');
+    });
+    document.getElementById('btnClearChat').addEventListener('click',function(){
+      document.getElementById('messages').innerHTML='';
+      addMsg('zio','Chat cleared. Ready for new messages.');
+    });
+    document.getElementById('btnExportChat').addEventListener('click',function(){
+      var msgs=document.getElementById('messages').innerText;
+      var blob=new Blob([msgs],{type:'text/plain'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='zio_chat_'+Date.now()+'.txt';
+      a.click();
+    });
+    document.getElementById('btnImportChat').addEventListener('click',function(){
+      document.getElementById('importModal').style.display='flex';
+      document.getElementById('importResult').textContent='';
+      document.getElementById('importFileLabel').textContent='';
+      document.getElementById('importUploadBtn').disabled=true;
+      document.getElementById('importFileInput').value='';
+    });
+    document.getElementById('importSelectBtn').addEventListener('click',function(){
+      document.getElementById('importFileInput').click();
+    });
+    document.getElementById('importFileInput').addEventListener('change',function(){
+      var f=this.files[0];
+      if(f){
+        document.getElementById('importFileLabel').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+        document.getElementById('importUploadBtn').disabled=false;
+      }
+    });
+    document.getElementById('importUploadBtn').addEventListener('click',function(){
+      var file=document.getElementById('importFileInput').files[0];
+      if(!file)return;
+      var source=document.getElementById('importSource').value;
+      var session=document.getElementById('importSessionName').value||'imported';
+      var fd=new FormData();
+      fd.append('file',file);
+      if(source)fd.append('source',source);
+      fd.append('session_prefix',session);
+      document.getElementById('importResult').textContent='Uploading...';
+      document.getElementById('importUploadBtn').disabled=true;
+      fetch('/api/zio/import',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+        if(d.status==='ok'){
+          document.getElementById('importResult').innerHTML='<span style="color:#00e5ff">Imported '+d.imported+' messages from '+d.source+' ('+d.filename+')</span>';
+          addMsg('system','Imported '+d.imported+' messages from '+d.source+'. Session: '+session+'_'+d.source);
+        }else{
+          document.getElementById('importResult').innerHTML='<span style="color:#ff5555">Error: '+(d.error||'unknown')+'</span>';
+        }
+        document.getElementById('importUploadBtn').disabled=false;
+      }).catch(function(e){
+        document.getElementById('importResult').innerHTML='<span style="color:#ff5555">Upload failed: '+e.message+'</span>';
+        document.getElementById('importUploadBtn').disabled=false;
+      });
+    });
+    document.getElementById('btnImportAssets').addEventListener('click',function(){
+      document.getElementById('importAssetsModal').style.display='flex';
+      document.getElementById('assetPreview').style.display='none';
+      document.getElementById('assetUploadBtn').style.display='none';
+      document.getElementById('assetUploadStatus').textContent='';
+      loadAssetList();
+    });
+    var dropZone=document.getElementById('assetDropZone');
+    var fileInput=document.getElementById('assetFileInput');
+    dropZone.addEventListener('click',function(){fileInput.click();});
+    dropZone.addEventListener('dragover',function(e){e.preventDefault();this.style.borderColor='rgba(0,255,136,0.8)';this.style.background='rgba(0,255,136,0.05)';});
+    dropZone.addEventListener('dragleave',function(){this.style.borderColor='rgba(0,255,136,0.3)';this.style.background='none';});
+    dropZone.addEventListener('drop',function(e){e.preventDefault();this.style.borderColor='rgba(0,255,136,0.3)';this.style.background='none';handleAssetFiles(e.dataTransfer.files);});
+    fileInput.addEventListener('change',function(){if(this.files.length)handleAssetFiles(this.files);});
+    document.getElementById('assetUploadBtn').addEventListener('click',uploadAssets);
+    /* ZIO Control */
+    var _zcSend=document.getElementById('zctrlSend');
+    if(_zcSend)_zcSend.addEventListener('click',zctrlSendChat);
+    var _zcChat=document.getElementById('zctrlChat');
+    if(_zcChat)_zcChat.addEventListener('keydown',function(e){if(e.key==='Enter')zctrlSendChat();});
+    var _zcExec=document.getElementById('zctrlExec');
+    if(_zcExec)_zcExec.addEventListener('click',zctrlRunCmd);
+    var _zcRun=document.getElementById('zctrlRun');
+    if(_zcRun)_zcRun.addEventListener('click',zctrlRunSys);
+  }
+
+  var _assetFiles=[];
+  function handleAssetFiles(files){
+    _assetFiles=[];
+    var prev=document.getElementById('assetPreview');
+    prev.style.display='block';
+    prev.innerHTML='';
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      _assetFiles.push(f);
+      var ext=f.name.split('.').pop().toLowerCase();
+      var is3d=['stl','glb','obj','fbx'].indexOf(ext)>-1;
+      var isImg=['png','jpg','jpeg'].indexOf(ext)>-1;
+      var isAudio=['mp3','wav','ogg'].indexOf(ext)>-1;
+      var div=document.createElement('div');
+      div.style.cssText='display:inline-block;margin:4px;padding:8px;border:1px solid rgba(0,255,136,0.2);border-radius:6px;text-align:center;min-width:100px;vertical-align:top;background:rgba(0,255,136,0.03);';
+      if(isImg){
+        var img=document.createElement('img');
+        img.src=URL.createObjectURL(f);
+        img.style.cssText='width:90px;height:60px;object-fit:cover;border-radius:4px;';
+        div.appendChild(img);
+      }else if(isAudio){
+        var audio=document.createElement('div');
+        audio.style.cssText='width:90px;height:60px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#ff6b9d;';
+        audio.textContent='\u266B';
+        div.appendChild(audio);
+      }else if(is3d){
+        var mesh3d=document.createElement('div');
+        mesh3d.style.cssText='width:90px;height:60px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#00ff88;';
+        mesh3d.textContent='\u25C6';
+        div.appendChild(mesh3d);
+      }
+      var nameEl=document.createElement('div');
+      nameEl.style.cssText='font-size:9px;color:#889;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;';
+      nameEl.textContent=f.name;
+      div.appendChild(nameEl);
+      var sizeEl=document.createElement('div');
+      sizeEl.style.cssText='font-size:8px;color:#555;';
+      sizeEl.textContent=Math.round(f.size/1024)+'KB';
+      div.appendChild(sizeEl);
+      prev.appendChild(div);
+    }
+    document.getElementById('assetUploadBtn').style.display='block';
+    document.getElementById('assetUploadStatus').textContent=files.length+' file(s) selected';
+  }
+
+  function uploadAssets(){
+    if(!_assetFiles.length)return;
+    var status=document.getElementById('assetUploadStatus');
+    var btn=document.getElementById('assetUploadBtn');
+    btn.disabled=true;btn.textContent='UPLOADING...';
+    var uploaded=0;var total=_assetFiles.length;var errors=0;
+    function uploadNext(){
+      if(uploaded+errors>=total){
+        btn.disabled=false;btn.textContent='UPLOAD';
+        status.innerHTML='<span style="color:'+(errors?'#ff5555':'#00ff88')+'">'+uploaded+' uploaded'+(errors?', '+errors+' failed':'')+'</span>';
+        loadAssetList();_assetFiles=[];
+        return;
+      }
+      var f=_assetFiles[uploaded+errors];
+      var fd=new FormData();
+      fd.append('file',f);
+      status.textContent='Uploading '+(uploaded+errors+1)+'/'+total+': '+f.name+'...';
+      fetch('/api/assets/upload',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+        if(d.status==='ok')uploaded++;else errors++;
+        uploadNext();
+      }).catch(function(){errors++;uploadNext();});
+    }
+    uploadNext();
+  }
+
+  function loadAssetList(){
+    var list=document.getElementById('assetList');
+    list.innerHTML='<div style="font-size:9px;color:#555">Loading assets...</div>';
+    fetch('/api/assets/list').then(function(r){return r.json();}).then(function(d){
+      var files=d.files||[];
+      if(!files.length){list.innerHTML='<div style="font-size:9px;color:#555">No assets imported yet.</div>';return;}
+      var html='';
+      files.forEach(function(f){
+        var ext=f.name.split('.').pop().toLowerCase();
+        var is3d=['stl','glb','obj'].indexOf(ext)>-1;
+        var isImg=['png','jpg','jpeg'].indexOf(ext)>-1;
+        var isAudio=['mp3','wav','ogg'].indexOf(ext)>-1;
+        var icon=is3d?'\u25C6':isImg?'\u25A1':'\u266B';
+        var color=is3d?'#00ff88':isImg?'#7c4dff':'#ff6b9d';
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid rgba(0,255,136,0.08);">';
+        html+='<span style="color:'+color+';font-size:14px;">'+icon+'</span>';
+        html+='<span style="flex:1;font-size:11px;color:#c8d0dc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+f.name+'</span>';
+        html+='<span style="font-size:9px;color:#555;">'+Math.round(f.size/1024)+'KB</span>';
+        if(is3d)html+='<button onclick="previewAsset3D(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);color:#00ff88;border-radius:3px;cursor:pointer;">VIEW</button>';
+        if(isImg)html+='<button onclick="previewAssetImg(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);color:#7c4dff;border-radius:3px;cursor:pointer;">VIEW</button>';
+        if(isAudio)html+='<button onclick="previewAssetAudio(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(255,107,157,0.1);border:1px solid rgba(255,107,157,0.2);color:#ff6b9d;border-radius:3px;cursor:pointer;">PLAY</button>';
+        html+='<button onclick="downloadAsset(\''+f.name+'\')" style="padding:2px 8px;font-size:9px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:#00e5ff;border-radius:3px;cursor:pointer;">\u2193</button>';
+        html+='</div>';
+      });
+      list.innerHTML=html;
+    }).catch(function(){list.innerHTML='<div style="font-size:9px;color:#f44">Error loading assets</div>';});
+  }
+
+  function previewAsset3D(name){openMeshFull('/api/assets/'+name);}
+  function previewAssetImg(name){
+    var prev=document.getElementById('assetPreview');
+    prev.style.display='block';
+    prev.innerHTML='<img src="/api/assets/'+name+'" style="max-width:100%;max-height:200px;border-radius:4px;border:1px solid rgba(124,77,255,0.3);">';
+  }
+  function previewAssetAudio(name){
+    var prev=document.getElementById('assetPreview');
+    prev.style.display='block';
+    prev.innerHTML='<audio controls src="/api/assets/'+name+'" style="width:100%;"></audio>';
+  }
+  function downloadAsset(name){
+    var a=document.createElement('a');a.href='/api/assets/'+name;a.download=name;a.click();
+  }
+
+  function setupSliders(){
+    document.getElementById('tempSlider').addEventListener('input',function(){
+      var v=(this.value/100).toFixed(2);
+      document.getElementById('tempVal').textContent=v;
+      saveParam('temperature',parseFloat(v));
+    });
+    document.getElementById('maxTokSlider').addEventListener('input',function(){
+      document.getElementById('maxTokVal').textContent=this.value;
+      saveParam('max_tokens',parseInt(this.value));
+    });
+    document.getElementById('topPSlider').addEventListener('input',function(){
+      var v=(this.value/100).toFixed(2);
+      document.getElementById('topPVal').textContent=v;
+      saveParam('top_p',parseFloat(v));
+    });
+  }
+
+  function saveParam(key,value){
+    if(!config.zio_engine)config.zio_engine={};
+    config.zio_engine[key]=value;
+    apiFetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}).catch(function(){});
+  }
+
+  function showOutput(path,filename){
+    var op=document.getElementById('outputPreview');
+    var oc=document.getElementById('outputContent');
+    var op2=document.getElementById('outputPath');
+    op.classList.add('active');
+    op2.textContent=path;
+    var ext=(filename||path).split('.').pop().toLowerCase();
+    if(['png','jpg','jpeg','gif','bmp'].indexOf(ext)>=0){
+      oc.innerHTML='<img src="/output/'+filename+'" alt="Generated">';
+    }else if(['mp4','webm'].indexOf(ext)>=0){
+      oc.innerHTML='<video controls src="/output/'+filename+'"></video>';
+    }else if(['wav','mp3'].indexOf(ext)>=0){
+      oc.innerHTML='<audio controls src="/output/'+filename+'"></audio>';
+    }else if(['stl','obj','ply'].indexOf(ext)>=0){
+      oc.innerHTML='<div class="mesh-preview">'
+        +'<canvas id="inlineMeshCanvas" width="280" height="200"></canvas>'
+        +'<div style="font-size:9px;color:var(--glow)">'+filename+'</div>'
+        +'<div class="mesh-actions">'
+        +'<button class="mesh-btn" onclick="downloadMesh(\''+filename+'\')">DOWNLOAD</button>'
+        +'<button class="mesh-btn accent" onclick="openMeshFull(\''+filename+'\')">ENLARGE</button>'
+        +'</div></div>';
+      setTimeout(function(){renderInlineMesh('inlineMeshCanvas','/output/'+filename,ext);},100);
+    }else{
+      oc.innerHTML='<div style="padding:10px;color:#889">'+filename+'</div>';
+    }
+  }
+
+  function renderInlineMesh(canvasId,url,ext){
+    var canvas=document.getElementById(canvasId);
+    if(!canvas||typeof THREE==='undefined')return;
+    try{
+      var scene=new THREE.Scene();
+      scene.background=new THREE.Color(0x0a0e18);
+      var camera=new THREE.PerspectiveCamera(50,canvas.width/canvas.height,0.1,1000);
+      camera.position.set(2,1.5,2);camera.lookAt(0,0,0);
+      var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+      renderer.setSize(canvas.width,canvas.height);
+      scene.add(new THREE.AmbientLight(0x404040,0.5));
+      var dir=new THREE.DirectionalLight(0xffffff,0.8);dir.position.set(5,5,5);scene.add(dir);
+      var point=new THREE.PointLight(0x00e5ff,0.4);point.position.set(-3,2,-3);scene.add(point);
+      scene.add(new THREE.GridHelper(4,8,0x1a2a3a,0x0d1520));
+      var loader=new THREE.STLLoader();
+      loader.load(url,function(geo){
+        geo.computeVertexNormals();
+        var mat=new THREE.MeshPhongMaterial({color:0x00e5ff,wireframe:false,transparent:true,opacity:0.85,side:THREE.DoubleSide});
+        var mesh=new THREE.Mesh(geo,mat);
+        var box=new THREE.Box3().setFromObject(mesh);
+        var center=box.getCenter(new THREE.Vector3());
+        mesh.position.sub(center);
+        var size=box.getSize(new THREE.Vector3());
+        var maxDim=Math.max(size.x,size.y,size.z);
+        if(maxDim>0)mesh.scale.multiplyScalar(2/maxDim);
+        scene.add(mesh);
+        var edges=new THREE.EdgesGeometry(geo);
+        var line=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:0x7c4dff,transparent:true,opacity:0.3}));
+        line.position.copy(mesh.position);line.scale.copy(mesh.scale);scene.add(line);
+        function anim(){requestAnimationFrame(anim);mesh.rotation.y+=0.008;line.rotation.y=mesh.rotation.y;renderer.render(scene,camera);}
+        anim();
+      });
+    }catch(e){}
+  }
+
+  function downloadMesh(filename){
+    var a=document.createElement('a');
+    a.href='/output/'+filename;a.download=filename;a.click();
+  }
+
+  function openMeshFull(filename){
+    var modal=document.getElementById('meshModal');
+    modal.classList.add('active');
+    document.getElementById('meshModalTitle').textContent='3D VIEWER — '+filename;
+    document.getElementById('meshModalInfo').textContent=filename;
+    document.getElementById('meshModalDownload').onclick=function(){downloadMesh(filename);};
+    var canvas=document.getElementById('meshModalCanvas');
+    var rect=canvas.parentElement.getBoundingClientRect();
+    canvas.width=rect.width||700;canvas.height=(rect.height-80)||400;
+    var ext=filename.split('.').pop().toLowerCase();
+    setTimeout(function(){renderFullMesh(canvas,'/output/'+filename,ext);},200);
+  }
+
+  function renderFullMesh(canvas,url,ext){
+    if(typeof THREE==='undefined')return;
+    try{
+      var scene=new THREE.Scene();
+      scene.background=new THREE.Color(0x060a12);
+      var camera=new THREE.PerspectiveCamera(50,canvas.width/canvas.height,0.1,2000);
+      camera.position.set(3,2,3);camera.lookAt(0,0,0);
+      var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+      renderer.setSize(canvas.width,canvas.height);
+      scene.add(new THREE.AmbientLight(0x404040,0.6));
+      var dir=new THREE.DirectionalLight(0xffffff,0.9);dir.position.set(5,5,5);scene.add(dir);
+      var point=new THREE.PointLight(0x00e5ff,0.5);point.position.set(-4,3,-4);scene.add(point);
+      var point2=new THREE.PointLight(0x7c4dff,0.3);point2.position.set(4,-2,4);scene.add(point2);
+      scene.add(new THREE.GridHelper(6,12,0x1a2a3a,0x0d1520));
+      var loader=new THREE.STLLoader();
+      loader.load(url,function(geo){
+        geo.computeVertexNormals();
+        var mat=new THREE.MeshPhongMaterial({color:0x00e5ff,specular:0x111111,shininess:80,wireframe:false,transparent:true,opacity:0.88,side:THREE.DoubleSide});
+        var mesh=new THREE.Mesh(geo,mat);
+        var box=new THREE.Box3().setFromObject(mesh);
+        var center=box.getCenter(new THREE.Vector3());
+        mesh.position.sub(center);
+        var size=box.getSize(new THREE.Vector3());
+        var maxDim=Math.max(size.x,size.y,size.z);
+        if(maxDim>0)mesh.scale.multiplyScalar(3/maxDim);
+        scene.add(mesh);
+        var edges=new THREE.EdgesGeometry(geo);
+        var line=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:0x7c4dff,transparent:true,opacity:0.25}));
+        line.position.copy(mesh.position);line.scale.copy(mesh.scale);scene.add(line);
+        document.getElementById('meshModalInfo').textContent=filename+' — '+geo.attributes.position.count+' vertices';
+        var isDragging=false,prevMouse={x:0,y:0};
+        canvas.addEventListener('mousedown',function(e){isDragging=true;prevMouse={x:e.clientX,y:e.clientY};});
+        canvas.addEventListener('mousemove',function(e){
+          if(!isDragging)return;
+          var dx=e.clientX-prevMouse.x;var dy=e.clientY-prevMouse.y;
+          mesh.rotation.y+=dx*0.01;mesh.rotation.x+=dy*0.01;
+          line.rotation.y=mesh.rotation.y;line.rotation.x=mesh.rotation.x;
+          prevMouse={x:e.clientX,y:e.clientY};
+        });
+        canvas.addEventListener('mouseup',function(){isDragging=false;});
+        canvas.addEventListener('mouseleave',function(){isDragging=false;});
+        canvas.addEventListener('wheel',function(e){
+          e.preventDefault();
+          var z=camera.position.length();
+          z+=e.deltaY*0.01;z=Math.max(2,Math.min(20,z));
+          camera.position.normalize().multiplyScalar(z);
+        });
+        function anim(){requestAnimationFrame(anim);if(!isDragging){mesh.rotation.y+=0.005;line.rotation.y=mesh.rotation.y;line.rotation.x=mesh.rotation.x;}renderer.render(scene,camera);}
+        anim();
+      });
+    }catch(e){}
+  }
+
+  init();
+})();
+</script>
+
+<script>
+/* ======== TASK MONITOR ======== */
+var _tasks=[];
+var _taskIdSeq=0;
+var _taskFilter='all';
+var _taskTypeFilter='all';
+
+function toggleTaskPanel(){
+  var p=document.getElementById('taskPanel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))renderTasks();
+}
+
+function addTask(name,status,meta,toolType){
+  var id=++_taskIdSeq;
+  var t={id:id,name:name,status:status||'running',meta:meta||'',tool:toolType||'chat',progress:0,result:null,created:Date.now()};
+  _tasks.unshift(t);
+  renderTasks();
+  updateTaskBadge();
+  return id;
+}
+
+function updateTask(id,changes){
+  for(var i=0;i<_tasks.length;i++){
+    if(_tasks[i].id===id){
+      for(var k in changes)_tasks[i][k]=changes[k];
+      break;
+    }
+  }
+  renderTasks();
+  updateTaskBadge();
+}
+
+function removeTask(id){
+  _tasks=_tasks.filter(function(t){return t.id!==id;});
+  renderTasks();
+  updateTaskBadge();
+}
+
+function filterTasks(f,el){
+  _taskFilter=f;
+  document.querySelectorAll('.tp-filter').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderTasks();
+}
+
+function filterTaskType(f,el){
+  _taskTypeFilter=f;
+  document.querySelectorAll('.tp-type-filter').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderTasks();
+}
+
+function updateTaskBadge(){
+  var c=_tasks.filter(function(t){return t.status==='running'||t.status==='queued';}).length;
+  var b=document.getElementById('taskBadge');
+  b.textContent=c;
+  b.classList.toggle('active',c>0);
+}
+
+function formatDuration(ms){
+  if(ms<1000)return ms+'ms';
+  if(ms<60000)return (ms/1000).toFixed(1)+'s';
+  return (ms/60000).toFixed(0)+'m '+((ms%60000)/1000).toFixed(0)+'s';
+}
+
+var TOOL_COLORS={chat:'#00e5ff',image:'#7c4dff',sound:'#ff6b9d',video:'#ffaa00',mesh:'#00ff88',code:'#58a6ff',system:'#889',query:'#f97316'};
+var TOOL_LABELS={chat:'CHAT',image:'IMAGE',sound:'AUDIO',video:'VIDEO',mesh:'3D MESH',code:'CODE',system:'SYS',query:'QUERY'};
+
+function renderTasks(){
+  var list=document.getElementById('taskList');
+  var filtered=_tasks;
+  if(_taskFilter!=='all')filtered=filtered.filter(function(t){return t.status===_taskFilter;});
+  if(_taskTypeFilter!=='all')filtered=filtered.filter(function(t){return t.tool===_taskTypeFilter;});
+  if(!filtered.length){
+    list.innerHTML='<div class="tp-empty">'+(_tasks.length?'No tasks match filter':'No active tasks')+'</div>';
+    return;
+  }
+  var html='';
+  filtered.forEach(function(t){
+    var elapsed=Date.now()-t.created;
+    var statusCls=t.status==='running'?'running':t.status==='queued'?'queued':t.status==='error'?'error':'done';
+    var toolColor=TOOL_COLORS[t.tool]||'#889';
+    var toolLabel=TOOL_LABELS[t.tool]||t.tool.toUpperCase();
+    var barHtml='';
+    if(t.status==='running'&&t.progress>0){
+      barHtml='<div class="ti-bar"><div class="ti-bar-fill" style="width:'+t.progress+'%"></div></div>';
+    }
+    var resultHtml='';
+    if(t.result!==null&&t.result!==undefined){
+      var txt=typeof t.result==='string'?t.result:JSON.stringify(t.result);
+      if(txt.length>200)txt=txt.substring(0,200)+'...';
+      resultHtml='<div class="ti-result">'+txt+'</div>';
+    }
+    var cancelHtml='';
+    if(t.status==='running'||t.status==='queued'){
+      cancelHtml='<button class="ti-cancel" onclick="updateTask('+t.id+',{status:\'error\',result:\'Cancelled\'})">CANCEL</button>';
+    }
+    html+='<div class="task-item" data-id="'+t.id+'">'
+      +'<div class="ti-row"><span class="ti-name">'+t.name+'</span><span class="ti-status '+statusCls+'">'+t.status+'</span></div>'
+      +'<div class="ti-meta"><span style="color:'+toolColor+';font-weight:600">'+toolLabel+'</span><span>'+t.meta+'</span><span>'+formatDuration(elapsed)+'</span></div>'
+      +barHtml+resultHtml+cancelHtml
+      +'</div>';
+  });
+  list.innerHTML=html;
+}
+
+/* ======== PROJECT SLIDER ======== */
+var _projects={active:'zicore-system',projects:[]};
+
+function toggleProjectSlider(){
+  var p=document.getElementById('projectSlider');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))loadProjects();
+}
+
+function switchSliderTab(tab){
+  var isProj=tab==='projects';
+  document.getElementById('psTabProjects').className='ps-tab'+(isProj?' active':'');
+  document.getElementById('psTabSessions').className='ps-tab'+(isProj?'':' active');
+  document.getElementById('projectList').style.display=isProj?'':'none';
+  document.getElementById('sessionList').style.display=isProj?'none':'';
+  if(!isProj)loadSessions();
+}
+
+function loadSessions(){
+  var list=document.getElementById('sessionList');
+  fetch('/api/knowledge/conversations?limit=500')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var convs=data.conversations||data;
+      if(!Array.isArray(convs))convs=[];
+      var groups={};
+      convs.forEach(function(c){
+        var s=c.session_id||'default';
+        if(!groups[s])groups[s]={count:0,last:0,preview:''};
+        groups[s].count++;
+        var t=Date.parse(c.timestamp||0)||0;
+        if(t>groups[s].last)groups[s].last=t;
+        if(c.role==='user')groups[s].preview=c.content;
+      });
+      var arr=Object.keys(groups).map(function(id){
+        return {id:id,count:groups[id].count,last:groups[id].last,preview:(groups[id].preview||'').substring(0,90)};
+      }).sort(function(a,b){return b.last-a.last;});
+      renderSessions(arr);
+    })
+    .catch(function(){list.innerHTML='<div class="ps-empty">Error loading sessions</div>';});
+}
+
+function renderSessions(sessions){
+  var list=document.getElementById('sessionList');
+  if(!sessions.length){
+    list.innerHTML='<div class="ps-empty">No sessions yet</div>';
+    return;
+  }
+  var html='';
+  sessions.forEach(function(s){
+    var isActive=s.id===sessionId;
+    var d=s.last?new Date(s.last):null;
+    var time=d?d.toLocaleDateString()+' '+d.toTimeString().slice(0,5):'';
+    html+='<div class="session-item'+(isActive?' active':'')+'" onclick="selectSession(\''+s.id.replace(/[^a-zA-Z0-9_\-]/g,'')+'\')">'
+      +'<div class="si-row"><span class="si-id">'+s.id.replace(/[^a-zA-Z0-9_\-]/g,'')+'</span>'
+      +'<span class="si-count">'+s.count+'</span></div>'
+      +'<div class="si-preview">'+(s.preview||'&nbsp;')+'</div>'
+      +'<div class="si-time">'+(time||'')+'</div>'
+      +'</div>';
+  });
+  list.innerHTML=html;
+}
+
+function selectSession(id){
+  if(!id)return;
+  sessionId=id;
+  try{localStorage.setItem('zio_session_id',id);}catch(e){}
+  renderSessionsAll();
+  loadChatHistory();
+  document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;
+  console.log('Session: '+id);
+}
+
+function renderSessionsAll(){
+  // Refresh active highlight without re-fetch
+  var list=document.getElementById('sessionList');
+  Array.prototype.forEach.call(list.querySelectorAll('.session-item'),function(el){
+    var t=el.querySelector('.si-id');
+    if(t)el.className='session-item'+(t.textContent===sessionId?' active':'');
+  });
+}
+
+function loadProjects(){
+  fetch('/api/projects').then(function(r){return r.json();}).then(function(d){
+    _projects=d;
+    renderProjects();
+  }).catch(function(){renderProjects();});
+}
+
+function selectProject(id){
+  _projects.active=id;
+  fetch('/api/projects/active',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).catch(function(){});
+  renderProjects();
+  var p=_projects.projects.find(function(x){return x.id===id;});
+  if(typeof addMsg==='function'&&p){
+    addMsg('system','Project: '+p.name+' ('+p.path+')');
+  }
+}
+
+function createProject(){
+  var name=prompt('Project name:');
+  if(!name)return;
+  var path=prompt('Project path (folder):','');
+  var desc=prompt('Description:','');
+  fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,path:path,desc:desc})}).then(function(r){return r.json();}).then(function(d){
+    if(d.project){
+      _projects.projects.push(d.project);
+      _projects.active=d.project.id;
+      renderProjects();
+    }
+  }).catch(function(){});
+}
+
+function deleteProject(id,event){
+  event.stopPropagation();
+  if(!confirm('Delete this project?'))return;
+  fetch('/api/projects/'+id,{method:'DELETE'}).then(function(){
+    _projects.projects=_projects.projects.filter(function(p){return p.id!==id;});
+    if(_projects.active===id&&_projects.projects.length)_projects.active=_projects.projects[0].id;
+    renderProjects();
+  }).catch(function(){});
+}
+
+function renderProjects(){
+  var list=document.getElementById('projectList');
+  if(!_projects.projects||!_projects.projects.length){
+    list.innerHTML='<div class="ps-empty">No projects yet</div><button class="ps-create" onclick="createProject()">&#43; New Project</button>';
+    return;
+  }
+  var html='';
+  _projects.projects.forEach(function(p){
+    var isActive=p.id===_projects.active;
+    html+='<div class="project-item'+(isActive?' active':'')+'" onclick="selectProject(\''+p.id+'\')">'
+      +'<div class="pi-row"><span class="pi-name">'+p.name+'</span>'
+      +(p.badge?'<span class="pi-badge">'+p.badge+'</span>':'')
+      +(isActive?'':'<span class="pi-delete" onclick="deleteProject(\''+p.id+'\',event)" style="color:#555;cursor:pointer;font-size:12px;margin-left:6px" title="Delete">&#10005;</span>')
+      +'</div>'
+      +'<div class="pi-path">'+p.path+'</div>'
+      +(p.desc?'<div class="pi-desc">'+p.desc+'</div>':'')
+      +'</div>';
+  });
+  html+='<button class="ps-create" onclick="createProject()">&#43; New Project</button>';
+  list.innerHTML=html;
+}
+
+/* Auto-refresh tasks every 2s */
+setInterval(function(){
+  if(document.getElementById('taskPanel').classList.contains('open'))renderTasks();
+},2000);
+
+/* Init */
+loadProjects();
+renderTasks();
+</script>
+
+<input type="file" id="importFileInput" accept=".json,.jsonl,.txt,.csv" style="display:none">
+
+<div id="taskPanel">
+  <div class="tp-head">
+    <span class="tp-title">TASK MONITOR</span>
+    <button class="tp-close" onclick="toggleTaskPanel()">&#10005;</button>
+  </div>
+  <div class="tp-filters">
+    <button class="tp-filter active" onclick="filterTasks('all',this)">All</button>
+    <button class="tp-filter" onclick="filterTasks('running',this)">Running</button>
+    <button class="tp-filter" onclick="filterTasks('done',this)">Done</button>
+    <button class="tp-filter" onclick="filterTasks('error',this)">Error</button>
+  </div>
+  <div class="tp-filters" style="border-bottom:1px solid #1e2330;padding-top:0">
+    <button class="tp-type-filter active" onclick="filterTaskType('all',this)" style="color:#889">ALL</button>
+    <button class="tp-type-filter" onclick="filterTaskType('chat',this)" style="color:#00e5ff">CHAT</button>
+    <button class="tp-type-filter" onclick="filterTaskType('image',this)" style="color:#7c4dff">IMG</button>
+    <button class="tp-type-filter" onclick="filterTaskType('sound',this)" style="color:#ff6b9d">AUDIO</button>
+    <button class="tp-type-filter" onclick="filterTaskType('mesh',this)" style="color:#00ff88">3D</button>
+    <button class="tp-type-filter" onclick="filterTaskType('code',this)" style="color:#58a6ff">CODE</button>
+    <button class="tp-type-filter" onclick="filterTaskType('video',this)" style="color:#ffaa00">VID</button>
+  </div>
+  <div class="tp-list" id="taskList">
+    <div class="tp-empty">No active tasks</div>
+  </div>
+</div>
+
+<div id="projectSlider">
+  <div class="ps-head">
+    <span class="ps-title">PROJECTS / SESSIONS</span>
+    <div class="ps-tabs">
+      <button class="ps-tab active" id="psTabProjects" onclick="switchSliderTab('projects')">PROJECTS</button>
+      <button class="ps-tab" id="psTabSessions" onclick="switchSliderTab('sessions')">SESSIONS</button>
+    </div>
+    <button class="ps-close" onclick="toggleProjectSlider()">&#10005;</button>
+  </div>
+  <div class="ps-list" id="projectList">
+    <div class="ps-empty">Loading projects...</div>
+  </div>
+  <div class="ps-list" id="sessionList" style="display:none">
+    <div class="ps-empty">Loading sessions...</div>
+  </div>
+</div>
+
+<div id="importModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:24px;max-width:420px;width:90%;color:#e0e0e0;font-family:monospace;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="color:#00e5ff;font-size:14px;font-weight:bold;">IMPORT CHAT HISTORY</span>
+      <button onclick="document.getElementById('importModal').style.display='none'" style="background:none;border:none;color:#ff5555;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="color:#888;font-size:11px;">SOURCE</label>
+      <select id="importSource" style="width:100%;background:#161b22;border:1px solid #30363d;color:#e0e0e0;padding:8px;border-radius:6px;margin-top:4px;">
+        <option value="">Auto-detect</option>
+        <option value="chatgpt">ChatGPT</option>
+        <option value="grok">Grok (xAI)</option>
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="generic">Generic (JSON/JSONL/TXT)</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="color:#888;font-size:11px;">SESSION NAME</label>
+      <input id="importSessionName" placeholder="e.g. chatgpt_backup" style="width:100%;background:#161b22;border:1px solid #30363d;color:#e0e0e0;padding:8px;border-radius:6px;margin-top:4px;">
+    </div>
+    <div id="importFileLabel" style="color:#58a6ff;font-size:12px;margin-bottom:12px;min-height:18px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="importSelectBtn" style="flex:1;background:#21262d;border:1px solid #30363d;color:#e0e0e0;padding:10px;border-radius:6px;cursor:pointer;">SELECT FILE</button>
+      <button id="importUploadBtn" style="flex:1;background:#00e5ff;border:none;color:#000;padding:10px;border-radius:6px;cursor:pointer;font-weight:bold;" disabled>UPLOAD</button>
+    </div>
+    <div id="importResult" style="margin-top:12px;color:#888;font-size:12px;min-height:18px;"></div>
+  </div>
+</div>
+
+<div id="importAssetsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(0,255,136,0.3);border-radius:12px;padding:24px;max-width:640px;width:92%;max-height:80vh;overflow-y:auto;color:#e0e0e0;font-family:monospace;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="color:#00ff88;font-size:14px;font-weight:bold;">IMPORT ASSETS</span>
+      <button onclick="document.getElementById('importAssetsModal').style.display='none'" style="background:none;border:none;color:#ff5555;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div id="assetDropZone" style="border:2px dashed rgba(0,255,136,0.3);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;">
+      <div style="font-size:24px;color:#00ff88;margin-bottom:8px;">+</div>
+      <div style="font-size:12px;color:#889;">Drop files here or click to select</div>
+      <div style="font-size:10px;color:#555;margin-top:4px;">STL, GLB, OBJ, PNG, JPG, MP3, WAV</div>
+      <input type="file" id="assetFileInput" multiple accept=".stl,.glb,.obj,.fbx,.png,.jpg,.jpeg,.mp3,.wav,.ogg" style="display:none">
+    </div>
+    <div id="assetPreview" style="display:none;margin-bottom:16px;"></div>
+    <div id="assetUploadStatus" style="font-size:11px;color:#889;min-height:16px;margin-bottom:12px;"></div>
+    <div id="assetList" style="margin-bottom:12px;"></div>
+    <button id="assetUploadBtn" style="width:100%;background:#00ff88;border:none;color:#000;padding:10px;border-radius:6px;cursor:pointer;font-weight:bold;display:none;">UPLOAD</button>
+  </div>
+</div>
+
+<script>
+// Connection status already in topnav
+</script>
+<script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
+<script src="/js/zicore-polyfills.js"></script>
+<script src="/js/zicore-library.js"></script>
+</body>
+</html>

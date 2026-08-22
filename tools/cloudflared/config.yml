@@ -1,0 +1,21 @@
+# ZICORE System - Cloudflare Tunnel Configuration
+# Production deployment for zicore.space
+#
+# Setup:
+# 1. Download cloudflared.exe from: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
+# 2. Place cloudflared.exe in this folder
+# 3. Run: cloudflared.exe tunnel login
+# 4. Run: cloudflared.exe tunnel create zicore
+# 5. Update tunnel and credentials-file below
+# 6. Run: cloudflared.exe tunnel route dns zicore app.zicore.space
+# 7. Run: cloudflared.exe tunnel route dns zicore api.zicore.space
+
+tunnel: zicore
+credentials-file: C:\Users\zinem\.cloudflared\TUNNEL_ID.json
+
+ingress:
+  - hostname: app.zicore.space
+    service: http://localhost:4000
+  - hostname: api.zicore.space
+    service: http://localhost:4080
+  - service: http_status:404

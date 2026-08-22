@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIO Agent — Powered by OpenCode</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1528;--bg4:#151c35;--bg5:#1a2240;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d71;--orange:#ff9f43;--yellow:#ffd32a;
+  --text:#e0e6f0;--text2:#8892b0;--text3:#5a6480;
+  --glass:rgba(10,14,26,0.92);--glass2:rgba(15,21,40,0.75);
+  --border:rgba(0,229,255,0.1);--border2:rgba(0,229,255,0.2);
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+  --radius:12px;--radius-sm:8px;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Cascadia Code','Consolas','Courier New',monospace;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.006) 2px,rgba(0,229,255,.006) 4px)}
+
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(4,6,12,0.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;gap:16px}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px;cursor:pointer;flex-shrink:0}
+.topbar-logo svg{width:24px;height:24px}
+.topbar-logo span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-sep{width:1px;height:18px;background:var(--border);flex-shrink:0}
+.topbar-title{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.topbar-clock{font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:1px}
+.topbar-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);padding:4px 12px;border-radius:var(--radius-sm);background:rgba(0,229,255,0.04);border:1px solid var(--border)}
+.topbar-status .dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0}
+.topbar-status .dot.online{background:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.4)}
+.powered-badge{font-size:9px;color:var(--text3);padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-family:var(--mono);letter-spacing:0.5px}
+
+.layout{position:relative;z-index:2;margin-top:52px;height:calc(100vh - 52px);display:flex;overflow:hidden}
+
+/* ── Sessions Sidebar ── */
+.sidebar{width:320px;background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-head{padding:12px 14px 8px;border-bottom:1px solid var(--border)}
+.sidebar-head h3{font-size:12px;color:var(--cyan);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.sidebar-head h3 .count{font-size:10px;color:var(--text3);font-weight:400;font-family:var(--mono);margin-left:auto}
+.sidebar-search input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color .2s}
+.sidebar-search input:focus{border-color:var(--cyan)}
+.sidebar-search input::placeholder{color:var(--text3)}
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 4px}
+.sidebar-tab{flex:1;padding:7px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-weight:600}
+.sidebar-tab:hover{color:var(--text2)}
+.sidebar-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.session-list{flex:1;overflow-y:auto;padding:4px 0}
+.session-item{padding:9px 14px;cursor:pointer;border-left:3px solid transparent;border-bottom:1px solid rgba(0,229,255,0.03);transition:all .15s}
+.session-item:hover{background:rgba(0,229,255,0.03);border-left-color:rgba(0,229,255,0.15)}
+.session-item.active{background:rgba(0,229,255,0.06);border-left-color:var(--cyan)}
+.session-title{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.session-title-wrap{display:flex;align-items:center;gap:6px}
+.session-title-wrap .session-title{flex:1;min-width:0}
+.session-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.session-item:hover .session-actions{opacity:1}
+.session-actions .sact{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;color:var(--text3);cursor:pointer;background:var(--bg4);transition:all .15s;user-select:none}
+.session-actions .sact:hover{color:var(--cyan);background:var(--bg5)}
+.session-actions .sact.danger:hover{color:var(--red);background:rgba(255,61,113,0.12)}
+.session-meta{display:flex;gap:6px;margin-top:3px;font-size:10px;color:var(--text3);flex-wrap:wrap;align-items:center}
+.session-meta .msgs{color:var(--cyan);font-family:var(--mono);font-weight:600}
+.session-meta .model{color:var(--purple);font-family:var(--mono);background:rgba(124,77,255,0.08);padding:1px 6px;border-radius:3px}
+.session-meta .tokens{color:var(--orange);font-family:var(--mono)}
+.sidebar-foot{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:5px}
+.sidebar-foot button{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;font-family:var(--font);cursor:pointer;transition:all .2s}
+.sidebar-foot button:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.04)}
+.sidebar-foot button.primary{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan)}
+
+/* ── Main Panel ── */
+.main-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.chat-header{padding:10px 20px;border-bottom:1px solid var(--border);background:var(--glass);display:flex;align-items:center;gap:12px;min-height:44px}
+.chat-header-title{font-size:13px;font-weight:600;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-header-meta{font-size:10px;color:var(--text3);font-family:var(--mono);display:flex;gap:12px;flex-shrink:0}
+.chat-header-meta .label{color:var(--text3)}
+.chat-header-meta .val{color:var(--cyan)}
+.chat-area{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.msg{display:flex;gap:10px;max-width:85%;animation:msgIn .2s ease-out}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg.assistant{align-self:flex-start}
+.msg.system{align-self:center;max-width:70%}
+.msg-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.msg.user .msg-avatar{background:rgba(0,229,255,0.12);color:var(--cyan);border:1px solid rgba(0,229,255,0.2)}
+.msg.assistant .msg-avatar{background:rgba(124,77,255,0.12);color:var(--purple);border:1px solid rgba(124,77,255,0.2)}
+.msg.system .msg-avatar{background:rgba(255,159,67,0.1);color:var(--orange);border:1px solid rgba(255,159,67,0.15)}
+.msg-bubble{background:var(--bg3);border:1px solid var(--border);border-radius:4px 10px 10px 10px;padding:9px 12px;font-size:12px;line-height:1.6;overflow-wrap:break-word}
+.msg.user .msg-bubble{background:rgba(0,229,255,0.05);border-color:rgba(0,229,255,0.12);border-radius:10px 4px 10px 10px}
+.msg.assistant .msg-bubble{background:var(--bg3);border-color:var(--border)}
+.msg.system .msg-bubble{background:rgba(255,159,67,0.04);border-color:rgba(255,159,67,0.1);border-radius:10px;font-size:11px;color:var(--text2)}
+.msg-bubble pre{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;overflow-x:auto;margin:6px 0;font-size:11px}
+.msg-bubble code{background:rgba(0,229,255,0.07);padding:1px 4px;border-radius:3px;font-size:11px;font-family:var(--mono)}
+.msg-bubble pre code{background:none;padding:0}
+.msg-bubble strong{color:var(--cyan)}
+.msg-bubble em{color:var(--purple)}
+.msg-bubble h2,.msg-bubble h3,.msg-bubble h4{color:var(--cyan);margin:6px 0 3px;font-weight:700}
+.msg-time{font-size:9px;color:var(--text3);margin-top:2px;padding:0 4px}
+.msg.user .msg-time{text-align:right}
+.empty-state{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--text3)}
+.empty-state .hex-icon{width:80px;height:80px;opacity:0.15}
+.empty-state h3{font-size:15px;color:var(--text2);font-weight:600}
+.empty-state p{font-size:12px;max-width:300px;text-align:center;line-height:1.5}
+
+.live-bar{border-top:1px solid var(--border);background:var(--glass);padding:10px 20px;display:flex;gap:8px;align-items:center}
+.live-bar input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color .2s}
+.live-bar input:focus{border-color:var(--cyan)}
+.live-bar input::placeholder{color:var(--text3)}
+.btn{padding:9px 16px;border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:var(--font);cursor:pointer;transition:all .2s}
+.btn-cyan{background:var(--cyan);color:var(--bg)}
+.btn-cyan:hover{box-shadow:0 0 16px rgba(0,229,255,0.3)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-red{background:rgba(255,61,113,0.1);border:1px solid rgba(255,61,113,0.2);color:var(--red)}
+.btn-red:hover{background:rgba(255,61,113,0.15)}
+
+.stats-bar{padding:6px 20px;border-top:1px solid var(--border);background:var(--bg2);display:flex;gap:16px;font-size:10px;color:var(--text3);font-family:var(--mono);align-items:center}
+.stats-bar .v{color:var(--cyan)}
+.stats-bar .sep{width:1px;height:12px;background:var(--border)}
+.stats-bar .mode-badge{padding:2px 8px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.stats-bar .mode-badge.build{background:rgba(0,229,255,0.12);color:var(--cyan);border:1px solid rgba(0,229,255,0.2)}
+.stats-bar .mode-badge.plan{background:rgba(124,77,255,0.12);color:var(--purple);border:1px solid rgba(124,77,255,0.2)}
+.stats-bar .tool-pill{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:3px;font-size:9px;background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.15);animation:toolPulse 1.5s ease-in-out infinite}
+@keyframes toolPulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.stats-bar .key-hint{padding:1px 5px;border:1px solid var(--border);border-radius:3px;font-size:9px;color:var(--text3);background:var(--bg3)}
+
+/* Persistent Prompt Bar */
+.prompt-bar{border-top:1px solid var(--border);background:var(--glass);padding:12px 20px}
+.prompt-input-wrapper{display:flex;align-items:flex-end;gap:10px}
+.prompt-input-wrapper textarea{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;resize:none;min-height:44px;max-height:160px;line-height:1.5;transition:border-color .2s}
+.prompt-input-wrapper textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,0.1)}
+.prompt-input-wrapper textarea::placeholder{color:var(--text3)}
+.prompt-actions{display:flex;align-items:center;gap:8px}
+/* Inline Provider/Model bar below prompt */
+.prompt-model-bar{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.prompt-model-bar label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700;flex-shrink:0}
+.prompt-model-bar select{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px;font-family:var(--font);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:200px}
+.prompt-model-bar select:focus{border-color:var(--cyan)}
+.prompt-model-bar select option{background:var(--bg2);color:var(--text)}
+.prompt-model-bar .pm-sep{width:1px;height:14px;background:var(--border);flex-shrink:0}
+.prompt-model-bar .pm-info{font-size:9px;color:var(--text3);font-family:var(--mono);margin-left:auto;flex-shrink:0}
+.prompt-model-bar .pm-info .pm-active{color:var(--cyan)}
+.prompt-hints{display:flex;gap:8px;margin-top:8px;padding-left:4px}
+.prompt-hints .hint{font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:3px;color:var(--text3);background:var(--bg3);cursor:pointer;transition:all .2s}
+.prompt-hints .hint:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.05)}
+
+/* Live Connection Bar */
+.live-bar{border-top:1px solid var(--border);background:var(--glass);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.live-status{display:flex;align-items:center;gap:8px;color:var(--green);font-size:11px;font-family:var(--mono)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.live-bar input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color .2s}
+.live-bar input:focus{border-color:var(--cyan)}
+.live-bar input::placeholder{color:var(--text3)}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);width:560px;max-width:92vw;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:14px;color:var(--cyan);font-weight:700}
+.modal-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px 8px;transition:color .2s}
+.modal-close:hover{color:var(--red)}
+.modal-body{padding:14px 20px;overflow-y:auto;flex:1}
+.modal-body textarea{width:100%;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none}
+.modal-body textarea:focus{border-color:var(--cyan)}
+.modal-body .hint{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5}
+.modal-foot{padding:10px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+.loading{padding:50px;text-align:center;color:var(--text3);font-size:12px}
+.loading::after{content:'';display:block;width:32px;height:32px;margin:12px auto;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,229,255,0.2)}
+
+/* ── Mode Toggle (topbar) ── */
+.mode-toggle{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.mode-btn{padding:4px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;color:var(--text3);background:transparent;font-family:var(--font)}
+.mode-btn.active{background:rgba(0,229,255,0.12);color:var(--cyan)}
+.mode-btn.plan.active{background:rgba(124,77,255,0.12);color:var(--purple)}
+.mode-btn:hover:not(.active){color:var(--text2)}
+
+/* ── Tool Indicator ── */
+.tool-indicator{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green);font-family:var(--mono)}
+.tool-indicator.hidden{display:none}
+.tool-indicator .spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+
+/* ── Parameter sliders (right panel) ── */
+.cfg-slider-group{margin-bottom:10px}
+.cfg-slider-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px}
+.cfg-slider-label .val{color:var(--cyan);font-family:var(--mono)}
+.cfg-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--bg4);border-radius:2px;outline:none;cursor:pointer}
+.cfg-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg);cursor:pointer}
+
+/* ── Right Tools Panel ── */
+.tools-panel{width:280px;background:var(--glass);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.tools-section{padding:12px 14px;border-bottom:1px solid var(--border)}
+.tools-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.tools-label svg{width:12px;height:12px;stroke:var(--text3);fill:none;stroke-width:2}
+
+/* ── Node Cards ── */
+.node-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;transition:all .2s}
+.node-card:hover{border-color:var(--border2)}
+.node-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.node-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.node-dot.online{background:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.4)}
+.node-dot.offline{background:var(--red)}
+.node-dot.warning{background:var(--orange)}
+.node-name{font-size:11px;font-weight:600;color:var(--text);flex:1}
+.node-tag{font-size:9px;color:var(--text3);font-family:var(--mono);padding:1px 5px;border:1px solid var(--border);border-radius:3px}
+.node-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.node-stat{font-size:10px;color:var(--text3);font-family:var(--mono);display:flex;justify-content:space-between}
+.node-stat .val{color:var(--cyan)}
+.node-stat .val.warn{color:var(--orange)}
+.node-stat .val.danger{color:var(--red)}
+
+/* ── Tool Cards ── */
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tool-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s}
+.tool-card:hover{border-color:var(--cyan);background:rgba(0,229,255,0.04)}
+.tool-card .icon{font-size:18px;margin-bottom:4px}
+.tool-card .name{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.tool-card .status{font-size:8px;color:var(--text3);margin-top:2px}
+.tool-card.active{border-color:var(--green);background:rgba(0,255,136,0.04)}
+.tool-card.active .status{color:var(--green)}
+
+/* ── Quick Models ── */
+.model-chip{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:all .2s;font-size:11px}
+.model-chip:hover{border-color:var(--purple);background:rgba(124,77,255,0.04)}
+.model-chip .mp{color:var(--text3);font-size:9px;font-family:var(--mono);margin-left:auto}
+.model-chip .mn{color:var(--text);font-weight:500}
+.model-chip .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── System Health Bar ── */
+.health-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px}
+.health-row .hicon{font-size:14px}
+.health-row .hlabel{font-size:10px;color:var(--text2);flex:1;font-weight:500}
+.health-row .hval{font-size:10px;font-family:var(--mono);color:var(--cyan)}
+.health-row .hval.warn{color:var(--orange)}
+.health-row .hval.danger{color:var(--red)}
+
+/* ── Quick Actions ── */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qa-btn{padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;transition:all .2s;text-align:center;font-family:var(--font)}
+.qa-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.04)}
+.qa-btn .qa-icon{font-size:16px;display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="scanline"></div>
+
+<div class="topbar">
+  <div class="topbar-logo" onclick="location.href='/zicore'">
+    <svg viewBox="0 0 100 100"><polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="none" stroke="url(#hg)" stroke-width="3"/><defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs></svg>
+    <span>ZICORE</span>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">ZIO COPILOT</div>
+  <div class="powered-badge">OPENCODE</div>
+  <div class="powered-badge" style="border-color:rgba(0,255,136,0.2);color:var(--green)">VPS</div>
+  <div class="topbar-right">
+    <div class="mode-toggle">
+      <div class="mode-btn active" id="modeBuild" onclick="switchMode('build')" title="Tab to toggle">BUILD</div>
+      <div class="mode-btn plan" id="modePlan" onclick="switchMode('plan')" title="Tab to toggle">PLAN</div>
+    </div>
+    <div class="topbar-status"><div class="dot" id="liveDot"></div><span id="liveLabel">Disconnected</span></div>
+    <div class="topbar-status" id="sysUpdateStatus" style="cursor:pointer;display:none" onclick="showSystemPanel()"><div class="dot" style="background:var(--cyan)"></div><span>Update</span></div>
+    <div class="topbar-clock" id="clock"></div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Sessions Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <h3>Sessions <span class="count" id="sessionCount">0</span></h3>
+      <div class="sidebar-search"><input type="text" id="searchInput" placeholder="Search sessions..." oninput="filterSessions()"></div>
+    </div>
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active" onclick="setTab(this,'all')">All</div>
+      <div class="sidebar-tab" onclick="setTab(this,'recent')">Recent</div>
+      <div class="sidebar-tab" onclick="setTab(this,'large')">Largest</div>
+      <div class="sidebar-tab" onclick="setTab(this,'agent')" style="color:var(--purple);font-weight:800;letter-spacing:1px">Copilot</div>
+      <div class="sidebar-tab" onclick="loadImported(this)" style="color:var(--green);font-weight:800;letter-spacing:1px">ChatGPT</div>
+    </div>
+    <div class="session-list" id="sessionList"><div class="loading">Loading...</div></div>
+    <div class="sidebar-foot">
+      <button onclick="loadSessions()">Refresh</button>
+      <button onclick="createNewSession()">New</button>
+      <button onclick="showImport()">Import</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-panel">
+    <div class="chat-header">
+      <div class="chat-header-title" id="chatTitle">Select a session</div>
+      <div class="tool-indicator hidden" id="toolIndicator"><div class="spinner"></div><span id="toolName">idle</span></div>
+      <div class="chat-header-meta" id="chatMeta"></div>
+    </div>
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state">
+        <svg class="hex-icon" viewBox="0 0 100 100"><defs><linearGradient id="zg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="none" stroke="url(#zg)" stroke-width="2.5" opacity="0.4"/><text x="50" y="46" text-anchor="middle" fill="#00e5ff" font-size="16" font-weight="800" font-family="monospace" opacity="0.4">ZIO</text><text x="50" y="64" text-anchor="middle" fill="#7c4dff" font-size="9" font-family="monospace" opacity="0.3">AGENT</text></svg>
+        <h3>ZIO Agent</h3>
+        <p>Powered by OpenCode. Browse coding sessions or connect live to a new agent session.</p>
+      </div>
+    </div>
+    <!-- Persistent Prompt Input (always visible) -->
+    <div class="prompt-bar" id="promptBar">
+      <div class="prompt-input-wrapper">
+        <textarea id="promptInput" placeholder="Ask ZIO Agent anything... (Ctrl+Enter to send, Tab to switch Build/Plan mode)" rows="1" onkeydown="handlePromptKeydown(event)"></textarea>
+        <div class="prompt-actions">
+          <button class="btn btn-ghost" id="promptModeBtn" onclick="toggleAgentMode()" title="Tab: Switch Build/Plan mode">
+            <span id="promptModeIcon">⚡</span> <span id="promptModeText">BUILD</span>
+          </button>
+          <button class="btn btn-cyan" onclick="sendPrompt()" id="sendPromptBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            Send
+          </button>
+        </div>
+      </div>
+      <div class="prompt-model-bar">
+        <label>Provider</label>
+        <select id="promptProvider" onchange="onPromptProviderChange(this.value)"></select>
+        <div class="pm-sep"></div>
+        <label>Model</label>
+        <select id="promptModel" onchange="onPromptModelChange(this.value)"></select>
+        <div class="pm-sep"></div>
+        <label>Root</label>
+        <input type="text" id="projectRoot" placeholder="/path/to/project" onchange="saveProjectRoot(this.value)" style="flex:1;min-width:140px">
+        <div class="pm-sep"></div>
+        <div class="pm-info">Active: <span class="pm-active" id="pmActiveModel">—</span></div>
+      </div>
+      <div class="prompt-hints">
+        <span class="hint">@file</span><span class="hint">@symbol</span><span class="hint">#session</span><span class="hint">/command</span>
+      </div>
+    </div>
+
+    <!-- Live Connection Bar (when connected) -->
+    <div class="live-bar" id="liveBar" style="display:none">
+      <div class="live-status">
+        <span class="live-dot"></span>
+        <span>Live connected to OpenCode agent</span>
+      </div>
+      <input type="text" id="liveInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendLive()">
+      <button class="btn btn-cyan" onclick="sendLive()">Send</button>
+      <button class="btn btn-red" onclick="disconnectLive()">Disconnect</button>
+    </div>
+    <div class="stats-bar">
+      <span class="mode-badge build" id="statMode">BUILD</span>
+      <span class="sep"></span>
+      <span>Sessions: <span class="v" id="statSess">0</span></span>
+      <span>Messages: <span class="v" id="statMsgs">0</span></span>
+      <span>Exported: <span class="v" id="statExp">-</span></span>
+      <span class="sep"></span>
+      <span>Model: <span class="v" id="statModel">-</span></span>
+      <span>Provider: <span class="v" id="statProvider">opencode</span></span>
+      <span class="sep"></span>
+      <span id="toolPill"></span>
+      <span style="margin-left:auto"></span>
+      <span class="key-hint">Tab</span><span>mode</span>
+      <span class="sep"></span>
+      <span>ZIO Copilot v1.0</span>
+    </div>
+  </div>
+
+  <!-- Right Tools Panel -->
+  <div class="tools-panel">
+    <!-- System Nodes -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        System Nodes
+      </div>
+      <div class="node-card" id="node85">
+        <div class="node-card-head">
+          <div class="node-dot offline" id="node85Dot"></div>
+          <div class="node-name">.85 Primary</div>
+          <div class="node-tag">ZICORE</div>
+        </div>
+        <div class="node-stats">
+          <div class="node-stat"><span>CPU</span><span class="val" id="n85cpu">—</span></div>
+          <div class="node-stat"><span>RAM</span><span class="val" id="n85ram">—</span></div>
+          <div class="node-stat"><span>Disk</span><span class="val" id="n85disk">—</span></div>
+          <div class="node-stat"><span>Port</span><span class="val">:4000</span></div>
+        </div>
+      </div>
+      <div class="node-card" id="node68">
+        <div class="node-card-head">
+          <div class="node-dot offline" id="node68Dot"></div>
+          <div class="node-name">.68 Ollama</div>
+          <div class="node-tag">OC</div>
+        </div>
+        <div class="node-stats">
+          <div class="node-stat"><span>CPU</span><span class="val" id="n68cpu">—</span></div>
+          <div class="node-stat"><span>RAM</span><span class="val" id="n68ram">—</span></div>
+          <div class="node-stat"><span>Models</span><span class="val" id="n68models">13</span></div>
+          <div class="node-stat"><span>Port</span><span class="val">:4096</span></div>
+        </div>
+      </div>
+      <div class="node-card" id="nodeVPS">
+        <div class="node-card-head">
+          <div class="node-dot offline" id="nodeVPSDot"></div>
+          <div class="node-name">VPS Oracle</div>
+          <div class="node-tag">ARM64</div>
+        </div>
+        <div class="node-stats">
+          <div class="node-stat"><span>CPU</span><span class="val" id="nVcpu">—</span></div>
+          <div class="node-stat"><span>RAM</span><span class="val" id="nVram">—</span></div>
+          <div class="node-stat"><span>Models</span><span class="val" id="nVmodels">5</span></div>
+          <div class="node-stat"><span>IP</span><span class="val">.208</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        System Health
+      </div>
+      <div class="health-row"><span class="hicon">&#9889;</span><span class="hlabel">ZICORE Server</span><span class="hval" id="hZicore">checking...</span></div>
+      <div class="health-row"><span class="hicon">&#9881;</span><span class="hlabel">OpenCode API</span><span class="hval" id="hOpenCode">checking...</span></div>
+      <div class="health-row"><span class="hicon">&#129302;</span><span class="hlabel">Ollama (.68)</span><span class="hval" id="hOllama">checking...</span></div>
+      <div class="health-row"><span class="hicon">&#127760;</span><span class="hlabel">VPS Ollama</span><span class="hval" id="hVpsOllama">checking...</span></div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="tools-section" id="paramsSection" style="display:none">
+      <div class="tools-label" style="cursor:pointer" onclick="var s=document.getElementById('paramsContent');s.style.display=s.style.display==='none'?'block':'none'">
+        <svg viewBox="0 0 24 24"><path d="M12 15V3m0 12a3 3 0 100-6 3 3 0 000 6zm0 0v6"/></svg>
+        Parameters &#9660;
+      </div>
+      <div id="paramsContent">
+        <div class="cfg-slider-group">
+          <div class="cfg-slider-label"><span>Temperature</span><span class="val" id="tempVal">0.70</span></div>
+          <input type="range" class="cfg-slider" id="tempSlider" min="0" max="200" value="70" oninput="var v=(this.value/100).toFixed(2);document.getElementById('tempVal').textContent=v;saveParam('temperature',parseFloat(v))">
+        </div>
+        <div class="cfg-slider-group">
+          <div class="cfg-slider-label"><span>Max Tokens</span><span class="val" id="maxTokVal">4096</span></div>
+          <input type="range" class="cfg-slider" id="maxTokSlider" min="256" max="16384" value="4096" step="256" oninput="document.getElementById('maxTokVal').textContent=this.value;saveParam('max_tokens',parseInt(this.value))">
+        </div>
+        <div class="cfg-slider-group">
+          <div class="cfg-slider-label"><span>Top P</span><span class="val" id="topPVal">0.90</span></div>
+          <input type="range" class="cfg-slider" id="topPSlider" min="0" max="100" value="90" oninput="var v=(this.value/100).toFixed(2);document.getElementById('topPVal').textContent=v;saveParam('top_p',parseFloat(v))">
+        </div>
+      </div>
+    </div>
+
+    <!-- ZICORE Tools -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        ZICORE Tools
+      </div>
+      <div class="tool-grid">
+        <div class="tool-card" onclick="toolAction('memory')"><div class="icon">&#128218;</div><div class="name">Memory</div><div class="status">35 tools</div></div>
+        <div class="tool-card" onclick="toolAction('notify')"><div class="icon">&#128276;</div><div class="name">Notify</div><div class="status">Ready</div></div>
+        <div class="tool-card" onclick="toolAction('reminder')"><div class="icon">&#9200;</div><div class="name">Remind</div><div class="status">Ready</div></div>
+        <div class="tool-card" onclick="toolAction('device')"><div class="icon">&#128421;</div><div class="name">Device</div><div class="status">SSH</div></div>
+        <div class="tool-card" onclick="toolAction('engineering')"><div class="icon">&#128736;</div><div class="name">Engin</div><div class="status">Ready</div></div>
+        <div class="tool-card" onclick="toolAction('3d')"><div class="icon">&#128300;</div><div class="name">3D</div><div class="status">Materializer</div></div>
+      </div>
+    </div>
+
+    <!-- Quick Models -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Quick Models
+      </div>
+      <div id="quickModelChips"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="tools-section">
+      <div class="tools-label">
+        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Quick Actions
+      </div>
+      <div class="qa-grid">
+        <button class="qa-btn" onclick="toolAction('new-session')"><span class="qa-icon">&#10010;</span>New Chat</button>
+        <button class="qa-btn" onclick="toolAction('refresh-all')"><span class="qa-icon">&#8635;</span>Refresh</button>
+        <button class="qa-btn" onclick="toolAction('ollama-pull')"><span class="qa-icon">&#11015;</span>Pull Model</button>
+        <button class="qa-btn" onclick="window.open('/settings','_blank')"><span class="qa-icon">&#9881;</span>Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Import Chats</h3><button class="modal-close" onclick="hideImport()">&times;</button></div>
+    <div class="modal-body">
+      <p class="hint">Paste a JSON export or upload a file to browse chat history.</p>
+      <textarea id="importText" placeholder='Paste JSON here...' style="margin-top:8px"></textarea>
+      <div style="margin-top:8px"><input type="file" id="importFile" accept=".json" onchange="handleFile(event)" style="font-size:11px;color:var(--text3)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="hideImport()">Cancel</button>
+      <button class="btn btn-cyan" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- System Update Panel -->
+<div class="modal-overlay" id="sysModal" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head"><h3>◈ SYSTEM UPDATE</h3><button class="modal-close" onclick="hideSystemPanel()">&times;</button></div>
+    <div class="modal-body">
+      <div id="sysStatus"><div class="loading">Checking system status...</div></div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-cyan" onclick="sysGitStatus()">Recheck</button>
+        <button class="btn" onclick="sysGitPull()" style="border-color:var(--purple);color:var(--purple)">Git Pull</button>
+        <button class="btn" onclick="sysFullUpdate()" style="border-color:var(--orange);color:var(--orange)">Full Update + Restart</button>
+      </div>
+      <div id="sysResult" style="margin-top:12px;font-size:11px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;display:none;font-family:var(--mono);white-space:pre-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Starfield ──
+(function(){var c=document.getElementById('starfield'),x=c.getContext('2d');function rz(){c.width=innerWidth;c.height=innerHeight}rz();addEventListener('resize',rz);var S=[];for(var i=0;i<180;i++)S.push({x:Math.random()*2e3,y:Math.random()*2e3,s:Math.random()*1.2+0.3,p:Math.random()*6.28,sp:Math.random()*0.004+0.001});function d(){x.fillStyle='#04060c';x.fillRect(0,0,c.width,c.height);S.forEach(function(s){s.p+=s.sp;if(s.p>6.28)s.p-=6.28;var o=Math.abs(Math.sin(s.p))*0.5;x.fillStyle='rgba(0,229,255,'+(o*0.45)+')';x.fillRect(s.x%c.width,s.y%c.height,s.s,s.s)});requestAnimationFrame(d)}d()})();
+setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+// ── OpenCode API Config (same-origin: VPS proxy -> .68 tailnet) ──
+var OC_HOST='';
+function ocFetch(path,opts){
+  opts=opts||{};opts.headers=opts.headers||{};
+  opts.headers['Content-Type']=opts.headers['Content-Type']||'application/json';
+  return fetch(OC_HOST+path,opts);
+}
+function localFetch(path,opts){
+  opts=opts||{};opts.headers=opts.headers||{};
+  opts.headers['Content-Type']=opts.headers['Content-Type']||'application/json';
+  return fetch(path,opts);
+}
+
+// ── State ──
+var allSessions=[],filtered=[],selected=null,liveSSE=null,liveOn=false,activeTab='all';
+var agentMode='build',activeSessionId=null,currentModel='';
+var providers=[],allModels={};
+
+// ── Health Check ──
+async function checkHealth(){
+  try{
+    var r=await ocFetch('/global/health');
+    var d=await r.json();
+    var dot=document.getElementById('liveDot');
+    if(d.healthy){
+      dot.className='dot online';
+      document.getElementById('liveLabel').textContent='OpenCode Online v'+d.version;
+    }else{
+      dot.className='dot';
+      document.getElementById('liveLabel').textContent='OpenCode Unhealthy';
+    }
+  }catch(e){
+    document.getElementById('liveDot').className='dot';
+    document.getElementById('liveLabel').textContent='OpenCode Offline';
+  }
+}
+
+// ── Load Providers from ZICORE config (providers settings: API keys + models) ──
+var KNOWN_PROVIDERS=[
+  {id:'zicore_native',name:'VPS Ollama',models:['gemma4:12b','qwen2.5-coder:7b','deepseek-r1:8b','gemma3:4b','gemma3:1b','dolphin-phi:2.7b']},
+  {id:'openrouter',name:'OpenRouter',models:['nvidia/nemotron-3-super-120b-a12b:free','google/gemini-2.5-flash','anthropic/claude-sonnet-4','meta-llama/llama-4-maverick','deepseek/deepseek-chat']},
+  {id:'groq',name:'Groq',models:['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','mixtral-8x7b-32768']},
+  {id:'opencode',name:'OpenCode Zen',models:['opencode/mimo-v2-free']},
+  {id:'openai',name:'OpenAI',models:['gpt-4o-mini']}
+];
+var PROVIDER_ORDER=['zicore_native','zicore_vps_tunnel','uncensored_68','ollama','openrouter','groq','opencode','openai','anthropic','deepseek','together'];
+async function loadProviders(){
+  // Prefer ZICORE config (providers settings) — authoritative for API keys/models
+  try{
+    var token=localStorage.getItem('zicore_sso_token')||'';
+    var r=await fetch('/api/config',{headers:token?{'Authorization':'Bearer '+token}:{}});
+    var cfg=await r.json();
+    var pv=cfg.providers||{};
+    var list=Object.keys(pv).filter(function(k){return pv[k]&&pv[k].enabled!==false;});
+    if(list.length){
+      providers=list.map(function(id){
+        var p=pv[id];
+        var models=p.models||[];
+        var dm=p.default_model;
+        if(dm&&models.indexOf(dm)<0)models=[dm].concat(models);
+        return {id:id,name:p.name||id,models:models,default_model:dm,base_url:p.base_url};
+      });
+      providers.sort(function(a,b){
+        var ia=PROVIDER_ORDER.indexOf(a.id),ib=PROVIDER_ORDER.indexOf(b.id);
+        return (ia<0?99:ia)-(ib<0?99:ib);
+      });
+      allModels={};
+      providers.forEach(function(p){allModels[p.id]=p.models||[];});
+      renderPromptProviderSelect(cfg);
+      updateProviderStat();
+      refreshVPSModels();
+      renderQuickModels();
+      return;
+    }
+  }catch(e){console.log('Config load failed, using fallback:',e.message);}
+  try{
+    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(30000)});
+    var d=await r.json();
+    providers=d.all||[];
+    allModels={};
+    providers.forEach(function(p){allModels[p.id]=p.models||[];});
+  }catch(e){
+    providers=KNOWN_PROVIDERS;
+    allModels={};
+    providers.forEach(function(p){allModels[p.id]=p.models||[];});
+  }
+  renderPromptProviderSelect();
+  updateProviderStat();
+  refreshVPSModels();
+  renderQuickModels();
+}
+
+async function refreshVPSModels(){
+  try{
+    var token=localStorage.getItem('zicore_sso_token')||'';
+    var r=await fetch('/api/provider/models/zicore_native',{headers:token?{'Authorization':'Bearer '+token}:{}});
+    var d=await r.json();
+    var models=d.models||[];
+    if(!models.length)return;
+    var cur=allModels['zicore_native']||[];
+    var same=cur.length===models.length&&cur.every(function(m,i){return m===models[i];});
+    if(!same){
+      allModels['zicore_native']=models;
+      var found=false;
+      providers.forEach(function(p){if(p.id==='zicore_native'){p.models=models;found=true;}});
+      if(!found)providers.push({id:'zicore_native',name:'VPS Ollama',models:models,default_model:'gemma4:12b'});
+      renderPromptProviderSelect();
+    }
+  }catch(e){}
+}
+
+var defaultProviderId='zicore_native';
+
+function renderPromptProviderSelect(cfg){
+  var sel=document.getElementById('promptProvider');
+  if(!sel)return;
+  sel.innerHTML='';
+  var active=cfg&&cfg.zio_engine?cfg.zio_engine.active_provider:'';
+  var order=PROVIDER_ORDER;
+  var all=providers.slice().sort(function(a,b){
+    var ia=order.indexOf(a.id),ib=order.indexOf(b.id);
+    return (ia<0?99:ia)-(ib<0?99:ib);
+  });
+  all.forEach(function(p){
+    var o=document.createElement('option');
+    o.value=p.id;o.textContent=p.name||p.id;
+    sel.appendChild(o);
+  });
+  // Default selection: active provider from config, else VPS ollama, else first
+  var pick=active;
+  if(pick&&!all.some(function(p){return p.id===pick;}))pick='';
+  if(!pick&&all.some(function(p){return p.id==='zicore_native';}))pick='zicore_native';
+  if(!pick&&all.length)pick=all[0].id;
+  if(pick)sel.value=pick;
+  onPromptProviderChange(sel.value);
+}
+
+function onPromptProviderChange(pid){
+  var prov=providers.find(function(p){return p.id===pid;});
+  var models=prov?prov.models||[]:(allModels[pid]||[]);
+  var ms=document.getElementById('promptModel');
+  if(!ms)return;
+  ms.innerHTML='';
+  if(!models.length){ms.innerHTML='<option>No models</option>';return;}
+  models.forEach(function(m){
+    var name=typeof m==='object'?m.name||m.id:m;
+    var o=document.createElement('option');
+    o.value=name;o.textContent=name;
+    ms.appendChild(o);
+  });
+  // Prefer configured default_model for this provider
+  if(prov&&prov.default_model){
+    for(var i=0;i<ms.options.length;i++){
+      if(ms.options[i].value===prov.default_model){ms.selectedIndex=i;break;}
+    }
+  }
+  if(ms.options.length>0){
+    currentModel=ms.value;
+    document.getElementById('pmActiveModel').textContent=ms.value;
+    document.getElementById('statModel').textContent=ms.value;
+    document.getElementById('statProvider').textContent=pid;
+  }
+}
+
+function onPromptModelChange(model){
+  currentModel=model;
+  document.getElementById('pmActiveModel').textContent=model;
+  document.getElementById('statModel').textContent=model;
+  var pid=document.getElementById('promptProvider').value;
+  document.getElementById('statProvider').textContent=pid;
+}
+
+function activeSessionProvider(){
+  if(selected&&selected.model)return selected.model.providerID||'opencode';
+  return currentModel?'':'opencode';
+}
+
+function updateProviderStat(){
+  document.getElementById('statProvider').textContent=activeSessionProvider()||'opencode';
+}
+
+// ── Sessions (OpenCode native API) ──
+async function loadSessions(){
+  try{
+    var r=await ocFetch('/session');
+    var d=await r.json();
+    allSessions=(Array.isArray(d)?d:[]).map(function(s){
+      return {
+        id:s.id,
+        title:s.title||s.slug||s.id,
+        slug:s.slug,
+        model:s.model,
+        agent:s.agent||'build',
+        directory:s.directory,
+        tokens:s.tokens||{},
+        cost:s.cost||0,
+        time:s.time||{},
+        created:s.time?s.time.created:0,
+        updated:s.time?s.time.updated:0,
+        version:s.version
+      };
+    });
+    allSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
+    document.getElementById('statSess').textContent=allSessions.length;
+    document.getElementById('sessionCount').textContent=allSessions.length;
+    var totalIn=0,totalOut=0;
+    allSessions.forEach(function(s){totalIn+=(s.tokens.input||0);totalOut+=(s.tokens.output||0);});
+    document.getElementById('statMsgs').textContent=fmtNum(totalIn+totalOut)+' tok';
+    var models={};allSessions.forEach(function(s){
+      var mn=parseModel(s.model);if(mn)models[mn]=(models[mn]||0)+1;
+    });
+    var top=Object.entries(models).sort(function(a,b){return b[1]-a[1]})[0];
+    document.getElementById('statModel').textContent=top?top[0]:'-';
+    document.getElementById('statExp').textContent=new Date().toLocaleDateString();
+    filterSessions();
+  }catch(e){
+    document.getElementById('sessionList').innerHTML='<div class="loading" style="animation:none">Failed to load sessions</div>';
+  }
+}
+
+var importedSessions=[];
+
+async function loadImported(tabEl){
+  try{
+    var r=await localFetch('/api/opencode/imported');
+    var d=await r.json();
+    importedSessions=(d.sessions||[]).map(function(s){
+      return {
+        id:s.id,
+        title:s.title||s.id,
+        model:s.model,
+        agent:'imported',
+        tokens:s.tokens||{},
+        time:s.time||{},
+        created:s.time?s.time.created:0,
+        updated:s.time?s.time.updated:0,
+        source:'chatgpt',
+        msg_count:s.msg_count||0,
+        _messages:s.messages||[]
+      };
+    });
+    importedSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
+    // Merge imported into allSessions (don't replace)
+    var liveIds={};
+    allSessions.forEach(function(s){liveIds[s.id]=true;});
+    importedSessions.forEach(function(s){
+      if(!liveIds[s.id])allSessions.push(s);
+    });
+    allSessions.sort(function(a,b){return(b.updated||0)-(a.updated||0);});
+    document.getElementById('statSess').textContent=allSessions.length;
+    document.getElementById('sessionCount').textContent=allSessions.length;
+    document.getElementById('statExp').textContent=d.exported_at?new Date(d.exported_at).toLocaleDateString():'-';
+    if(tabEl){
+      activeTab='chatgpt';
+      document.querySelectorAll('.sidebar-tab').forEach(function(t){t.classList.remove('active')});
+      tabEl.classList.add('active');
+    }
+    filterSessions();
+  }catch(e){
+    console.log('Import load failed:',e.message);
+  }
+}
+
+function setTab(el,tab){
+  activeTab=tab;
+  document.querySelectorAll('.sidebar-tab').forEach(function(t){t.classList.remove('active')});
+  el.classList.add('active');
+  if(tab==='chatgpt'){loadImported(el);return;}
+  filterSessions();
+}
+
+function filterSessions(){
+  var q=document.getElementById('searchInput').value.toLowerCase();
+  filtered=allSessions.filter(function(s){
+    var mn=parseModel(s.model).toLowerCase();
+    var title=(s.title||'').toLowerCase();
+    if(q&&!(title.indexOf(q)>=0||mn.indexOf(q)>=0))return false;
+    if(activeTab==='agent'&&s.source==='chatgpt')return false;
+    if(activeTab==='chatgpt'&&s.source!=='chatgpt')return false;
+    return true;
+  });
+  var now=Date.now();
+  if(activeTab==='recent')filtered=filtered.filter(function(s){return s.updated&&s.updated>now-7*86400000;});
+  else if(activeTab==='large')filtered=filtered.filter(function(s){
+    var tok=(s.tokens.input||0)+(s.tokens.output||0);return tok>100000;
+  });
+  renderList();
+}
+
+function renderList(){
+  var el=document.getElementById('sessionList');
+  if(!filtered.length){el.innerHTML='<div class="loading" style="animation:none">No sessions found</div>';return;}
+  el.innerHTML=filtered.map(function(s){
+    var d=s.created?new Date(s.created).toLocaleDateString():'';
+    var cls=selected&&selected.id===s.id?'active':'';
+    var mn=parseModel(s.model);
+    var tok='';
+    if(s.tokens.input||s.tokens.output)tok='<span class="tokens">'+fmtNum(s.tokens.input||0)+'in/'+fmtNum(s.tokens.output||0)+'out</span>';
+    var badge=s.source==='chatgpt'?'<span style="color:var(--green);font-size:9px;font-weight:800">ZIO </span>':'';
+    var mc=s.msg_count?(s.msg_count+' msgs'):'';
+    return '<div class="session-item '+cls+'" onclick="selectSession(\''+s.id+'\')">'
+      +'<div class="session-title-wrap"><div class="session-title">'+badge+esc(s.title)+'</div>'
+      +'<div class="session-actions" onclick="event.stopPropagation()">'
+      +'<span class="sact" title="Rename" onclick="renameSession(\''+s.id+'\')">&#9998;</span>'
+      +'<span class="sact danger" title="Delete" onclick="deleteSession(\''+s.id+'\')">&#10005;</span>'
+      +'</div></div>'
+      +'<div class="session-meta">'
+      +'<span>'+d+'</span>'
+      +(mc?'<span>'+mc+'</span>':'')
+      +(mn?'<span class="model">'+esc(mn)+'</span>':'')
+      +tok+'</div></div>';
+  }).join('');
+}
+
+function fmtNum(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n}
+
+// ── Session Controls (create / rename / delete) ──
+async function createNewSession(){
+  try{
+    var r=await ocFetch('/session',{method:'POST',body:JSON.stringify({title:'New session',agent:agentMode})});
+    var s=await r.json();
+    if(s&&s.id){
+      activeSessionId=s.id;
+      selected=null;
+      document.getElementById('chatTitle').textContent=s.title||'New session';
+      document.getElementById('chatMeta').innerHTML='';
+      document.getElementById('chatArea').innerHTML='<div class="empty-state"><h3>New Session</h3><p>Type a message below to start a new conversation with ZIO Copilot.</p></div>';
+      await loadSessions();
+    }
+  }catch(e){
+    alert('Failed to create session: '+e.message);
+  }
+}
+
+function renameSession(id){
+  var s=allSessions.find(function(x){return x.id===id});
+  var cur=s?(s.title||s.id):'';
+  var name=prompt('Rename session:',cur);
+  if(!name)return;
+  ocFetch('/session/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({title:name})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.id){
+        loadSessions();
+        if(selected&&selected.id===id){
+          document.getElementById('chatTitle').textContent=d.title||name;
+        }
+      }
+    })
+    .catch(function(e){alert('Rename failed: '+e.message);});
+}
+
+function deleteSession(id){
+  if(!confirm('Delete session? This cannot be undone.'))return;
+  ocFetch('/session/'+encodeURIComponent(id),{method:'DELETE'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(activeSessionId===id){activeSessionId=null;selected=null;}
+      loadSessions();
+    })
+    .catch(function(e){alert('Delete failed: '+e.message);});
+}
+
+async function selectSession(id){
+  selected=allSessions.find(function(s){return s.id===id});
+  if(!selected)return;
+  activeSessionId=id;
+  renderList();
+  document.getElementById('chatTitle').textContent=selected.title;
+  var d=selected.created?new Date(selected.created).toLocaleString():'';
+  var mn=parseModel(selected.model);
+  var tok=(selected.tokens.input||0)+(selected.tokens.output||0);
+  var src=selected.source==='chatgpt'?' <span style="color:var(--green);font-size:9px">[CHATGPT]</span>':'';
+  document.getElementById('chatMeta').innerHTML=
+    '<span><span class="label">Date:</span> <span class="val">'+d+'</span></span>'
+    +(tok?'<span><span class="label">Tokens:</span> <span class="val">'+fmtNum(tok)+'</span></span>':'')
+    +(mn?'<span><span class="label">Model:</span> <span class="val">'+esc(mn)+'</span></span>':'')
+    +src;
+  var area=document.getElementById('chatArea');
+  area.innerHTML='<div class="loading">Loading messages...</div>';
+  if(selected._messages&&selected._messages.length){
+    renderMessages(selected._messages);
+  }else{
+    try{
+      var r=await ocFetch('/session/'+encodeURIComponent(id)+'/message');
+      var data=await r.json();
+      renderMessages(Array.isArray(data)?data:data.messages||[]);
+    }catch(e){
+      area.innerHTML='<div class="loading" style="animation:none">Failed to load messages — '+esc(e.message)+'</div>';
+    }
+  }
+}
+
+function renderMessages(msgs){
+  var area=document.getElementById('chatArea');
+  if(!msgs.length){area.innerHTML='<div class="empty-state"><p>No messages</p></div>';return;}
+  area.innerHTML=msgs.map(function(m){
+    var role=m.role||'unknown';
+    var av=role==='user'?'U':role==='assistant'?'AI':'S';
+    var cls=role==='user'?'user':role==='assistant'?'assistant':'system';
+    var content=m.content||m.text||'';
+    if(typeof content==='object'){
+      if(Array.isArray(content)){
+        content=content.map(function(p){return typeof p==='object'?(p.text||p.content||JSON.stringify(p)):p;}).join('');
+      }else{
+        content=content.text||content.content||JSON.stringify(content);
+      }
+    }
+    var t=m.time?new Date(m.time).toLocaleTimeString():'';
+    var txt=esc(String(content));
+    txt=txt.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>');
+    txt=txt.replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
+    txt=txt.replace(/`([^`]+)`/g,'<code>$1</code>');
+    txt=txt.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    txt=txt.replace(/\*(.+?)\*/g,'<em>$1</em>');
+    txt=txt.replace(/^### (.+)$/gm,'<h4>$1</h4>');
+    txt=txt.replace(/^## (.+)$/gm,'<h3>$1</h3>');
+    txt=txt.replace(/^# (.+)$/gm,'<h3>$1</h3>');
+    txt=txt.replace(/\n/g,'<br>');
+    return '<div class="msg '+cls+'"><div class="msg-avatar">'+av+'</div><div class="msg-body"><div class="msg-bubble">'+txt+'</div><div class="msg-time">'+t+'</div></div></div>';
+  }).join('');
+  area.scrollTop=area.scrollHeight;
+}
+
+// ── Live SSE + Chat (OpenCode /event + /session/{id}/prompt_async) ──
+var streamPartID=null;
+var streamDone=false;
+function resetLiveMessage(){
+  var existing=document.getElementById('chatArea').querySelector('.msg.live-ai');
+  if(existing)existing.remove();
+  streamPartID=null;
+  streamDone=false;
+}
+function connectLive(){
+  if(liveOn)return;
+  var es=new EventSource(OC_HOST+'/event');
+  liveSSE=es;
+  es.onopen=function(){
+    liveOn=true;
+    document.getElementById('liveBar').style.display='flex';
+    document.getElementById('liveDot').classList.add('online');
+    document.getElementById('liveLabel').textContent='SSE Connected';
+  };
+  es.onmessage=function(e){
+    try{
+      var d=JSON.parse(e.data);
+      var type=d.type||d.event||'';
+      var props=d.properties||d.info||d;
+      if(type.indexOf('tool')>=0||type==='tool_start'){
+        var toolName=props.name||props.tool||(props.properties&&props.properties.tool)||'tool';
+        showTool(toolName);
+      }
+      if(type==='message.part.delta'){
+        if(props.field==='text'&&props.delta){
+          if(props.partID!==streamPartID){
+            resetLiveMessage();
+            streamPartID=props.partID;
+            streamDone=false;
+          }
+          appendLiveMessage(String(props.delta));
+        }
+      }
+      if(type==='message.part.updated'){
+        var part=props.part||props;
+        if(part&&part.type==='text'&&part.text&&props.partID&&props.partID!==streamPartID){
+          resetLiveMessage();
+          appendLiveMessage(String(part.text));
+          streamPartID=props.partID;
+        }
+      }
+      if(type==='text'&&props.text){
+        appendLiveMessage(String(props.text));
+      }
+      if(type==='message.updated'&&props.info){
+        var info=props.info;
+        var content=info.content||info.text||'';
+        if(content)appendLiveMessage(String(content));
+      }
+      if(type==='session.error'||type==='session.error'){
+        var em=props.message||props.error||'Agent error';
+        if(typeof em==='object')em=em.message||JSON.stringify(em);
+        appendLiveMessage('[Error: '+em+']');
+        hideTool();
+      }
+      if(type==='session.idle'||type==='idle'){
+        streamPartID=null;
+        streamDone=true;
+        if(activeSessionId){
+          setTimeout(function(){refreshActiveMessages();},500);
+        }
+      }
+      if(type==='message'||type==='assistant'||type==='response'||type==='chat'){
+        var info=props.info||props;
+        var content=info.content||info.text||info.delta||'';
+        if(typeof content==='object'&&content){
+          if(Array.isArray(content)){
+            content=content.map(function(p){return typeof p==='object'?(p.text||p.content||''):p;}).join('');
+          }else{
+            content=content.text||content.content||'';
+          }
+        }
+        if(content&&type!=='message.user'){
+          appendLiveMessage(String(content));
+        }
+      }
+    }catch(ex){}
+  };
+  es.onerror=function(){
+    liveOn=false;liveSSE=null;
+    document.getElementById('liveBar').style.display='none';
+    document.getElementById('liveDot').classList.remove('online');
+    document.getElementById('liveLabel').textContent='SSE Disconnected';
+    setTimeout(function(){if(!liveOn)connectLive();},5000);
+  };
+}
+function disconnectLive(){if(liveSSE)liveSSE.close();liveSSE=null;liveOn=false;}
+
+async function refreshActiveMessages(){
+  if(!activeSessionId)return;
+  try{
+    var r=await ocFetch('/session/'+encodeURIComponent(activeSessionId)+'/message');
+    var data=await r.json();
+    var msgs=Array.isArray(data)?data:data.messages||[];
+    if(msgs.length){
+      var area=document.getElementById('chatArea');
+      var live=area.querySelector('.msg.live-ai');
+      var keepScroll=live&&area.scrollTop+area.clientHeight>=area.scrollHeight-10;
+      renderMessages(msgs);
+      if(keepScroll)area.scrollTop=area.scrollHeight;
+    }
+  }catch(e){}
+}
+
+function appendLiveMessage(text){  if(!text)return;
+  var area=document.getElementById('chatArea');
+  var existing=area.querySelector('.msg.live-ai .msg-bubble');
+  if(existing){
+    existing.innerHTML+=esc(text).replace(/\n/g,'<br>');
+  }else{
+    var div=document.createElement('div');
+    div.className='msg assistant live-ai';
+    div.innerHTML='<div class="msg-avatar">AI</div><div class="msg-body"><div class="msg-bubble">'+esc(text).replace(/\n/g,'<br>')+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
+    area.appendChild(div);
+  }
+  area.scrollTop=area.scrollHeight;
+  hideTool();
+}
+
+async function sendLive(){
+  var inp=document.getElementById('liveInput');
+  var txt=inp.value.trim();if(!txt)return;inp.value='';
+
+  var area=document.getElementById('chatArea');
+  var div=document.createElement('div');div.className='msg user';
+  div.innerHTML='<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-bubble">'+esc(txt)+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
+  area.appendChild(div);area.scrollTop=area.scrollHeight;
+
+  try{
+    var sid=await ensureSession();
+    var mo=currentModelObj();
+    var body={parts:[{type:'text',text:txt}],agent:agentMode};
+    if(mo)body.model=mo;
+    await ocFetch('/session/'+encodeURIComponent(sid)+'/prompt_async',{
+      method:'POST',
+      body:JSON.stringify(body)
+    });
+  }catch(e){
+    appendLiveMessage('[Error sending: '+e.message+']');
+  }
+}
+
+// ── Import/Export ──
+function showImport(){document.getElementById('importModal').classList.add('show')}
+function hideImport(){document.getElementById('importModal').classList.remove('show')}
+function handleFile(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){document.getElementById('importText').value=ev.target.result;};r.readAsText(f);}
+function doImport(){
+  var txt=document.getElementById('importText').value.trim();
+  if(!txt){alert('No data');return;}
+  try{var d=JSON.parse(txt);allSessions=d.sessions||[];filtered=allSessions;document.getElementById('statSess').textContent=allSessions.length;document.getElementById('sessionCount').textContent=allSessions.length;renderList();hideImport();}catch(e){alert('Invalid JSON: '+e.message);}
+}
+function exportChats(){
+  var data={sessions:allSessions,total:allSessions.length,exported_at:new Date().toISOString()};
+  var blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='zio_agent_chats.json';a.click();
+}
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function saveParam(key,val){}
+
+// ── Agent Mode (Build/Plan) ──
+function switchMode(mode){
+  agentMode=mode;
+  var b=document.getElementById('modeBuild');
+  var p=document.getElementById('modePlan');
+  var sm=document.getElementById('statMode');
+  if(mode==='build'){
+    b.classList.add('active');p.classList.remove('active');
+    sm.textContent='BUILD';sm.className='mode-badge build';
+  }else{
+    p.classList.add('active');b.classList.remove('active');
+    sm.textContent='PLAN';sm.className='mode-badge plan';
+  }
+}
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(e.key==='Tab'){
+    e.preventDefault();
+    switchMode(agentMode==='build'?'plan':'build');
+  }
+});
+
+// ── Tool Activity Indicator ──
+function showTool(name){
+  var el=document.getElementById('toolIndicator');
+  var nm=document.getElementById('toolName');
+  var pill=document.getElementById('toolPill');
+  el.classList.remove('hidden');
+  nm.textContent=name;
+  pill.innerHTML='<span class="tool-pill">'+esc(name)+'</span>';
+}
+function hideTool(){
+  document.getElementById('toolIndicator').classList.add('hidden');
+  document.getElementById('toolPill').innerHTML='';
+}
+
+// ── Provider stat display ──
+function updateProviderStat(){
+  document.getElementById('statProvider').textContent=activeSessionProvider()||'opencode';
+}
+
+// ── Model name parser ──
+function parseModel(m){
+  if(!m)return'';
+  if(typeof m==='object')return m.id||m.name||JSON.stringify(m);
+  try{var p=JSON.parse(m);return p.id||p.name||m;}catch(e){return m;}
+}
+
+// ── System Status Polling ──
+async function pollSystemStatus(){
+  check85();
+  check68();
+  checkVPS();
+  checkOllamaHealth();
+}
+
+async function check85(){
+  try{
+    var r=await localFetch('/api/system/stats',{signal:AbortSignal.timeout(5000)});
+    var d=await r.json();
+    var dot=document.getElementById('node85Dot');
+    dot.className='node-dot online';
+    var cpu=d.cpu||d.cpu_percent||'—';
+    var ram=d.ram_percent||d.memory_percent||'—';
+    var disk=d.disk_percent||'—';
+    document.getElementById('n85cpu').textContent=typeof cpu==='number'?cpu.toFixed(0)+'%':cpu;
+    document.getElementById('n85ram').textContent=typeof ram==='number'?ram.toFixed(0)+'%':ram;
+    document.getElementById('n85disk').textContent=typeof disk==='number'?disk.toFixed(0)+'%':disk;
+    var cpuEl=document.getElementById('n85cpu');
+    var ramEl=document.getElementById('n85ram');
+    var diskEl=document.getElementById('n85disk');
+    if(typeof cpu==='number'&&cpu>80)cpuEl.className='val danger';else if(typeof cpu==='number'&&cpu>60)cpuEl.className='val warn';else cpuEl.className='val';
+    if(typeof ram==='number'&&ram>85)ramEl.className='val danger';else if(typeof ram==='number'&&ram>70)ramEl.className='val warn';else ramEl.className='val';
+    document.getElementById('hZicore').textContent='Online';
+    document.getElementById('hZicore').className='hval';
+  }catch(e){
+    document.getElementById('node85Dot').className='node-dot offline';
+    document.getElementById('hZicore').textContent='Offline';
+    document.getElementById('hZicore').className='hval danger';
+  }
+}
+
+async function check68(){
+  try{
+    var r=await ocFetch('/global/health',{signal:AbortSignal.timeout(5000)});
+    var d=await r.json();
+    var dot=document.getElementById('node68Dot');
+    dot.className=d.healthy?'node-dot online':'node-dot warning';
+    document.getElementById('hOpenCode').textContent=d.healthy?'v'+d.version:'Unhealthy';
+    document.getElementById('hOpenCode').className=d.healthy?'hval':'hval warn';
+  }catch(e){
+    document.getElementById('node68Dot').className='node-dot offline';
+    document.getElementById('hOpenCode').textContent='Offline';
+    document.getElementById('hOpenCode').className='hval danger';
+  }
+}
+
+async function checkVPS(){
+  try{
+    var r=await fetch('/ollama/api/tags',{signal:AbortSignal.timeout(8000),
+      headers:{'User-Agent':'ZICORE/5.0'}});
+    var d=await r.json();
+    var dot=document.getElementById('nodeVPSDot');
+    var models=d.models||[];
+    dot.className=models.length>0?'node-dot online':'node-dot warning';
+    document.getElementById('nVmodels').textContent=models.length;
+    document.getElementById('hVpsOllama').textContent=models.length+' models';
+    document.getElementById('hVpsOllama').className='hval';
+  }catch(e){
+    document.getElementById('nodeVPSDot').className='node-dot offline';
+    document.getElementById('hVpsOllama').textContent='Offline';
+    document.getElementById('hVpsOllama').className='hval danger';
+  }
+}
+
+async function checkOllamaHealth(){
+  try{
+    var r=await ocFetch('/provider',{signal:AbortSignal.timeout(30000)});
+    var d=await r.json();
+    var all=d.all||[];
+    var hasOllama=all.some(function(p){return p.id&&p.id.indexOf('ollama')>=0;});
+    document.getElementById('hOllama').textContent=hasOllama?'Connected':'No provider';
+    document.getElementById('hOllama').className=hasOllama?'hval':'hval warn';
+  }catch(e){
+    document.getElementById('hOllama').textContent='Unknown';
+    document.getElementById('hOllama').className='hval warn';
+  }
+}
+
+// ── Quick Models ──
+var QUICK_MODEL_RANK=[
+  // Local/free first: [providerID, modelID, label, tag, color]
+  ['zicore_native','granite4.1:3b','Granite 4.1 3B','VPS','var(--green)'],
+  ['ollama_cloud','gpt-oss:20b-cloud','GPT-OSS 20B Cloud','Free','var(--cyan)'],
+  ['ollama_cloud','gpt-oss:120b-cloud','GPT-OSS 120B Cloud','Free','var(--cyan)'],
+  ['openrouter','nvidia/nemotron-3-super-120b-a12b:free','Nemotron 120B','Free','var(--purple)'],
+  ['openrouter','google/gemini-2.5-flash','Gemini 2.5 Flash','Free','var(--orange)'],
+  ['groq','llama-3.3-70b-versatile','Llama 3.3 70B','Groq','var(--orange)']
+];
+var _chipRenderedFor='';
+
+function renderQuickModels(){
+  var box=document.getElementById('quickModelChips');
+  if(!box)return;
+  var provIds={};providers.forEach(function(p){provIds[p.id]=true;});
+  var avail=QUICK_MODEL_RANK.filter(function(q){return provIds[q[0]];});
+  if(!avail.length)avail=QUICK_MODEL_RANK;
+  var key=avail.map(function(q){return q[0]+'/'+q[1];}).join('|');
+  if(key===_chipRenderedFor)return;
+  _chipRenderedFor=key;
+  box.innerHTML=avail.map(function(q){
+    return '<div class="model-chip" onclick="quickModel('+"'"+q[0]+"'"+','+"'"+q[1]+"'"+')"><div class="dot" style="background:'+q[4]+'"></div><span class="mn">'+esc(q[2])+'</span><span class="mp">'+esc(q[3])+'</span></div>';
+  }).join('');
+}
+
+function quickModel(provider,model){
+  document.getElementById('statModel').textContent=model;
+  document.getElementById('statProvider').textContent=provider;
+  currentModel=model;
+  var ps=document.getElementById('promptProvider');
+  var ms=document.getElementById('promptModel');
+  if(ps){ps.value=provider;onPromptProviderChange(provider);}
+  if(ms){ms.value=model;onPromptModelChange(model);}
+  document.getElementById('pmActiveModel').textContent=model;
+}
+
+// ── Tool Actions ──
+function toolAction(action){
+  var cards=document.querySelectorAll('.tool-card');
+  cards.forEach(function(c){c.classList.remove('active')});
+  event.currentTarget.classList.add('active');
+  switch(action){
+    case 'new-session':
+      activeSessionId=null;selected=null;
+      document.getElementById('chatTitle').textContent='New Session';
+      document.getElementById('chatMeta').innerHTML='';
+      document.getElementById('chatArea').innerHTML='<div class="empty-state"><svg class="hex-icon" viewBox="0 0 100 100"><defs><linearGradient id="zg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="none" stroke="url(#zg2)" stroke-width="2.5" opacity="0.4"/><text x="50" y="46" text-anchor="middle" fill="#00e5ff" font-size="16" font-weight="800" font-family="monospace" opacity="0.4">ZIO</text><text x="50" y="64" text-anchor="middle" fill="#7c4dff" font-size="9" font-family="monospace" opacity="0.3">COPILOT</text></svg><h3>New Session</h3><p>Type a message below to start a new conversation with ZIO Copilot.</p></div>';
+      document.getElementById('promptInput').focus();
+      renderList();
+      break;
+    case 'refresh-all':
+      loadSessions();pollSystemStatus();loadProviders();
+      break;
+    case 'ollama-pull':
+      var model=prompt('Enter Ollama model name to pull (e.g. qwen3:8b):');
+      if(model){
+        fetch('/api/ollama/pull',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model})})
+        .then(function(){alert('Pull started: '+model);})
+        .catch(function(e){alert('Error: '+e.message);});
+      }
+      break;
+    case 'memory':
+      var q=prompt('Search ZICORE memory:');
+      if(q){sendAsUser('[MEMORY] '+q);}
+      break;
+    case 'notify':
+      var msg=prompt('Notification message:');
+      if(msg){sendAsUser('[NOTIFY] '+msg);}
+      break;
+    case 'reminder':
+      var rem=prompt('Reminder (e.g. "Check orbit in 30 minutes"):');
+      if(rem){sendAsUser('[REMIND] '+rem);}
+      break;
+    case 'device':
+      var cmd=prompt('SSH command to execute on .85:');
+      if(cmd){sendAsUser('[COMMAND] '+cmd);}
+      break;
+    case 'engineering':
+      sendAsUser('[ENGINEERING] Run structural analysis on current vehicle');
+      break;
+    case '3d':
+      window.open('/materializer','_blank');
+      break;
+  }
+  setTimeout(function(){cards.forEach(function(c){c.classList.remove('active')});},2000);
+}
+
+// ── Prompt Bar ──
+function handlePromptKeydown(e){
+  if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();
+    sendPrompt();
+  }
+}
+
+function sendPrompt(){
+  var inp=document.getElementById('promptInput');
+  var txt=inp.value.trim();
+  if(!txt)return;
+  inp.value='';
+  inp.style.height='44px';
+  sendAsUser(txt);
+}
+
+function toggleAgentMode(){
+  switchMode(agentMode==='build'?'plan':'build');
+}
+
+function currentModelObj(){
+  var pid=document.getElementById('promptProvider')?document.getElementById('promptProvider').value:'';
+  var mid=document.getElementById('promptModel')?document.getElementById('promptModel').value:'';
+  if(!pid||!mid||mid==='No models')return null;
+  return {providerID:pid,modelID:mid};
+}
+
+// ── Project Root ──
+function loadProjectRoot(){
+  var el=document.getElementById('projectRoot');
+  if(!el)return;
+  var v=localStorage.getItem('zicore_project_root')||'';
+  try{
+    var t=localStorage.getItem('zicore_sso_token')||'';
+    if(!v)v=sessionStorage.getItem('zicore_project_root')||'';
+  }catch(e){}
+  if(v)el.value=v;
+  return v;
+}
+function saveProjectRoot(v){
+  try{localStorage.setItem('zicore_project_root',v||'');}catch(e){}
+  document.getElementById('projectRoot').value=v||'';
+}
+
+async function ensureSession(){
+  if(activeSessionId)return activeSessionId;
+  var body={title:'New session',agent:agentMode};
+  var root=(document.getElementById('projectRoot')?document.getElementById('projectRoot').value:'')||localStorage.getItem('zicore_project_root')||'';
+  if(root)body.directory=root;
+  var r=await ocFetch('/session',{method:'POST',body:JSON.stringify(body)});
+  var s=await r.json();
+  if(s&&s.id){
+    activeSessionId=s.id;
+    loadSessions();
+    return s.id;
+  }
+  throw new Error('Failed to create session');
+}
+
+function sendAsUser(text){
+  var area=document.getElementById('chatArea');
+  var empty=area.querySelector('.empty-state');
+  if(empty)empty.remove();
+  var div=document.createElement('div');div.className='msg user';
+  div.innerHTML='<div class="msg-avatar">U</div><div class="msg-body"><div class="msg-bubble">'+esc(text)+'</div><div class="msg-time">'+new Date().toLocaleTimeString()+'</div></div>';
+  area.appendChild(div);area.scrollTop=area.scrollHeight;
+  (async function(){
+    try{
+      var sid=await ensureSession();
+      var mo=currentModelObj();
+      var body={parts:[{type:'text',text:text}],agent:agentMode};
+      if(mo)body.model=mo;
+      await ocFetch('/session/'+encodeURIComponent(sid)+'/prompt_async',{method:'POST',body:JSON.stringify(body)});
+    }catch(e){
+      appendLiveMessage('[Error sending: '+e.message+']');
+    }
+  })();
+}
+
+// ── System Auto-Update ──
+var _sysUpdating=false;
+function showSystemPanel(){
+  document.getElementById('sysModal').style.display='';
+  sysGitStatus();
+}
+function hideSystemPanel(){
+  document.getElementById('sysModal').style.display='none';
+  document.getElementById('sysResult').style.display='none';
+}
+async function sysGitStatus(){
+  var s=document.getElementById('sysStatus');
+  var r=document.getElementById('sysResult');
+  r.style.display='none';
+  s.innerHTML='<div class="loading">Checking...</div>';
+  try{
+    var resp=await fetch('/api/system/git-status');
+    var d=await resp.json();
+    if(d.status==='ok'){
+      var h='<div style="font-size:12px;color:var(--text)"><b>Branch:</b> '+d.branch+'</div>';
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:4px"><b>Ahead:</b> '+d.ahead+' | <b>Behind:</b> '+d.behind+'</div>';
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:4px"><b>Modified:</b> '+d.modified_count+' files</div>';
+      if(d.modified&&d.modified.length){
+        h+='<div style="margin-top:8px;font-size:10px;color:var(--text3);max-height:80px;overflow-y:auto">';
+        d.modified.forEach(function(m){h+='<div>'+esc(m)+'</div>';});
+        h+='</div>';
+      }
+      if(d.recent_commits&&d.recent_commits.length){
+        h+='<div style="margin-top:8px;font-size:10px;color:var(--green);border-top:1px solid var(--border);padding-top:6px"><b>Recent commits:</b></div>';
+        d.recent_commits.forEach(function(c){h+='<div style="font-size:10px;color:var(--text3)">'+esc(c)+'</div>';});
+      }
+      s.innerHTML=h;
+      document.getElementById('sysUpdateStatus').style.display='';
+    } else {
+      s.innerHTML='<div style="color:var(--orange)">Error: '+esc(d.error)+'</div>';
+    }
+  } catch(e){
+    s.innerHTML='<div style="color:var(--red)">Connection error: '+esc(e.message)+'</div>';
+  }
+}
+async function sysGitPull(){
+  if(_sysUpdating)return;
+  _sysUpdating=true;
+  var r=document.getElementById('sysResult');
+  r.style.display='block';
+  r.innerHTML='<div class="loading">Pulling...</div>';
+  try{
+    var resp=await fetch('/api/system/git-pull',{method:'POST'});
+    var d=await resp.json();
+    r.innerHTML='<b>Git Pull Result:</b>\n'+esc(JSON.stringify(d,null,2));
+    sysGitStatus();
+  } catch(e){r.innerHTML='Error: '+esc(e.message);}
+  _sysUpdating=false;
+}
+async function sysFullUpdate(){
+  if(_sysUpdating)return;
+  _sysUpdating=true;
+  var r=document.getElementById('sysResult');
+  r.style.display='block';
+  r.innerHTML='<div class="loading">Updating system...</div>';
+  try{
+    var resp=await fetch('/api/system/update',{method:'POST',body:'{}',headers:{'Content-Type':'application/json'}});
+    var d=await resp.json();
+    r.innerHTML='<b>Update Result:</b>\n'+esc(JSON.stringify(d,null,2));
+    sysGitStatus();
+  } catch(e){r.innerHTML='Error: '+esc(e.message);}
+  _sysUpdating=false;
+}
+
+// ── Init ──
+checkHealth();
+loadProviders();
+loadSessions();
+loadImported();
+connectLive();
+pollSystemStatus();
+setInterval(pollSystemStatus,30000);
+loadProjectRoot();
+renderQuickModels();
+// Auto-connect SSE after short delay
+setTimeout(function(){if(!liveOn)connectLive();},3000);
+</script>
+</body>
+</html>

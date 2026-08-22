@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZICORE Pong</title>
+<style>
+body{background:#0a0a1a;color:#0f6;font-family:monospace;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center}
+canvas{border:2px solid #0f6;background:#000}
+h1{text-shadow:0 0 10px #0f6}
+.info{color:#888;font-size:12px;margin:10px}
+</style>
+</head>
+<body>
+<h1>Pong</h1>
+<div class="info">W/S or Arrow Keys for left paddle | Mouse for right paddle</div>
+<canvas id="c" width="600" height="400"></canvas>
+<div class="info">Player: <span id="p1">0</span> | CPU: <span id="p2">0</span></div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const W=600,H=400;
+let paddle1,paddle2,ball,score1,score2,running;
+
+function init(){
+  paddle1={x:10,y:H/2-30,w:10,h:60,speed:5};
+  paddle2={x:W-20,y:H/2-30,w:10,h:60,speed:3};
+  ball={x:W/2,y:H/2,r:5,dx:3,dy:2};
+  score1=0;score2=0;running=true;
+  updateUI();draw();
+}
+
+function tick(){
+  if(!running)return;
+  // AI
+  if(paddle2.y+paddle2.h/2<ball.y)paddle2.y+=paddle2.speed;
+  else if(paddle2.y+paddle2.h/2>ball.y)paddle2.y-=paddle2.speed;
+  paddle2.y=Math.max(0,Math.min(H-paddle2.h,paddle2.y));
+
+  ball.x+=ball.dx;ball.y+=ball.dy;
+  if(ball.y<=ball.r||ball.y>=H-ball.r)ball.dy*=-1;
+
+  // Paddle collision
+  if(ball.dx<0&&ball.x-ball.r<=paddle1.x+paddle1.w&&ball.y>=paddle1.y&&ball.y<=paddle1.y+paddle1.h){
+    ball.dx*=-1;let hit=(ball.y-(paddle1.y+paddle1.h/2))/(paddle1.h/2);ball.dy=hit*4;
+  }
+  if(ball.dx>0&&ball.x+ball.r>=paddle2.x&&ball.y>=paddle2.y&&ball.y<=paddle2.y+paddle2.h){
+    ball.dx*=-1;let hit=(ball.y-(paddle2.y+paddle2.h/2))/(paddle2.h/2);ball.dy=hit*4;
+  }
+
+  // Score
+  if(ball.x<0){score2++;updateUI();resetBall();}
+  if(ball.x>W){score1++;updateUI();resetBall();}
+
+  draw();
+}
+
+function resetBall(){
+  ball.x=W/2;ball.y=H/2;ball.dx=3*(Math.random()>0.5?1:-1);ball.dy=2*(Math.random()>0.5?1:-1);
+}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.setLineDash([5,5]);ctx.strokeStyle='#333';ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#0f6';ctx.fillRect(paddle1.x,paddle1.y,paddle1.w,paddle1.h);
+  ctx.fillStyle='#f44';ctx.fillRect(paddle2.x,paddle2.y,paddle2.w,paddle2.h);
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();
+}
+
+function updateUI(){
+  document.getElementById('p1').textContent=score1;
+  document.getElementById('p2').textContent=score2;
+}
+
+c.onmousemove=e=>{
+  const rect=c.getBoundingClientRect();
+  paddle1.y=Math.max(0,Math.min(H-paddle1.h,(e.clientY-rect.top)*(H/rect.height)-paddle1.h/2));
+};
+
+document.onkeydown=e=>{
+  if(e.key=='ArrowUp'||e.key=='w')paddle1.y=Math.max(0,paddle1.y-20);
+  if(e.key=='ArrowDown'||e.key=='s')paddle1.y=Math.min(H-paddle1.h,paddle1.y+20);
+};
+
+setInterval(tick,16);
+init();
+</script>
+</body>
+</html>

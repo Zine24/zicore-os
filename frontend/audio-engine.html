@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Audio Engine</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080c14;--panel:#0d1117;--border:#1a2332;--accent:#00e5ff;--accent2:#7c4dff;--green:#00ff88;--text:#e0e6ed;--muted:#5a6a7a;--track1:#1a1a2e;--track2:#0e1a2e;--track3:#1a0e2e;--track4:#0e2e1a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.top-bar{display:flex;align-items:center;background:var(--panel);border-bottom:1px solid var(--border);padding:6px 16px;gap:12px;z-index:100}
+.top-bar .logo{font-size:14px;font-weight:700;color:var(--accent);letter-spacing:2px}
+.top-bar .logo span{color:var(--accent2)}
+.transport{display:flex;gap:4px;align-items:center}
+.transport button{background:#1a2332;border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:14px;transition:all .2s}
+.transport button:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+.transport button.rec{color:#ff4444}
+.transport button.rec.active{background:#ff4444;color:#fff;animation:pulse 1s infinite}
+.transport button.play{color:var(--green)}
+.transport button.play.active{background:var(--green);color:#000}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.time-display{font-family:'Courier New',monospace;font-size:18px;color:var(--accent);background:#0a0e14;padding:4px 12px;border-radius:4px;border:1px solid var(--border)}
+.bpm-control{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.bpm-control input{width:50px;background:#0a0e14;border:1px solid var(--border);color:var(--accent);padding:2px 6px;border-radius:3px;text-align:center;font-size:12px}
+.main-area{flex:1;display:flex;overflow:hidden}
+.sidebar{width:240px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar h3{padding:10px 12px;font-size:12px;text-transform:uppercase;color:var(--accent);letter-spacing:1px;border-bottom:1px solid var(--border)}
+.track-list{flex:1;overflow-y:auto;padding:4px}
+.track-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:4px;cursor:pointer;margin-bottom:2px;transition:background .2s}
+.track-item:hover{background:#1a2332}
+.track-item.active{background:#1a2332;border-left:3px solid var(--accent)}
+.track-color{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+.track-name{font-size:12px;flex:1}
+.track-vol{font-size:10px;color:var(--muted)}
+.add-track{margin:8px;padding:6px;background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:4px;cursor:pointer;font-size:11px;text-align:center}
+.add-track:hover{border-color:var(--accent);color:var(--accent)}
+.center-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.timeline-header{display:flex;background:#0a0e14;border-bottom:1px solid var(--border);height:28px;align-items:center;padding-left:200px;overflow-x:auto}
+.beat-marker{min-width:100px;border-left:1px solid #1a2332;padding:0 4px;font-size:10px;color:var(--muted);height:100%;display:flex;align-items:center}
+.timeline-container{flex:1;overflow:auto;position:relative}
+.timeline-ruler{height:24px;background:#0a0e14;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.timeline-tracks{position:relative}
+.timeline-track{height:60px;border-bottom:1px solid #111827;position:relative;display:flex}
+.track-label{width:200px;min-width:200px;background:var(--panel);border-right:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:6px;z-index:5}
+.track-label .mute-btn,.track-label .solo-btn{background:none;border:1px solid var(--border);color:var(--muted);width:20px;height:20px;border-radius:2px;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center}
+.track-label .mute-btn.muted{color:#ff4444;border-color:#ff4444}
+.track-label .solo-btn.solo{color:var(--accent);border-color:var(--accent)}
+.track-content{flex:1;position:relative;overflow:hidden;cursor:crosshair}
+.audio-region{position:absolute;height:44px;top:8px;border-radius:4px;cursor:move;overflow:hidden;border:1px solid transparent;transition:border-color .2s}
+.audio-region:hover{border-color:var(--accent)}
+.audio-region.selected{border-color:var(--accent);box-shadow:0 0 8px rgba(0,229,255,.3)}
+.region-waveform{width:100%;height:100%;opacity:.8}
+.region-label{position:absolute;top:2px;left:4px;font-size:9px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);pointer-events:none}
+.playhead{position:absolute;top:0;width:2px;background:var(--accent);height:100%;z-index:20;pointer-events:none}
+.playhead::before{content:'';position:absolute;top:-4px;left:-5px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--accent)}
+.bottom-panel{height:200px;background:var(--panel);border-top:1px solid var(--border);display:flex;overflow:hidden}
+.mixer{flex:1;display:flex;overflow-x:auto;padding:8px;gap:4px}
+.mixer-channel{min-width:60px;background:#0a0e14;border-radius:4px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid var(--border)}
+.mixer-channel .ch-name{font-size:9px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.mixer-channel .fader{writing-mode:vertical-lr;direction:rtl;width:24px;height:100px;background:#111;border-radius:3px;-webkit-appearance:none;appearance:none}
+.mixer-channel .fader::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:8px;background:var(--accent);border-radius:2px;cursor:pointer}
+.mixer-channel .db{font-size:9px;color:var(--green);font-family:monospace}
+.mixer-channel .pan{width:40px;height:16px;background:#111;border-radius:2px;-webkit-appearance:none;appearance:none}
+.mixer-channel .pan::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:14px;background:var(--accent2);border-radius:2px;cursor:pointer}
+.zio-panel{width:320px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--panel)}
+.zio-panel .zio-header{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.zio-panel .zio-header .zio-name{font-size:12px;font-weight:600;color:var(--accent)}
+.zio-panel .zio-header .zio-status{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.zio-messages{flex:1;overflow-y:auto;padding:8px;font-size:12px}
+.zio-msg{margin-bottom:8px;padding:6px 8px;border-radius:6px;max-width:95%}
+.zio-msg.user{background:#1a2332;margin-left:auto;border-bottom-right-radius:2px}
+.zio-msg.assistant{background:#0e1a2e;border-bottom-left-radius:2px}
+.zio-msg .role{font-size:9px;color:var(--muted);margin-bottom:2px}
+.zio-input{display:flex;padding:8px;gap:6px;border-top:1px solid var(--border)}
+.zio-input input{flex:1;background:#0a0e14;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px}
+.zio-input button{background:var(--accent);color:#000;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
+.zio-input button:hover{opacity:.8}
+.zio-input .voice-btn{background:var(--accent2);padding:6px 8px}
+.zio-input .voice-btn.listening{background:#ff4444;animation:pulse .8s infinite}
+.effects-bar{display:flex;gap:4px;padding:4px 8px;background:#0a0e14;border-bottom:1px solid var(--border)}
+.effect-chip{padding:3px 8px;background:#1a2332;border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--muted);cursor:pointer;transition:all .2s}
+.effect-chip:hover{border-color:var(--accent);color:var(--accent)}
+.effect-chip.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.library-panel{display:none;position:absolute;right:320px;top:0;width:250px;background:var(--panel);border:1px solid var(--border);border-radius:4px;z-index:50;max-height:300px;overflow-y:auto}
+.library-panel.show{display:block}
+.lib-item{padding:6px 10px;font-size:11px;cursor:pointer;border-bottom:1px solid #111827;display:flex;justify-content:space-between}
+.lib-item:hover{background:#1a2332}
+.lib-item .type{color:var(--accent);font-size:9px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;width:400px;max-width:90%}
+.modal h3{color:var(--accent);margin-bottom:12px;font-size:14px}
+.modal label{display:block;font-size:11px;color:var(--muted);margin:8px 0 4px}
+.modal input,.modal select{width:100%;background:#0a0e14;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px}
+.modal .btn-row{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal .btn-row button{padding:6px 16px;border-radius:4px;border:1px solid var(--border);background:#1a2332;color:var(--text);cursor:pointer;font-size:12px}
+.modal .btn-row .primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e14}
+::-webkit-scrollbar-thumb{background:#1a2332;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a3342}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="logo">ZICORE <span>AUDIO ENGINE</span></div>
+  <div class="transport">
+    <button onclick="transportAction('stop')" title="Stop">⏹</button>
+    <button class="play" id="playBtn" onclick="transportAction('play')" title="Play">▶</button>
+    <button class="rec" id="recBtn" onclick="transportAction('rec')" title="Record">●</button>
+    <button onclick="transportAction('loop')" id="loopBtn" title="Loop">🔁</button>
+  </div>
+  <div class="time-display" id="timeDisplay">00:00:00.000</div>
+  <div class="bpm-control">
+    <span>BPM</span>
+    <input type="number" id="bpmInput" value="120" min="20" max="300" onchange="setBPM(this.value)">
+  </div>
+  <div style="flex:1"></div>
+  <div class="effects-bar">
+    <div class="effect-chip" onclick="toggleEffect('reverb')">Reverb</div>
+    <div class="effect-chip" onclick="toggleEffect('delay')">Delay</div>
+    <div class="effect-chip" onclick="toggleEffect('eq')">EQ</div>
+    <div class="effect-chip" onclick="toggleEffect('compress')">Compress</div>
+    <div class="effect-chip" onclick="toggleEffect('filter')">Filter</div>
+    <div class="effect-chip" onclick="toggleEffect('chorus')">Chorus</div>
+  </div>
+  <button style="background:var(--accent2);color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px" onclick="showExportModal()">Export</button>
+</div>
+
+<div class="main-area">
+  <div class="sidebar">
+    <h3>Tracks</h3>
+    <div class="track-list" id="trackList"></div>
+    <div class="add-track" onclick="addTrack()">+ Add Track</div>
+  </div>
+
+  <div class="center-area">
+    <div class="timeline-header" id="timelineHeader"></div>
+    <div class="timeline-container" id="timelineContainer">
+      <div class="timeline-tracks" id="timelineTracks"></div>
+      <div class="playhead" id="playhead" style="left:200px"></div>
+    </div>
+  </div>
+
+  <div class="zio-panel">
+    <div class="zio-header">
+      <div class="zio-status"></div>
+      <div class="zio-name">ZIO Audio Assistant</div>
+    </div>
+    <div class="zio-messages" id="zioMessages">
+      <div class="zio-msg assistant"><div class="role">ZIO</div>I'm your audio production assistant. I can help with mixing, effects, composition, and more. Try: "Add a reverb to track 1" or "Generate a drum beat at 120 BPM"</div>
+    </div>
+    <div class="zio-input">
+      <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
+      <input type="text" id="zioInput" placeholder="Ask ZIO about audio..." onkeydown="if(event.key==='Enter')sendZio()">
+      <button onclick="sendZio()">→</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-panel">
+  <div class="mixer" id="mixer"></div>
+  <div class="zio-panel" style="border-left:1px solid var(--border)">
+    <div class="zio-header"><div class="zio-name">Master</div></div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center">
+      <div style="font-size:10px;color:var(--muted)">Output Level</div>
+      <div id="masterMeter" style="width:30px;height:120px;background:#0a0e14;border-radius:4px;position:relative;overflow:hidden;border:1px solid var(--border)">
+        <div id="masterLevel" style="position:absolute;bottom:0;width:100%;background:linear-gradient(to top,var(--green),var(--accent),#ff4444);transition:height .1s;border-radius:0 0 3px 3px"></div>
+      </div>
+      <div style="font-size:10px;color:var(--green);font-family:monospace" id="masterDb">-∞ dB</div>
+      <input type="range" min="0" max="100" value="80" style="width:100px" id="masterVol" oninput="setMasterVol(this.value)">
+      <div style="font-size:9px;color:var(--muted)">Master Volume</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h3>Export Audio</h3>
+    <label>Format</label>
+    <select id="exportFormat"><option>WAV (44.1kHz 16-bit)</option><option>WAV (48kHz 24-bit)</option><option>MP3 (320kbps)</option><option>FLAC</option><option>OGG Vorbis</option></select>
+    <label>Sample Rate</label>
+    <select id="exportSampleRate"><option>44100</option><option>48000</option><option>96000</option></select>
+    <label>Bit Depth</label>
+    <select id="exportBitDepth"><option>16</option><option>24</option><option>32</option></select>
+    <label>Filename</label>
+    <input type="text" id="exportFilename" value="zicore-export">
+    <div class="btn-row">
+      <button onclick="closeExportModal()">Cancel</button>
+      <button class="primary" onclick="doExport()">Export</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#00e5ff','#7c4dff','#00ff88','#ff6b35','#ff4444','#ffd93d','#6bcb77','#4d96ff'];
+let tracks = [];
+let audioCtx = null;
+let isPlaying = false;
+let isRecording = false;
+let isLooping = false;
+let playStartTime = 0;
+let playOffset = 0;
+let bpm = 120;
+let selectedRegion = null;
+let activeEffects = new Set();
+let zioContext = 'audio-engine';
+
+function initAudioContext() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function addTrack(name) {
+  const id = Date.now();
+  const color = COLORS[tracks.length % COLORS.length];
+  const track = {
+    id, name: name || `Track ${tracks.length + 1}`, color,
+    volume: 0.8, pan: 0, muted: false, solo: false,
+    regions: [], effects: [], gainNode: null, panNode: null
+  };
+  tracks.push(track);
+  renderTrackList();
+  renderTimeline();
+  renderMixer();
+  return track;
+}
+
+function removeTrack(id) {
+  tracks = tracks.filter(t => t.id !== id);
+  renderTrackList();
+  renderTimeline();
+  renderMixer();
+}
+
+function renderTrackList() {
+  const el = document.getElementById('trackList');
+  el.innerHTML = tracks.map(t => `
+    <div class="track-item" onclick="selectTrack(${t.id})">
+      <div class="track-color" style="background:${t.color}"></div>
+      <div class="track-name">${t.name}</div>
+      <div class="track-vol">${Math.round(t.volume * 100)}%</div>
+    </div>
+  `).join('');
+}
+
+function renderTimeline() {
+  const header = document.getElementById('timelineHeader');
+  const container = document.getElementById('timelineTracks');
+  const pxPerBeat = 100;
+  const beats = 64;
+
+  let headerHtml = '';
+  for (let i = 0; i < beats; i++) {
+    headerHtml += `<div class="beat-marker" style="min-width:${pxPerBeat}px">${i + 1}</div>`;
+  }
+  header.innerHTML = headerHtml;
+
+  let tracksHtml = '';
+  tracks.forEach(t => {
+    const regionsHtml = t.regions.map(r => `
+      <div class="audio-region ${r.id === selectedRegion ? 'selected' : ''}"
+           style="left:${r.start * pxPerBeat}px;width:${r.duration * pxPerBeat}px;background:${t.color}40;border-color:${t.color}"
+           onclick="selectRegion('${r.id}', event)" onmousedown="startDragRegion('${r.id}', event)">
+        <canvas class="region-waveform" id="wf-${r.id}" width="${r.duration * pxPerBeat}" height="44"></canvas>
+        <div class="region-label">${r.name}</div>
+      </div>
+    `).join('');
+
+    tracksHtml += `
+      <div class="timeline-track">
+        <div class="track-label">
+          <button class="mute-btn ${t.muted ? 'muted' : ''}" onclick="toggleMute(${t.id})">M</button>
+          <button class="solo-btn ${t.solo ? 'solo' : ''}" onclick="toggleSolo(${t.id})">S</button>
+          <span style="font-size:11px;color:${t.color}">${t.name}</span>
+        </div>
+        <div class="track-content" style="width:${beats * pxPerBeat}px" ondblclick="createRegion(${t.id}, event)">
+          ${regionsHtml}
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = tracksHtml;
+  container.style.width = beats * pxPerBeat + 200 + 'px';
+
+  // Draw waveforms
+  tracks.forEach(t => {
+    t.regions.forEach(r => {
+      const canvas = document.getElementById('wf-' + r.id);
+      if (canvas) drawWaveform(canvas, r.data, t.color);
+    });
+  });
+}
+
+function drawWaveform(canvas, data, color) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  if (!data || !data.length) {
+    // Generate fake waveform
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < w; i++) {
+      const amp = Math.random() * 0.7 + 0.1;
+      ctx.moveTo(i, h / 2 - amp * h / 2);
+      ctx.lineTo(i, h / 2 + amp * h / 2);
+    }
+    ctx.stroke();
+  } else {
+    const step = Math.ceil(data.length / w);
+    ctx.fillStyle = color + '80';
+    ctx.beginPath();
+    for (let i = 0; i < w; i++) {
+      const idx = Math.floor(i * data.length / w);
+      const val = Math.abs(data[idx] || 0);
+      ctx.fillRect(i, h / 2 - val * h / 2, 1, val * h);
+    }
+  }
+}
+
+function createRegion(trackId, event) {
+  const track = tracks.find(t => t.id === trackId);
+  if (!track) return;
+  const rect = event.target.getBoundingClientRect();
+  const x = (event.clientX - rect.left + event.target.parentElement.parentElement.scrollLeft) / 100;
+  const start = Math.floor(x);
+  const duration = 2;
+  const data = generateTone(start * 440, duration);
+
+  track.regions.push({
+    id: 'r' + Date.now(), name: `Region ${track.regions.length + 1}`,
+    start, duration, data, color: track.color
+  });
+  renderTimeline();
+}
+
+function generateTone(freq, duration) {
+  const sr = 44100;
+  const len = sr * duration;
+  const data = new Float32Array(len);
+  for (let i = 0; i < len; i++) {
+    data[i] = Math.sin(2 * Math.PI * freq * i / sr) * 0.3 * Math.exp(-3 * i / len);
+  }
+  return data;
+}
+
+function selectRegion(id, event) {
+  event.stopPropagation();
+  selectedRegion = id;
+  renderTimeline();
+}
+
+function selectTrack(id) {
+  document.querySelectorAll('.track-item').forEach((el, i) => {
+    el.classList.toggle('active', tracks[i]?.id === id);
+  });
+}
+
+function toggleMute(id) {
+  const t = tracks.find(t => t.id === id);
+  if (t) { t.muted = !t.muted; renderTrackList(); renderTimeline(); }
+}
+
+function toggleSolo(id) {
+  const t = tracks.find(t => t.id === id);
+  if (t) { t.solo = !t.solo; renderTrackList(); renderTimeline(); }
+}
+
+function renderMixer() {
+  const mixer = document.getElementById('mixer');
+  mixer.innerHTML = tracks.map(t => `
+    <div class="mixer-channel">
+      <div class="ch-name" style="color:${t.color}">${t.name}</div>
+      <input type="range" class="fader" min="0" max="100" value="${t.volume * 100}"
+             oninput="setTrackVol(${t.id}, this.value)">
+      <div class="db">${(20 * Math.log10(t.volume || 0.001)).toFixed(1)} dB</div>
+      <input type="range" class="pan" min="-100" max="100" value="${t.pan * 100}"
+             oninput="setTrackPan(${t.id}, this.value)">
+      <div style="font-size:8px;color:var(--muted)">L${t.pan < 0 ? '●' : '○'} R${t.pan > 0 ? '●' : '○'}</div>
+    </div>
+  `).join('') + `
+    <div class="mixer-channel" style="border-color:var(--accent)">
+      <div class="ch-name" style="color:var(--accent)">MASTER</div>
+      <input type="range" class="fader" min="0" max="100" value="80">
+      <div class="db">-2.0 dB</div>
+    </div>
+  `;
+}
+
+function setTrackVol(id, val) {
+  const t = tracks.find(t => t.id === id);
+  if (t) { t.volume = val / 100; renderTrackList(); renderMixer(); }
+}
+
+function setTrackPan(id, val) {
+  const t = tracks.find(t => t.id === id);
+  if (t) { t.pan = val / 100; renderMixer(); }
+}
+
+function setMasterVol(val) {
+  document.getElementById('masterLevel').style.height = val + '%';
+  document.getElementById('masterDb').textContent = (20 * Math.log10(val / 100 || 0.001)).toFixed(1) + ' dB';
+}
+
+function transportAction(action) {
+  initAudioContext();
+  if (action === 'play') {
+    isPlaying = !isPlaying;
+    document.getElementById('playBtn').classList.toggle('active', isPlaying);
+    if (isPlaying) {
+      playStartTime = audioCtx.currentTime - playOffset;
+      animatePlayhead();
+    }
+  } else if (action === 'stop') {
+    isPlaying = false;
+    isRecording = false;
+    playOffset = 0;
+    document.getElementById('playBtn').classList.remove('active');
+    document.getElementById('recBtn').classList.remove('active');
+    updatePlayhead(0);
+  } else if (action === 'rec') {
+    isRecording = !isRecording;
+    document.getElementById('recBtn').classList.toggle('active', isRecording);
+    if (isRecording && !isPlaying) transportAction('play');
+  } else if (action === 'loop') {
+    isLooping = !isLooping;
+    document.getElementById('loopBtn').style.color = isLooping ? 'var(--green)' : '';
+  }
+}
+
+function animatePlayhead() {
+  if (!isPlaying) return;
+  const elapsed = audioCtx.currentTime - playStartTime;
+  playOffset = elapsed;
+  updatePlayhead(elapsed);
+  requestAnimationFrame(animatePlayhead);
+}
+
+function updatePlayhead(time) {
+  const pxPerBeat = 100;
+  const beatsPerSec = bpm / 60;
+  const x = 200 + time * beatsPerSec * pxPerBeat;
+  document.getElementById('playhead').style.left = x + 'px';
+
+  const min = Math.floor(time / 60);
+  const sec = Math.floor(time % 60);
+  const ms = Math.floor((time % 1) * 1000);
+  document.getElementById('timeDisplay').textContent =
+    `00:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+}
+
+function setBPM(val) { bpm = parseInt(val) || 120; }
+
+function toggleEffect(name) {
+  if (activeEffects.has(name)) activeEffects.delete(name);
+  else activeEffects.add(name);
+  document.querySelectorAll('.effect-chip').forEach(el => {
+    el.classList.toggle('active', activeEffects.has(el.textContent.toLowerCase()));
+  });
+}
+
+// ZIO Chat
+async function sendZio() {
+  const input = document.getElementById('zioInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  addZioMsg('user', msg);
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `[Audio Engine] ${msg}`, context: zioContext })
+    });
+    const data = await res.json();
+    addZioMsg('assistant', data.response || data.message || 'Processing...');
+  } catch (e) {
+    addZioMsg('assistant', 'Connection error. ZIO is thinking...');
+    // Fallback: local audio assistant
+    const reply = localAudioAssistant(msg);
+    addZioMsg('assistant', reply);
+  }
+}
+
+function localAudioAssistant(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes('reverb') || m.includes('reverberation'))
+    return 'Reverb simulates acoustic spaces. I\'ve added reverb to the selected track. Adjust decay time (0.5-5s) for room size.';
+  if (m.includes('delay') || m.includes('echo'))
+    return 'Delay effect added. Try 250ms for rhythmic delays, or 500ms+ for ambient textures. Feedback at 30-40% for natural decay.';
+  if (m.includes('eq') || m.includes('equaliz'))
+    return 'EQ adjustments: Boost 60-100Hz for bass warmth, 1-3kHz for presence, 8-12kHz for air. Cut mud at 200-400Hz.';
+  if (m.includes('compress'))
+    return 'Compression evens out dynamics. Start with ratio 4:1, threshold -20dB, attack 10ms, release 100ms.';
+  if (m.includes('drum') || m.includes('beat'))
+    return 'Creating a 4/4 drum pattern at ' + bpm + ' BPM. Kick on 1 & 3, snare on 2 & 4, hi-hat on 8ths.';
+  if (m.includes('bass') || m.includes('sub'))
+    return 'Adding a sub bass at 40-80Hz. Using a sine wave for clean low end. Sidechain to kick for clarity.';
+  if (m.includes('mix'))
+    return 'Mixing tips: Start with levels, then pan, then EQ, then compression. Keep -6dB headroom. Reference on multiple systems.';
+  if (m.includes('export') || m.includes('render'))
+    return 'Click the Export button in the top-right to render your project. WAV for quality, MP3 for sharing.';
+  return 'I can help with effects, mixing, composition, and mastering. Try asking about specific effects, or say "generate a drum beat".';
+}
+
+function addZioMsg(role, text) {
+  const el = document.getElementById('zioMessages');
+  el.innerHTML += `<div class="zio-msg ${role}"><div class="role">${role === 'user' ? 'You' : 'ZIO'}</div>${text}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// Voice Recognition
+let recognition = null;
+function toggleVoice() {
+  const btn = document.getElementById('voiceBtn');
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    addZioMsg('assistant', 'Voice recognition not supported in this browser. Try Chrome or Edge.');
+    return;
+  }
+
+  if (recognition && recognition.running) {
+    recognition.stop();
+    btn.classList.remove('listening');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onstart = () => btn.classList.add('listening');
+  recognition.onend = () => btn.classList.remove('listening');
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('zioInput').value = transcript;
+    sendZio();
+  };
+  recognition.onerror = () => btn.classList.remove('listening');
+  recognition.start();
+}
+
+function showExportModal() { document.getElementById('exportModal').classList.add('show'); }
+function closeExportModal() { document.getElementById('exportModal').classList.remove('show'); }
+function doExport() {
+  closeExportModal();
+  addZioMsg('assistant', 'Export started... Your audio is being rendered.');
+}
+
+// Drag regions
+let dragData = null;
+function startDragRegion(id, e) {
+  e.preventDefault();
+  const track = tracks.find(t => t.regions.some(r => r.id === id));
+  const region = track?.regions.find(r => r.id === id);
+  if (!region) return;
+  dragData = { id, startX: e.clientX, origStart: region.start };
+  document.addEventListener('mousemove', onDragRegion);
+  document.addEventListener('mouseup', stopDragRegion);
+}
+function onDragRegion(e) {
+  if (!dragData) return;
+  const dx = (e.clientX - dragData.startX) / 100;
+  const track = tracks.find(t => t.regions.some(r => r.id === dragData.id));
+  const region = track?.regions.find(r => r.id === dragData.id);
+  if (region) {
+    region.start = Math.max(0, Math.round(dragData.origStart + dx));
+    renderTimeline();
+  }
+}
+function stopDragRegion() {
+  dragData = null;
+  document.removeEventListener('mousemove', onDragRegion);
+  document.removeEventListener('mouseup', stopDragRegion);
+}
+
+// Init
+addTrack('Drums');
+addTrack('Bass');
+addTrack('Synth');
+addTrack('Vocals');
+
+// Simulate meter
+setInterval(() => {
+  if (isPlaying) {
+    const level = Math.random() * 60 + 20;
+    document.getElementById('masterLevel').style.height = level + '%';
+  }
+}, 100);
+</script>
+</body>
+</html>

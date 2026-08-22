@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiCore CAPCOM</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--surface:rgba(15,20,35,0.85);--glass:rgba(10,14,23,0.7);
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d3d;
+  --text:#e0e6f0;--muted:#7a8ba8;--border:rgba(0,229,255,0.15);
+  --glow-cyan:0 0 20px rgba(0,229,255,0.3);--glow-purple:0 0 20px rgba(124,77,255,0.3);
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:all .2s}
+input,select{font-family:inherit;outline:none;border:none}
+input:focus,select:focus{box-shadow:0 0 0 2px var(--cyan)}
+
+.lobby{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:24px;padding:20px}
+.lobby-logo{font-size:48px;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;letter-spacing:2px}
+.lobby-tag{color:var(--muted);font-size:14px;margin-top:-16px;letter-spacing:1px}
+.lobby-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px;backdrop-filter:blur(20px)}
+.lobby-card h3{color:var(--cyan);font-size:16px;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+.preview-box{width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#0d1220;position:relative;border:1px solid var(--border)}
+.preview-box video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.preview-box .no-cam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;flex-direction:column;gap:8px}
+.preview-box .no-cam svg{width:48px;height:48px;opacity:.4}
+.settings-row{display:flex;gap:8px}
+.settings-row select{flex:1;background:var(--bg);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;border:1px solid var(--border)}
+.toggles{display:flex;gap:8px}
+.toggle-btn{flex:1;padding:10px;border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:6px}
+.toggle-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.05)}
+.btn-primary{width:100%;padding:14px;border-radius:10px;font-size:16px;font-weight:600;color:#000;background:linear-gradient(135deg,var(--cyan),#00b8d4);box-shadow:var(--glow-cyan)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(0,229,255,0.4)}
+.btn-secondary{width:100%;padding:14px;border-radius:10px;font-size:16px;font-weight:600;color:var(--cyan);background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.3)}
+.btn-secondary:hover{background:rgba(0,229,255,0.15)}
+.room-input{display:flex;gap:8px}
+.room-input input{flex:1;padding:14px;border-radius:10px;font-size:16px;background:var(--bg);color:var(--text);text-align:center;letter-spacing:4px;text-transform:uppercase;border:1px solid var(--border)}
+.room-input button{padding:14px 24px;border-radius:10px;font-size:14px;font-weight:600;color:#000;background:var(--green)}
+.room-code-display{text-align:center;padding:16px;background:var(--bg);border-radius:10px;border:1px solid var(--green)}
+.room-code-display .code{font-size:32px;font-weight:800;letter-spacing:6px;color:var(--green);font-family:monospace}
+.room-code-display .label{font-size:12px;color:var(--muted);margin-top:4px}
+.divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:2px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.sdp-section{display:flex;flex-direction:column;gap:8px}
+.sdp-section label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.sdp-section textarea{width:100%;height:80px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;resize:vertical}
+.sdp-section .btn-copy{width:100%;padding:10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--purple);background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.3)}
+.sdp-section .btn-connect{width:100%;padding:10px;border-radius:8px;font-size:13px;font-weight:600;color:#000;background:var(--green)}
+.status-bar{position:fixed;top:0;left:0;right:0;height:4px;z-index:100}
+.status-bar.connecting{background:linear-gradient(90deg,var(--purple),var(--cyan),var(--purple));background-size:200%;animation:statusPulse 1.5s linear infinite}
+.status-bar.connected{background:var(--green)}
+.status-bar.error{background:var(--red)}
+@keyframes statusPulse{0%{background-position:0%}100%{background-position:200%}}
+
+.call-screen{display:flex;height:100%;position:relative}
+.video-area{flex:1;position:relative;background:#000;overflow:hidden}
+.remote-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.local-pip{position:absolute;bottom:80px;right:20px;width:240px;aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:2px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:10;cursor:move;transition:width .2s}
+.local-pip video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.local-pip:hover{width:320px}
+.local-pip .pip-avatar{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:36px;font-weight:700;color:var(--cyan)}
+.call-info{position:absolute;top:16px;left:16px;display:flex;align-items:center;gap:12px;z-index:10}
+.call-timer{background:var(--glass);backdrop-filter:blur(10px);padding:8px 16px;border-radius:20px;font-size:14px;font-family:monospace;color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.participant-count{background:var(--glass);backdrop-filter:blur(10px);padding:8px 12px;border-radius:20px;font-size:13px;border:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.connection-status{position:absolute;top:16px;right:16px;background:var(--glass);backdrop-filter:blur(10px);padding:8px 16px;border-radius:20px;font-size:13px;border:1px solid var(--border);display:flex;align-items:center;gap:6px;z-index:10}
+.connection-status .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.connection-status .dot.connected{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+.control-bar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 20px;background:linear-gradient(transparent,rgba(10,14,23,0.95));z-index:10}
+.ctrl-btn{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);color:var(--text);font-size:22px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px)}
+.ctrl-btn:hover{background:rgba(255,255,255,0.15);transform:scale(1.05)}
+.ctrl-btn.active{background:rgba(255,255,255,0.2);border-color:var(--cyan)}
+.ctrl-btn.end{background:var(--red);color:#fff;border-color:var(--red);width:60px;height:60px;font-size:26px}
+.ctrl-btn.end:hover{background:#ff1a1a;box-shadow:0 0 20px rgba(255,61,61,0.5)}
+.ctrl-btn.muted{background:rgba(255,61,61,0.15);border-color:rgba(255,61,61,0.3);color:var(--red)}
+
+.chat-panel{width:360px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;backdrop-filter:blur(20px)}
+
+/* ── ChatGPT-style Sidebar Menu ───────────────────── */
+.sidebar{width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;backdrop-filter:blur(20px);overflow:hidden;transition:width .25s ease}
+.sidebar.hidden{display:none}
+.sb-head{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 6px 16px}
+.sb-brand{font-size:15px;font-weight:800;letter-spacing:.5px;color:var(--text)}
+.sb-brand b{color:var(--cyan)}
+.sb-rail-btn{width:28px;height:28px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0}
+.sb-rail-btn:hover{border-color:var(--border);color:var(--cyan)}
+.sb-newchat{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 12px;padding:11px;border-radius:10px;background:var(--cyan);border:none;color:#04060c;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.sb-newchat:hover{filter:brightness(1.1);box-shadow:0 0 18px rgba(0,229,255,0.35)}
+.sb-newchat .ic{font-size:15px}
+.sb-search{display:flex;align-items:center;gap:6px;margin:4px 12px 10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border)}
+.sb-search .ic{color:var(--muted);font-size:12px}
+.sb-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:12px}
+.sb-search input::placeholder{color:var(--muted)}
+.sb-menu{display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.sb-section-label{padding:10px 12px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)}
+.sb-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:8px;background:transparent;border:none;color:var(--text);font-size:13px;cursor:pointer;text-align:left;transition:background .15s}
+.sb-item .ic{width:20px;text-align:center;font-size:15px}
+.sb-item:hover{background:rgba(255,255,255,0.05)}
+.sb-item.active{background:rgba(0,229,255,0.12);color:var(--cyan)}
+.sb-item.active .ic{opacity:1}
+.sb-content{flex:1;overflow-y:auto;padding:6px 8px;min-height:0}
+.sb-footer{padding:10px;border-top:1px solid var(--border)}
+.sb-profile{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:10px;background:transparent;border:none;cursor:pointer;text-align:left;transition:background .15s}
+.sb-profile:hover{background:rgba(255,255,255,0.05)}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,255,0.25),rgba(124,77,255,0.25));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--cyan);border:1px solid var(--border);flex-shrink:0}
+.sb-profile-info{flex:1;min-width:0}
+.sb-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-sub{font-size:10px;color:var(--muted)}
+.sb-gear{color:var(--muted);font-size:13px}
+/* rail (colapsado estilo ChatGPT) */
+.sidebar.rail{width:54px}
+.sidebar.rail .lb,.sidebar.rail .sb-search,.sidebar.rail .sb-section-label,.sidebar.rail .sb-content,.sidebar.rail .sb-profile-info,.sidebar.rail .sb-gear,.sidebar.rail .sb-brand{display:none}
+.sidebar.rail .sb-head{justify-content:center;padding:12px 0 6px}
+.sidebar.rail .sb-rail-btn{width:32px;height:32px;font-size:12px}
+.sidebar.rail .sb-newchat{padding:10px 0;margin:8px}
+.sidebar.rail .sb-item{justify-content:center;padding:10px 0}
+.sidebar.rail .sb-item .ic{font-size:17px;width:auto}
+.sidebar.rail .sb-footer{padding:8px}
+.sidebar.rail .sb-profile{justify-content:center;padding:6px 0}
+.contact-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s}
+.contact-item:hover{background:rgba(0,229,255,0.05)}
+.contact-item .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,255,0.2),rgba(124,77,255,0.2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--cyan);border:1px solid var(--border);flex-shrink:0}
+.contact-item .avatar.online{border-color:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.3)}
+.contact-item .info{flex:1;min-width:0}
+.contact-item .name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contact-item .status{font-size:10px;color:var(--muted)}
+.contact-item .call-btn{width:28px;height:28px;border-radius:50%;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:var(--green);font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;transition:opacity .15s}
+.contact-item:hover .call-btn{opacity:1}
+.room-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s}
+.room-item:hover{background:rgba(124,77,255,0.05)}
+.room-item .room-icon{width:36px;height:36px;border-radius:8px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.room-item .room-info{flex:1;min-width:0}
+.room-item .room-name{font-size:12px;font-weight:600;color:var(--text)}
+.room-item .room-meta{font-size:10px;color:var(--muted)}
+
+/* ── Profile Modal ────────────────────────────────── */
+.profile-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.profile-modal.hidden{display:none}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:360px;max-width:90vw}
+.profile-card .avatar-large{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,255,0.2),rgba(124,77,255,0.2));display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;border:2px solid var(--border)}
+.profile-card input{width:100%;padding:12px;border-radius:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);margin-bottom:12px;font-size:13px}
+.profile-card .btn-row{display:flex;gap:8px;margin-top:16px}
+.profile-card .btn-row button{flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.profile-card .btn-save{background:var(--cyan);color:#000}
+.profile-card .btn-cancel{background:transparent;border:1px solid var(--border);color:var(--text)}
+.chat-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chat-header h3{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--cyan)}
+.chat-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);color:var(--text);font-size:16px;display:flex;align-items:center;justify-content:center}
+.chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.chat-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;animation:msgIn .2s ease}
+.chat-msg.sent{align-self:flex-end;background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.2);border-bottom-right-radius:4px}
+.chat-msg.received{align-self:flex-start;background:rgba(124,77,255,0.12);border:1px solid rgba(124,77,255,0.2);border-bottom-left-radius:4px}
+.chat-msg .time{font-size:10px;color:var(--muted);margin-top:4px}
+.typing-indicator{font-size:12px;color:var(--muted);padding:4px 14px;font-style:italic}
+.chat-input-area{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.chat-input-area input{flex:1;padding:12px;border-radius:10px;background:var(--bg);color:var(--text);font-size:13px;border:1px solid var(--border)}
+.chat-input-area button{padding:12px 16px;border-radius:10px;background:var(--cyan);color:#000;font-weight:600}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.offline-avatar{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d1220,#141c30);flex-direction:column;gap:12px}
+.offline-avatar .icon{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,77,255,0.1));display:flex;align-items:center;justify-content:center;font-size:32px;border:2px solid var(--border)}
+.offline-avatar .name{font-size:16px;color:var(--muted)}
+
+.error-overlay{position:fixed;inset:0;background:rgba(10,14,23,0.95);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:20px;text-align:center}
+.error-overlay .icon{font-size:48px}
+.error-overlay h2{color:var(--red);font-size:20px}
+.error-overlay p{color:var(--muted);max-width:400px;font-size:14px}
+.error-overlay button{padding:12px 32px;border-radius:10px;background:var(--cyan);color:#000;font-weight:600;font-size:14px;margin-top:8px}
+
+.reconnect-banner{position:fixed;top:40px;left:50%;transform:translateX(-50%);background:rgba(124,77,255,0.9);backdrop-filter:blur(10px);padding:12px 24px;border-radius:12px;font-size:14px;z-index:50;animation:fadeIn .3s;display:flex;align-items:center;gap:8px}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ── CAPCOM Console ───────────────────────────────────── */
+.sidebar{position:relative}
+.capcom-panel{position:fixed;inset:0;z-index:90;background:rgba(6,9,16,0.98);backdrop-filter:blur(14px);display:flex;flex-direction:column}
+.capcom-panel.hidden{display:none}
+.capcom-top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.capcom-top h2{font-size:14px;letter-spacing:3px;color:var(--cyan);text-transform:uppercase}
+.capcom-top .sub{font-size:10px;color:var(--muted);letter-spacing:1px}
+.capcom-body{flex:1;overflow-y:auto;padding:18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+@media(max-width:900px){.capcom-body{grid-template-columns:1fr}}
+.capcom-left,.capcom-right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.cbox{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.cbox h3{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.cbox h3::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.gauge-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.gauge{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px}
+.gauge .k{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.gauge .bar{height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.gauge .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:3px;transition:width .5s}
+.gauge .v{font-size:15px;font-family:monospace;color:var(--text);margin-top:6px}
+.gauge .v.good{color:var(--green)}.gauge .v.warn{color:var(--amber)}
+.tel-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.tel{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.tel .k{font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.tel .v{font-size:16px;font-family:monospace;color:var(--green);margin-top:4px}
+.tel .v.purple{color:var(--purple)}.tel .v.amber{color:var(--amber)}
+.capcom-actions{display:flex;flex-wrap:wrap;gap:8px}
+.cc-btn{padding:9px 14px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text);background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.2);border-radius:8px;cursor:pointer;transition:all .2s}
+.cc-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.cc-btn.danger{background:rgba(255,61,61,0.08);border-color:rgba(255,61,61,0.3);color:var(--red)}
+.cc-btn.danger:hover{border-color:var(--red)}
+.cc-btn.success{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.3);color:var(--green)}
+.cc-btn:disabled{opacity:.4;cursor:not-allowed}
+.cc-input{flex:1;min-width:120px;padding:9px 12px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px}
+.cc-input:focus{border-color:var(--cyan)}
+.wplist{list-style:none;max-height:150px;overflow-y:auto}
+.wplist li{padding:7px 4px;border-bottom:1px solid var(--border);font-size:11px;font-family:monospace;color:var(--text-dim);display:flex;justify-content:space-between;gap:8px}
+.wplist li .rm{color:var(--red);cursor:pointer;border:none;background:none}
+.voice-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mic-btn{width:44px;height:44px;border-radius:50%;background:rgba(255,61,61,0.12);border:1px solid rgba(255,61,61,0.35);color:var(--red);font-size:18px;cursor:pointer;transition:all .2s}
+.mic-btn.listening{background:var(--red);color:#fff;box-shadow:0 0 20px rgba(255,61,61,0.6);animation:micPulse 1.2s infinite}
+@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.voice-out{flex:1;min-width:180px;font-family:monospace;font-size:11px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;min-height:36px}
+.tgl{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);cursor:pointer}
+.tgl input{accent-color:var(--cyan)}
+/* CAPCOM chat — same look as the ZIO agent original */
+.cc-chat{display:flex;flex-direction:column;height:100%;min-height:380px}
+.cc-chat-box{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;min-height:280px;max-height:60vh}
+.cmsg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.5;animation:msgIn .2s ease}
+.cmsg .label{font-size:9px;letter-spacing:1px;margin-bottom:3px}
+.cmsg.user{align-self:flex-end;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.18);border-bottom-right-radius:3px;text-align:left}
+.cmsg.user .label{color:rgba(0,229,255,0.6)}
+.cmsg.zio{align-self:flex-start;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.16);border-bottom-left-radius:3px;text-align:left}
+.cmsg.zio .label{color:rgba(124,77,255,0.6)}
+.cmsg.zio .bubble:empty::after{content:'...';letter-spacing:2px;color:rgba(124,77,255,0.7);animation:msgIn .5s}
+.cmsg.error .bubble{color:#f44}
+.cc-chat-input{display:flex;gap:8px;margin-top:10px}
+.cc-chat-input input{flex:1;padding:11px 14px;border-radius:10px;background:var(--bg);color:var(--text);font-size:13px;border:1px solid var(--border)}
+.cc-chat-input input:focus{border-color:var(--cyan)}
+.cc-chat-input button{padding:11px 18px;border-radius:10px;background:var(--cyan);color:#000;font-weight:600}
+.vr-overlay{position:fixed;inset:0;z-index:120;background:#000;display:flex;flex-direction:column}
+.vr-overlay.hidden{display:none}
+.vr-overlay iframe{flex:1;width:100%;border:none}
+.vr-overlay .vr-bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:rgba(6,9,16,0.95);border-bottom:1px solid var(--border)}
+.vr-overlay .vr-bar .t{font-size:12px;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;flex:1}
+.vr-cam{position:absolute;right:18px;bottom:18px;width:230px;aspect-ratio:16/9;border:1px solid rgba(0,229,255,0.35);border-radius:12px;overflow:hidden;background:#000;box-shadow:0 8px 30px rgba(0,0,0,0.65);z-index:5}
+.vr-cam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.vr-cam .vr-cam-label{position:absolute;left:8px;bottom:6px;font-size:9px;letter-spacing:1px;color:var(--cyan);text-shadow:0 0 6px #000;background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px}
+.vr-cam .vr-cam-x{position:absolute;right:6px;top:6px;width:20px;height:20px;border-radius:50%;background:rgba(255,61,61,0.85);color:#fff;font-size:10px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6}
+.vr-cam .vr-cam-sel{position:absolute;left:6px;top:6px;max-width:112px;font-size:10px;background:rgba(0,0,0,0.65);color:var(--cyan);border:1px solid rgba(0,229,255,0.4);border-radius:6px;padding:2px 4px;z-index:6;outline:none;cursor:pointer}
+.vr-cam .vr-cam-sel option{background:#04060c;color:#e8eaf0}
+.vr-cam.hidden{display:none}
+.vr-cam-off{position:absolute;right:18px;bottom:18px;padding:8px 14px;border-radius:10px;background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.35);color:var(--cyan);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;z-index:5;display:none}
+.vr-cam-off.show{display:block}
+.cmd-result{font-family:monospace;font-size:11px;color:var(--green);background:var(--bg);border:1px solid rgba(0,255,136,0.15);border-radius:8px;padding:10px 12px;white-space:pre-wrap;max-height:140px;overflow-y:auto;display:none}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.2);border-radius:3px}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="status-bar" id="statusBar"></div>
+<div class="app" id="app" style="flex-direction:row;position:fixed;inset:0;top:32px">
+
+<!-- SIDEBAR: menú estilo ChatGPT -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <div class="sb-brand">Z<b>i</b>Core</div>
+    <button class="sb-rail-btn" id="sbRailBtn" title="Colapsar panel" onclick="toggleRail()">◀</button>
+  </div>
+  <button class="sb-newchat" onclick="newCapcomChat()"><span class="ic">＋</span><span class="lb">Nuevo Chat</span></button>
+  <div class="sb-search"><span class="ic">⌕</span><input id="sbSearch" placeholder="Buscar" oninput="filterSidebar(this.value)"></div>
+  <div class="sb-menu">
+    <div class="sb-section-label">Principal</div>
+    <button class="sb-item sidebar-tab active" onclick="switchSidebarTab('contacts',this)"><span class="ic">👥</span><span class="lb">Contactos</span></button>
+    <button class="sb-item sidebar-tab" onclick="switchSidebarTab('rooms',this)"><span class="ic">🔗</span><span class="lb">Salas</span></button>
+    <button class="sb-item" onclick="openCapcom()"><span class="ic">🛰</span><span class="lb">CAPCOM Console</span></button>
+    <button class="sb-item" onclick="openVR()"><span class="ic">🧿</span><span class="lb">VR Monitor</span></button>
+    <button class="sb-item" onclick="showAddContact()"><span class="ic">＋</span><span class="lb">Agregar Contacto</span></button>
+  </div>
+  <div class="sb-content" id="sidebarContent">
+    <div id="contactsList"></div>
+    <div id="roomsList" style="display:none"></div>
+  </div>
+  <div class="sb-footer">
+    <button class="sb-profile" onclick="showProfile()">
+      <div class="sb-avatar" id="sbAvatar">Z</div>
+      <div class="sb-profile-info"><div class="sb-name" id="myUserName">Mi Perfil</div><div class="sb-sub">Perfil y ajustes</div></div>
+      <span class="sb-gear">⚙</span>
+    </button>
+  </div>
+</div>
+
+<!-- CAPCOM CONSOLE -->
+<div class="capcom-panel hidden" id="capcomPanel">
+  <div class="capcom-top">
+    <h2>🛰 CAPCOM Console</h2>
+    <span class="sub" id="capcomStatus">— offline —</span>
+    <div style="flex:1"></div>
+    <button class="cc-btn" onclick="openVR()">🧿 VR Monitor</button>
+    <button class="cc-btn danger" onclick="closeCapcom()">✕ Cerrar</button>
+  </div>
+  <div class="capcom-body">
+    <div class="capcom-left">
+      <div class="cbox">
+        <h3>Recursos del Nodo</h3>
+        <div class="gauge-row">
+          <div class="gauge"><div class="k">CPU</div><div class="bar"><i id="gCpu" style="width:0%"></i></div><div class="v" id="vCpu">--</div></div>
+          <div class="gauge"><div class="k">RAM</div><div class="bar"><i id="gRam" style="width:0%"></i></div><div class="v" id="vRam">--</div></div>
+          <div class="gauge"><div class="k">DISCO</div><div class="bar"><i id="gDisk" style="width:0%"></i></div><div class="v" id="vDisk">--</div></div>
+        </div>
+        <div class="tel-grid" id="capcomGauges">
+          <div class="tel"><div class="k">Uptime</div><div class="v" id="vUp">--</div></div>
+          <div class="tel"><div class="k">Ollama</div><div class="v purple" id="vOllama">--</div></div>
+          <div class="tel"><div class="k">Nodes</div><div class="v" id="vNodes">--</div></div>
+        </div>
+      </div>
+      <div class="cbox">
+        <h3>Telemetría de Misión</h3>
+        <div class="tel-grid">
+          <div class="tel"><div class="k">Altitud</div><div class="v" id="vAlt">--</div></div>
+          <div class="tel"><div class="k">Velocidad</div><div class="v amber" id="vVel">--</div></div>
+          <div class="tel"><div class="k">Heading</div><div class="v purple" id="vHead">--</div></div>
+          <div class="tel"><div class="k">Batería</div><div class="v" id="vBat">--</div></div>
+          <div class="tel"><div class="k">G-force</div><div class="v" id="vG">--</div></div>
+          <div class="tel"><div class="k">Comms</div><div class="v" id="vComms">--</div></div>
+        </div>
+      </div>
+      <div class="cbox">
+        <h3>Navegación</h3>
+        <div class="capcom-actions">
+          <input class="cc-input" id="navWaypoint" placeholder="Waypoint (ej: LEO 400km)">
+          <button class="cc-btn success" onclick="addWaypoint()">+ Waypoint</button>
+          <button class="cc-btn" onclick="navCommand('reset')">⟲ Reset</button>
+        </div>
+        <ul class="wplist" id="waypointList"></ul>
+        <div class="cmd-result" id="navResult"></div>
+      </div>
+      <div class="cbox">
+        <h3>Comandos de Voz</h3>
+        <div class="voice-bar">
+          <button class="mic-btn" id="micBtn" title="Escuchar" onclick="toggleMic()">🎙</button>
+          <div class="voice-out" id="voiceOut">Pulsa el micrófono y habla…</div>
+        </div>
+        <label class="tgl" style="margin-top:10px"><input type="checkbox" id="ttsToggle"> Respuesta por voz (TTS)</label>
+        <div class="cmd-result" id="voiceResult" style="margin-top:10px"></div>
+        <h3 style="margin-top:14px">Vocabulario</h3>
+        <div class="cmd-result" id="voiceVocab" style="display:block"></div>
+      </div>
+    </div>
+    <div class="capcom-right">
+      <div class="cbox">
+        <h3>Stack ZICORE</h3>
+        <div class="cmd-result" id="sistemaResult" style="display:block"></div>
+        <div class="capcom-actions" style="margin-top:10px">
+          <button class="cc-btn success" onclick="capcomCommand('startall_status')">Estado Stack</button>
+          <button class="cc-btn success" onclick="capcomCommand('startall_start')">▶ Start All</button>
+          <button class="cc-btn danger" onclick="capcomCommand('startall_stop')">■ Stop All</button>
+          <button class="cc-btn" onclick="capcomCommand('service_restart')">⟳ Restart Web</button>
+          <button class="cc-btn danger" onclick="capcomCommand('system_update')">⬇ Update</button>
+          <button class="cc-btn" onclick="capcomCommand('vr_status')">🧿 VR Status</button>
+        </div>
+      </div>
+      <div class="cbox">
+        <h3>Órdenes por Voz / Texto</h3>
+        <p style="font-size:11px;color:var(--muted)">Ejecuta comandos del catálogo CAPCOM escribiéndolos aquí, o usa el micrófono.</p>
+        <div class="capcom-actions" style="margin-top:8px">
+          <input class="cc-input" id="rawCommand" placeholder="system_stats | startall_start | vr_status ...">
+          <button class="cc-btn" onclick="runRawCommand()">Ejecutar</button>
+        </div>
+        <div class="cmd-result" id="rawResult" style="margin-top:10px"></div>
+      </div>
+      <div class="cbox cc-chat">
+        <h3>Chat con la persona CAPCOM</h3>
+        <div class="cc-chat-box" id="capcomChatBox"></div>
+        <div class="cc-chat-input">
+          <input id="capcomChatInput" placeholder="Mensaje a CAPCOM…" onkeydown="if(event.key==='Enter')sendCapcomChat()">
+          <button onclick="sendCapcomChat()">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VR MONITOR OVERLAY -->
+<div class="vr-overlay hidden" id="vrOverlay">
+  <div class="vr-bar">
+    <span class="t">🧿 VR Monitor — ZiVR</span>
+    <button class="cc-btn danger" onclick="closeVR()">✕ Cerrar</button>
+  </div>
+  <iframe id="vrFrame" title="ZiVR Monitor"></iframe>
+  <div class="vr-cam" id="vrCamWrap">
+    <select class="vr-cam-sel" id="vrCamSel" onchange="switchVRCam(this.value)" title="Seleccionar cámara"></select>
+    <button class="vr-cam-x" title="Ocultar cámara" onclick="toggleVRCam(false)">✕</button>
+    <video id="vrCam" autoplay muted playsinline></video>
+    <div class="vr-cam-label">📷 Cámara operador</div>
+  </div>
+  <button class="vr-cam-off" id="vrCamOff" onclick="toggleVRCam(true)">📷 Activar cámara</button>
+</div>
+
+<!-- LOBBY -->
+<div class="lobby" id="lobby" style="flex:1;overflow-y:auto">
+  <div class="lobby-logo">ZiCore CAPCOM</div>
+  <div class="lobby-tag">Comunicación peer-to-peer segura</div>
+
+  <div class="lobby-card">
+    <h3>Preview</h3>
+    <div class="preview-box" id="previewBox">
+      <video id="previewVideo" autoplay muted playsinline></video>
+      <div class="no-cam" id="noCam">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
+        <span>Cámara no disponible</span>
+      </div>
+    </div>
+    <div class="settings-row">
+      <select id="camSelect"><option value="">Cargando cámaras...</option></select>
+      <select id="micSelect"><option value="">Cargando micrófonos...</option></select>
+    </div>
+    <div class="toggles">
+      <button class="toggle-btn active" id="togVideo" onclick="togglePreviewVideo()">📹 Video</button>
+      <button class="toggle-btn active" id="togAudio" onclick="togglePreviewAudio()">🎤 Audio</button>
+    </div>
+  </div>
+
+  <div class="lobby-card">
+    <button class="btn-primary" onclick="createRoom()">Crear Sala</button>
+    <div class="divider">o unirse a una sala</div>
+    <div class="room-input">
+      <input type="text" id="joinCode" maxlength="6" placeholder="CÓDIGO" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      <button class="btn-secondary" onclick="joinRoom()" style="padding:14px 20px;border-radius:10px;font-weight:600">Unirse</button>
+    </div>
+  </div>
+
+  <div class="lobby-card" id="manualSection" style="display:none">
+    <h3>Señalización Manual (SDP)</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:4px">Para conexión entre dispositivos distintos. Copia y pega los códigos SDP.</p>
+    <div class="room-code-display" id="lobbyRoomCode" style="display:none">
+      <div class="label">Sala creada</div>
+      <div class="code" id="lobbyCodeText"></div>
+    </div>
+    <div class="sdp-section" id="offerSection" style="display:none">
+      <label>1. Copia el Offer (del host)</label>
+      <textarea id="offerText" readonly></textarea>
+      <button class="btn-copy" onclick="copyText('offerText')">Copiar Offer</button>
+    </div>
+    <div class="sdp-section" id="answerSection" style="display:none">
+      <label>2. Pega el Offer remoto aquí</label>
+      <textarea id="remoteOffer" placeholder="Pega el SDP Offer aquí..."></textarea>
+      <button class="btn-connect" onclick="processRemoteOffer()">Generar Answer</button>
+    </div>
+    <div class="sdp-section" id="answerOutSection" style="display:none">
+      <label>3. Copia el Answer</label>
+      <textarea id="answerText" readonly></textarea>
+      <button class="btn-copy" onclick="copyText('answerText')">Copiar Answer</button>
+    </div>
+    <div class="sdp-section" id="finalSection" style="display:none">
+      <label>4. Pega el Answer remoto aquí</label>
+      <textarea id="remoteAnswer" placeholder="Pega el SDP Answer aquí..."></textarea>
+      <button class="btn-connect" onclick="processRemoteAnswer()">Conectar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALL SCREEN -->
+<div class="call-screen hidden" id="callScreen">
+  <div class="video-area" id="videoArea">
+    <div class="offline-avatar" id="remoteAvatar">
+      <div class="icon" id="remoteAvatarIcon">?</div>
+      <div class="name" id="remoteAvatarName">Esperando peer...</div>
+    </div>
+    <video id="remoteVideo" autoplay playsinline class="remote-video hidden"></video>
+
+    <div class="local-pip" id="localPip">
+      <video id="localVideo" autoplay muted playsinline></video>
+    </div>
+
+    <div class="call-info">
+      <div class="call-timer" id="callTimer">00:00</div>
+      <div class="participant-count" id="participantCount">👥 <span id="pCount">1</span></div>
+    </div>
+    <div class="connection-status" id="connStatus">
+      <div class="dot" id="connDot"></div>
+      <span id="connText">Desconectado</span>
+    </div>
+
+    <div class="control-bar">
+      <button class="ctrl-btn" id="btnMic" onclick="toggleMic()" title="Micrófono">🎤</button>
+      <button class="ctrl-btn" id="btnCam" onclick="toggleCam()" title="Cámara">📹</button>
+      <button class="ctrl-btn" id="btnScreen" onclick="toggleScreen()" title="Compartir pantalla">🖥</button>
+      <button class="ctrl-btn" id="btnChat" onclick="toggleChat()" title="Chat">💬</button>
+      <button class="ctrl-btn end" onclick="endCall()" title="Finalizar">📞</button>
+    </div>
+  </div>
+
+  <div class="chat-panel hidden" id="chatPanel">
+    <div class="chat-header">
+      <h3>Chat</h3>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="typing-indicator hidden" id="typingIndicator">Escribiendo...</div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- ERROR OVERLAY -->
+<div class="error-overlay hidden" id="errorOverlay">
+  <div class="icon">⚠️</div>
+  <h2 id="errorTitle">Error</h2>
+  <p id="errorMsg"></p>
+  <button onclick="dismissError()">Volver</button>
+</div>
+
+<div class="reconnect-banner hidden" id="reconnectBanner">🔄 Reconectando...</div>
+
+<!-- PROFILE MODAL -->
+<div class="profile-modal hidden" id="profileModal">
+  <div class="profile-card">
+    <div class="avatar-large" id="profileAvatar">Z</div>
+    <input type="text" id="profileName" placeholder="Tu nombre">
+    <input type="text" id="profileEmail" placeholder="Email" disabled style="opacity:0.5">
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">Este nombre se muestra a otros en la sala</div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeProfile()">Cancelar</button>
+      <button class="btn-save" onclick="saveProfile()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CONTACT MODAL -->
+<div class="profile-modal hidden" id="addContactModal">
+  <div class="profile-card">
+    <div style="font-size:24px;margin-bottom:12px">👥</div>
+    <h3 style="color:var(--cyan);margin:0 0 16px">Agregar Contacto</h3>
+    <input type="text" id="contactNameInput" placeholder="Nombre del contacto">
+    <input type="text" id="contactIdInput" placeholder="ID de sala del contacto (6 caracteres)">
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">El contacto debe tener una sala activa para conectarse</div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeAddContact()">Cancelar</button>
+      <button class="btn-save" onclick="addContact()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+const ROOM_PREFIX = 'zicore_vc_';
+const BC_CHANNEL = 'zicore-videochat';
+
+let localStream = null, screenStream = null, pc = null, dataChannel = null;
+let myId = Math.random().toString(36).substring(2, 8).toUpperCase();
+let roomId = null, isHost = false, callActive = false, callSeconds = 0, callTimerInterval = null;
+let previewVideoOn = true, previewAudioOn = true, videoOn = true, audioOn = true, screenSharing = false;
+let bc = null, pendingCandidates = [], reconnectAttempts = 0;
+let camDeviceId = '', micDeviceId = '';
+let selectedQuality = '720p';
+
+// Starfield
+(function initStars() {
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  for (let i = 0; i < 200; i++) {
+    stars.push({ x: Math.random() * 2000, y: Math.random() * 2000, r: Math.random() * 1.5 + 0.3, a: Math.random(), da: (Math.random() - 0.5) * 0.02 });
+  }
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a += s.da;
+      if (s.a > 1 || s.a < 0.2) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x % c.width, s.y % c.height, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,220,255,${s.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Devices
+async function loadDevices() {
+  try {
+    if (!localStream) {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const camSel = document.getElementById('camSelect');
+    const micSel = document.getElementById('micSelect');
+    camSel.innerHTML = '';
+    micSel.innerHTML = '';
+    devices.filter(d => d.kind === 'videoinput').forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.text = d.label || `Cámara ${i + 1}`;
+      if (d.deviceId === camDeviceId) opt.selected = true;
+      camSel.appendChild(opt);
+    });
+    devices.filter(d => d.kind === 'audioinput').forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.text = d.label || `Micrófono ${i + 1}`;
+      if (d.deviceId === micDeviceId) opt.selected = true;
+      micSel.appendChild(opt);
+    });
+    camSel.onchange = () => switchCamera(camSel.value);
+    micSel.onchange = () => switchMic(micSel.value);
+    if (!camDeviceId && devices.find(d => d.kind === 'videoinput')) {
+      camDeviceId = devices.find(d => d.kind === 'videoinput').deviceId;
+    }
+    if (!micDeviceId && devices.find(d => d.kind === 'audioinput')) {
+      micDeviceId = devices.find(d => d.kind === 'audioinput').deviceId;
+    }
+    showPreview();
+  } catch (e) {
+    console.warn('Device access denied:', e);
+    document.getElementById('noCam').style.display = 'flex';
+  }
+}
+
+async function showPreview() {
+  const video = document.getElementById('previewVideo');
+  try {
+    if (localStream) {
+      video.srcObject = localStream;
+      document.getElementById('noCam').style.display = 'none';
+    }
+  } catch (e) { console.warn(e); }
+}
+
+async function switchCamera(deviceId) {
+  camDeviceId = deviceId;
+  if (!localStream) return;
+  localStream.getVideoTracks().forEach(t => t.stop());
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
+    const newTrack = s.getVideoTracks()[0];
+    localStream.addTrack(newTrack);
+    if (pc) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) sender.replaceTrack(newTrack);
+    }
+    showPreview();
+    if (callActive) document.getElementById('localVideo').srcObject = localStream;
+  } catch (e) { console.warn('Camera switch failed:', e); }
+}
+
+async function switchMic(deviceId) {
+  micDeviceId = deviceId;
+  if (!localStream) return;
+  localStream.getAudioTracks().forEach(t => t.stop());
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: false, audio: { deviceId: { exact: deviceId } } });
+    const newTrack = s.getAudioTracks()[0];
+    localStream.addTrack(newTrack);
+    if (pc) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) sender.replaceTrack(newTrack);
+    }
+  } catch (e) { console.warn('Mic switch failed:', e); }
+}
+
+function togglePreviewVideo() {
+  previewVideoOn = !previewVideoOn;
+  if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = previewVideoOn);
+  document.getElementById('togVideo').classList.toggle('active', previewVideoOn);
+  document.getElementById('togVideo').textContent = previewVideoOn ? '📹 Video' : '🚫 Video';
+}
+function togglePreviewAudio() {
+  previewAudioOn = !previewAudioOn;
+  if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = previewAudioOn);
+  document.getElementById('togAudio').classList.toggle('active', previewAudioOn);
+  document.getElementById('togAudio').textContent = previewAudioOn ? '🎤 Audio' : '🔇 Audio';
+}
+
+// Room
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function createRoom() {
+  roomId = generateRoomCode();
+  isHost = true;
+  setupBroadcastChannel();
+  document.getElementById('manualSection').style.display = 'flex';
+  document.getElementById('lobbyRoomCode').style.display = 'block';
+  document.getElementById('lobbyCodeText').textContent = roomId;
+  document.getElementById('offerSection').style.display = 'block';
+  document.getElementById('answerSection').style.display = 'block';
+  await initPeerConnection();
+  createOffer();
+}
+
+async function joinRoom() {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  if (code.length !== 6) { alert('Ingresa un código de 6 caracteres'); return; }
+  roomId = code;
+  isHost = false;
+  setupBroadcastChannel();
+  document.getElementById('manualSection').style.display = 'flex';
+  document.getElementById('answerSection').style.display = 'block';
+  document.getElementById('remoteOffer').focus();
+}
+
+async function initPeerConnection() {
+  if (pc) pc.close();
+  pc = new RTCPeerConnection(ICE_SERVERS);
+  pendingCandidates = [];
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      broadcastSignal({ type: 'ice-candidate', candidate: e.candidate });
+      sendManualSignal({ type: 'ice-candidate', candidate: e.candidate });
+    }
+  };
+  pc.ontrack = (e) => {
+    const remoteVideo = document.getElementById('remoteVideo');
+    remoteVideo.srcObject = e.streams[0];
+    remoteVideo.classList.remove('hidden');
+    document.getElementById('remoteAvatar').classList.add('hidden');
+    document.getElementById('connDot').classList.add('connected');
+    document.getElementById('connText').textContent = 'Conectado';
+    document.getElementById('pCount').textContent = '2';
+    if (!callActive) startCall();
+  };
+  pc.oniceconnectionstatechange = () => {
+    const state = pc.iceConnectionState;
+    if (state === 'connected' || state === 'completed') {
+      setConnectionStatus('connected', 'Conectado');
+      document.getElementById('reconnectBanner').classList.add('hidden');
+      reconnectAttempts = 0;
+    } else if (state === 'disconnected') {
+      setConnectionStatus('error', 'Desconectado');
+      attemptReconnect();
+    } else if (state === 'failed') {
+      setConnectionStatus('error', 'Conexión fallida');
+      attemptReconnect();
+    } else if (state === 'connecting') {
+      setConnectionStatus('connecting', 'Conectando...');
+    }
+  };
+  pc.ondatachannel = (e) => {
+    dataChannel = e.channel;
+    setupDataChannel();
+  };
+  if (localStream) {
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  }
+}
+
+async function createOffer() {
+  try {
+    dataChannel = pc.createDataChannel('chat');
+    setupDataChannel();
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    const encoded = btoa(JSON.stringify(pc.localDescription));
+    document.getElementById('offerText').value = encoded;
+    broadcastSignal({ type: 'offer', sdp: pc.localDescription });
+  } catch (e) { console.error('Offer error:', e); showError('Error al crear offer', e.message); }
+}
+
+async function processRemoteOffer() {
+  try {
+    const raw = document.getElementById('remoteOffer').value.trim();
+    if (!raw) { alert('Pega el SDP Offer primero'); return; }
+    const sdp = JSON.parse(atob(raw));
+    await initPeerConnection();
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    const encoded = btoa(JSON.stringify(pc.localDescription));
+    document.getElementById('answerText').value = encoded;
+    document.getElementById('answerOutSection').style.display = 'block';
+    document.getElementById('finalSection').style.display = 'none';
+    broadcastSignal({ type: 'answer', sdp: pc.localDescription });
+    enterCallScreen();
+  } catch (e) { console.error('Process offer error:', e); showError('Error al procesar offer', e.message); }
+}
+
+async function processRemoteAnswer() {
+  try {
+    const raw = document.getElementById('remoteAnswer').value.trim();
+    if (!raw) { alert('Pega el SDP Answer primero'); return; }
+    const sdp = JSON.parse(atob(raw));
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    enterCallScreen();
+  } catch (e) { console.error('Process answer error:', e); showError('Error al procesar answer', e.message); }
+}
+
+async function handleOffer(sdp) {
+  await initPeerConnection();
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  broadcastSignal({ type: 'answer', sdp: pc.localDescription });
+  document.getElementById('manualSection').style.display = 'none';
+  enterCallScreen();
+}
+
+async function handleAnswer(sdp) {
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  document.getElementById('manualSection').style.display = 'none';
+  enterCallScreen();
+}
+
+function handleIceCandidate(candidate) {
+  if (pc && pc.remoteDescription) {
+    pc.addIceCandidate(new RTCIceCandidate(candidate));
+  } else {
+    pendingCandidates.push(candidate);
+  }
+}
+
+function flushPendingCandidates() {
+  pendingCandidates.forEach(c => {
+    if (pc) pc.addIceCandidate(new RTCIceCandidate(c));
+  });
+  pendingCandidates = [];
+}
+
+// BroadcastChannel
+function setupBroadcastChannel() {
+  if (bc) bc.close();
+  bc = new BC_CHANNEL in window ? new BroadcastChannel(BC_CHANNEL) : null;
+  if (!bc) {
+    console.warn('BroadcastChannel not supported');
+    return;
+  }
+  bc.onmessage = (e) => {
+    const msg = e.data;
+    if (msg.roomId !== roomId) return;
+    if (msg.senderId === myId) return;
+    switch (msg.type) {
+      case 'offer': handleOffer(msg.sdp); break;
+      case 'answer': handleAnswer(msg.sdp); break;
+      case 'ice-candidate': handleIceCandidate(msg.candidate); break;
+      case 'chat': appendChat(msg.text, false); break;
+      case 'typing': showTyping(); break;
+      case 'leave': handlePeerLeave(); break;
+    }
+  };
+}
+
+function broadcastSignal(msg) {
+  if (bc) bc.postMessage({ ...msg, roomId, senderId: myId });
+}
+
+function sendManualSignal(msg) {
+  if (msg.type === 'answer' && !isHost) {
+    document.getElementById('finalSection').style.display = 'block';
+  }
+}
+
+// Data channel for chat
+function setupDataChannel() {
+  if (!dataChannel) return;
+  dataChannel.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'chat') appendChat(msg.text, false);
+      else if (msg.type === 'typing') showTyping();
+    } catch (err) { console.warn(err); }
+  };
+  dataChannel.onopen = () => console.log('Data channel open');
+}
+
+function sendDcMessage(msg) {
+  if (dataChannel && dataChannel.readyState === 'open') {
+    dataChannel.send(JSON.stringify(msg));
+  }
+  broadcastSignal(msg);
+}
+
+// Call
+function startCall() {
+  callActive = true;
+  callSeconds = 0;
+  callTimerInterval = setInterval(() => {
+    callSeconds++;
+    const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+    const s = String(callSeconds % 60).padStart(2, '0');
+    document.getElementById('callTimer').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function enterCallScreen() {
+  document.getElementById('lobby').classList.add('hidden');
+  document.getElementById('callScreen').classList.remove('hidden');
+  if (localStream) {
+    document.getElementById('localVideo').srcObject = localStream;
+  }
+  setConnectionStatus('connecting', 'Conectando...');
+  if (!callActive) startCall();
+}
+
+function endCall() {
+  if (pc) { pc.close(); pc = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+  if (bc) { broadcastSignal({ type: 'leave' }); bc.close(); bc = null; }
+  clearInterval(callTimerInterval);
+  callActive = false;
+  dataChannel = null;
+  document.getElementById('callScreen').classList.add('hidden');
+  document.getElementById('lobby').classList.remove('hidden');
+  document.getElementById('remoteVideo').classList.add('hidden');
+  document.getElementById('remoteAvatar').classList.remove('hidden');
+  document.getElementById('manualSection').style.display = 'none';
+  document.getElementById('chatPanel').classList.add('hidden');
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('connDot').classList.remove('connected');
+  document.getElementById('connText').textContent = 'Desconectado';
+  document.getElementById('pCount').textContent = '1';
+  document.getElementById('callTimer').textContent = '00:00';
+  document.getElementById('statusBar').className = 'status-bar';
+  document.getElementById('statusBar').style.background = '';
+  loadDevices();
+}
+
+function handlePeerLeave() {
+  document.getElementById('remoteVideo').classList.add('hidden');
+  document.getElementById('remoteAvatar').classList.remove('hidden');
+  document.getElementById('remoteAvatarName').textContent = 'Peer desconectado';
+  document.getElementById('pCount').textContent = '1';
+  setConnectionStatus('error', 'Peer desconectado');
+}
+
+// Controls
+function toggleMic() {
+  audioOn = !audioOn;
+  if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = audioOn);
+  const btn = document.getElementById('btnMic');
+  btn.classList.toggle('muted', !audioOn);
+  btn.textContent = audioOn ? '🎤' : '🔇';
+}
+
+function toggleCam() {
+  videoOn = !videoOn;
+  if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = videoOn);
+  const btn = document.getElementById('btnCam');
+  btn.classList.toggle('muted', !videoOn);
+  btn.textContent = videoOn ? '📹' : '🚫';
+}
+
+async function toggleScreen() {
+  const btn = document.getElementById('btnScreen');
+  if (!screenSharing) {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = screenStream.getVideoTracks()[0];
+      if (pc) {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) sender.replaceTrack(screenTrack);
+      }
+      document.getElementById('localVideo').srcObject = screenStream;
+      screenTrack.onended = () => stopScreenShare();
+      screenSharing = true;
+      btn.classList.add('active');
+    } catch (e) { console.warn('Screen share cancelled'); }
+  } else {
+    stopScreenShare();
+  }
+}
+
+function stopScreenShare() {
+  screenSharing = false;
+  const btn = document.getElementById('btnScreen');
+  btn.classList.remove('active');
+  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+  if (pc && localStream) {
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) sender.replaceTrack(videoTrack);
+    }
+  }
+  document.getElementById('localVideo').srcObject = localStream;
+}
+
+// Chat
+function toggleChat() {
+  const panel = document.getElementById('chatPanel');
+  panel.classList.toggle('hidden');
+  document.getElementById('btnChat').classList.toggle('active', !panel.classList.contains('hidden'));
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  appendChat(text, true);
+  sendDcMessage({ type: 'chat', text });
+  input.value = '';
+}
+
+function appendChat(text, sent) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${sent ? 'sent' : 'received'}`;
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  div.innerHTML = `${escapeHtml(text)}<div class="time">${time}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function showTyping() {
+  const el = document.getElementById('typingIndicator');
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 2000);
+}
+
+document.getElementById('chatInput')?.addEventListener('input', () => {
+  sendDcMessage({ type: 'typing' });
+});
+
+// Connection
+function setConnectionStatus(state, text) {
+  const bar = document.getElementById('statusBar');
+  bar.className = `status-bar ${state}`;
+  if (state === 'connected') bar.style.background = '';
+  else if (state === 'connecting') bar.style.background = '';
+  else if (state === 'error') bar.style.background = '';
+  document.getElementById('connText').textContent = text;
+  const dot = document.getElementById('connDot');
+  dot.classList.toggle('connected', state === 'connected');
+}
+
+function attemptReconnect() {
+  if (reconnectAttempts >= 5) {
+    showError('Conexión perdida', 'No se pudo reconectar después de 5 intentos.');
+    return;
+  }
+  reconnectAttempts++;
+  document.getElementById('reconnectBanner').classList.remove('hidden');
+  setTimeout(() => {
+    if (pc && pc.iceConnectionState === 'disconnected') {
+      pc.restartIce();
+      if (isHost) {
+        pc.createOffer({ iceRestart: true }).then(offer => pc.setLocalDescription(offer));
+      }
+    }
+  }, 2000 * reconnectAttempts);
+}
+
+// Utility
+function copyText(id) {
+  const el = document.getElementById(id);
+  el.select();
+  navigator.clipboard.writeText(el.value).then(() => {
+    const btn = el.nextElementSibling;
+    const orig = btn.textContent;
+    btn.textContent = 'Copiado!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function showError(title, msg) {
+  document.getElementById('errorTitle').textContent = title;
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorOverlay').classList.remove('hidden');
+}
+
+function dismissError() {
+  document.getElementById('errorOverlay').classList.add('hidden');
+  endCall();
+}
+
+// ══════════════════════════════════════════════════════
+// CONTACTS & ROOMS SIDEBAR
+// ══════════════════════════════════════════════════════
+
+function getProfile() {
+  try { return JSON.parse(localStorage.getItem('zicore_profile') || '{}'); } catch(e) { return {}; }
+}
+function saveProfileData(p) { localStorage.setItem('zicore_profile', JSON.stringify(p)); }
+function getContacts() {
+  try { return JSON.parse(localStorage.getItem('zicore_contacts') || '[]'); } catch(e) { return []; }
+}
+function saveContacts(c) { localStorage.setItem('zicore_contacts', JSON.stringify(c)); }
+function getRoomHistory() {
+  try { return JSON.parse(localStorage.getItem('zicore_room_history') || '[]'); } catch(e) { return []; }
+}
+function saveRoomHistory(r) { localStorage.setItem('zicore_room_history', JSON.stringify(r)); }
+
+function switchSidebarTab(tab, el) {
+  document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('contactsList').style.display = tab === 'contacts' ? 'block' : 'none';
+  document.getElementById('roomsList').style.display = tab === 'rooms' ? 'block' : 'none';
+  if (tab === 'contacts') renderContacts();
+  else renderRooms();
+}
+
+function renderContacts() {
+  const contacts = getContacts();
+  const list = document.getElementById('contactsList');
+  if (contacts.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Sin contactos<br><span style="font-size:11px;opacity:0.6">Agrega contactos para conectarte</span></div>';
+    return;
+  }
+  list.innerHTML = contacts.map(c => {
+    const initial = (c.name || '?')[0].toUpperCase();
+    return `<div class="contact-item" onclick="callContact('${c.id}')">
+      <div class="avatar${c.online ? ' online' : ''}">${initial}</div>
+      <div class="info">
+        <div class="name">${escHtml(c.name)}</div>
+        <div class="status">${c.online ? 'En línea' : 'ID: ' + c.id}</div>
+      </div>
+      <button class="call-btn" onclick="event.stopPropagation();callContact('${c.id}')" title="Llamar">📞</button>
+    </div>`;
+  }).join('');
+}
+
+function renderRooms() {
+  const rooms = getRoomHistory();
+  const list = document.getElementById('roomsList');
+  if (rooms.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Sin salas recientes<br><span style="font-size:11px;opacity:0.6">Crea o únete a una sala</span></div>';
+    return;
+  }
+  list.innerHTML = rooms.map(r => {
+    const date = new Date(r.date).toLocaleDateString('es-MX');
+    return `<div class="room-item" onclick="quickJoinRoom('${r.code}')">
+      <div class="room-icon">🔗</div>
+      <div class="room-info">
+        <div class="room-name">${r.code}</div>
+        <div class="room-meta">${r.name || 'Sala'} · ${date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function callContact(contactId) {
+  document.getElementById('joinCode').value = contactId;
+  joinRoom();
+}
+
+function quickJoinRoom(code) {
+  document.getElementById('joinCode').value = code;
+  joinRoom();
+}
+
+function showAddContact() {
+  document.getElementById('addContactModal').classList.remove('hidden');
+  document.getElementById('contactNameInput').value = '';
+  document.getElementById('contactIdInput').value = '';
+  document.getElementById('contactNameInput').focus();
+}
+function closeAddContact() { document.getElementById('addContactModal').classList.add('hidden'); }
+
+function addContact() {
+  const name = document.getElementById('contactNameInput').value.trim();
+  const id = document.getElementById('contactIdInput').value.trim().toUpperCase();
+  if (!name || !id) { alert('Ingresa nombre y ID'); return; }
+  if (id.length !== 6) { alert('El ID debe tener 6 caracteres'); return; }
+  const contacts = getContacts();
+  if (contacts.find(c => c.id === id)) { alert('Contacto ya existe'); return; }
+  contacts.push({ name, id, online: false, added: Date.now() });
+  saveContacts(contacts);
+  closeAddContact();
+  renderContacts();
+}
+
+function showProfile() {
+  const p = getProfile();
+  document.getElementById('profileName').value = p.name || '';
+  document.getElementById('profileEmail').value = p.email || '';
+  document.getElementById('profileAvatar').textContent = (p.name || 'Z')[0].toUpperCase();
+  document.getElementById('profileModal').classList.remove('hidden');
+}
+function closeProfile() { document.getElementById('profileModal').classList.add('hidden'); }
+
+function saveProfile() {
+  const name = document.getElementById('profileName').value.trim();
+  if (!name) { alert('Ingresa un nombre'); return; }
+  const p = getProfile();
+  p.name = name;
+  if (p.email) p.email = p.email;
+  saveProfileData(p);
+  document.getElementById('myUserName').textContent = name;
+  document.getElementById('sbAvatar').textContent = name[0].toUpperCase();
+  document.getElementById('profileAvatar').textContent = name[0].toUpperCase();
+  closeProfile();
+}
+
+// Save room to history when creating
+const origCreateRoom = createRoom;
+createRoom = async function() {
+  await origCreateRoom();
+  if (roomId) {
+    const rooms = getRoomHistory();
+    if (!rooms.find(r => r.code === roomId)) {
+      rooms.unshift({ code: roomId, name: 'Sala de ' + (getProfile().name || 'Yo'), date: Date.now(), host: true });
+      if (rooms.length > 20) rooms.pop();
+      saveRoomHistory(rooms);
+    }
+    renderRooms();
+  }
+};
+
+// Save room when joining
+const origJoinRoom = joinRoom;
+joinRoom = async function() {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  await origJoinRoom();
+  if (code && code.length === 6) {
+    const rooms = getRoomHistory();
+    if (!rooms.find(r => r.code === code)) {
+      rooms.unshift({ code, name: 'Sala ' + code, date: Date.now(), host: false });
+      if (rooms.length > 20) rooms.pop();
+      saveRoomHistory(rooms);
+    }
+    renderRooms();
+  }
+};
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Init sidebar
+(function initSidebar() {
+  const p = getProfile();
+  document.getElementById('myUserName').textContent = p.name || 'Mi Perfil';
+  document.getElementById('sbAvatar').textContent = (p.name || 'Z')[0].toUpperCase();
+  renderContacts();
+  renderRooms();
+})();
+
+// Init
+loadDevices();
+</script>
+<script>
+/* ═══════════ CAPCOM CONSOLE ═══════════ */
+const CAPCOM_WS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/zio';
+let capcomWs = null;
+let capcomOpen = false;
+let capcomPoll = null;
+let micActive = false;
+let capcomBusy = false;
+
+function capcomToken() {
+  return localStorage.getItem('zicore_sso_token') || sessionStorage.getItem('zicore_sso_token') || '';
+}
+function capcomFetch(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers || {}, capcomToken() ? { Authorization: 'Bearer ' + capcomToken() } : {});
+  return fetch(url, opts).then(async (r) => {
+    const t = await r.text();
+    let j;
+    try { j = JSON.parse(t); } catch (e) { j = { raw: t }; }
+    if (!r.ok) { throw new Error((j && (j.detail || j.error)) || r.statusText || r.status); }
+    return j;
+  });
+}
+function escCap(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function openCapcom() {
+  capcomOpen = true;
+  document.getElementById('capcomPanel').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  connectCapcomWs();
+  refreshCapcomStatus();
+  capcomPoll = setInterval(refreshCapcomStatus, 4000);
+  loadWaypoints();
+  loadVocab();
+}
+function closeCapcom() {
+  capcomOpen = false;
+  document.getElementById('capcomPanel').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (capcomPoll) clearInterval(capcomPoll);
+  capcomPoll = null;
+}
+
+/* ── Sidebar estilo ChatGPT ── */
+function toggleRail() {
+  const sb = document.querySelector('.sidebar');
+  const rail = sb.classList.toggle('rail');
+  document.getElementById('sbRailBtn').textContent = rail ? '▶' : '◀';
+  document.getElementById('sbRailBtn').title = rail ? 'Expandir panel' : 'Colapsar panel';
+}
+function newCapcomChat() {
+  openCapcom();
+  const box = document.getElementById('capcomChatBox');
+  if (box) box.innerHTML = '';
+  addCapcomMsg('zio', 'Conexión CAPCOM establecida. ¿En qué te ayudo hoy?');
+  const inp = document.getElementById('capcomChatInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+}
+function filterSidebar(q) {
+  q = (q || '').toLowerCase().trim();
+  document.querySelectorAll('#sidebarContent .contact-item, #sidebarContent .room-item').forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+/* ── Status ── */
+function refreshCapcomStatus() {
+  capcomFetch('/api/capcom/status').then((d) => {
+    const nodeInfo = (d.system && d.system.node) ? (d.system.node.online ? ('online' + (d.system.node.host ? ' @ ' + d.system.node.host : '')) : 'offline') : '';
+    document.getElementById('capcomStatus').textContent = 'online · node ' + nodeInfo;
+    const st = d.system || {};
+    const pct = (k) => (st[k] !== undefined && st[k] !== null) ? Math.round(st[k]) : null;
+    const cpu = pct('cpu_percent') !== null ? pct('cpu_percent') : pct('cpu');
+    const ram = pct('memory_percent') !== null ? pct('memory_percent') : pct('mem');
+    const disk = pct('disk_percent') !== null ? pct('disk_percent') : pct('disk');
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    if (cpu !== null) { set('vCpu', cpu + '%'); document.getElementById('gCpu').style.width = Math.min(100, cpu) + '%'; }
+    if (ram !== null) { set('vRam', ram + '%'); document.getElementById('gRam').style.width = Math.min(100, ram) + '%'; }
+    if (disk !== null) { set('vDisk', disk + '%'); document.getElementById('gDisk').style.width = Math.min(100, disk) + '%'; }
+    set('vUp', st.uptime !== undefined ? st.uptime : '—');
+    set('vOllama', st.ollama_status !== undefined ? (st.ollama_status ? 'online' : 'offline') : (d.ollama ? (d.ollama.status || 'online') : '—'));
+    set('vNodes', (st.node && st.node.nodes && st.node.nodes.length) ? st.node.nodes.length : '—');
+    const t = d.telemetry || {};
+    set('vAlt', (t.altitude !== undefined) ? Math.round(t.altitude) + ' m' : '—');
+    set('vVel', (t.velocity !== undefined) ? Math.round(t.velocity) + ' m/s' : '—');
+    set('vHead', (t.heading !== undefined) ? Math.round(t.heading) + '°' : '—');
+    set('vBat', (t.battery !== undefined) ? t.battery + '%' : '—');
+    set('vG', (t.gforce !== undefined) ? t.gforce.toFixed(1) + 'g' : '—');
+    set('vComms', (t.comms !== undefined) ? (t.comms ? 'OK' : 'DOWN') : '—');
+  }).catch(() => {
+    document.getElementById('capcomStatus').textContent = 'offline — conectando…';
+  });
+}
+
+/* ── Navigation ── */
+function loadWaypoints() {
+  capcomFetch('/api/capcom/status').then((d) => {
+    const list = document.getElementById('waypointList');
+    list.innerHTML = '';
+    const wps = (d.nav && d.nav.waypoints) || [];
+    wps.forEach((w, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span>' + escCap(String(i + 1) + '. ' + w) + '</span><button class="rm" title="Quitar" onclick="rmWaypoint(' + i + ')">✕</button>';
+      list.appendChild(li);
+    });
+  }).catch(() => {});
+}
+function rmWaypoint(i) {
+  capcomFetch('/api/capcom/nav', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: 'remove', index: i }) })
+    .then(loadWaypoints).catch((e) => showCmdResult('navResult', e.message, true));
+}
+function addWaypoint() {
+  const inp = document.getElementById('navWaypoint');
+  const wp = inp.value.trim();
+  if (!wp) return;
+  capcomFetch('/api/capcom/nav', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: 'add', waypoint: wp }) })
+    .then((d) => { inp.value = ''; showCmdResult('navResult', 'Waypoint añadido: ' + wp + ' → ' + (d.status || 'ok')); loadWaypoints(); refreshCapcomStatus(); })
+    .catch((e) => showCmdResult('navResult', e.message, true));
+}
+function navCommand(cmd) {
+  capcomFetch('/api/capcom/nav', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: cmd }) })
+    .then((d) => { showCmdResult('navResult', (d.message || 'OK') + (d.waypoints ? ' · waypoints: ' + d.waypoints.length : '')); loadWaypoints(); refreshCapcomStatus(); })
+    .catch((e) => showCmdResult('navResult', e.message, true));
+}
+
+/* ── Commands (real system control) ── */
+function capcomCommand(cmdId) {
+  const info = CAPCOM_CMD_HELP[cmdId] || {};
+  if (info.confirm && !confirm(info.confirm)) return;
+  showCmdResult('sistemaResult', '⏳ Ejecutando «' + cmdId + '»…');
+  capcomFetch('/api/capcom/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: cmdId }) })
+    .then((d) => {
+      showCmdResult('sistemaResult', formatCmdOutput(d));
+      if (d.reply && capcomWs && capcomWs.readyState === WebSocket.OPEN) {
+        addCapcomMsg('zio', d.reply, true);
+      }
+    })
+    .catch((e) => showCmdResult('sistemaResult', '⚠ ' + e.message, true));
+}
+function runRawCommand() {
+  const raw = document.getElementById('rawCommand').value.trim();
+  if (!raw) return;
+  const id = Object.keys(CAPCOM_CMD_HELP).find((k) => raw === k || raw.toLowerCase().startsWith(k.replace('_', ' ')));
+  if (id) { capcomCommand(id); return; }
+  showCmdResult('rawResult', '⚠ Comando no reconocido. Catálogo: ' + Object.keys(CAPCOM_CMD_HELP).join(', '), true);
+}
+function formatCmdOutput(d) {
+  const j = d.output || d.result || {};
+  if (typeof j === 'string') return j;
+  if (!j) return JSON.stringify(d, null, 2);
+  if (j.services) {
+    const lines = ['— Stack ZICORE —'];
+    Object.keys(j.services || {}).forEach((k) => {
+      const s = j.services[k];
+      const state = (typeof s === 'string') ? s : (s.state || s.status || s.active || '—');
+      lines.push('  ' + k + ': ' + state);
+    });
+    if (j.summary) lines.push('  summary: ' + j.summary);
+    return lines.join('\n');
+  }
+  return JSON.stringify(j, null, 2);
+}
+function showCmdResult(id, text, isErr) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = text;
+  el.style.color = isErr ? 'var(--red)' : 'var(--green)';
+  el.style.borderColor = isErr ? 'rgba(255,61,61,0.3)' : 'rgba(0,255,136,0.2)';
+}
+
+/* ── Voice ── */
+function loadVocab() {
+  capcomFetch('/api/capcom/status').then(() => {}).catch(() => {});
+  const v = document.getElementById('voiceVocab');
+  v.innerHTML = '';
+  Object.keys(VOICE_HINTS).forEach((k) => {
+    const p = document.createElement('div');
+    p.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:4px';
+    p.textContent = '“' + k + '” → ' + VOICE_HINTS[k];
+    v.appendChild(p);
+  });
+}
+function toggleMic() {
+  if (micActive) { stopMic(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showCmdResult('voiceResult', '⚠ Web Speech API no disponible en este navegador', true); return; }
+  const rec = new SR();
+  rec.lang = 'es-ES';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  const out = document.getElementById('voiceOut');
+  rec.onstart = () => {
+    micActive = true;
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('micBtn').textContent = '🛑';
+    out.textContent = '🎙 Escuchando…';
+  };
+  rec.onresult = (ev) => {
+    const txt = ev.results[0][0].transcript.trim();
+    out.textContent = '🗣 ' + txt;
+    handleVoiceText(txt);
+  };
+  rec.onerror = (ev) => {
+    micActive = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micBtn').textContent = '🎙';
+    out.textContent = '⚠ ' + (ev.error || 'error de audio');
+  };
+  rec.onend = () => {
+    micActive = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micBtn').textContent = '🎙';
+  };
+  rec.start();
+}
+function stopMic() {
+  micActive = false;
+  document.getElementById('micBtn').classList.remove('listening');
+  document.getElementById('micBtn').textContent = '🎙';
+  document.getElementById('voiceOut').textContent = 'Micrófono detenido.';
+}
+function handleVoiceText(txt) {
+  const low = txt.toLowerCase();
+  const keys = Object.keys(VOICE_KEYWORDS);
+  let best = null, bestScore = 0;
+  keys.forEach((k) => {
+    const w = k.toLowerCase();
+    const words = w.split(' ');
+    let hit = 0;
+    words.forEach((wd) => { if (low.indexOf(wd) !== -1) hit++; });
+    const score = hit / words.length;
+    if (score > 0 && score >= bestScore) { bestScore = score; best = k; }
+  });
+  if (best && bestScore >= 0.5) {
+    const cmdId = VOICE_KEYWORDS[best];
+    showCmdResult('voiceResult', '🗣 → Comando: ' + cmdId);
+    capcomCommand(cmdId);
+    if (document.getElementById('ttsToggle').checked) speakText('Ejecutando ' + cmdId);
+    return;
+  }
+  showCmdResult('voiceResult', '🗣 → Chat CAPCOM: ' + txt);
+  addCapcomMsg('user', txt);
+  sendCapcomText(txt);
+}
+function speakText(t) {
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = 'es-ES';
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* ── CAPCOM chat (ZIO persona capcom) ── */
+function connectCapcomWs() {
+  if (capcomWs && (capcomWs.readyState === WebSocket.OPEN || capcomWs.readyState === WebSocket.CONNECTING)) return;
+  try { capcomWs = new WebSocket(CAPCOM_WS_URL); } catch (e) { return; }
+  capcomWs.onmessage = (ev) => {
+    let d;
+    try { d = JSON.parse(ev.data); } catch (e) { return; }
+    if (d.type === 'welcome' || d.type === 'session_info') return;
+    if (d.type === 'stream_start') { capcomStreaming = true; capcomStreamEl = startCapcomBubble(); return; }
+    if (d.type === 'stream_chunk') { if (capcomStreamEl) capcomStreamEl.textContent += d.chunk || ''; return; }
+    if (d.type === 'stream_end') {
+      if (capcomStreamEl) {
+        const full = (d.outputs && d.outputs.text) || '';
+        if (!capcomStreamEl.textContent && full) capcomStreamEl.textContent = full;
+        capcomStreamEl.classList.remove('bubble');
+      }
+      capcomStreaming = false;
+      if (document.getElementById('ttsToggle').checked && d.outputs && d.outputs.text) speakText(d.outputs.text.slice(0, 300));
+      return;
+    }
+    if (d.type === 'response') {
+      const txt = (d.outputs && d.outputs.text) || d.message || '';
+      addCapcomMsg('zio', txt, true);
+      if (document.getElementById('ttsToggle').checked && txt) speakText(txt.slice(0, 300));
+      return;
+    }
+    if (d.type === 'error') { addCapcomMsg('zio', '⚠ ' + (d.message || 'error'), true); return; }
+    if (d.outputs && d.outputs.text) { addCapcomMsg('zio', d.outputs.text, true); }
+  };
+  capcomWs.onerror = () => {};
+  capcomWs.onclose = () => { capcomWs = null; if (capcomOpen) setTimeout(connectCapcomWs, 3000); };
+}
+let capcomStreaming = false;
+let capcomStreamEl = null;
+function startCapcomBubble() {
+  const box = document.getElementById('capcomChatBox');
+  const m = document.createElement('div');
+  m.className = 'cmsg zio';
+  m.innerHTML = '<div class="label">CAPCOM</div><div class="bubble"></div>';
+  box.appendChild(m);
+  box.scrollTop = box.scrollHeight;
+  return m.querySelector('.bubble');
+}
+function addCapcomMsg(type, text, renderMd) {
+  const box = document.getElementById('capcomChatBox');
+  const m = document.createElement('div');
+  m.className = 'cmsg ' + (type === 'user' ? 'user' : 'zio');
+  const label = type === 'user' ? 'TÚ' : 'CAPCOM';
+  m.innerHTML = '<div class="label">' + label + '</div><div class="bubble"></div>';
+  box.appendChild(m);
+  const b = m.querySelector('.bubble');
+  if (renderMd && typeof window.renderMd === 'function') b.innerHTML = renderMd(text);
+  else b.textContent = text;
+  box.scrollTop = box.scrollHeight;
+}
+function sendCapcomChat() {
+  const inp = document.getElementById('capcomChatInput');
+  const txt = inp.value.trim();
+  if (!txt || capcomBusy) return;
+  addCapcomMsg('user', txt);
+  inp.value = '';
+  sendCapcomText(txt);
+}
+function sendCapcomText(txt) {
+  connectCapcomWs();
+  capcomBusy = true;
+  const onOpen = () => {
+    capcomWs.send(JSON.stringify({ command: 'stream', payload: { message: txt, module: 'zicore_native', session_id: 'capcom', persona: 'capcom' } }));
+    capcomBusy = false;
+  };
+  if (capcomWs.readyState === WebSocket.OPEN) onOpen();
+  else {
+    const t = setTimeout(() => { capcomBusy = false; }, 8000);
+    capcomWs.onopen = () => { clearTimeout(t); onOpen(); };
+  }
+}
+
+/* ── VR overlay ── */
+let vrCamStream = null;
+function openVR() {
+  document.getElementById('vrFrame').src = '/vr-monitor';
+  document.getElementById('vrOverlay').classList.remove('hidden');
+  enableVRCam();
+}
+function closeVR() {
+  document.getElementById('vrOverlay').classList.add('hidden');
+  document.getElementById('vrFrame').src = 'about:blank';
+  disableVRCam();
+}
+function enableVRCam() {
+  const video = document.getElementById('vrCam');
+  if (!video) return;
+  const sel = document.getElementById('vrCamSel');
+  switchVRCam(sel ? sel.value : '');
+}
+function switchVRCam(deviceId) {
+  const video = document.getElementById('vrCam');
+  if (!video) return;
+  const wrap = document.getElementById('vrCamWrap');
+  const off = document.getElementById('vrCamOff');
+  if (vrCamStream) { vrCamStream.getTracks().forEach((t) => t.stop()); vrCamStream = null; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    wrap.classList.add('hidden');
+    off.classList.add('show');
+    return;
+  }
+  const constraints = deviceId ? { video: { deviceId: { exact: deviceId } }, audio: false } : { video: true, audio: false };
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then((s) => {
+      vrCamStream = s;
+      video.srcObject = s;
+      video.play().catch(() => {});
+      wrap.classList.remove('hidden');
+      off.classList.remove('show');
+      populateVRCamSel(s);
+    })
+    .catch(() => {
+      wrap.classList.add('hidden');
+      off.classList.add('show');
+    });
+}
+function populateVRCamSel(stream) {
+  const sel = document.getElementById('vrCamSel');
+  if (!sel || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  const cur = stream.getVideoTracks()[0];
+  const curId = cur && cur.getSettings ? cur.getSettings().deviceId : '';
+  navigator.mediaDevices.enumerateDevices().then((devices) => {
+    const cams = devices.filter((d) => d.kind === 'videoinput');
+    if (!cams.length) return;
+    const prev = sel.value;
+    sel.innerHTML = '';
+    cams.forEach((d) => {
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || 'Cámara ' + (sel.options.length + 1);
+      sel.appendChild(o);
+    });
+    if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+    else if (curId) {
+      const op = [...sel.options].find((o) => o.value === curId);
+      if (op) op.selected = true;
+    }
+  }).catch(() => {});
+}
+function disableVRCam() {
+  const video = document.getElementById('vrCam');
+  if (video && video.srcObject) video.srcObject = null;
+  if (vrCamStream) { vrCamStream.getTracks().forEach((t) => t.stop()); vrCamStream = null; }
+}
+function toggleVRCam(show) {
+  const wrap = document.getElementById('vrCamWrap');
+  const off = document.getElementById('vrCamOff');
+  if (show) { enableVRCam(); }
+  else { disableVRCam(); wrap.classList.add('hidden'); off.classList.add('show'); }
+}
+
+const VOICE_KEYWORDS = {
+  'estado del sistema': 'system_stats',
+  'estado stack': 'startall_status',
+  'iniciar todo': 'startall_start',
+  'arrancar todo': 'startall_start',
+  'parar todo': 'startall_stop',
+  'detener todo': 'startall_stop',
+  'reiniciar web': 'service_restart',
+  'reinicia web': 'service_restart',
+  'actualizar sistema': 'system_update',
+  'actualiza sistema': 'system_update',
+  'estado vr': 'vr_status',
+  'vr': 'vr_status',
+  'resumen': 'system_stats'
+};
+const VOICE_HINTS = {
+  'estado del sistema': 'system_stats',
+  'iniciar todo / arrancar todo': 'startall_start',
+  'parar todo / detener todo': 'startall_stop',
+  'reiniciar web': 'service_restart',
+  'actualizar sistema': 'system_update',
+  'estado vr': 'vr_status'
+};
+const CAPCOM_CMD_HELP = {
+  system_stats: {},
+  vr_status: {},
+  nav_status: {},
+  startall_status: {},
+  startall_start: {},
+  startall_stop: { confirm: '¿Detener TODOS los servicios del stack ZICORE?' },
+  system_update: { confirm: '¿Ejecutar system_update (git pull + restart) en producción?' },
+  service_restart: { confirm: '¿Reiniciar el servicio web (zicore-materializer/zicore-vps)?' }
+};
+
+window.addEventListener('DOMContentLoaded', () => { document.getElementById('sbRailBtn').textContent = document.querySelector('.sidebar').classList.contains('rail') ? '▶' : '◀'; });
+</script>
+<script src="/js/zicore-polyfills.js"></script><script src="/js/zicore-i18n.js"></script>
+<script>ZICORE_I18N.init();</script>
+<link rel="stylesheet" href="/css/zicore-library.css">
+<script src="/js/zicore-library.js"></script>
+</body>
+</html>

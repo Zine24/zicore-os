@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE ZSRI — Red de Comunicaciones Espaciales</title>
+<meta name="description" content="Red multicapa de comunicaciones espaciales: LEO, Earth Gateway, Relay cislunar y Luna.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0e18;--bg3:#0f1420;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--amber:#ffb300;
+  --red:#ff5555;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;
+  --border:rgba(0,229,255,0.08);
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.topbar{height:52px;display:flex;align-items:center;padding:0 20px;gap:14px;background:rgba(6,8,16,0.95);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1000}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.hex{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--purple);background:linear-gradient(135deg,rgba(124,77,255,.12),rgba(0,229,255,.06));border:1px solid rgba(124,77,255,.2);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+.ttl{font-size:12px;font-weight:600;letter-spacing:3px;color:var(--purple);text-transform:uppercase}
+.sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text-faint)}
+.spacer{flex:1}
+.back{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text-dim);text-decoration:none;border:1px solid var(--border);padding:5px 12px;border-radius:3px;text-transform:uppercase}
+.back:hover{color:var(--cyan);border-color:rgba(0,229,255,.2)}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 20px 60px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px}
+.stat .k{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px}
+.stat .v{font-size:22px;font-weight:300;color:var(--cyan);font-family:var(--mono)}
+.stat .v.green{color:var(--green)}
+.stat .v.purple{color:var(--purple)}
+.stat .v.amber{color:var(--amber)}
+.grid{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:16px;margin-top:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px}
+.card h3{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--text);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h3::before{content:'';width:6px;height:6px;background:var(--cyan);border-radius:50%;box-shadow:0 0 8px var(--cyan)}
+/* network layers */
+.layers{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.layer{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;cursor:pointer;transition:all .25s}
+.layer:hover{border-color:rgba(0,229,255,.3)}
+.layer .seg{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,229,255,.3);flex:0 0 22px}
+.layer .lbl{flex:1}
+.layer .lbl .n{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--text);text-transform:uppercase}
+.layer .lbl .d{font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:3px}
+.layer .cnt{font-family:var(--mono);font-size:10px;color:var(--text-dim)}
+.layer .cnt b{color:var(--green);font-weight:600}
+.layer .cnt b.off{color:var(--amber)}
+.prov{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:5px;margin-bottom:8px;background:var(--bg3)}
+.prov .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.prov .dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.prov .dot.degraded{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.prov .dot.off{background:var(--text-faint)}
+.prov .pn{flex:1}
+.prov .pn .nm{font-size:11px;font-weight:600;letter-spacing:1px}
+.prov .pn .meta{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--text-dim);margin-top:2px}
+.prov .st{font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase}
+.prov .st.ok{color:var(--green)}
+.prov .st.degraded{color:var(--amber)}
+.prov .st.off{color:var(--text-dim)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 10px;font-family:var(--mono);font-size:10px;border-bottom:1px solid var(--border)}
+th{color:var(--text-faint);font-size:8px;letter-spacing:2px;text-transform:uppercase;font-weight:600}
+td{color:var(--text-dim)}
+td b{color:var(--cyan);font-weight:500}
+td .pl{color:var(--amber);font-size:9px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.form{grid-template-columns:1fr}}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase}
+.fld input,.fld select{background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:12px;padding:9px 10px;outline:none}
+.fld input:focus,.fld select:focus{border-color:rgba(0,229,255,.4)}
+.btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text);background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);padding:10px 16px;border-radius:4px;transition:all .25s}
+.btn:hover{border-color:rgba(0,229,255,.5);color:var(--cyan)}
+.btn.primary{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,77,255,.12));border-color:rgba(0,229,255,.35)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv .cell{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 12px}
+.kv .cell .k{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--text-faint);text-transform:uppercase}
+.kv .cell .v{font-family:var(--mono);font-size:14px;color:var(--cyan);margin-top:4px}
+.kv .cell .v.green{color:var(--green)}
+.badge{font-family:var(--mono);font-size:8px;letter-spacing:1px;padding:2px 8px;border-radius:10px;border:1px solid var(--border);color:var(--text-dim)}
+.badge.on{color:var(--green);border-color:rgba(0,255,136,.3)}
+.err{color:var(--red);font-family:var(--mono);font-size:11px;margin-top:10px}
+.spin{color:var(--cyan);font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="logo" href="/zicore"><div class="hex">Z</div></a>
+  <div>
+    <div class="ttl">ZSRI · Space Network</div>
+    <div class="sub">ZiCore Space Relay Interface — LEO → Gateway → Cislunar → Luna</div>
+  </div>
+  <div class="spacer"></div>
+  <a class="back" href="/zicore">← ZICORE</a>
+</div>
+
+<div class="wrap">
+  <div class="stats" id="stats">
+    <div class="stat"><div class="k">Distancia Tierra-Luna</div><div class="v" id="st-dist">—</div></div>
+    <div class="stat"><div class="k">Retardo 1-way</div><div class="v green" id="st-ow">—</div></div>
+    <div class="stat"><div class="k">Round-trip</div><div class="v purple" id="st-rt">—</div></div>
+    <div class="stat"><div class="k">Proveedores online</div><div class="v amber" id="st-prov">—</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Arquitectura de red multicapa</h3>
+    <div class="layers" id="layers">
+      <div class="spin">cargando red…</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>Proveedores GSaaS</h3>
+        <div id="providers"><div class="spin">cargando…</div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Estaciones terrestres</h3>
+        <table>
+          <thead><tr><th>Estación</th><th>Banda</th><th>Estado</th></tr></thead>
+          <tbody id="stations"><tr><td colspan="3" class="spin">cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3>Link Budget (Friis)</h3>
+        <div class="form">
+          <div class="fld"><label>Banda</label>
+            <select id="lb-band"><option value="UHF">UHF 400 MHz</option><option value="S">S 2.2 GHz</option><option value="X" selected>X 8.4 GHz</option><option value="Ka">Ka 25.5 GHz</option><option value="K">K 22 GHz</option></select>
+          </div>
+          <div class="fld"><label>Distancia (km)</label><input id="lb-dist" type="number" value="384400" step="1000"></div>
+          <div class="fld"><label>Tx Power (dBm)</label><input id="lb-tx" type="number" value="20"></div>
+          <div class="fld"><label>Tx Gain (dBi)</label><input id="lb-txg" type="number" value="30"></div>
+          <div class="fld"><label>Rx Gain (dBi)</label><input id="lb-rxg" type="number" value="42"></div>
+          <div class="fld"><label>Data rate (bps, 0 = auto)</label><input id="lb-rate" type="number" value="0"></div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn primary" onclick="calcLink()">Calcular enlace</button>
+          <span class="badge" id="lb-hint">0 = distancia actual Tierra-Luna</span>
+        </div>
+        <div id="lb-out"><div class="kv" style="margin-top:10px">
+          <div class="cell"><div class="k">Pérdida espacio libre</div><div class="v" id="l-fspl">—</div></div>
+          <div class="cell"><div class="k">Rx power</div><div class="v" id="l-rxp">—</div></div>
+          <div class="cell"><div class="k">C/N</div><div class="v" id="l-cn">—</div></div>
+          <div class="cell"><div class="k">Eb/N0</div><div class="v green" id="l-ebno">—</div></div>
+          <div class="cell"><div class="k">Shannon capacity</div><div class="v" id="l-cap">—</div></div>
+        </div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3>Light-time Tierra-Luna</h3>
+        <div class="row">
+          <button class="btn" onclick="calcLight()">Refrescar ahora</button>
+          <span class="badge" id="lt-when"></span>
+        </div>
+        <div class="kv">
+          <div class="cell"><div class="k">Distancia</div><div class="v" id="lt-dist">—</div></div>
+          <div class="cell"><div class="k">1-way</div><div class="v green" id="lt-ow">—</div></div>
+          <div class="cell"><div class="k">Round-trip</div><div class="v purple" id="lt-rt">—</div></div>
+          <div class="cell"><div class="k">Rango perigeo→apogeo</div><div class="v" id="lt-range">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const url = path => location.hostname.includes("localhost") || location.protocol === "http:" ? path : path;
+
+async function api(path, opts){
+  const r = await fetch(url(path), opts);
+  return r.json();
+}
+
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+const SEG_ICON = {LEO:"🛰", EARTH_GATE:"📡", CISLUNAR:"🛰", LUNAR:"🌙"};
+
+async function loadNetwork(){
+  const d = await api("/api/comms/network");
+  if(!d.network){ $("layers").innerHTML = `<div class="err">${esc(d.error||"error")}</div>`; return; }
+  $("layers").innerHTML = d.network.layers.map(l => {
+    const ok = l.providers.filter(p => p.status === "ok").length;
+    return `<div class="layer">
+      <div class="seg" style="text-align:center;line-height:22px">${SEG_ICON[l.segment]||""}</div>
+      <div class="lbl"><div class="n">${esc(l.label)}</div>
+        <div class="d">${esc(l.segment)} — ${l.providers.map(p=>esc(p.name)).join(", ") || "sin proveedores"}</div></div>
+      <div class="cnt">${ok?`<b>${ok}</b> online`:`<b class="off">${l.providers.length}</b> proveedores`} · <b>${l.providers.length}</b> total</div>
+    </div>`;
+  }).join("");
+
+  $("st-ow").textContent = d.network.light_time ? `${d.network.light_time.one_way_ms} ms` : "—";
+  $("st-rt").textContent = d.network.light_time ? `${d.network.light_time.round_trip_ms} ms` : "—";
+  $("st-dist").textContent = d.network.light_time ? `${Math.round(d.network.light_time.distance_km).toLocaleString()} km` : "—";
+
+  const provs = await api("/api/comms/providers");
+  const list = provs.providers || [];
+  const on = list.filter(p => p.status === "ok").length;
+  $("st-prov").textContent = `${on}/${list.length}`;
+  $("providers").innerHTML = list.map(p => `
+    <div class="prov">
+      <div class="dot ${p.status||"off"}"></div>
+      <div class="pn"><div class="nm">${esc(p.name)}</div>
+        <div class="meta">${esc(p.segment)} · ${(p.bands||[]).join("/")} · ${esc(p.api_base||"")}</div>
+        ${p.reason?`<div class="meta" style="color:var(--amber)">${esc(p.reason)}</div>`:""}</div>
+      <div class="st ${p.status||"off"}">${esc(p.status||"off")}${p.latency_ms!=null?` ${p.latency_ms}ms`:""}</div>
+    </div>`).join("") || '<div class="err">Sin proveedores registrados</div>';
+
+  const st = await api("/api/comms/stations");
+  const rows = (st.stations||[]).filter(s => !s.planned);
+  const planned = (st.stations||[]).filter(s => s.planned);
+  $("stations").innerHTML = rows.map(s => `
+    <tr><td>${esc(s.name||s.id)}</td><td>${(s.bands||[]).join("/")}</td><td><b>on-line</b></td></tr>`).join("")
+    + planned.map(s => `<tr><td>${esc(s.name||s.id)} <span class="pl">· planificada</span></td><td>${(s.bands||[]).join("/")}</td><td>—</td></tr>`).join("");
+}
+
+async function calcLink(){
+  const qs = new URLSearchParams({
+    band: $("lb-band").value,
+    distance_km: $("lb-dist").value,
+    tx_power_dbm: $("lb-tx").value,
+    tx_gain_db: $("lb-txg").value,
+    rx_gain_db: $("lb-rxg").value,
+    data_rate_bps: $("lb-rate").value,
+  });
+  const d = await api(`/api/comms/link?${qs}`);
+  if(!d.budget){ $("lb-out").insertAdjacentHTML("beforeend", `<div class="err">${esc(d.error||"error")}</div>`); return; }
+  const b = d.budget;
+  $("l-fspl").textContent = `${b.freespace_loss_db} dB`;
+  $("l-rxp").textContent = `${b.rx_power_dbm} dBm`;
+  $("l-cn").textContent = `${b.c_n_db} dB`;
+  $("l-ebno").textContent = b.eb_no_db!=null ? `${b.eb_no_db} dB` : "—";
+  $("l-cap").textContent = b.shannon_capacity_bps!=null ? `${(b.shannon_capacity_bps/1000).toFixed(1)} kbps` : "—";
+}
+
+async function calcLight(){
+  const d = await api("/api/comms/light-time?distance_km=0");
+  if(d.error){ return; }
+  $("st-dist").textContent = `${Math.round(d.distance_km_now).toLocaleString()} km`;
+  $("st-ow").textContent = `${d.now.one_way_ms} ms`;
+  $("st-rt").textContent = `${d.now.round_trip_ms} ms`;
+  $("lt-dist").textContent = `${Math.round(d.distance_km_now).toLocaleString()} km`;
+  $("lt-ow").textContent = `${d.now.one_way_ms} ms`;
+  $("lt-rt").textContent = `${d.now.round_trip_ms} ms`;
+  $("lt-range").textContent = `${d.perigee_km.toLocaleString()} → ${d.apogee_km.toLocaleString()} km`;
+  $("lt-when").textContent = `perigeo ${d.perigee.one_way_ms}ms · apogeo ${d.apogee.one_way_ms}ms`;
+}
+
+calcLink(); calcLight(); loadNetwork();
+setInterval(loadNetwork, 30000);
+</script>
+</body>
+</html>

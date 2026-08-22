@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZiHost - Personal Diary</title>
+<style>
+:root{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a25;--bg4:#222233;--text:#e0e0e8;--text2:#9090a8;--accent:#6c5ce7;--accent2:#a29bfe;--green:#00b894;--red:#e17055;--yellow:#fdcb6e;--border:#2a2a3a;--radius:10px;--shadow:0 2px 12px rgba(0,0,0,.4)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-title{font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-sub{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase}
+.topbar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stat-pill{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2)}
+.stat-pill span{color:var(--accent2);font-weight:600}
+.btn{padding:8px 16px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.container{max-width:900px;margin:0 auto;padding:20px 24px 80px}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.search-box{flex:1;min-width:200px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;outline:none}.search-box:focus{border-color:var(--accent)}
+.storage-bar{background:var(--bg3);border-radius:8px;height:6px;margin-bottom:6px;overflow:hidden}
+.storage-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:8px;transition:width .5s}
+.storage-text{font-size:11px;color:var(--text2);margin-bottom:16px}
+.entry-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;transition:all .2s;position:relative}
+.entry-card:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.entry-card.pinned{border-left:3px solid var(--yellow)}
+.entry-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:12px}
+.entry-title{font-size:16px;font-weight:600;color:var(--text)}
+.entry-date{font-size:11px;color:var(--text2);white-space:nowrap}
+.entry-desc{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px;white-space:pre-wrap}
+.entry-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tag{background:var(--bg4);color:var(--accent2);font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600}
+.entry-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.entry-meta{font-size:11px;color:var(--text2);margin-left:auto}
+.files-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px}
+.file-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.file-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.file-icon{font-size:28px;margin-bottom:4px}
+.file-name{font-size:11px;color:var(--text);word-break:break-all;max-height:30px;overflow:hidden}
+.file-size{font-size:10px;color:var(--text2);margin-top:4px}
+.file-delete{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:10px;display:none;align-items:center;justify-content:center}
+.file-card:hover .file-delete{display:flex}
+.drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;color:var(--text2);transition:all .2s;cursor:pointer;margin-top:12px}
+.drop-zone.active{border-color:var(--accent);background:rgba(108,92,231,.08);color:var(--accent2)}
+.drop-zone-text{font-size:13px}
+.drop-zone-hint{font-size:11px;color:var(--text2);margin-top:4px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:16px;font-size:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:600}
+.form-input{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none}
+.form-input:focus{border-color:var(--accent)}
+textarea.form-input{min-height:80px;resize:vertical;font-family:inherit}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;align-items:center;justify-content:center;cursor:pointer}
+.preview-overlay.active{display:flex}
+.preview-overlay img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px}
+.preview-overlay video,.preview-overlay audio{max-width:90vw;max-height:90vh}
+.preview-close{position:fixed;top:20px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--bg3);color:#fff;border:1px solid var(--border);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:301}
+.empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;font-size:13px;color:var(--text);z-index:400;animation:slideUp .3s ease;box-shadow:var(--shadow)}
+.toast.success{border-color:var(--green)}.toast.error{border-color:var(--red)}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.loading{text-align:center;padding:40px;color:var(--text2)}
+.spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.upload-progress{background:var(--bg4);border-radius:4px;height:4px;margin-top:8px;overflow:hidden}
+.upload-progress-fill{height:100%;background:var(--accent);transition:width .3s}
+@media(max-width:600px){.container{padding:12px}.files-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}.toolbar{flex-direction:column}.topbar{flex-wrap:wrap;gap:8px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <div class="topbar-title">ZiHost</div>
+    <div class="topbar-sub">Personal Diary</div>
+  </div>
+  <div class="topbar-right">
+    <div class="stat-pill">Entries: <span id="statEntries">0</span></div>
+    <div class="stat-pill">Files: <span id="statFiles">0</span></div>
+    <div class="stat-pill">Storage: <span id="statStorage">0 MB</span></div>
+    <button class="btn btn-primary" onclick="showNewEntry()">+ New Entry</button>
+    <a href="/zio" class="btn btn-ghost">ZIO</a>
+  </div>
+</div>
+<div class="container">
+  <div class="storage-bar"><div class="storage-fill" id="storageBar" style="width:0%"></div></div>
+  <div class="storage-text" id="storageText">0 / 2048 MB used</div>
+  <div class="toolbar">
+    <input class="search-box" id="searchBox" placeholder="Search entries..." oninput="debounceSearch()">
+    <select class="form-input" style="width:auto;min-width:120px" id="sortSelect" onchange="loadEntries()">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="updated">Recently updated</option>
+    </select>
+  </div>
+  <div id="entriesList"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+</div>
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <h3 id="modalTitle">New Entry</h3>
+    <input type="hidden" id="editEntryId">
+    <div class="form-group"><label>Title</label><input class="form-input" id="entryTitle" placeholder="Entry title..."></div>
+    <div class="form-group"><label>Description</label><textarea class="form-input" id="entryDesc" placeholder="Write your thoughts..."></textarea></div>
+    <div class="form-group"><label>Tags (comma separated)</label><input class="form-input" id="entryTags" placeholder="diary, personal, note"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveEntry()">Create</button>
+    </div>
+  </div>
+</div>
+<div class="preview-overlay" id="previewOverlay" onclick="closePreview()">
+  <button class="preview-close" onclick="closePreview()">&times;</button>
+  <div id="previewContent" onclick="event.stopPropagation()"></div>
+</div>
+<input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(this)">
+<script>
+const API=window.location.origin+'/api/zihost';
+let currentPage=1,totalPages=1,searchTimer=null;
+function getToken(){const m=document.cookie.match(/zicore_sso_token=([^;]+)/);return m?m[1]:''}
+async function api(path,opts={}){
+  const h=opts.headers||{};h['Authorization']='Bearer '+getToken();
+  if(!h['Content-Type']&&opts.body&&typeof opts.body==='string')h['Content-Type']='application/json';
+  const r=await fetch(API+path,{...opts,headers:h});
+  if(r.status===401){window.location.href='/login?redirect=/zihost';return null}
+  return r.json();
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function formatDate(s){try{const d=new Date(s);return d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return s}}
+function formatSize(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB'}
+function toast(msg,type='success'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000)}
+function closeModal(){document.getElementById('entryModal').classList.remove('active')}
+function showNewEntry(){document.getElementById('editEntryId').value='';document.getElementById('modalTitle').textContent='New Entry';document.getElementById('entryTitle').value='';document.getElementById('entryDesc').value='';document.getElementById('entryTags').value='';document.getElementById('saveBtn').textContent='Create';document.getElementById('entryModal').classList.add('active')}
+function editEntry(id){api('/entries/'+id).then(e=>{if(!e||e.error)return;document.getElementById('editEntryId').value=e.id;document.getElementById('modalTitle').textContent='Edit Entry';document.getElementById('entryTitle').value=e.title;document.getElementById('entryDesc').value=e.description;document.getElementById('entryTags').value=(e.tags||[]).join(', ');document.getElementById('saveBtn').textContent='Save';document.getElementById('entryModal').classList.add('active')})}
+async function saveEntry(){const id=document.getElementById('editEntryId').value;const data={title:document.getElementById('entryTitle').value,description:document.getElementById('entryDesc').value,tags:document.getElementById('entryTags').value.split(',').map(t=>t.trim()).filter(Boolean)};if(id){await api('/entries/'+id,{method:'PUT',body:JSON.stringify(data)});toast('Entry updated')}else{await api('/entries',{method:'POST',body:JSON.stringify(data)});toast('Entry created')}closeModal();loadEntries();loadStats()}
+async function deleteEntry(id){if(!confirm('Delete this entry and all its files?'))return;await api('/entries/'+id,{method:'DELETE'});toast('Entry deleted');loadEntries();loadStats()}
+async function togglePin(id,pinned){await api('/entries/'+id,{method:'PUT',body:JSON.stringify({pinned:pinned?0:1})});loadEntries()}
+async function deleteFile(fid,eid){if(!confirm('Delete this file?'))return;await api('/files/'+fid,{method:'DELETE'});toast('File deleted');loadEntries();loadStats()}
+function triggerUpload(eid){document.getElementById('fileInput').dataset.entryId=eid;document.getElementById('fileInput').click()}
+function handleFileSelect(input){const eid=input.dataset.entryId;const files=input.files;if(!files.length||!eid)return;uploadFiles(eid,files);input.value=''}
+async function uploadFiles(eid,files){const fd=new FormData();for(const f of files)fd.append('files',f);try{const r=await fetch(API+'/entries/'+eid+'/upload',{method:'POST',headers:{'Authorization':'Bearer '+getToken()},body:fd});const d=await r.json();if(d.error){toast(d.error,'error')}else{toast(d.count+' file(s) uploaded');loadEntries();loadStats()}}catch(e){toast('Upload failed','error')}}
+function handleDragOver(e){e.preventDefault();e.currentTarget.classList.add('active')}
+function handleDragLeave(e){e.currentTarget.classList.remove('active')}
+function handleDrop(e,eid){e.preventDefault();e.currentTarget.classList.remove('active');if(e.dataTransfer.files.length)uploadFiles(eid,e.dataTransfer.files)}
+function previewFile(fid,mime,name){const url=API+'/files/'+fid+'/download?token='+getToken();const el=document.getElementById('previewContent');if(mime.startsWith('image/')){el.innerHTML='<img src="'+url+'" alt="'+esc(name)+'">'}else if(mime.startsWith('video/')){el.innerHTML='<video controls autoplay><source src="'+url+'" type="'+mime+'"></video>'}else if(mime.startsWith('audio/')){el.innerHTML='<audio controls autoplay><source src="'+url+'" type="'+mime+'"></audio>'}else{window.open(url,'_blank');return}document.getElementById('previewOverlay').classList.add('active')}
+function closePreview(){document.getElementById('previewOverlay').classList.remove('active');document.getElementById('previewContent').innerHTML=''}
+function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadEntries(),300)}
+async function loadStats(){const d=await api('/stats');if(!d)return;document.getElementById('statEntries').textContent=d.entry_count;document.getElementById('statFiles').textContent=d.file_count;document.getElementById('statStorage').textContent=d.total_size_mb+' MB';const pct=Math.min(100,(d.total_size_mb/d.storage_limit_mb)*100);document.getElementById('storageBar').style.width=pct+'%';document.getElementById('storageText').textContent=d.total_size_mb+' / '+d.storage_limit_mb+' MB used'}
+async function loadEntries(page=1){currentPage=page;const search=document.getElementById('searchBox').value;const sort=document.getElementById('sortSelect').value;const d=await api('/entries?page='+page+'&per_page=20&search='+encodeURIComponent(search)+'&sort='+sort);if(!d)return;totalPages=d.pages;renderEntries(d.entries)}
+function renderEntries(entries){const el=document.getElementById('entriesList');if(!entries||!entries.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128221;</div><div style="font-size:14px;margin-bottom:16px">No entries yet</div><button class="btn btn-primary" onclick="showNewEntry()">+ New Entry</button></div>';return}el.innerHTML=entries.map(e=>'<div class="entry-card'+(e.pinned?' pinned':'')+'" id="entry-'+e.id+'"><div class="entry-header"><div class="entry-title">'+esc(e.title||'Untitled')+'</div><div class="entry-date">'+formatDate(e.created_at)+'</div></div>'+(e.description?'<div class="entry-desc">'+esc(e.description)+'</div>':'')+(e.tags&&e.tags.length?'<div class="entry-tags">'+e.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div>':'')+'<div class="entry-actions"><button class="btn btn-ghost btn-sm" onclick="triggerUpload('+e.id+')">&#128228; Upload</button><button class="btn btn-ghost btn-sm" onclick="editEntry('+e.id+')">&#9998; Edit</button><button class="btn btn-ghost btn-sm" onclick="togglePin('+e.id+','+e.pinned+')">'+(e.pinned?'&#128204; Unpin':'&#128204; Pin')+'</button><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteEntry('+e.id+')">&#128465;</button><div class="entry-meta">'+e.file_count+' file'+(e.file_count!==1?'s':'')+' &middot; '+formatSize(e.total_size)+'</div></div>'+(e.files&&e.files.length?'<div class="files-grid">'+e.files.map(f=>'<div class="file-card" onclick="previewFile('+f.id+',\''+f.mime_type+'\',\''+esc(f.original_name)+'\')"><div class="file-icon">'+(f.category==='image'?'&#128444;':f.category==='video'?'&#127910;':f.category==='audio'?'&#127925;':f.category==='document'?'&#128196;':f.category==='code'?'&#128187;':'&#128196;')+'</div><div class="file-name">'+esc(f.original_name)+'</div><div class="file-size">'+formatSize(f.file_size)+'</div><button class="file-delete" onclick="event.stopPropagation();deleteFile('+f.id+','+e.id+')">&times;</button></div>').join('')+'</div>':'')+'<div class="drop-zone" id="drop-'+e.id+'" ondrop="handleDrop(event,'+e.id+')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="triggerUpload('+e.id+')"><div class="drop-zone-text">Drop files here or click to upload</div><div class="drop-zone-hint">Max 50MB per file</div></div></div>').join('')+renderPagination(currentPage,totalPages)}
+function renderPagination(page,pages){if(pages<=1)return'';let h='<div style="text-align:center;margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">';if(page>1)h+='<button class="btn btn-ghost btn-sm" onclick="loadEntries('+(page-1)+')">&laquo; Prev</button>';for(let i=Math.max(1,page-2);i<=Math.min(pages,page+2);i++)h+='<button class="btn '+(i===page?'btn-primary':'btn-ghost')+' btn-sm" onclick="loadEntries('+i+')">'+i+'</button>';if(page<pages)h+='<button class="btn btn-ghost btn-sm" onclick="loadEntries('+(page+1)+')">Next &raquo;</button>';return h+'</div>'}
+loadEntries();loadStats();
+</script>
+</body>
+</html>

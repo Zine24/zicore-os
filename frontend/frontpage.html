@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE — Digital Aerospace Operating System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#080c16;--bg3:#0a0e1a;--bg4:#0f1525;--bg5:#141c30;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;
+  --text:#c8d6e5;--text2:#7a8ba8;--text3:#4a5568;--border:rgba(0,229,255,0.08);--border2:rgba(0,229,255,0.15);
+  --glass:rgba(8,12,22,0.82);--glass2:rgba(8,12,22,0.6);--elevated:rgba(12,18,32,0.95);
+  --font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Cascadia Code','Consolas',monospace;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes rotate3d{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
+@keyframes orbitSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes textGlow{0%,100%{text-shadow:0 0 10px rgba(0,229,255,0.3)}50%{text-shadow:0 0 40px rgba(0,229,255,0.6),0 0 80px rgba(0,229,255,0.2)}}
+@keyframes hexPulse{0%,100%{box-shadow:0 0 20px rgba(0,229,255,0.08)}50%{box-shadow:0 0 60px rgba(0,229,255,0.2),0 0 120px rgba(0,229,255,0.08)}}
+@keyframes scanlineMove{0%{top:-100%}100%{top:100%}}
+@keyframes gridPulse{0%,100%{opacity:0.015}50%{opacity:0.045}}
+@keyframes eqBar{0%,100%{transform:scaleY(0.3)}50%{transform:scaleY(1)}}
+@keyframes borderGlow{0%,100%{border-color:rgba(0,229,255,0.06)}50%{border-color:rgba(0,229,255,0.18)}}
+@keyframes dataStream{0%{background-position:0% 0%}100%{background-position:0% 100%}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
+@keyframes ringPulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.15);opacity:0}}
+
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.6}
+
+canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0.018;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:128px}
+.scanline-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.008) 2px,rgba(0,229,255,0.008) 4px)}
+.grid-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(0,229,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.015) 1px,transparent 1px);
+  background-size:80px 80px;animation:gridPulse 4s ease-in-out infinite}
+.moving-scanline{position:fixed;top:0;left:0;width:100%;height:2px;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,0.1),transparent);
+  animation:scanlineMove 8s linear infinite}
+
+.page{position:relative;z-index:3;min-height:100vh}
+
+/* ═══ NAVIGATION ═══ */
+.nav{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(6,8,16,0.92);border-bottom:1px solid var(--border);
+  z-index:100;backdrop-filter:blur(24px);display:flex;align-items:center;padding:0 32px;gap:16px}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.nav-hex{width:32px;height:32px;position:relative}
+.nav-hex svg{width:100%;height:100%}
+.nav-brand{font-size:13px;font-weight:800;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-sep{width:1px;height:20px;background:rgba(0,229,255,0.1);flex-shrink:0}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-link{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);text-decoration:none;
+  padding:6px 14px;border-radius:6px;transition:all .2s;font-weight:500}
+.nav-link:hover{color:var(--text);background:rgba(0,229,255,0.04)}
+.nav-link.active{color:var(--cyan);background:rgba(0,229,255,0.06)}
+.nav-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.nav-status{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;
+  background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12)}
+.nav-status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.nav-status-text{font-size:9px;font-weight:600;letter-spacing:1px;color:var(--green)}
+.nav-clock{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:1px}
+.nav-enter{padding:7px 20px;border:1px solid rgba(0,229,255,0.4);border-radius:6px;
+  background:linear-gradient(135deg,rgba(0,229,255,0.14),rgba(124,77,255,0.14));color:var(--cyan);font-size:10px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;text-decoration:none;transition:all .25s;cursor:pointer;
+  display:flex;align-items:center;gap:6px;position:relative;overflow:hidden}
+.nav-enter::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent,rgba(0,229,255,0.18),transparent);transform:translateX(-100%);transition:transform .5s}
+.nav-enter:hover::after{transform:translateX(100%)}
+.nav-enter:hover{background:linear-gradient(135deg,rgba(0,229,255,0.22),rgba(124,77,255,0.22));border-color:rgba(0,229,255,0.7);box-shadow:0 0 24px rgba(0,229,255,0.18)}
+
+/* ═══ HERO ═══ */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:120px 32px 80px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:800px;height:800px;background:radial-gradient(circle,rgba(0,229,255,0.03) 0%,rgba(124,77,255,0.015) 40%,transparent 70%);
+  pointer-events:none}
+
+.hero-3d{perspective:800px;margin-bottom:32px;position:relative}
+.hero-hex{width:120px;height:120px;position:relative;transform-style:preserve-3d;
+  animation:rotate3d 12s linear infinite;margin:0 auto}
+.hex-face{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:44px;font-weight:900;color:var(--cyan);
+  background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(124,77,255,0.06));
+  border:1px solid rgba(0,229,255,0.12);backface-visibility:visible;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);animation:hexPulse 4s ease-in-out infinite}
+.hex-face:nth-child(1){transform:rotateY(0deg)translateZ(60px)}
+.hex-face:nth-child(2){transform:rotateY(60deg)translateZ(60px)}
+.hex-face:nth-child(3){transform:rotateY(120deg)translateZ(60px)}
+.hex-face:nth-child(4){transform:rotateY(180deg)translateZ(60px)}
+.hex-face:nth-child(5){transform:rotateY(240deg)translateZ(60px)}
+.hex-face:nth-child(6){transform:rotateY(300deg)translateZ(60px)}
+
+.hero-orbits{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:260px;height:260px;pointer-events:none}
+.orbit-ring{position:absolute;border:1px solid rgba(0,229,255,0.04);border-radius:50%;
+  top:50%;left:50%;transform:translate(-50%,-50%);animation:orbitSpin linear infinite}
+.orbit-ring:nth-child(1){width:160px;height:160px;animation-duration:10s}
+.orbit-ring:nth-child(2){width:200px;height:200px;animation-duration:15s;animation-direction:reverse;border-color:rgba(124,77,255,0.03)}
+.orbit-ring:nth-child(3){width:240px;height:240px;animation-duration:20s;border-color:rgba(0,229,255,0.02)}
+.orbit-dot{position:absolute;width:4px;height:4px;background:var(--cyan);border-radius:50%;top:-2px;left:50%;transform:translateX(-50%);box-shadow:0 0 8px var(--cyan)}
+.orbit-ring:nth-child(2) .orbit-dot{background:var(--purple);box-shadow:0 0 8px var(--purple)}
+.orbit-ring:nth-child(3) .orbit-dot{background:var(--green);box-shadow:0 0 8px var(--green);width:3px;height:3px;top:-1.5px}
+
+.hero-ring-pulse{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;
+  border-radius:50%;border:1px solid rgba(0,229,255,0.15);animation:ringPulse 3s ease-in-out infinite;pointer-events:none}
+
+.hero-title{font-size:clamp(48px,8vw,80px);font-weight:900;letter-spacing:12px;text-align:center;
+  background:linear-gradient(135deg,#00e5ff 0%,#7c4dff 50%,#00e5ff 100%);
+  background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;margin-bottom:12px;animation:textGlow 4s ease-in-out infinite;line-height:1.1}
+.hero-title span{-webkit-text-fill-color:var(--purple);color:var(--purple)}
+.hero-tagline{font-size:clamp(11px,1.5vw,15px);letter-spacing:8px;text-transform:uppercase;
+  color:var(--text3);text-align:center;margin-bottom:8px;font-weight:400}
+.hero-version{font-size:10px;letter-spacing:4px;color:var(--text3);text-align:center;margin-bottom:40px;opacity:0.6}
+
+.hero-stats{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-bottom:48px;animation:fadeSlideUp 1s ease-out 0.3s both}
+.hero-stat{text-align:center;padding:12px 20px;border:1px solid var(--border);border-radius:8px;
+  background:var(--glass);backdrop-filter:blur(12px);min-width:110px;
+  transition:border-color .2s}
+.hero-stat:hover{border-color:var(--border2)}
+.hero-stat-val{font-family:var(--mono);font-size:22px;font-weight:700;margin-bottom:2px}
+.hero-stat-val.cyan{color:var(--cyan)}.hero-stat-val.purple{color:var(--purple)}.hero-stat-val.green{color:var(--green)}
+.hero-stat-label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text3)}
+
+.hero-cta{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;animation:fadeSlideUp 1s ease-out 0.5s both}
+.cta-btn{padding:12px 32px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;text-decoration:none;transition:all .3s;cursor:pointer;border:none;font-family:var(--font)}
+.cta-primary{background:linear-gradient(135deg,rgba(0,229,255,0.18),rgba(124,77,255,0.18));
+  border:1px solid rgba(0,229,255,0.45);color:var(--cyan);position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.cta-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent,rgba(0,229,255,0.2),transparent);transform:translateX(-100%);transition:transform .5s}
+.cta-primary:hover::after{transform:translateX(100%)}
+.cta-primary:hover{background:linear-gradient(135deg,rgba(0,229,255,0.28),rgba(124,77,255,0.28));
+  box-shadow:0 0 44px rgba(0,229,255,0.22),0 8px 32px rgba(0,0,0,0.35);transform:translateY(-2px);border-color:rgba(0,229,255,0.8)}
+.cta-primary .cta-arrow{transition:transform .25s}
+.cta-primary:hover .cta-arrow{transform:translateX(4px)}
+.cta-secondary{background:transparent;border:1px solid rgba(0,229,255,0.12);color:var(--text2)}
+.cta-secondary:hover{border-color:rgba(0,229,255,0.3);color:var(--text);background:rgba(0,229,255,0.04)}
+
+.hero-scroll{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;animation:float 3s ease-in-out infinite}
+.hero-scroll-text{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--text3)}
+.hero-scroll-line{width:1px;height:30px;background:linear-gradient(to bottom,rgba(0,229,255,0.3),transparent)}
+
+/* ═══ SECTIONS ═══ */
+section{padding:100px 32px;max-width:1400px;margin:0 auto}
+.section-header{text-align:center;margin-bottom:60px}
+.section-label{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--purple);font-weight:600;margin-bottom:12px}
+.section-title{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;margin-bottom:12px}
+.section-desc{font-size:14px;color:var(--text2);max-width:600px;margin:0 auto;line-height:1.7}
+.section-line{width:60px;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));
+  margin:16px auto 0;border-radius:1px}
+
+/* ═══ NEURAL SYSTEM ═══ */
+.neural{padding:100px 32px;max-width:1400px;margin:0 auto}
+.neural-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:48px}
+@media(max-width:900px){.neural-grid{grid-template-columns:1fr}}
+.neural-viz{background:var(--glass);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;min-height:400px;position:relative}
+.neural-viz-header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);
+  background:rgba(0,0,0,0.2)}
+.neural-viz-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+.neural-viz-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);font-weight:600}
+.neural-viz-badge{margin-left:auto;font-size:8px;padding:2px 8px;border-radius:4px;
+  background:rgba(0,229,255,0.08);color:var(--cyan);letter-spacing:1px;font-weight:600}
+.neural-viz-body{position:relative;height:calc(100% - 40px);min-height:360px}
+.neural-viz iframe{width:100%;height:100%;border:none;background:var(--bg)}
+.neural-viz-fallback{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:16px;padding:24px;text-align:center}
+.neural-nodes{position:relative;width:200px;height:200px;margin:0 auto}
+.neural-node{position:absolute;width:12px;height:12px;border-radius:50%;
+  background:var(--cyan);box-shadow:0 0 12px rgba(0,229,255,0.4);animation:pulse 2s infinite}
+.neural-node:nth-child(1){top:0;left:50%;transform:translateX(-50%);animation-delay:0s}
+.neural-node:nth-child(2){top:25%;right:0;animation-delay:0.3s;background:var(--purple);box-shadow:0 0 12px rgba(124,77,255,0.4)}
+.neural-node:nth-child(3){bottom:25%;right:0;animation-delay:0.6s}
+.neural-node:nth-child(4){bottom:0;left:50%;transform:translateX(-50%);animation-delay:0.9s;background:var(--green);box-shadow:0 0 12px rgba(0,255,136,0.4)}
+.neural-node:nth-child(5){bottom:25%;left:0;animation-delay:1.2s;background:var(--purple);box-shadow:0 0 12px rgba(124,77,255,0.4)}
+.neural-node:nth-child(6){top:25%;left:0;animation-delay:1.5s}
+.neural-node-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));
+  box-shadow:0 0 24px rgba(0,229,255,0.3);animation:pulse 1.5s infinite}
+
+.neural-info{display:flex;flex-direction:column;gap:16px}
+.neural-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:20px;
+  backdrop-filter:blur(12px);transition:border-color .2s}
+.neural-card:hover{border-color:var(--border2)}
+.neural-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.neural-card-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0}
+.neural-card-icon.cyan{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12)}
+.neural-card-icon.purple{background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.12)}
+.neural-card-icon.green{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.12)}
+.neural-card-title{font-size:13px;font-weight:700;letter-spacing:1px}
+.neural-card-body{font-size:12px;color:var(--text2);line-height:1.6}
+.neural-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.neural-metric{padding:8px 10px;border-radius:6px;background:rgba(0,0,0,0.2);border:1px solid rgba(0,229,255,0.04)}
+.neural-metric-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:2px}
+.neural-metric-val{font-family:var(--mono);font-size:14px;font-weight:700}
+.neural-metric-val.cyan{color:var(--cyan)}.neural-metric-val.green{color:var(--green)}.neural-metric-val.purple{color:var(--purple)}.neural-metric-val.orange{color:var(--orange)}
+
+/* ═══ MODULE CARDS ═══ */
+.modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:48px}
+.module-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;
+  padding:24px;cursor:pointer;transition:all .35s cubic-bezier(0.4,0,0.2,1);
+  position:relative;overflow:hidden;text-decoration:none;color:var(--text);display:flex;flex-direction:column}
+.module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s}
+.module-card::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,0.03),transparent);transition:left .6s}
+.module-card:hover{transform:translateY(-4px);border-color:rgba(0,229,255,0.2);
+  box-shadow:0 16px 48px rgba(0,0,0,0.3),0 0 30px rgba(0,229,255,0.06)}
+.module-card:hover::before{opacity:0.6}
+.module-card:hover::after{left:100%}
+.module-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.module-card-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:22px;flex-shrink:0;transition:all .3s}
+.module-card-icon.cyan{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.1)}
+.module-card-icon.purple{background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.1)}
+.module-card-icon.green{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.1)}
+.module-card-icon.orange{background:rgba(255,136,0,0.06);border:1px solid rgba(255,136,0,0.1)}
+.module-card:hover .module-card-icon{transform:scale(1.08);box-shadow:0 0 20px rgba(0,229,255,0.1)}
+.module-card-name{font-size:14px;font-weight:700;letter-spacing:1px;margin-bottom:4px}
+.module-card-desc{font-size:11px;color:var(--text2);line-height:1.6;flex:1}
+.module-card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px}
+.module-tag{font-size:8px;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;
+  background:rgba(0,229,255,0.04);color:var(--text3);border:1px solid rgba(255,255,255,0.03)}
+.module-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;
+  padding-top:12px;border-top:1px solid rgba(0,229,255,0.04)}
+.module-status{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;font-weight:600}
+.module-status.online{color:var(--green)}.module-status.dev{color:var(--orange)}.module-status.future{color:var(--text3)}
+.module-status-dot{width:5px;height:5px;border-radius:50%}
+.module-status.online .module-status-dot{background:var(--green);box-shadow:0 0 5px var(--green)}
+.module-status.dev .module-status-dot{background:var(--orange);box-shadow:0 0 5px var(--orange)}
+.module-status.future .module-status-dot{background:var(--text3)}
+.module-arrow{font-size:14px;color:var(--text3);transition:all .2s}
+.module-card:hover .module-arrow{color:var(--cyan);transform:translateX(3px)}
+
+.module-card.purple-accent{border-color:rgba(124,77,255,0.06)}
+.module-card.purple-accent::before{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.module-card.purple-accent:hover{border-color:rgba(124,77,255,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.3),0 0 30px rgba(124,77,255,0.06)}
+.module-card.purple-accent .module-card-name{color:var(--purple)}
+.module-card.purple-accent:hover .module-card-icon{box-shadow:0 0 20px rgba(124,77,255,0.1)}
+
+.module-card.green-accent{border-color:rgba(0,255,136,0.06)}
+.module-card.green-accent::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.module-card.green-accent:hover{border-color:rgba(0,255,136,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.3),0 0 30px rgba(0,255,136,0.06)}
+.module-card.green-accent .module-card-name{color:var(--green)}
+.module-card.green-accent:hover .module-card-icon{box-shadow:0 0 20px rgba(0,255,136,0.1)}
+
+.module-card.orange-accent{border-color:rgba(255,136,0,0.06)}
+.module-card.orange-accent::before{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+.module-card.orange-accent:hover{border-color:rgba(255,136,0,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.3),0 0 30px rgba(255,136,0,0.06)}
+.module-card.orange-accent .module-card-name{color:var(--orange)}
+
+/* ═══ SYSTEM STATUS ═══ */
+.status-section{padding:100px 32px;max-width:1400px;margin:0 auto}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:48px}
+.status-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:20px;
+  backdrop-filter:blur(12px);transition:border-color .2s;position:relative;overflow:hidden}
+.status-card:hover{border-color:var(--border2)}
+.status-card::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:0 2px 2px 0}
+.status-card.cyan::after{background:var(--cyan)}.status-card.purple::after{background:var(--purple)}
+.status-card.green::after{background:var(--green)}.status-card.orange::after{background:var(--orange)}
+.status-card-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-weight:600}
+.status-card-value{font-family:var(--mono);font-size:28px;font-weight:700;margin-bottom:4px}
+.status-card-value.cyan{color:var(--cyan)}.status-card-value.purple{color:var(--purple)}
+.status-card-value.green{color:var(--green)}.status-card-value.orange{color:var(--orange)}
+.status-card-sub{font-size:10px;color:var(--text3)}
+.status-bar-track{width:100%;height:6px;background:rgba(0,0,0,0.3);border-radius:3px;margin-top:10px;overflow:hidden}
+.status-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.status-bar-fill.cyan{background:linear-gradient(90deg,var(--cyan),rgba(0,229,255,0.3))}
+.status-bar-fill.purple{background:linear-gradient(90deg,var(--purple),rgba(124,77,255,0.3))}
+.status-bar-fill.green{background:linear-gradient(90deg,var(--green),rgba(0,255,136,0.3))}
+.status-bar-fill.orange{background:linear-gradient(90deg,var(--orange),rgba(255,136,0,0.3))}
+.status-bar-fill.red{background:linear-gradient(90deg,var(--red),rgba(255,51,51,0.3))}
+
+.status-services{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:24px}
+.service-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;
+  background:rgba(0,0,0,0.15);border:1px solid rgba(0,229,255,0.04);transition:border-color .2s}
+.service-row:hover{border-color:var(--border2)}
+.service-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.service-dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.service-dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+.service-dot.yellow{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+.service-name{font-size:12px;font-weight:500;flex:1}
+.service-detail{font-family:var(--mono);font-size:10px;color:var(--text3)}
+
+/* ═══ DOWNLOAD / INSTALL ═══ */
+.install{padding:100px 32px;max-width:1400px;margin:0 auto}
+.install-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;margin-top:48px}
+.install-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:28px;
+  text-align:center;transition:all .3s;position:relative;overflow:hidden;backdrop-filter:blur(12px)}
+.install-card:hover{border-color:var(--border2);transform:translateY(-3px);
+  box-shadow:0 12px 40px rgba(0,0,0,0.25)}
+.install-card-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;
+  justify-content:center;font-size:26px;margin:0 auto 16px}
+.install-card-icon.cyan{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12)}
+.install-card-icon.purple{background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.12)}
+.install-card-icon.green{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.12)}
+.install-card-title{font-size:16px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
+.install-card-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px}
+.install-card-link{display:inline-flex;align-items:center;gap:6px;padding:10px 24px;border-radius:8px;
+  font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-decoration:none;transition:all .25s}
+.install-card-link.cyan{background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--cyan)}
+.install-card-link.cyan:hover{background:rgba(0,229,255,0.15);box-shadow:0 0 20px rgba(0,229,255,0.1)}
+.install-card-link.purple{background:rgba(124,77,255,0.08);border:1px solid rgba(124,77,255,0.2);color:var(--purple)}
+.install-card-link.purple:hover{background:rgba(124,77,255,0.15);box-shadow:0 0 20px rgba(124,77,255,0.1)}
+.install-card-link.green{background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);color:var(--green)}
+.install-card-link.green:hover{background:rgba(0,255,136,0.15);box-shadow:0 0 20px rgba(0,255,136,0.1)}
+
+/* ═══ FOOTER ═══ */
+.footer{border-top:1px solid var(--border);padding:48px 32px 32px;max-width:1400px;margin:80px auto 0}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:40px}
+@media(max-width:800px){.footer-grid{grid-template-columns:1fr 1fr;gap:24px}}
+.footer-brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.footer-brand-title{font-size:14px;font-weight:800;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.footer-brand-desc{font-size:12px;color:var(--text3);line-height:1.7;max-width:320px}
+.footer-col-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);font-weight:700;margin-bottom:14px}
+.footer-links{display:flex;flex-direction:column;gap:8px}
+.footer-link{font-size:12px;color:var(--text3);text-decoration:none;transition:color .2s}
+.footer-link:hover{color:var(--cyan)}
+.footer-bottom{display:flex;align-items:center;justify-content:space-between;padding-top:20px;
+  border-top:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.footer-copy{font-size:10px;color:var(--text3);letter-spacing:0.5px}
+.footer-socials{display:flex;gap:8px}
+.footer-social{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);display:flex;
+  align-items:center;justify-content:center;font-size:13px;color:var(--text3);text-decoration:none;transition:all .2s}
+.footer-social:hover{border-color:rgba(0,229,255,0.25);color:var(--cyan);background:rgba(0,229,255,0.04)}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  .nav{padding:0 16px;height:48px}
+  .nav-links{display:none}
+  .nav-clock,.nav-status{display:none}
+  section{padding:60px 16px}
+  .hero{padding:100px 16px 60px}
+  .hero-title{letter-spacing:6px}
+  .hero-tagline{letter-spacing:4px}
+  .hero-stats{gap:12px}
+  .hero-stat{min-width:90px;padding:10px 14px}
+  .hero-stat-val{font-size:18px}
+  .modules-grid{grid-template-columns:1fr}
+  .status-grid{grid-template-columns:1fr 1fr}
+  .install-grid{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr}
+  .neural-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:480px){
+  .hero-hex{width:80px;height:80px}
+  .hex-face{font-size:30px}
+  .hex-face:nth-child(1){transform:rotateY(0deg)translateZ(40px)}
+  .hex-face:nth-child(2){transform:rotateY(60deg)translateZ(40px)}
+  .hex-face:nth-child(3){transform:rotateY(120deg)translateZ(40px)}
+  .hex-face:nth-child(4){transform:rotateY(180deg)translateZ(40px)}
+  .hex-face:nth-child(5){transform:rotateY(240deg)translateZ(40px)}
+  .hex-face:nth-child(6){transform:rotateY(300deg)translateZ(40px)}
+  .hero-orbits{width:160px;height:160px}
+  .orbit-ring:nth-child(1){width:100px;height:100px}
+  .orbit-ring:nth-child(2){width:130px;height:130px}
+  .orbit-ring:nth-child(3){width:160px;height:160px}
+  .status-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="grain"></div>
+<div class="scanline-overlay"></div>
+<div class="grid-overlay"></div>
+<div class="moving-scanline"></div>
+
+<div class="page">
+
+<!-- ═══ NAVIGATION ═══ -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-hex">
+      <svg viewBox="0 0 36 42"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#navG)" stroke-width="1.5"/><defs><linearGradient id="navG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#navG)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
+    </div>
+    <span class="nav-brand">ZICORE</span>
+  </a>
+  <div class="nav-sep"></div>
+  <div class="nav-links">
+    <a href="#neural" class="nav-link">Neural</a>
+    <a href="#modules" class="nav-link">Modules</a>
+    <a href="#status" class="nav-link">System</a>
+    <a href="#install" class="nav-link">Install</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-status">
+      <div class="nav-status-dot"></div>
+      <span class="nav-status-text">NOMINAL</span>
+    </div>
+    <div class="nav-clock" id="navClock">--:--:--</div>
+    <a href="https://aerospace.zicore.space/zicore" class="nav-enter">◈ ENTER</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-3d">
+    <div class="hero-ring-pulse"></div>
+    <div class="hero-hex">
+      <div class="hex-face">Z</div>
+      <div class="hex-face">Z</div>
+      <div class="hex-face">Z</div>
+      <div class="hex-face">Z</div>
+      <div class="hex-face">Z</div>
+      <div class="hex-face">Z</div>
+    </div>
+    <div class="hero-orbits">
+      <div class="orbit-ring"><div class="orbit-dot"></div></div>
+      <div class="orbit-ring"><div class="orbit-dot"></div></div>
+      <div class="orbit-ring"><div class="orbit-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="hero-title"><span>Z</span>ICORE</div>
+  <div class="hero-tagline">Digital Aerospace Operating System</div>
+  <div class="hero-version">v5.0.0 &mdash; ZineMotion Foundation &mdash; Aerospace Division</div>
+
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hero-stat-val cyan">17+</div><div class="hero-stat-label">Modules</div></div>
+    <div class="hero-stat"><div class="hero-stat-val purple">DUAL</div><div class="hero-stat-label">AI Engine</div></div>
+    <div class="hero-stat"><div class="hero-stat-val green">99.97%</div><div class="hero-stat-label">Uptime</div></div>
+    <div class="hero-stat"><div class="hero-stat-val cyan">12ms</div><div class="hero-stat-label">Latency</div></div>
+    <div class="hero-stat"><div class="hero-stat-val green">NOMINAL</div><div class="hero-stat-label">Status</div></div>
+  </div>
+
+  <div class="hero-cta">
+    <a href="https://aerospace.zicore.space/zicore" class="cta-btn cta-primary">ACCESS SYSTEM <span class="cta-arrow">➔</span></a>
+    <a href="#modules" class="cta-btn cta-secondary">EXPLORE MODULES</a>
+  </div>
+
+  <div class="hero-scroll">
+    <div class="hero-scroll-text">SCROLL</div>
+    <div class="hero-scroll-line"></div>
+  </div>
+</section>
+
+<!-- ═══ NEURAL SYSTEM ═══ -->
+<div class="neural" id="neural">
+  <div class="section-header">
+    <div class="section-label">Core Intelligence</div>
+    <div class="section-title">Neural System</div>
+    <div class="section-desc">ZICORE's neural network operates across distributed nodes, processing telemetry, AI inference, and real-time system orchestration.</div>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="neural-grid">
+    <div class="neural-viz">
+      <div class="neural-viz-header">
+        <div class="neural-viz-dot"></div>
+        <div class="neural-viz-title">Neural Visualization</div>
+        <div class="neural-viz-badge">LIVE</div>
+      </div>
+      <div class="neural-viz-body">
+        <iframe src="https://zzz.zicore.space" loading="lazy" title="ZICORE Neural Network" id="neuralIframe"></iframe>
+        <div class="neural-viz-fallback" id="neuralFallback" style="display:none">
+          <div class="neural-nodes">
+            <div class="neural-node"></div><div class="neural-node"></div><div class="neural-node"></div>
+            <div class="neural-node"></div><div class="neural-node"></div><div class="neural-node"></div>
+            <div class="neural-node-center"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text2)">Neural Network Active</div>
+          <div style="font-size:9px;color:var(--text3);letter-spacing:1px">6 NODES &middot; 3 CLUSTERS &middot; REAL-TIME</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="neural-info">
+      <div class="neural-card">
+        <div class="neural-card-header">
+          <div class="neural-card-icon cyan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="neural-card-title">System Overview</div>
+        </div>
+        <div class="neural-card-body">Distributed intelligence across two primary nodes with Ollama inference, OpenRouter cloud AI, and real-time telemetry processing.</div>
+        <div class="neural-metrics">
+          <div class="neural-metric"><div class="neural-metric-label">Node .85</div><div class="neural-metric-val cyan">PRIMARY</div></div>
+          <div class="neural-metric"><div class="neural-metric-label">Node .68</div><div class="neural-metric-val purple">OLLAMA</div></div>
+          <div class="neural-metric"><div class="neural-metric-label">Models</div><div class="neural-metric-val green">13+</div></div>
+          <div class="neural-metric"><div class="neural-metric-label">Providers</div><div class="neural-metric-val orange">4</div></div>
+        </div>
+      </div>
+
+      <div class="neural-card">
+        <div class="neural-card-header">
+          <div class="neural-card-icon purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="neural-card-title">ZIO AI Copilot</div>
+        </div>
+        <div class="neural-card-body">Multi-modal inference engine: OpenRouter (nemotron-3-super-120b), Ollama local fallback, context-aware mission assistance, engineering analysis.</div>
+        <div class="neural-metrics">
+          <div class="neural-metric"><div class="neural-metric-label">Primary</div><div class="neural-metric-val cyan">OPENROUTER</div></div>
+          <div class="neural-metric"><div class="neural-metric-label">Fallback</div><div class="neural-metric-val green">OLLAMA</div></div>
+        </div>
+      </div>
+
+      <div class="neural-card">
+        <div class="neural-card-header">
+          <div class="neural-card-icon green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="neural-card-title">Live Telemetry</div>
+        </div>
+        <div class="neural-card-body">Real-time system monitoring, mission control integration, and automated health diagnostics across all connected nodes and services.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODULES ═══ -->
+<section id="modules">
+  <div class="section-header">
+    <div class="section-label">Ecosystem</div>
+    <div class="section-title">System Modules</div>
+    <div class="section-desc">Each module operates independently through the ZICORE Core API. Full REST + WebSocket integration.</div>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="modules-grid">
+    <a href="https://zio.zicore.space" class="module-card purple-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon purple">&#x1F9E0;</div>
+        <div><div class="module-card-name">ZIO AI Copilot</div></div>
+      </div>
+      <div class="module-card-desc">Neural intelligence operator. Multi-modal inference, vision analysis, knowledge management, chat import/export, session memory.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">AI</span><span class="module-tag">OpenRouter</span><span class="module-tag">Ollama</span><span class="module-tag">Vision</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://materializer.zicore.space" class="module-card">
+      <div class="module-card-top">
+        <div class="module-card-icon cyan">&#x2728;</div>
+        <div><div class="module-card-name">Materializer</div></div>
+      </div>
+      <div class="module-card-desc">Procedural 3D generation engine. 14+ generator types: Cube, Sphere, Rocket, Terrain, Gear, Star, OpenSCAD, parametric surfaces.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">3D</span><span class="module-tag">STL</span><span class="module-tag">Procedural</span><span class="module-tag">OpenSCAD</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://zcs.zicore.space" class="module-card green-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon green">&#x1F30D;</div>
+        <div><div class="module-card-name">Mission Control</div></div>
+      </div>
+      <div class="module-card-desc">Aerospace command dashboard. Real-time telemetry, missions, nodes, modules, alerts. Launch operations and ground station control.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">Telemetry</span><span class="module-tag">Missions</span><span class="module-tag">Live</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://aerospace.zicore.space" class="module-card">
+      <div class="module-card-top">
+        <div class="module-card-icon cyan">&#x1F680;</div>
+        <div><div class="module-card-name">Aerospace</div></div>
+      </div>
+      <div class="module-card-desc">Vehicle designer, propulsion lab, orbital mechanics, engineering analysis. Full aerospace simulation stack.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">Vehicles</span><span class="module-tag">Propulsion</span><span class="module-tag">Orbital</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://agency.zicore.space" class="module-card orange-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon orange">&#x1F5C4;</div>
+        <div><div class="module-card-name">Space Agency</div></div>
+      </div>
+      <div class="module-card-desc">Agencia espacial ZICORE. Conexiones con proveedores de servicio: NASA, SpaceX, Blue Origin, Virgin. Coordinación de misiones y acceso al núcleo.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">NASA</span><span class="module-tag">SpaceX</span><span class="module-tag">Blue Origin</span><span class="module-tag">Virgin</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://flight.zicore.space" class="module-card green-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon green">&#x2708;</div>
+        <div><div class="module-card-name">Flight Simulator</div></div>
+      </div>
+      <div class="module-card-desc">Aerospace vehicle flight dynamics. Drone, Obsidiana, BlackVanta, ZIron Sigma. Real-time controls and aircraft configuration.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">Flight</span><span class="module-tag">Sim</span><span class="module-tag">Dynamics</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://engineering.zicore.space" class="module-card orange-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon orange">&#x2699;</div>
+        <div><div class="module-card-name">Engineering</div></div>
+      </div>
+      <div class="module-card-desc">Structural analysis, aerodynamics, propulsion calculations. Stress, buckling, fatigue, safety factors, CFD placeholders.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">FEA</span><span class="module-tag">Aero</span><span class="module-tag">Structural</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://games.zicore.space" class="module-card purple-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon purple">&#x1F3AE;</div>
+        <div><div class="module-card-name">Games Center</div></div>
+      </div>
+      <div class="module-card-desc">17+ HTML5 games: Asteroids, Flappy Bird, Space Invaders, Chess, Tetris, Snake, and more. Global leaderboard.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">HTML5</span><span class="module-tag">Games</span><span class="module-tag">Leaderboard</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="/settings" class="module-card">
+      <div class="module-card-top">
+        <div class="module-card-icon cyan">&#x2699;</div>
+        <div><div class="module-card-name">Settings</div></div>
+      </div>
+      <div class="module-card-desc">11-tab configuration: General, Providers, ZIO, Materializer, Network, Ollama, Engineering, Theme, System, Models, Chats.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">Config</span><span class="module-tag">11 Tabs</span><span class="module-tag">Theme</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="/zicore-bank" class="module-card orange-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon orange">&#x1F4B0;</div>
+        <div><div class="module-card-name">ZiBank</div></div>
+      </div>
+      <div class="module-card-desc">Universal asset vault. ZNT token economy, transfers, balances. Integrated across the entire ZICORE ecosystem.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">ZNT</span><span class="module-tag">Vault</span><span class="module-tag">Economy</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://aerospace.zicore.space" class="module-card purple-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon purple">&#x1F680;</div>
+        <div><div class="module-card-name">Aerospace System</div></div>
+      </div>
+      <div class="module-card-desc">Sistema aeroespacial completo. Diseño de vehículos, propulsión, órbita, ingeniería estructural, misiones. Control total de cada subsistema.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">Vehicles</span><span class="module-tag">Propulsion</span><span class="module-tag">Missions</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="/ziounified" class="module-card green-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon green">&#x1F9E0;</div>
+        <div><div class="module-card-name">ZIO Unified</div></div>
+      </div>
+      <div class="module-card-desc">Unified 3D printing control. ESP32-S3 camera, Marlin firmware, desktop visualizer, Android app, CNC control. Open source.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">3D Print</span><span class="module-tag">Firmware</span><span class="module-tag">ESP32</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="/metropolis" class="module-card orange-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon orange">&#x1F3D9;</div>
+        <div><div class="module-card-name">ZiCore METROPOLIS</div></div>
+      </div>
+      <div class="module-card-desc">Navegación terrestre universal. VTOL, avión, barco, vehículo terrestre. Sistema de transporte multimodal aire-mar-tierra.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">VTOL</span><span class="module-tag">Nav</span><span class="module-tag">Multi-vehicle</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a href="https://mc.zicore.space/master-creator" class="module-card purple-accent">
+      <div class="module-card-top">
+        <div class="module-card-icon purple">&#x1F3A8;</div>
+        <div><div class="module-card-name">Master Creator</div></div>
+      </div>
+      <div class="module-card-desc">Creator Art Studio. Nano Banana, Rodin, NightCafe y Engineering→Blender en un lienzo central con presets de estilo, galería y visor 3D.</div>
+      <div class="module-card-tags">
+        <span class="module-tag">AI Image</span><span class="module-tag">3D</span><span class="module-tag">Studio</span>
+      </div>
+      <div class="module-card-footer">
+        <div class="module-status online"><div class="module-status-dot"></div>ONLINE</div>
+        <div class="module-arrow">&rarr;</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ═══ SYSTEM STATUS ═══ -->
+<div class="status-section" id="status">
+  <div class="section-header">
+    <div class="section-label">Real-Time</div>
+    <div class="section-title">System Status</div>
+    <div class="section-desc">Live telemetry from primary and secondary nodes. Auto-refreshing every 5 seconds.</div>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="status-grid" id="statusGrid">
+    <div class="status-card cyan">
+      <div class="status-card-label">CPU Usage</div>
+      <div class="status-card-value cyan" id="statCpu">--</div>
+      <div class="status-card-sub">Xeon E5345 @ .85</div>
+      <div class="status-bar-track"><div class="status-bar-fill cyan" id="statCpuBar" style="width:0%"></div></div>
+    </div>
+    <div class="status-card purple">
+      <div class="status-card-label">RAM Usage</div>
+      <div class="status-card-value purple" id="statRam">--</div>
+      <div class="status-card-sub">8GB Total @ .85</div>
+      <div class="status-bar-track"><div class="status-bar-fill purple" id="statRamBar" style="width:0%"></div></div>
+    </div>
+    <div class="status-card green">
+      <div class="status-card-label">Disk</div>
+      <div class="status-card-value green" id="statDisk">--</div>
+      <div class="status-card-sub">93% Used @ .85</div>
+      <div class="status-bar-track"><div class="status-bar-fill green" id="statDiskBar" style="width:0%"></div></div>
+    </div>
+    <div class="status-card orange">
+      <div class="status-card-label">Ollama</div>
+      <div class="status-card-value orange" id="statOllama">--</div>
+      <div class="status-card-sub">13 Models @ .68</div>
+      <div class="status-bar-track"><div class="status-bar-fill orange" id="statOllamaBar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="status-services" id="serviceList">
+    <div class="service-row"><div class="service-dot green"></div><div class="service-name">ZICORE Materializer</div><div class="service-detail">:4000 &middot; .85</div></div>
+    <div class="service-row"><div class="service-dot green"></div><div class="service-name">Cloudflare Tunnel</div><div class="service-detail">zcs.zicore.space</div></div>
+    <div class="service-row"><div class="service-dot green"></div><div class="service-name">Ollama Primary</div><div class="service-detail">:11434 &middot; .68</div></div>
+    <div class="service-row"><div class="service-dot green"></div><div class="service-name">Ollama Secondary</div><div class="service-detail">:11434 &middot; .85</div></div>
+    <div class="service-row"><div class="service-dot green"></div><div class="service-name">OpenRouter AI</div><div class="service-detail">nemotron-3 &middot; Cloud</div></div>
+    <div class="service-row"><div class="service-dot green"></div><div class="service-name">ZineMotion Portal</div><div class="service-detail">zinemotion.com.mx</div></div>
+  </div>
+</div>
+
+<!-- ═══ INSTALL / DOWNLOAD ═══ -->
+<div class="install" id="install">
+  <div class="section-header">
+    <div class="section-label">Access</div>
+    <div class="section-title">Download &amp; Install</div>
+    <div class="section-desc">Access ZICORE from anywhere. Web portal, desktop app, or mobile companion.</div>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="install-grid">
+    <div class="install-card">
+      <div class="install-card-icon cyan">&#x1F5A5;</div>
+      <div class="install-card-title">Porthub</div>
+      <div class="install-card-desc">Desktop application hub. Access all ZICORE modules, manage nodes, configure services from a single interface.</div>
+      <a href="/porthub" class="install-card-link cyan">OPEN PORTHUB</a>
+    </div>
+    <div class="install-card">
+      <div class="install-card-icon purple">&#x1F4F1;</div>
+      <div class="install-card-title">App Store</div>
+      <div class="install-card-desc">Native apps for iOS and macOS. ZICORE Mission Control, ZIO Copilot, Materializer, and Games in your pocket.</div>
+      <a href="#" class="install-card-link purple">COMING SOON</a>
+    </div>
+    <div class="install-card">
+      <div class="install-card-icon green">&#x1F4F2;</div>
+      <div class="install-card-title">Android APK</div>
+      <div class="install-card-desc">Direct APK download for Android devices. Full ZICORE ecosystem access with offline capabilities.</div>
+      <a href="#" class="install-card-link green">DOWNLOAD APK</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">
+        <svg viewBox="0 0 36 42" width="24" height="28"><polygon points="18,2 34,10 34,30 18,38 2,30 2,10" fill="none" stroke="url(#fG)" stroke-width="1.5"/><defs><linearGradient id="fG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs><text x="18" y="25" text-anchor="middle" fill="url(#fG)" font-size="14" font-weight="700" font-family="sans-serif">Z</text></svg>
+        <span class="footer-brand-title">ZICORE</span>
+      </div>
+      <div class="footer-brand-desc">Digital Aerospace Operating System. The neural core of ZiAerospace &mdash; controlling simulations, engineering, autonomous spacecraft, and future aerospace vehicles.</div>
+    </div>
+    <div>
+      <div class="footer-col-title">Platform</div>
+      <div class="footer-links">
+        <a href="https://aerospace.zicore.space/zicore" class="footer-link">Launch System</a>
+        <a href="/mission-control" class="footer-link">Mission Control</a>
+        <a href="/zio" class="footer-link">ZIO AI</a>
+        <a href="/materializer" class="footer-link">Materializer</a>
+        <a href="/aerospace" class="footer-link">Aerospace</a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Resources</div>
+      <div class="footer-links">
+        <a href="/api-docs" class="footer-link">API Documentation</a>
+        <a href="/settings" class="footer-link">Settings</a>
+        <a href="/games" class="footer-link">Games Center</a>
+        <a href="/porthub" class="footer-link">Porthub</a>
+        <a href="https://github.com" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Legal</div>
+      <div class="footer-links">
+        <a href="/privacy-policy" class="footer-link">Privacy Policy</a>
+        <a href="/terms-of-service" class="footer-link">Terms of Service</a>
+        <a href="/aviso-privacidad" class="footer-link">Aviso de Privacidad</a>
+        <a href="/condiciones-uso" class="footer-link">Condiciones de Uso</a>
+        <a href="/disclaimer" class="footer-link">Disclaimer</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">&copy; 2024&ndash;2026 ZineMotion Foundation. ZICORE System v5.0.0. All rights reserved.</div>
+    <div class="footer-socials">
+      <a href="https://x.com" class="footer-social" target="_blank" rel="noopener" title="X / Twitter">X</a>
+      <a href="https://github.com" class="footer-social" target="_blank" rel="noopener" title="GitHub">G</a>
+      <a href="https://aerospace.zicore.space" class="footer-social" target="_blank" rel="noopener" title="ZICORE">Z</a>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script>
+// ═══ STARFIELD ═══
+(function(){
+  const c=document.getElementById('starfield'),x=c.getContext('2d');
+  let stars=[],meteors=[];
+  function resize(){c.width=innerWidth;c.height=innerHeight}
+  resize();addEventListener('resize',resize);
+  for(let i=0;i<180;i++)stars.push({
+    x:Math.random()*2e3,y:Math.random()*2e3,
+    r:Math.random()*1.2+0.2,a:Math.random(),
+    d:(Math.random()-0.5)*0.008,
+    twinkleSpeed:Math.random()*0.02+0.005
+  });
+  function spawnMeteor(){
+    if(meteors.length<2&&Math.random()<0.003){
+      meteors.push({x:Math.random()*c.width,y:0,vx:(Math.random()-0.5)*2,vy:Math.random()*4+2,
+        life:1,decay:Math.random()*0.015+0.01,len:Math.random()*40+20});
+    }
+  }
+  function draw(){
+    x.clearRect(0,0,c.width,c.height);
+    stars.forEach(p=>{
+      p.a+=p.twinkleSpeed;
+      if(p.a>1||p.a<0.15)p.d*=-1;
+      x.beginPath();x.arc(p.x%c.width,p.y%c.height,p.r,0,Math.PI*2);
+      x.fillStyle='rgba(180,210,240,'+p.a+')';x.fill();
+    });
+    spawnMeteor();
+    meteors=meteors.filter(m=>{
+      m.x+=m.vx;m.y+=m.vy;m.life-=m.decay;
+      if(m.life<=0)return false;
+      x.beginPath();x.moveTo(m.x,m.y);x.lineTo(m.x-m.vx*m.len/4,m.y-m.vy*m.len/4);
+      x.strokeStyle='rgba(0,229,255,'+(m.life*0.4)+')';x.lineWidth=1;x.stroke();
+      return true;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══ CLOCK ═══
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  const t=h+':'+m+':'+s;
+  const el=document.getElementById('navClock');
+  if(el)el.textContent=t;
+}
+setInterval(updateClock,1000);updateClock();
+
+// ═══ NEURAL IFRAME FALLBACK ═══
+(function(){
+  const iframe=document.getElementById('neuralIframe');
+  const fallback=document.getElementById('neuralFallback');
+  if(iframe){
+    iframe.onerror=function(){iframe.style.display='none';fallback.style.display='flex';};
+    setTimeout(function(){
+      try{if(!iframe.contentWindow||iframe.contentWindow.document==='')throw 'blocked';}
+      catch(e){iframe.style.display='none';fallback.style.display='flex';}
+    },3000);
+  }
+})();
+
+// ═══ SYSTEM STATUS ═══
+async function fetchStatus(){
+  try{
+    const r=await fetch('/api/status');
+    if(!r.ok)throw new Error('status '+r.status);
+    const d=await r.json();
+    if(d.cpu!==undefined){
+      document.getElementById('statCpu').textContent=d.cpu+'%';
+      document.getElementById('statCpuBar').style.width=d.cpu+'%';
+    }
+    if(d.ram!==undefined){
+      document.getElementById('statRam').textContent=d.ram+'%';
+      document.getElementById('statRamBar').style.width=d.ram+'%';
+    }
+    if(d.disk!==undefined){
+      document.getElementById('statDisk').textContent=d.disk+'%';
+      document.getElementById('statDiskBar').style.width=d.disk+'%';
+    }
+    if(d.ollama!==undefined){
+      document.getElementById('statOllama').textContent=d.ollama||'ONLINE';
+    }
+    if(d.services&&Array.isArray(d.services)){
+      const list=document.getElementById('serviceList');
+      list.innerHTML='';
+      d.services.forEach(s=>{
+        const dot=s.status==='ok'||s.status==='online'?'green':s.status==='warn'?'yellow':'red';
+        list.innerHTML+='<div class="service-row"><div class="service-dot '+dot+'"></div><div class="service-name">'+s.name+'</div><div class="service-detail">'+s.detail+'</div></div>';
+      });
+    }
+  }catch(e){
+    // Show static fallback values
+    document.getElementById('statCpu').textContent='87%';
+    document.getElementById('statCpuBar').style.width='87%';
+    document.getElementById('statRam').textContent='72%';
+    document.getElementById('statRamBar').style.width='72%';
+    document.getElementById('statDisk').textContent='93%';
+    document.getElementById('statDiskBar').style.width='93%';
+    document.getElementById('statOllama').textContent='ACTIVE';
+    document.getElementById('statOllamaBar').style.width='100%';
+  }
+}
+fetchStatus();setInterval(fetchStatus,5000);
+
+// ═══ SMOOTH SCROLL ═══
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',function(e){
+    e.preventDefault();
+    const target=document.querySelector(this.getAttribute('href'));
+    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+
+// ═══ NAV SCROLL EFFECT ═══
+(function(){
+  const nav=document.querySelector('.nav');
+  let lastScroll=0;
+  window.addEventListener('scroll',()=>{
+    const st=window.scrollY;
+    if(st>100)nav.style.borderBottomColor='rgba(0,229,255,0.12)';
+    else nav.style.borderBottomColor='rgba(0,229,255,0.08)';
+    lastScroll=st;
+  });
+})();
+
+// ═══ INTERSECTION OBSERVER FOR ANIMATIONS ═══
+(function(){
+  const observer=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.style.opacity='1';
+        entry.target.style.transform='translateY(0)';
+      }
+    });
+  },{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.module-card,.status-card,.install-card,.neural-card').forEach(el=>{
+    el.style.opacity='0';el.style.transform='translateY(24px)';
+    el.style.transition='opacity 0.6s ease,transform 0.6s ease';
+    observer.observe(el);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ZICORE VR VIEWPORT</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;touch-action:none;position:fixed;top:0;left:0}
+:root{--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--warn:#ffa500;--err:#ff5555;--bg:#04060c;--surface:rgba(4,6,12,0.7);--glass:rgba(4,6,12,0.55)}
+
+/* ── Landscape-locked viewport ─────────────────── */
+#viewport{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden}
+
+/* Two identical lenses — left/right */
+.lens-row{display:flex;flex-direction:row;width:100%;height:100%;position:relative;align-items:stretch;justify-content:center}
+.lens{position:relative;width:50%;height:100%;overflow:hidden;flex-shrink:0;background:#000}
+.lens video{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;z-index:0}
+.lens::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;border:1px solid rgba(0,229,255,0.08);pointer-events:none;z-index:5}
+.lens.left::after{border-right:none}
+.lens.right::after{border-left:none}
+
+/* Single-screen mode (no VR) — one full display */
+.lens-row.single{flex-direction:row}
+.lens-row.single .lens{width:100%}
+.lens-row.single .lens.right{display:none}
+.lens-row.single .center-line{display:none}
+.lens-row.single .lens::after{border:1px solid rgba(0,229,255,0.08)}
+
+/* Center divider — vertical split line */
+.center-line{position:absolute;top:0;left:50%;width:1px;height:100%;background:linear-gradient(180deg,transparent 5%,rgba(0,229,255,0.15) 30%,rgba(0,229,255,0.3) 50%,rgba(0,229,255,0.15) 70%,transparent 95%);z-index:50;transform:translateX(-0.5px)}
+
+/* Center bridge — flight control stabilizer (per lens) */
+.bridge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;width:180px;height:180px;pointer-events:auto}
+.bridge-arc{position:absolute;top:50%;left:50%;width:170px;height:170px;border:1px solid rgba(0,229,255,0.2);border-radius:50%;transform:translate(-50%,-50%);animation:bridgeSpin 20s linear infinite}
+@keyframes bridgeSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.bridge-arc::before{content:'';position:absolute;top:-1px;left:50%;width:8px;height:8px;background:var(--cyan);border-radius:50%;transform:translateX(-50%);box-shadow:0 0 8px var(--cyan)}
+
+/* Artificial horizon in bridge */
+.horizon-box{position:absolute;top:50%;left:50%;width:120px;height:120px;border:1px solid rgba(0,229,255,0.3);border-radius:50%;transform:translate(-50%,-50%);overflow:hidden;background:rgba(4,6,12,0.4)}
+.horizon-canvas{width:100%;height:100%}
+
+/* Compass ring around bridge */
+.compass-ring{position:absolute;top:50%;left:50%;width:160px;height:160px;border:1px dashed rgba(124,77,255,0.2);border-radius:50%;transform:translate(-50%,-50%)}
+.compass-ring.rot{transition:transform .2s linear}
+.compass-inner{position:absolute;inset:0;border-radius:50%}
+.compass-tick{position:absolute;width:1px;height:8px;background:rgba(124,77,255,0.4);top:0;left:50%;transform-origin:0 80px}
+.compass-tick.major{height:12px;background:rgba(0,229,255,0.5)}
+.compass-label{position:absolute;font-size:6px;color:var(--purple);letter-spacing:1px;font-weight:700}
+.compass-label.n{top:4px;left:50%;transform:translateX(-50%);color:var(--cyan)}
+.compass-label.s{bottom:4px;left:50%;transform:translateX(-50%)}
+.compass-label.e{right:4px;top:50%;transform:translateY(-50%)}
+.compass-label.w{left:4px;top:50%;transform:translateY(-50%)}
+
+/* Stabilizer crosshair */
+.stab-cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2}
+.stab-h{width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.stab-v{width:1px;height:40px;background:linear-gradient(180deg,transparent,var(--cyan),transparent);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.stab-dot{width:4px;height:4px;border-radius:50%;background:var(--green);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 6px var(--green)}
+
+/* Sensor overlay (per lens) */
+.sensor-overlay{position:absolute;top:0;left:0;width:100%;height:100%;z-index:55;pointer-events:none}
+.sensor-overlay *{pointer-events:auto}
+
+/* Top bar */
+.top-bar{position:absolute;top:0;left:0;right:0;height:24px;background:linear-gradient(180deg,rgba(4,6,12,0.65),transparent);display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:70;border-bottom:1px solid rgba(0,229,255,0.08)}
+.top-bar .logo{font-size:7px;letter-spacing:3px;color:var(--cyan);font-weight:700}
+.top-bar .logo span{color:var(--purple)}
+.top-bar .info{font-size:7px;color:#607080;display:flex;gap:8px;align-items:center}
+.dot{width:4px;height:4px;border-radius:50%;display:inline-block}
+.dot.on{background:var(--green);box-shadow:0 0 4px var(--green);animation:pulse 2s infinite}
+.dot.off{background:var(--err);box-shadow:0 0 4px var(--err)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Top sensors — top-left corner */
+.sl-sensors{position:absolute;top:32px;left:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;width:calc(50% - 100px)}
+.sl-s{background:rgba(4,6,12,0.45);border:1px solid rgba(0,229,255,0.12);border-radius:3px;padding:3px 5px;backdrop-filter:blur(2px)}
+.sl-s .l{font-size:5px;letter-spacing:1px;color:#506070;margin-bottom:1px}
+.sl-s .v{font-size:9px;color:#e0e0e0;font-weight:700;font-variant-numeric:tabular-nums}
+.sl-s .v.warn{color:var(--warn)}
+.sl-s .v.crit{color:var(--err)}
+
+/* Derived sensors — bottom-right corner */
+.sr-sensors{position:absolute;bottom:70px;right:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;width:calc(50% - 100px);justify-items:end}
+
+/* Bottom gauges */
+.gauge-strip{position:absolute;bottom:36px;left:12px;right:12px;display:flex;gap:4px;z-index:56}
+.gauge{flex:1;background:rgba(4,6,12,0.45);border:1px solid rgba(0,229,255,0.1);border-radius:3px;padding:4px 6px;backdrop-filter:blur(2px)}
+.gauge .l{font-size:5px;letter-spacing:1.5px;color:#506070;margin-bottom:2px}
+.gauge .v{font-size:14px;font-weight:900;color:var(--cyan);text-shadow:0 0 6px rgba(0,229,255,0.3)}
+.gauge .v.warn{color:var(--warn);text-shadow:0 0 6px rgba(255,165,0,0.3)}
+.gauge .v.crit{color:var(--err);text-shadow:0 0 6px rgba(255,85,85,0.3)}
+.gauge .bar{height:2px;background:rgba(255,255,255,0.03);border-radius:1px;margin-top:3px;overflow:hidden}
+.gauge .fill{height:100%;border-radius:1px;transition:width .5s;background:linear-gradient(90deg,var(--cyan),var(--green))}
+.gauge .fill.warn{background:linear-gradient(90deg,var(--warn),var(--err))}
+.gauge .fill.crit{background:var(--err)}
+.gauge-strip.hidden{display:none}
+
+/* System readings — plain list, no boxes. Each row: metric, value, avail %. */
+.sys-list{position:absolute;bottom:36px;left:12px;display:flex;flex-direction:column;gap:1px;z-index:56;font-size:6px;color:#b0c0d0;min-width:150px}
+.sys-row{display:flex;justify-content:space-between;gap:8px;padding:0 2px}
+.sys-row .k{color:#506070;letter-spacing:1px}
+.sys-row .v{color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums}
+.sys-row .v.warn{color:var(--warn)}
+.sys-row .v.crit{color:var(--err)}
+.sys-row .a{color:var(--green);opacity:.8}
+.sys-row .a.low{color:var(--warn)}
+
+/* Process list — inside the transparent console frame */
+.proc-list{display:flex;flex-direction:column;gap:1px;font-size:5px;color:#8090a0;line-height:1.3}
+.proc-head,.proc-line{display:flex;gap:4px;white-space:nowrap}
+.proc-head{color:rgba(0,229,255,0.45);letter-spacing:1px}
+.proc-pid{width:30px;text-align:right;color:#2a3040}
+.proc-name{flex:1;overflow:hidden;text-overflow:ellipsis;color:#b0c0d0}
+.proc-cpu{width:34px;text-align:right;color:var(--green)}
+.proc-mem{width:34px;text-align:right;color:var(--purple)}
+
+/* ZiPort row — bottom center above gauges */
+.ziport-row{position:absolute;bottom:88px;left:50%;transform:translateX(-50%);display:flex;gap:3px;z-index:56}
+.zp{background:rgba(4,6,12,0.45);border:1px solid rgba(124,77,255,0.15);border-radius:3px;padding:2px 6px;backdrop-filter:blur(2px);display:flex;align-items:center;gap:4px}
+.zp .l{font-size:5px;color:#506070;letter-spacing:.5px}
+.zp .v{font-size:7px;font-weight:600}
+.zp .v.ok{color:var(--green)}
+.zp .v.err{color:var(--err)}
+.zp .v.wait{color:var(--warn)}
+
+/* Audio vis — left bottom */
+.audio-strip{position:absolute;bottom:108px;left:12px;width:120px;display:flex;align-items:center;gap:3px;z-index:56}
+.audio-vis{flex:1;height:10px;background:rgba(4,6,12,0.4);border:1px solid rgba(0,255,136,0.12);border-radius:2px;overflow:hidden;display:flex;align-items:flex-end;padding:1px}
+.audio-bar-item{width:2px;background:var(--green);border-radius:1px;transition:height .08s}
+.audio-label{font-size:5px;color:var(--green);letter-spacing:1px;width:18px;text-align:right}
+
+/* Console — transparent frame (right bottom): console log + process list */
+.console-mini{position:absolute;bottom:30px;right:12px;width:200px;max-height:170px;background:rgba(4,6,12,0.0);border:1px solid rgba(0,229,255,0.14);border-radius:3px;padding:4px 6px;overflow:hidden;z-index:56;backdrop-filter:blur(1px)}
+.console-mini .title{font-size:5px;letter-spacing:1px;color:rgba(0,229,255,0.6);margin-bottom:2px;border-bottom:1px solid rgba(0,229,255,0.08);padding-bottom:2px}
+.console-mini .console-box{margin-bottom:4px}
+.console-mini .proc-block{margin-top:4px;border-top:1px solid rgba(124,77,255,0.15);padding-top:3px}
+.console-mini .proc-title{font-size:5px;letter-spacing:1px;color:rgba(124,77,255,0.6);margin-bottom:2px}
+.cline{font-size:5px;color:#506070;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cline .ts{color:#2a3040}
+.cline .ok{color:var(--green)}
+.cline .err{color:var(--err)}
+.cline .sys{color:var(--purple)}
+
+/* 3D Sensor Cube — right of bridge */
+.sensor-cube-wrap{position:absolute;top:50%;right:calc(50% - 140px);transform:translateY(-50%);width:50px;height:50px;border:1px solid rgba(124,77,255,0.2);border-radius:3px;background:rgba(4,6,12,0.4);overflow:hidden;z-index:56;display:none}
+.sensor-canvas{width:100%;height:100%}
+
+/* Bottom bar — camera tools */
+.bottom-bar{position:absolute;bottom:0;left:0;right:0;height:28px;background:linear-gradient(0deg,rgba(4,6,12,0.65),transparent);border-top:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:70}
+.bottom-bar .brand{font-size:5px;letter-spacing:2px;color:#2a3040}
+.bottom-bar .brand span{color:var(--cyan);opacity:.5}
+.ctrl{display:flex;gap:3px}
+.b{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.2);border-radius:2px;padding:2px 6px;font-size:5px;letter-spacing:1px;color:var(--cyan);cursor:pointer;font-family:inherit}
+.b:active{background:rgba(0,229,255,0.15)}
+.b.on{background:rgba(0,229,255,0.15);border-color:var(--cyan)}
+
+/* Scanlines */
+.scanlines{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.006) 2px,rgba(0,229,255,0.006) 4px);z-index:65;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div class="lens-row">
+    <div class="center-line"></div>
+
+    <!-- Left Lens — full duplicated display -->
+    <div class="lens left" id="eyeL">
+      <video class="eye-cam" autoplay playsinline muted></video>
+      <div class="scanlines"></div>
+      <div class="sensor-overlay">
+        <div class="top-bar">
+          <div class="logo"><span>Z</span>ICORE VR</div>
+          <div class="info">
+            <span><span class="dot conn-dot"></span></span>
+            <span class="clock">--:--:--</span>
+            <span class="fps">0 FPS</span>
+          </div>
+        </div>
+
+        <div class="sl-sensors">
+          <div class="sl-s"><div class="l">GYRO X</div><div class="v v-gyroX">0.00</div></div>
+          <div class="sl-s"><div class="l">GYRO Y</div><div class="v v-gyroY">0.00</div></div>
+          <div class="sl-s"><div class="l">GYRO Z</div><div class="v v-gyroZ">0.00</div></div>
+          <div class="sl-s"><div class="l">ACCEL X</div><div class="v v-accelX">0.00</div></div>
+          <div class="sl-s"><div class="l">ACCEL Y</div><div class="v v-accelY">0.00</div></div>
+          <div class="sl-s"><div class="l">ACCEL Z</div><div class="v v-accelZ">0.00</div></div>
+        </div>
+
+        <div class="sr-sensors">
+          <div class="sl-s"><div class="l">PITCH</div><div class="v v-pitch">0°</div></div>
+          <div class="sl-s"><div class="l">ROLL</div><div class="v v-roll">0°</div></div>
+          <div class="sl-s"><div class="l">HEADING</div><div class="v v-magHead">---°</div></div>
+          <div class="sl-s"><div class="l">ALTITUDE</div><div class="v v-altitude">--- m</div></div>
+          <div class="sl-s"><div class="l">SPEED</div><div class="v v-speed">--- km/h</div></div>
+          <div class="sl-s"><div class="l">G-FORCE</div><div class="v v-gforce">1.00 G</div></div>
+        </div>
+
+        <!-- Center Bridge — Flight Stabilizer -->
+        <div class="bridge">
+          <div class="compass-ring">
+            <div class="compass-inner">
+            <div class="compass-tick major" style="transform:rotate(0deg)"></div>
+            <div class="compass-tick" style="transform:rotate(30deg)"></div>
+            <div class="compass-tick" style="transform:rotate(60deg)"></div>
+            <div class="compass-tick major" style="transform:rotate(90deg)"></div>
+            <div class="compass-tick" style="transform:rotate(120deg)"></div>
+            <div class="compass-tick" style="transform:rotate(150deg)"></div>
+            <div class="compass-tick major" style="transform:rotate(180deg)"></div>
+            <div class="compass-tick" style="transform:rotate(210deg)"></div>
+            <div class="compass-tick" style="transform:rotate(240deg)"></div>
+            <div class="compass-tick major" style="transform:rotate(270deg)"></div>
+            <div class="compass-tick" style="transform:rotate(300deg)"></div>
+            <div class="compass-tick" style="transform:rotate(330deg)"></div>
+            <div class="compass-label n">N</div>
+            <div class="compass-label s">S</div>
+            <div class="compass-label e">E</div>
+            <div class="compass-label w">W</div>
+            </div>
+          </div>
+          <div class="horizon-box">
+            <canvas class="horizon-canvas" width="240" height="240"></canvas>
+          </div>
+          <div class="stab-cross">
+            <div class="stab-h"></div>
+            <div class="stab-v"></div>
+            <div class="stab-dot"></div>
+          </div>
+        </div>
+
+        <!-- Sensor Cube -->
+        <div class="sensor-cube-wrap cube-wrap">
+          <canvas class="sensor-canvas" width="100" height="100"></canvas>
+        </div>
+
+        <!-- ZiPort input row -->
+        <div class="ziport-row">
+          <div class="zp" data-slot="cam"><span class="l">CAM</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="mic"><span class="l">MIC</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="gyro"><span class="l">GYRO</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="accel"><span class="l">ACCEL</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="mag"><span class="l">MAG</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="gps"><span class="l">GPS</span><span class="v">INIT</span></div>
+        </div>
+
+        <!-- Audio vis -->
+        <div class="audio-strip">
+          <div class="audio-label">MIC</div>
+          <div class="audio-vis"></div>
+        </div>
+
+        <!-- Console mini — transparent: log + processes -->
+        <div class="console-mini">
+          <div class="title">SYS LOG</div>
+          <div class="console-box"></div>
+          <div class="proc-block">
+            <div class="proc-title">PROCESSES</div>
+            <div class="proc-list"></div>
+          </div>
+        </div>
+
+        <!-- System readings — plain list with availability -->
+        <div class="sys-list">
+          <div class="sys-row"><span class="k">CPU</span><span class="v" data-sys="cpu">--</span><span class="a" data-sys="cpuA">--</span></div>
+          <div class="sys-row"><span class="k">MEM</span><span class="v" data-sys="mem">--</span><span class="a" data-sys="memA">--</span></div>
+          <div class="sys-row"><span class="k">DISK</span><span class="v" data-sys="disk">--</span><span class="a" data-sys="diskA">--</span></div>
+          <div class="sys-row"><span class="k">OLLAMA</span><span class="v" data-sys="ollama">--</span></div>
+          <div class="sys-row"><span class="k">NET ↓/↑</span><span class="v" data-sys="net">--</span></div>
+          <div class="sys-row"><span class="k">UPTIME</span><span class="v" data-sys="uptime">--</span></div>
+          <div class="sys-row"><span class="k">MODELS</span><span class="v" data-sys="models">--</span></div>
+        </div>
+
+        <!-- Bottom bar — camera tools -->
+        <div class="bottom-bar">
+          <div class="brand"><span>ZICORE</span> VR VIEWPORT v5.1</div>
+          <div class="ctrl">
+            <button class="b btn-view on">VR</button>
+            <button class="b btn-cam">CAM</button>
+            <button class="b btn-face">FRONT</button>
+            <button class="b btn-mirror">MIRROR</button>
+            <button class="b btn-mic">MIC</button>
+            <button class="b btn-stereo">STEREO</button>
+            <button class="b btn-full">FULL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Lens — identical duplicated display -->
+    <div class="lens right" id="eyeR">
+      <video class="eye-cam" autoplay playsinline muted></video>
+      <div class="scanlines"></div>
+      <div class="sensor-overlay">
+        <div class="top-bar">
+          <div class="logo"><span>Z</span>ICORE VR</div>
+          <div class="info">
+            <span><span class="dot conn-dot"></span></span>
+            <span class="clock">--:--:--</span>
+            <span class="fps">0 FPS</span>
+          </div>
+        </div>
+
+        <div class="sl-sensors">
+          <div class="sl-s"><div class="l">GYRO X</div><div class="v v-gyroX">0.00</div></div>
+          <div class="sl-s"><div class="l">GYRO Y</div><div class="v v-gyroY">0.00</div></div>
+          <div class="sl-s"><div class="l">GYRO Z</div><div class="v v-gyroZ">0.00</div></div>
+          <div class="sl-s"><div class="l">ACCEL X</div><div class="v v-accelX">0.00</div></div>
+          <div class="sl-s"><div class="l">ACCEL Y</div><div class="v v-accelY">0.00</div></div>
+          <div class="sl-s"><div class="l">ACCEL Z</div><div class="v v-accelZ">0.00</div></div>
+        </div>
+
+        <div class="sr-sensors">
+          <div class="sl-s"><div class="l">PITCH</div><div class="v v-pitch">0°</div></div>
+          <div class="sl-s"><div class="l">ROLL</div><div class="v v-roll">0°</div></div>
+          <div class="sl-s"><div class="l">HEADING</div><div class="v v-magHead">---°</div></div>
+          <div class="sl-s"><div class="l">ALTITUDE</div><div class="v v-altitude">--- m</div></div>
+          <div class="sl-s"><div class="l">SPEED</div><div class="v v-speed">--- km/h</div></div>
+          <div class="sl-s"><div class="l">G-FORCE</div><div class="v v-gforce">1.00 G</div></div>
+        </div>
+
+        <!-- Center Bridge — Flight Stabilizer -->
+        <div class="bridge">
+          <div class="compass-ring">
+            <div class="compass-inner">
+            <div class="compass-tick major" style="transform:rotate(0deg)"></div>
+            <div class="compass-tick" style="transform:rotate(30deg)"></div>
+            <div class="compass-tick" style="transform:rotate(60deg)"></div>
+            <div class="compass-tick major" style="transform:rotate(90deg)"></div>
+            <div class="compass-tick" style="transform:rotate(120deg)"></div>
+            <div class="compass-tick" style="transform:rotate(150deg)"></div>
+            <div class="compass-tick major" style="transform:rotate(180deg)"></div>
+            <div class="compass-tick" style="transform:rotate(210deg)"></div>
+            <div class="compass-tick" style="transform:rotate(240deg)"></div>
+            <div class="compass-tick major" style="transform:rotate(270deg)"></div>
+            <div class="compass-tick" style="transform:rotate(300deg)"></div>
+            <div class="compass-tick" style="transform:rotate(330deg)"></div>
+            <div class="compass-label n">N</div>
+            <div class="compass-label s">S</div>
+            <div class="compass-label e">E</div>
+            <div class="compass-label w">W</div>
+            </div>
+          </div>
+          <div class="horizon-box">
+            <canvas class="horizon-canvas" width="240" height="240"></canvas>
+          </div>
+          <div class="stab-cross">
+            <div class="stab-h"></div>
+            <div class="stab-v"></div>
+            <div class="stab-dot"></div>
+          </div>
+        </div>
+
+        <!-- Sensor Cube -->
+        <div class="sensor-cube-wrap cube-wrap">
+          <canvas class="sensor-canvas" width="100" height="100"></canvas>
+        </div>
+
+        <!-- ZiPort input row -->
+        <div class="ziport-row">
+          <div class="zp" data-slot="cam"><span class="l">CAM</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="mic"><span class="l">MIC</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="gyro"><span class="l">GYRO</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="accel"><span class="l">ACCEL</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="mag"><span class="l">MAG</span><span class="v">INIT</span></div>
+          <div class="zp" data-slot="gps"><span class="l">GPS</span><span class="v">INIT</span></div>
+        </div>
+
+        <!-- Audio vis -->
+        <div class="audio-strip">
+          <div class="audio-label">MIC</div>
+          <div class="audio-vis"></div>
+        </div>
+
+        <!-- Console mini — transparent: log + processes -->
+        <div class="console-mini">
+          <div class="title">SYS LOG</div>
+          <div class="console-box"></div>
+          <div class="proc-block">
+            <div class="proc-title">PROCESSES</div>
+            <div class="proc-list"></div>
+          </div>
+        </div>
+
+        <!-- System readings — plain list with availability -->
+        <div class="sys-list">
+          <div class="sys-row"><span class="k">CPU</span><span class="v" data-sys="cpu">--</span><span class="a" data-sys="cpuA">--</span></div>
+          <div class="sys-row"><span class="k">MEM</span><span class="v" data-sys="mem">--</span><span class="a" data-sys="memA">--</span></div>
+          <div class="sys-row"><span class="k">DISK</span><span class="v" data-sys="disk">--</span><span class="a" data-sys="diskA">--</span></div>
+          <div class="sys-row"><span class="k">OLLAMA</span><span class="v" data-sys="ollama">--</span></div>
+          <div class="sys-row"><span class="k">NET ↓/↑</span><span class="v" data-sys="net">--</span></div>
+          <div class="sys-row"><span class="k">UPTIME</span><span class="v" data-sys="uptime">--</span></div>
+          <div class="sys-row"><span class="k">MODELS</span><span class="v" data-sys="models">--</span></div>
+        </div>
+
+        <!-- Bottom bar — camera tools -->
+        <div class="bottom-bar">
+          <div class="brand"><span>ZICORE</span> VR VIEWPORT v5.1</div>
+          <div class="ctrl">
+            <button class="b btn-view on">VR</button>
+            <button class="b btn-cam">CAM</button>
+            <button class="b btn-face">FRONT</button>
+            <button class="b btn-mirror">MIRROR</button>
+            <button class="b btn-mic">MIC</button>
+            <button class="b btn-stereo">STEREO</button>
+            <button class="b btn-full">FULL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.ZICORE_API || location.origin;
+let token = window.ZICORE_TOKEN || '';
+let camEnabled = true, stereoMode = false, mirrorMode = false, micEnabled = false;
+let camFacing = 'user';
+let camStream = null, micStream = null, audioCtx = null, analyser = null;
+let consoleBuf = [], MAX_LOG = 4;
+let frameCount = 0, lastFpsTime = Date.now(), currentFps = 0;
+let sensors = { gyro:{x:0,y:0,z:0}, accel:{x:0,y:0,z:0}, orient:{alpha:0,beta:0,gamma:0}, mag:{heading:0} };
+
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+/* ── Per-user preferences (localStorage keyed by SSO user) ── */
+function getPrefsUser() {
+  try {
+    const u = JSON.parse(localStorage.getItem('zicore_sso_user') || 'null');
+    return (u && u.username) ? u.username : 'guest';
+  } catch(e) { return 'guest'; }
+}
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem('zc_vr_prefs_' + getPrefsUser()) || '{}'); }
+  catch(e) { return {}; }
+}
+function savePrefs(p) {
+  try { localStorage.setItem('zc_vr_prefs_' + getPrefsUser(), JSON.stringify(p)); } catch(e) {}
+}
+function getPref(k, def) {
+  const p = loadPrefs();
+  return (k in p) ? p[k] : def;
+}
+function setPref(k, v) {
+  const p = loadPrefs();
+  p[k] = v;
+  savePrefs(p);
+}
+
+function setText(sel, txt) { $$(sel).forEach(el => el.textContent = txt); }
+
+function log(msg, type='msg') {
+  const ts = new Date().toTimeString().slice(0,8);
+  consoleBuf.push({ts, msg, type});
+  if (consoleBuf.length > MAX_LOG) consoleBuf.shift();
+  const html = consoleBuf.map(l =>
+    `<div class="cline"><span class="ts">[${l.ts}]</span> <span class="${l.type}">${l.msg}</span></div>`
+  ).join('');
+  $$('.console-box').forEach(el => el.innerHTML = html);
+}
+
+function setZiPort(slot, status, ok) {
+  $$('.zp[data-slot="' + slot + '"]').forEach(el => {
+    const v = el.querySelector('.v');
+    v.textContent = status;
+    v.className = 'v ' + (ok ? 'ok' : ok === false ? 'err' : 'wait');
+  });
+}
+
+/* ── CAMERA ── */
+async function initCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: camFacing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    $$('.eye-cam').forEach(v => {
+      v.srcObject = camStream;
+      v.onloadedmetadata = () => fitCameraFeed(v);
+    });
+    setZiPort('cam', 'LIVE', true);
+    log('Camera stream active', 'ok');
+  } catch(e) {
+    setZiPort('cam', 'ERR', false);
+    log('Camera: ' + e.message, 'err');
+  }
+}
+
+/* Fit the raw camera feed into each lens. Phone cameras often deliver
+   portrait (tall) frames; the VR viewport is landscape, so we rotate the
+   feed 90° and cover the lens instead of showing a vertical strip. */
+function fitCameraFeed(video) {
+  if (!video.videoWidth || !video.videoHeight) return;
+  const lens = video.closest('.lens') || video.parentElement;
+  if (!lens) return;
+  const lensW = lens.clientWidth || window.innerWidth;
+  const lensH = lens.clientHeight || window.innerHeight;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const nativePortrait = vh > vw;
+
+  let t = '';
+  if (nativePortrait) {
+    // Rotate 90° and scale so the (now-landscape) feed covers the lens.
+    const s = lensW / lensH;
+    t = 'rotate(90deg) scale(' + (s >= 1 ? s : 1 / s) + ')';
+  }
+  if (mirrorMode) t = 'scaleX(-1)' + (t ? ' ' + t : '');
+  video.style.transform = t || 'none';
+  video.style.objectFit = 'cover';
+}
+
+function setCamFacing(facing) {
+  camFacing = facing === 'environment' ? 'environment' : 'user';
+  setPref('camFacing', camFacing);
+  $$('.btn-face').forEach(b => {
+    b.textContent = camFacing === 'user' ? 'FRONT' : 'BACK';
+    b.className = 'b btn-face' + (camFacing === 'user' ? ' on' : '');
+  });
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
+  initCamera();
+  log('Camera facing: ' + camFacing);
+}
+
+function toggleFace() {
+  setCamFacing(camFacing === 'user' ? 'environment' : 'user');
+}
+
+function toggleCam() {
+  camEnabled = !camEnabled;
+  const d = camEnabled ? 'block' : 'none';
+  $$('.eye-cam').forEach(v => v.style.display = d);
+  $$('.btn-cam').forEach(b => b.className = 'b' + (camEnabled ? ' on' : ''));
+  log('Camera ' + (camEnabled ? 'ON' : 'OFF'));
+}
+
+/* ── VIEW MODE: Cardboard VR (2 eyes) vs Single screen ── */
+function setViewMode(mode) {
+  const row = document.querySelector('.lens-row');
+  const isVR = mode === 'vr';
+  if (row) row.classList.toggle('single', !isVR);
+  $$('.btn-view').forEach(b => {
+    b.textContent = isVR ? 'VR' : '1X';
+    b.className = 'b btn-view' + (isVR ? ' on' : '');
+  });
+  setPref('viewMode', isVR ? 'vr' : 'single');
+  // Lens dims changed (50% vs 100%) — refit the camera feed.
+  setTimeout(() => { $$('.eye-cam').forEach(v => { if (v.videoWidth) fitCameraFeed(v); }); }, 60);
+  log('View: ' + (isVR ? 'CARDBOARD VR (2 eyes)' : 'SINGLE (no VR)'), 'sys');
+}
+
+function toggleView() {
+  const isVR = document.querySelector('.lens-row').classList.contains('single');
+  setViewMode(isVR ? 'vr' : 'single');
+}
+
+function toggleMirror() {
+  mirrorMode = !mirrorMode;
+  $$('.eye-cam').forEach(v => {
+    if (v.videoWidth) fitCameraFeed(v);
+    else v.style.transform = mirrorMode ? 'scaleX(-1)' : 'none';
+  });
+  $$('.btn-mirror').forEach(b => b.className = 'b' + (mirrorMode ? ' on' : ''));
+  log('Mirror ' + (mirrorMode ? 'ON' : 'OFF'));
+}
+
+function toggleStereo() {
+  stereoMode = !stereoMode;
+  if (stereoMode) {
+    mirrorMode = false;
+    $$('.eye-cam').forEach(v => {
+      if (v.videoWidth) fitCameraFeed(v);
+      else v.style.transform = '';
+    });
+    $$('.btn-mirror').forEach(b => b.className = 'b');
+  }
+  $$('.btn-stereo').forEach(b => b.className = 'b' + (stereoMode ? ' on' : ''));
+  log('Stereo ' + (stereoMode ? 'ON' : 'OFF'));
+}
+
+/* ── MICROPHONE ── */
+async function initMic() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    setZiPort('mic', 'LIVE', true);
+    log('Microphone active', 'ok');
+    initAudioBars();
+  } catch(e) {
+    setZiPort('mic', 'ERR', false);
+    log('Mic: ' + e.message, 'err');
+  }
+}
+
+function toggleMic() {
+  micEnabled = !micEnabled;
+  $$('.btn-mic').forEach(b => b.className = 'b' + (micEnabled ? ' on' : ''));
+  if (micEnabled && !micStream) initMic();
+  else if (!micEnabled && micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+    setZiPort('mic', 'OFF', false);
+  }
+}
+
+function initAudioBars() {
+  $$('.audio-vis').forEach(vis => {
+    vis.innerHTML = '';
+    for (let i = 0; i < 30; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'audio-bar-item';
+      bar.style.height = '1px';
+      vis.appendChild(bar);
+    }
+  });
+}
+
+function updateAudioVis() {
+  if (!analyser || !micEnabled) return;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  const step = Math.floor(data.length / 30);
+  $$('.audio-vis').forEach(vis => {
+    const bars = vis.children;
+    for (let i = 0; i < bars.length; i++) {
+      const val = data[i * step] || 0;
+      bars[i].style.height = Math.max(1, (val / 255) * 8) + 'px';
+    }
+  });
+}
+
+/* ── SENSORS ── */
+function initSensors() {
+  if ('DeviceOrientationEvent' in window) {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(state => {
+        if (state === 'granted') bindOrientation();
+      }).catch(() => {});
+    } else bindOrientation();
+  }
+  if ('DeviceMotionEvent' in window) {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission().then(state => {
+        if (state === 'granted') bindMotion();
+      }).catch(() => {});
+    } else bindMotion();
+  }
+}
+
+let sensorEventSeen = false;
+function bindOrientation() {
+  const onOrient = (e) => {
+    sensorEventSeen = true;
+    sensors.orient = { alpha: e.alpha || 0, beta: e.beta || 0, gamma: e.gamma || 0 };
+  };
+  window.addEventListener('deviceorientation', onOrient, true);
+  window.addEventListener('deviceorientationabsolute', onOrient, true);
+}
+
+function getOrientAngle() {
+  try {
+    const o = window.screen && window.screen.orientation;
+    if (o && typeof o.angle === 'number') return o.angle;
+    return window.orientation || 0;
+  } catch(e) { return window.orientation || 0; }
+}
+
+/* Attitude from gravity (accelerationIncludingGravity). Works in ANY device
+   position — held upright in front of you, landscape, or flat — without
+   depending on screen.orientation.angle (which the CSS rotation breaks). */
+function gravityAttitude() {
+  const a = sensors.accel || {x:0, y:0, z:0};
+  const g = Math.sqrt(a.x*a.x + a.y*a.y + a.z*a.z) || 9.81;
+  // Pitch = angle of the device's top edge vs the horizon (-90..90).
+  // 0 when held level/upright, +pitch when the top tips up.
+  let pitch = Math.asin(Math.max(-1, Math.min(1, -a.y / g))) * 180 / Math.PI;
+  // Roll = rotation around the device's Z axis (screen plane), 0 when level.
+  let roll = Math.atan2(a.x, a.z) * 180 / Math.PI;
+  // Compensate for the CSS 90° rotation when the viewport was rotated to
+  // landscape on a portrait screen so pitch/roll map to the displayed frame.
+  const vp = document.getElementById('viewport');
+  const rotated = vp && vp.style.transform && vp.style.transform.indexOf('rotate') >= 0;
+  if (rotated) {
+    const r = roll;
+    roll = -pitch;
+    pitch = r;
+  }
+  return { alpha: sensors.orient ? (sensors.orient.alpha || 0) : 0, pitch, roll };
+}
+
+function remapOrient() {
+  return gravityAttitude();
+}
+
+function bindMotion() {
+  window.addEventListener('devicemotion', (e) => {
+    const a = e.accelerationIncludingGravity || {};
+    const r = e.rotationRate || {};
+    sensors.accel = { x: a.x||0, y: a.y||0, z: a.z||0 };
+    sensors.gyro = { x: r.alpha||0, y: r.beta||0, z: r.gamma||0 };
+    setZiPort('gyro', 'LIVE', true);
+    setZiPort('accel', 'LIVE', true);
+  }, true);
+}
+
+function updateSensors() {
+  setText('.v-gyroX', sensors.gyro.x.toFixed(2));
+  setText('.v-gyroY', sensors.gyro.y.toFixed(2));
+  setText('.v-gyroZ', sensors.gyro.z.toFixed(2));
+  setText('.v-accelX', sensors.accel.x.toFixed(2));
+  setText('.v-accelY', sensors.accel.y.toFixed(2));
+  setText('.v-accelZ', sensors.accel.z.toFixed(2));
+  const o = remapOrient();
+  const pitch = o.pitch || 0;
+  const roll = o.roll || 0;
+  setText('.v-pitch', Math.round(pitch) + '°');
+  setText('.v-roll', Math.round(roll) + '°');
+  const heading = Math.round(360 - (o.alpha || 0)) % 360;
+  setText('.v-magHead', heading + '°');
+  setZiPort('mag', heading + '°', true);
+
+  // Rotate the compass card so "N" (and the readout) track the heading.
+  $$('.compass-inner').forEach(el => {
+    el.style.transform = 'rotate(' + (-heading) + 'deg)';
+  });
+
+  const gforce = Math.sqrt(sensors.accel.x**2 + sensors.accel.y**2 + sensors.accel.z**2) / 9.81;
+  $$('.v-gforce').forEach(el => {
+    el.textContent = gforce.toFixed(2) + ' G';
+    el.className = 'v' + (gforce > 2 ? ' crit' : gforce > 1.5 ? ' warn' : '');
+  });
+
+  const alt = (pitch * 10).toFixed(0);
+  setText('.v-altitude', alt + ' m');
+
+  const spd = Math.abs(sensors.gyro.z * 3.6).toFixed(0);
+  setText('.v-speed', spd + ' km/h');
+
+  drawHorizon();
+  drawSensorCube();
+}
+
+/* ── ARTIFICIAL HORIZON ── */
+function drawHorizon() {
+  const canvases = $$('.horizon-canvas');
+  if (!canvases.length) return;
+  const o = remapOrient();
+  const pitch = o.pitch || 0;
+  const roll = o.roll || 0;
+  canvases.forEach(canvas => {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const cx = w/2, cy = h/2;
+    ctx.clearRect(0,0,w,h);
+
+    // Pitch shift (in px) for the horizon line from the center.
+    const pitchPx = (pitch / 90) * (h/2);
+
+    // Draw sky + ground in the pitch/roll reference frame: translate to
+    // center, rotate by roll, then shift by pitch so the horizon line and
+    // both halves rotate together as the aircraft banks.
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-roll * Math.PI / 180);
+
+    ctx.fillStyle = 'rgba(0,40,80,0.6)';
+    ctx.fillRect(-w, -h, 2*w, h + pitchPx);
+    ctx.fillStyle = 'rgba(60,30,0,0.6)';
+    ctx.fillRect(-w, pitchPx, 2*w, h);
+
+    // Pitch ladder lines (rotate with the horizon).
+    ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.font = '7px Courier New';
+    ctx.textAlign = 'right';
+    for (let p = -30; p <= 30; p += 10) {
+      if (p === 0) continue;
+      const py = pitchPx - (p / 90) * (h/2);
+      ctx.beginPath();
+      ctx.moveTo(-25, py);
+      ctx.lineTo(25, py);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,229,255,0.4)';
+      ctx.fillText(Math.abs(p) + '°', -28, py + 3);
+    }
+
+    // Horizon line (with roll applied).
+    ctx.strokeStyle = 'rgba(0,229,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-60, pitchPx);
+    ctx.lineTo(60, pitchPx);
+    ctx.stroke();
+    ctx.restore();
+
+    // Fixed aircraft symbol (does NOT rotate).
+    ctx.strokeStyle = 'rgba(0,255,136,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx-20, cy); ctx.lineTo(cx-6, cy);
+    ctx.moveTo(cx+6, cy); ctx.lineTo(cx+20, cy);
+    ctx.moveTo(cx-6, cy); ctx.lineTo(cx, cy+6);
+    ctx.moveTo(cx+6, cy); ctx.lineTo(cx, cy+6);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,255,136,0.9)';
+    ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+/* ── 3D SENSOR CUBE ── */
+function drawSensorCube() {
+  const canvases = $$('.sensor-canvas');
+  if (!canvases.length) return;
+  const o = remapOrient();
+  const beta = (o.pitch || 0) * Math.PI / 180;
+  const gamma = (o.roll || 0) * Math.PI / 180;
+  const alpha = (o.alpha || 0) * Math.PI / 180;
+
+  const vertices = [
+    [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+    [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]
+  ];
+  const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+
+  function rotate(v) {
+    let [x,y,z] = v;
+    let y1 = y*Math.cos(beta) - z*Math.sin(beta);
+    let z1 = y*Math.sin(beta) + z*Math.cos(beta);
+    let x1 = x*Math.cos(gamma) + z1*Math.sin(gamma);
+    let z2 = -x*Math.sin(gamma) + z1*Math.cos(gamma);
+    let x2 = x1*Math.cos(alpha) - y1*Math.sin(alpha);
+    let y2 = x1*Math.sin(alpha) + y1*Math.cos(alpha);
+    return [x2, y2, z2];
+  }
+
+  canvases.forEach(canvas => {
+    if (canvas.parentElement.style.display === 'none') return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2, s = 16;
+    const projected = vertices.map(v => {
+      const [x,y,z] = rotate(v);
+      const scale = 1 / (3 + z * 0.3);
+      return [cx + x * s * scale, cy + y * s * scale];
+    });
+    ctx.strokeStyle = 'rgba(124,77,255,0.4)';
+    ctx.lineWidth = 0.8;
+    edges.forEach(([a,b]) => {
+      ctx.beginPath();
+      ctx.moveTo(projected[a][0], projected[a][1]);
+      ctx.lineTo(projected[b][0], projected[b][1]);
+      ctx.stroke();
+    });
+    ctx.fillStyle = 'rgba(0,229,255,0.6)';
+    projected.forEach(([x,y]) => {
+      ctx.beginPath(); ctx.arc(x,y,1.2,0,Math.PI*2); ctx.fill();
+    });
+  });
+}
+
+/* ── GPS ── */
+function initGPS() {
+  if ('geolocation' in navigator) {
+    navigator.geolocation.watchPosition(
+      (pos) => setZiPort('gps', `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, true),
+      (err) => setZiPort('gps', 'ERR', false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  } else setZiPort('gps', 'N/A', false);
+}
+
+/* ── DATA FETCHING ── */
+async function fetchStats() {
+  try {
+    const h = {};
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(API + '/api/vr-monitor/stats', { headers: h });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    renderSysList(d);
+    renderProcs(d.processes || []);
+    $$('.conn-dot').forEach(el => el.className = 'dot on');
+  } catch(e) {
+    $$('.conn-dot').forEach(el => el.className = 'dot off');
+    log('Telemetry err: ' + e.message, 'err');
+  }
+}
+
+function availClass(pct) { return pct > 30 ? 'a low' : 'a'; }
+
+function renderSysList(d) {
+  const cpu = d.cpu || 0, mem = d.mem || 0, disk = d.disk || 0;
+  setSys('cpu', Math.round(cpu) + '%', availClass(cpu));
+  setSys('cpuA', 'avail ' + Math.round(100 - cpu) + '%', availClass(100 - cpu));
+  setSys('mem', Math.round(mem) + '%', availClass(mem));
+  setSys('memA', 'avail ' + Math.round(100 - mem) + '%', availClass(100 - mem));
+  setSys('disk', Math.round(disk) + '%', availClass(disk));
+  setSys('diskA', 'avail ' + Math.round(100 - disk) + '%', availClass(100 - disk));
+  setSys('ollama', d.ollama ? 'ON (' + (d.ollama_models || []).length + ')' : 'OFF', d.ollama ? '' : 'low');
+  setSys('net', '↓' + (d.net_recv_mb||0) + ' ↑' + (d.net_sent_mb||0) + ' MB');
+  setSys('uptime', d.uptime || '--');
+  setSys('models', (d.ollama_models || []).length ? (d.ollama_models || []).join(', ') : '--');
+}
+
+function setSys(key, txt, cls) {
+  $$('.sys-list [data-sys="' + key + '"]').forEach(el => {
+    el.textContent = txt;
+    el.className = cls === 'a low' ? 'a low' : (cls === 'low' ? 'v warn' : (cls ? 'v' : 'v'));
+    if (key === 'ollama' && cls === '') el.className = 'v ok';
+  });
+}
+
+function renderProcs(procs) {
+  if (!procs || !procs.length) return;
+  const rows = procs.map(p =>
+    '<div class="proc-line"><span class="proc-pid">' + (p.pid || '') + '</span>' +
+    '<span class="proc-name">' + (p.name || '?') + '</span>' +
+    '<span class="proc-cpu">' + (p.cpu || 0).toFixed(1) + '</span>' +
+    '<span class="proc-mem">' + (p.mem || 0).toFixed(1) + '%</span></div>'
+  ).join('');
+  $$('.proc-list').forEach(el => {
+    el.innerHTML = '<div class="proc-head"><span class="proc-pid">PID</span><span class="proc-name">PROC</span><span class="proc-cpu">CPU%</span><span class="proc-mem">MEM%</span></div>' + rows;
+  });
+}
+
+/* ── FULLSCREEN ── */
+/* FULL shows a single (non-VR) image in fullscreen; restore the previous
+   view mode when leaving fullscreen. */
+let prevViewBeforeFull = null;
+function goFullscreen() {
+  const row = document.querySelector('.lens-row');
+  prevViewBeforeFull = row && row.classList.contains('single') ? 'single' : 'vr';
+  setViewMode('single');
+  const el = document.documentElement;
+  try {
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch(e) {}
+}
+function onFullscreenChange() {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (prevViewBeforeFull) {
+      setViewMode(prevViewBeforeFull);
+      prevViewBeforeFull = null;
+    }
+  }
+}
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+/* ── FPS ── */
+function updateFPS() {
+  frameCount++;
+  const now = Date.now();
+  if (now - lastFpsTime >= 1000) {
+    currentFps = frameCount;
+    frameCount = 0;
+    lastFpsTime = now;
+    setText('.fps', currentFps + ' FPS');
+  }
+  requestAnimationFrame(updateFPS);
+}
+
+/* ── CLOCK ── */
+function updateClock() {
+  setText('.clock', new Date().toTimeString().slice(0,8));
+}
+
+/* ── LANDSCAPE LOCK ── */
+function applyOrientation() {
+  const vp = document.getElementById('viewport');
+  const sw = window.innerWidth, sh = window.innerHeight;
+  if (sh > sw) {
+    vp.style.width = sh + 'px';
+    vp.style.height = sw + 'px';
+    vp.style.top = '50%';
+    vp.style.left = '50%';
+    vp.style.margin = '0';
+    vp.style.transform = 'translate(-50%, -50%) rotate(90deg)';
+  } else {
+    vp.style.width = '100%';
+    vp.style.height = '100%';
+    vp.style.top = '0';
+    vp.style.left = '0';
+    vp.style.margin = '0';
+    vp.style.transform = 'none';
+  }
+}
+window.addEventListener('orientationchange', applyOrientation);
+window.addEventListener('resize', applyOrientation);
+window.addEventListener('resize', () => { setTimeout(() => {
+  $$('.eye-cam').forEach(v => { if (v.videoWidth) fitCameraFeed(v); });
+}, 80); });
+
+/* ── CONTROLS ── */
+$$('.btn-cam').forEach(b => b.addEventListener('click', toggleCam));
+$$('.btn-face').forEach(b => b.addEventListener('click', toggleFace));
+$$('.btn-mirror').forEach(b => b.addEventListener('click', toggleMirror));
+$$('.btn-mic').forEach(b => b.addEventListener('click', toggleMic));
+$$('.btn-stereo').forEach(b => b.addEventListener('click', toggleStereo));
+$$('.btn-view').forEach(b => b.addEventListener('click', toggleView));
+$$('.btn-full').forEach(b => b.addEventListener('click', goFullscreen));
+
+/* ── INIT ── */
+window.ZICORE_VR = {
+  setToken: (t) => { token = t; },
+  setApi: (url) => { window.ZICORE_API = url; },
+  log: log,
+  refresh: fetchStats,
+};
+
+log('VR Viewport v5.0 initializing...');
+applyOrientation();
+updateClock();
+setInterval(updateClock, 1000);
+requestAnimationFrame(updateFPS);
+
+/* Restore per-user preferences */
+const savedFacing = getPref('camFacing', 'user');
+const savedView = getPref('viewMode', 'vr');
+if (savedFacing && savedFacing !== 'user') camFacing = savedFacing;
+$$('.btn-face').forEach(b => {
+  b.textContent = camFacing === 'user' ? 'FRONT' : 'BACK';
+  b.className = 'b btn-face' + (camFacing === 'user' ? ' on' : '');
+});
+if (savedView !== 'vr') setViewMode('single');
+
+initCamera();
+initSensors();
+initGPS();
+fetchStats();
+setInterval(fetchStats, 5000);
+setInterval(updateSensors, 100);
+setInterval(updateAudioVis, 100);
+
+setTimeout(() => {
+  $$('.cube-wrap').forEach(el => el.style.display = 'block');
+  log('All subsystems online', 'sys');
+  log('ZICORE AEROSPACE OS', 'sys');
+}, 1500);
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "active": "zicore-system",
+  "projects": [
+    {
+      "id": "zicore-system",
+      "name": "ZICORE System",
+      "path": "/opt/zicore-system",
+      "desc": "Core aerospace OS",
+      "badge": "ROOT"
+    }
+  ]
+}

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Video Editor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080c14;--panel:#0d1117;--border:#1a2332;--accent:#00e5ff;--accent2:#7c4dff;--green:#00ff88;--text:#e0e6ed;--muted:#5a6a7a}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.top-bar{display:flex;align-items:center;background:var(--panel);border-bottom:1px solid var(--border);padding:6px 16px;gap:12px}
+.top-bar .logo{font-size:14px;font-weight:700;color:var(--accent);letter-spacing:2px}
+.top-bar .logo span{color:var(--accent2)}
+.transport{display:flex;gap:4px}
+.transport button{background:#1a2332;border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:14px;transition:all .2s}
+.transport button:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+.transport button.active{background:var(--green);color:#000}
+.transport button.rec{color:#ff4444}
+.transport button.rec.active{background:#ff4444;color:#fff}
+.time-display{font-family:'Courier New',monospace;font-size:16px;color:var(--accent);background:#0a0e14;padding:4px 12px;border-radius:4px;border:1px solid var(--border)}
+.main{flex:1;display:flex;overflow:hidden}
+.preview-panel{flex:1;display:flex;flex-direction:column;background:#000;position:relative}
+.preview-video{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.preview-video canvas{max-width:100%;max-height:100%;background:#000}
+.preview-controls{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--border)}
+.preview-controls button{background:none;border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px}
+.preview-controls button:hover{border-color:var(--accent);color:var(--accent)}
+.preview-controls button.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.right-panel{width:280px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column}
+.right-panel .tabs{display:flex;border-bottom:1px solid var(--border)}
+.right-panel .tab{flex:1;padding:8px;text-align:center;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .2s}
+.right-panel .tab:hover{color:var(--text)}
+.right-panel .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.right-panel .content{flex:1;overflow-y:auto;padding:8px}
+.right-panel .prop-group{margin-bottom:12px}
+.right-panel .prop-label{font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.right-panel .prop-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.right-panel .prop-input{flex:1;background:#0a0e14;border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:3px;font-size:11px}
+.right-panel select.prop-input{appearance:none;padding-right:20px}
+.effects-list{display:flex;flex-direction:column;gap:4px}
+.effect-item{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0a0e14;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all .2s}
+.effect-item:hover{border-color:var(--accent)}
+.effect-item.active{border-color:var(--green)}
+.effect-item .fx-name{font-size:11px;flex:1}
+.effect-item .fx-toggle{width:20px;height:12px;background:#333;border-radius:6px;position:relative;cursor:pointer}
+.effect-item .fx-toggle.on{background:var(--green)}
+.effect-item .fx-toggle::after{content:'';position:absolute;top:1px;left:1px;width:10px;height:10px;background:#fff;border-radius:50%;transition:left .2s}
+.effect-item .fx-toggle.on::after{left:9px}
+.zio-section{border-top:1px solid var(--border);padding:8px}
+.zio-section h4{font-size:11px;color:var(--accent);margin-bottom:6px}
+.zio-msgs{max-height:150px;overflow-y:auto;font-size:11px;margin-bottom:6px}
+.zio-msg{padding:4px 6px;border-radius:4px;margin-bottom:4px}
+.zio-msg.user{background:#1a2332;text-align:right}
+.zio-msg.ai{background:#0e1a2e}
+.zio-input-row{display:flex;gap:4px}
+.zio-input-row input{flex:1;background:#0a0e14;border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:3px;font-size:11px}
+.zio-input-row button{background:var(--accent);color:#000;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px}
+.zio-input-row .voice{background:var(--accent2);padding:4px 6px}
+.zio-input-row .voice.on{background:#ff4444;animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.timeline-panel{height:220px;background:var(--panel);border-top:1px solid var(--border);display:flex;flex-direction:column}
+.timeline-toolbar{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--border)}
+.timeline-toolbar button{background:#1a2332;border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:3px;cursor:pointer;font-size:11px}
+.timeline-toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+.timeline-toolbar button.tool-active{background:var(--accent);color:#000;border-color:var(--accent)}
+.timeline-toolbar .sep{width:1px;height:16px;background:var(--border)}
+.timeline-body{flex:1;display:flex;overflow:auto}
+.timeline-labels{width:160px;min-width:160px;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto}
+.tl-label{height:36px;display:flex;align-items:center;padding:0 8px;gap:4px;border-bottom:1px solid #111827;font-size:10px}
+.tl-label .tl-color{width:8px;height:8px;border-radius:2px}
+.tl-label .tl-vis{width:16px;height:16px;background:none;border:1px solid var(--border);border-radius:2px;cursor:pointer;font-size:8px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.tl-label .tl-vis.off{color:#ff4444;border-color:#ff4444}
+.timeline-content{flex:1;position:relative;overflow-x:auto;overflow-y:hidden}
+.tl-track{height:36px;border-bottom:1px solid #111827;position:relative}
+.tl-clip{position:absolute;height:28px;top:4px;border-radius:4px;cursor:pointer;font-size:9px;padding:2px 6px;overflow:hidden;white-space:nowrap;border:1px solid transparent}
+.tl-clip:hover{border-color:#fff}
+.tl-clip.selected{border-color:var(--accent);box-shadow:0 0 6px rgba(0,229,255,.4)}
+.tl-playhead{position:absolute;top:0;width:2px;background:var(--accent);height:100%;z-index:10}
+.tl-ruler{height:20px;background:#0a0e14;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.tl-ruler .tl-time{min-width:100px;border-left:1px solid #1a2332;padding:0 4px;font-size:9px;color:var(--muted)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;width:450px;max-width:90%}
+.modal h3{color:var(--accent);margin-bottom:12px;font-size:14px}
+.modal label{display:block;font-size:11px;color:var(--muted);margin:8px 0 4px}
+.modal input,.modal select{width:100%;background:#0a0e14;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px}
+.modal .btn-row{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal .btn-row button{padding:6px 16px;border-radius:4px;border:1px solid var(--border);background:#1a2332;color:var(--text);cursor:pointer;font-size:12px}
+.modal .btn-row .primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#0a0e14}
+::-webkit-scrollbar-thumb{background:#1a2332;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="logo">ZICORE <span>VIDEO EDITOR</span></div>
+  <div class="transport">
+    <button onclick="vAction('stop')">⏹</button>
+    <button id="playBtn" onclick="vAction('play')">▶</button>
+    <button class="rec" id="recBtn" onclick="vAction('rec')">●</button>
+    <button id="fwdBtn" onclick="vAction('fwd')">⏩</button>
+    <button id="revBtn" onclick="vAction('rev')">⏪</button>
+  </div>
+  <div class="time-display" id="timeDisp">00:00:00:00</div>
+  <div style="flex:1"></div>
+  <button style="background:#1a2332;border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px" onclick="showImportModal()">Import</button>
+  <button style="background:var(--accent2);color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px" onclick="showExportModal()">Export</button>
+</div>
+
+<div class="main">
+  <div class="preview-panel">
+    <div class="preview-video">
+      <canvas id="previewCanvas" width="854" height="480"></canvas>
+      <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);padding:4px 8px;border-radius:3px;font-size:10px;color:var(--muted)">1920x1080 • 30fps</div>
+    </div>
+    <div class="preview-controls">
+      <button onclick="zoomPreview(-1)">-</button>
+      <button onclick="zoomPreview(0)">Fit</button>
+      <button onclick="zoomPreview(1)">+</button>
+      <div style="flex:1"></div>
+      <button id="snapBtn" onclick="toggleSnap()" class="active">Snap</button>
+      <button id="gridBtn" onclick="toggleGrid()">Grid</button>
+      <button onclick="splitClip()">✂ Split</button>
+      <button onclick="deleteClip()">🗑 Delete</button>
+      <button onclick="duplicateClip()">📋 Duplicate</button>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'props')">Properties</div>
+      <div class="tab" onclick="switchTab(this,'effects')">Effects</div>
+      <div class="tab" onclick="switchTab(this,'media')">Media</div>
+    </div>
+    <div class="content" id="rightContent">
+      <div id="tab-props">
+        <div class="prop-group">
+          <div class="prop-label">Project</div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">Name</span><input class="prop-input" value="Untitled Project"></div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">FPS</span><select class="prop-input"><option>24</option><option>25</option><option selected>30</option><option>60</option></select></div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">Res</span><select class="prop-input"><option>1280x720</option><option selected>1920x1080</option><option>3840x2160</option></select></div>
+        </div>
+        <div class="prop-group">
+          <div class="prop-label">Selected Clip</div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">Start</span><input class="prop-input" type="number" value="0" id="clipStart"></div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">Duration</span><input class="prop-input" type="number" value="5" id="clipDur"></div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">Speed</span><input class="prop-input" type="number" value="100" step="10" id="clipSpeed"><span style="font-size:10px;color:var(--muted)">%</span></div>
+          <div class="prop-row"><span style="font-size:11px;width:50px">Volume</span><input class="prop-input" type="range" min="0" max="100" value="80" style="flex:1"></div>
+        </div>
+      </div>
+      <div id="tab-effects" style="display:none">
+        <div class="effects-list">
+          <div class="effect-item active"><div class="fx-name">Brightness</div><div class="fx-toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Contrast</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Saturation</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Blur</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Sharpen</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Color Grade</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Chroma Key</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Speed Ramping</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Stabilize</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Film Grain</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">Vignette</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="effect-item"><div class="fx-name">LUT</div><div class="fx-toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+      <div id="tab-media" style="display:none">
+        <div style="padding:4px;font-size:10px;color:var(--muted)">Drop files here or click Import</div>
+        <div id="mediaBin"></div>
+      </div>
+      <div class="zio-section">
+        <h4>ZIO Video Assistant</h4>
+        <div class="zio-msgs" id="zioMsgs">
+          <div class="zio-msg ai">I can help edit, generate effects, color grade, add transitions, and export your video. Try: "Add a crossfade between clips" or "Color grade this scene cinematic"</div>
+        </div>
+        <div class="zio-input-row">
+          <button class="voice" id="voiceBtn" onclick="toggleVoice()">🎤</button>
+          <input type="text" id="zioInput" placeholder="Ask ZIO..." onkeydown="if(event.key==='Enter')sendZio()">
+          <button onclick="sendZio()">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="timeline-panel">
+  <div class="timeline-toolbar">
+    <button class="tool-active" id="selectTool" onclick="setTool('select')">🔲 Select</button>
+    <button id="razorTool" onclick="setTool('razor')">✂ Razor</button>
+    <button id="slipTool" onclick="setTool('slip')">↔ Slip</button>
+    <div class="sep"></div>
+    <button onclick="addVideoTrack()">+ Video</button>
+    <button onclick="addAudioTrack()">+ Audio</button>
+    <button onclick="addTextTrack()">+ Text</button>
+    <div class="sep"></div>
+    <button onclick="addTransition()">Transition</button>
+    <button onclick="addOverlay()">Overlay</button>
+  </div>
+  <div class="tl-ruler" id="tlRuler"></div>
+  <div class="timeline-body">
+    <div class="timeline-labels" id="tlLabels"></div>
+    <div class="timeline-content" id="tlContent">
+      <div class="tl-playhead" id="tlPlayhead" style="left:0"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h3>Export Video</h3>
+    <label>Format</label>
+    <select><option>MP4 (H.264)</option><option>MP4 (H.265/HEVC)</option><option>WebM (VP9)</option><option>MOV (ProRes)</option><option>AVI</option></select>
+    <label>Resolution</label>
+    <select><option>1280x720 (HD)</option><option selected>1920x1080 (Full HD)</option><option>3840x2160 (4K)</option></select>
+    <label>Bitrate</label>
+    <select><option>5 Mbps (Good)</option><option selected>10 Mbps (High)</option><option>20 Mbps (Ultra)</option></select>
+    <label>Frame Rate</label>
+    <select><option>24 fps</option><option>25 fps</option><option selected>30 fps</option><option>60 fps</option></select>
+    <label>Filename</label>
+    <input type="text" value="zicore-export">
+    <div class="btn-row">
+      <button onclick="closeModal('exportModal')">Cancel</button>
+      <button class="primary" onclick="doExport()">Export</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h3>Import Media</h3>
+    <label>File</label>
+    <input type="file" accept="video/*,audio/*,image/*" multiple>
+    <label>Or URL</label>
+    <input type="text" placeholder="https://...">
+    <div class="btn-row">
+      <button onclick="closeModal('importModal')">Cancel</button>
+      <button class="primary" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let vTracks = [
+  {id:1, name:'V1', type:'video', color:'#00e5ff', clips:[
+    {id:'c1', name:'Intro', start:0, dur:5, color:'#00e5ff40'},
+    {id:'c2', name:'Scene 1', start:5, dur:8, color:'#7c4dff40'},
+    {id:'c3', name:'Scene 2', start:13, dur:6, color:'#00ff8840'}
+  ]},
+  {id:2, name:'V2', type:'video', color:'#7c4dff', clips:[
+    {id:'c4', name:'Overlay', start:2, dur:4, color:'#ff6b3540'}
+  ]},
+  {id:3, name:'A1', type:'audio', color:'#00ff88', clips:[
+    {id:'c5', name:'Music', start:0, dur:19, color:'#00ff8840'},
+    {id:'c6', name:'SFX', start:7, dur:3, color:'#ffd93d40'}
+  ]},
+  {id:4, name:'A2', type:'audio', color:'#ff6b35', clips:[
+    {id:'c7', name:'Voice', start:5, dur:14, color:'#ff444440'}
+  ]},
+  {id:5, name:'T1', type:'text', color:'#ffd93d', clips:[
+    {id:'c8', name:'Title', start:0, dur:3, color:'#ffd93d40'},
+    {id:'c9', name:'Credits', start:16, dur:3, color:'#ffd93d40'}
+  ]}
+];
+
+let currentTool = 'select';
+let isPlaying = false;
+let playOffset = 0;
+let selectedClip = null;
+let snapEnabled = true;
+let fps = 30;
+let zoom = 1;
+const pxPerSec = 80;
+
+function initTimeline() {
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const ruler = document.getElementById('tlRuler');
+  const labels = document.getElementById('tlLabels');
+  const content = document.getElementById('tlContent');
+
+  const totalSec = 30;
+  let rulerHtml = '';
+  for (let i = 0; i < totalSec; i++) {
+    rulerHtml += `<div class="tl-time" style="min-width:${pxPerSec * zoom}px">${formatTimecode(i)}</div>`;
+  }
+  ruler.innerHTML = rulerHtml;
+
+  let labelsHtml = '';
+  let contentHtml = '<div class="tl-playhead" id="tlPlayhead" style="left:0"></div>';
+
+  vTracks.forEach(t => {
+    const visClass = t.visible === false ? ' off' : '';
+    labelsHtml += `<div class="tl-label"><div class="tl-color" style="background:${t.color}"></div><span style="flex:1">${t.name}</span><div class="tl-vis${visClass}" onclick="toggleTrackVis(${t.id})">${t.visible === false ? '👁‍🗨' : '👁'}</div></div>`;
+    contentHtml += `<div class="tl-track" data-track="${t.id}">`;
+    t.clips.forEach(cl => {
+      contentHtml += `<div class="tl-clip ${cl.id === selectedClip ? 'selected' : ''}" style="left:${cl.start * pxPerSec * zoom}px;width:${cl.dur * pxPerSec * zoom}px;background:${cl.color};border-color:${t.color}" onclick="selectClip('${cl.id}', ${t.id})">${cl.name}</div>`;
+    });
+    contentHtml += '</div>';
+  });
+
+  labels.innerHTML = labelsHtml;
+  content.innerHTML = contentHtml;
+}
+
+function formatTimecode(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const f = Math.floor((sec % 1) * fps);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
+}
+
+function selectClip(clipId, trackId) {
+  selectedClip = clipId;
+  renderTimeline();
+}
+
+function vAction(action) {
+  if (action === 'play') {
+    isPlaying = !isPlaying;
+    document.getElementById('playBtn').classList.toggle('active', isPlaying);
+    if (isPlaying) animateTimeline();
+  } else if (action === 'stop') {
+    isPlaying = false;
+    playOffset = 0;
+    document.getElementById('playBtn').classList.remove('active');
+    document.getElementById('tlPlayhead').style.left = '0px';
+    document.getElementById('timeDisp').textContent = '00:00:00:00';
+  } else if (action === 'rec') {
+    document.getElementById('recBtn').classList.toggle('active');
+  }
+}
+
+function animateTimeline() {
+  if (!isPlaying) return;
+  playOffset += 1 / fps;
+  const x = playOffset * pxPerSec * zoom;
+  document.getElementById('tlPlayhead').style.left = x + 'px';
+  document.getElementById('timeDisp').textContent = formatTimecode(playOffset);
+  drawPreview();
+  setTimeout(() => requestAnimationFrame(animateTimeline), 1000 / fps);
+}
+
+function drawPreview() {
+  const canvas = document.getElementById('previewCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  vTracks.filter(t => t.type === 'video' && t.visible !== false).forEach(t => {
+    t.clips.forEach(cl => {
+      if (playOffset >= cl.start && playOffset < cl.start + cl.dur) {
+        ctx.globalAlpha = 0.8;
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, cl.color.replace('40', ''));
+        gradient.addColorStop(1, '#0a0e1a');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 24px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText(cl.name, canvas.width / 2, canvas.height / 2);
+      }
+    });
+  });
+}
+
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.timeline-toolbar button').forEach(b => b.classList.remove('tool-active'));
+  document.getElementById(tool + 'Tool')?.classList.add('tool-active');
+}
+
+function toggleSnap() { snapEnabled = !snapEnabled; document.getElementById('snapBtn').classList.toggle('active', snapEnabled); }
+function toggleGrid() { document.getElementById('gridBtn').classList.toggle('active'); }
+function toggleTrackVis(id) { const t = vTracks.find(t => t.id === id); if (t) { t.visible = t.visible === false ? true : false; renderTimeline(); } }
+function zoomPreview(d) {}
+function addVideoTrack() { vTracks.push({id: Date.now(), name: 'V' + (vTracks.filter(t=>t.type==='video').length+1), type:'video', color:COLORS[vTracks.length % COLORS.length], clips:[]}); renderTimeline(); }
+function addAudioTrack() { vTracks.push({id: Date.now(), name: 'A' + (vTracks.filter(t=>t.type==='audio').length+1), type:'audio', color:COLORS[vTracks.length % COLORS.length], clips:[]}); renderTimeline(); }
+function addTextTrack() { vTracks.push({id: Date.now(), name: 'T' + (vTracks.filter(t=>t.type==='text').length+1), type:'text', color:'#ffd93d', clips:[]}); renderTimeline(); }
+function splitClip() {}
+function deleteClip() { if (!selectedClip) return; vTracks.forEach(t => { t.clips = t.clips.filter(c => c.id !== selectedClip); }); selectedClip = null; renderTimeline(); }
+function duplicateClip() {}
+function addTransition() {}
+function addOverlay() {}
+
+const COLORS = ['#00e5ff','#7c4dff','#00ff88','#ff6b35','#ff4444','#ffd93d','#6bcb77','#4d96ff'];
+
+function switchTab(el, tab) {
+  document.querySelectorAll('.right-panel .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.right-panel .content > div').forEach(d => d.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = '';
+}
+
+// ZIO
+function addZioMsg(role, text) {
+  const el = document.getElementById('zioMsgs');
+  el.innerHTML += `<div class="zio-msg ${role === 'user' ? 'user' : 'ai'}">${text}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendZio() {
+  const input = document.getElementById('zioInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addZioMsg('user', msg);
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: `[Video Editor] ${msg}`, context: 'video-editor'})
+    });
+    const data = await res.json();
+    addZioMsg('ai', data.response || data.message || 'Processing...');
+  } catch(e) {
+    addZioMsg('ai', localVideoAssistant(msg));
+  }
+}
+
+function localVideoAssistant(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes('cut') || m.includes('split'))
+    return 'Use the Razor tool (✂) in the timeline toolbar, then click on a clip to split it at that point.';
+  if (m.includes('transition') || m.includes('fade'))
+    return 'Click "Transition" in the toolbar to add a crossfade between adjacent clips. Default is 1s dissolve.';
+  if (m.includes('color') || m.includes('grade') || m.includes('cinematic'))
+    return 'For cinematic grading: increase contrast +15%, reduce saturation -10%, warm the shadows (orange tint), cool the highlights (teal). Try the Color Grade effect.';
+  if (m.includes('speed') || m.includes('slow') || m.includes('fast'))
+    return 'Select a clip and adjust the Speed property in the Properties panel. 50% = half speed, 200% = double speed.';
+  if (m.includes('export') || m.includes('render'))
+    return 'Click the Export button (top-right). MP4 H.264 at 1080p/30fps is the most compatible. For social media, use H.265 for smaller files.';
+  if (m.includes('overlay') || m.includes('text'))
+    return 'Add a Text track, then drag to create a text clip. Select it to edit text, font, and position in Properties.';
+  if (m.includes('music') || m.includes('audio'))
+    return 'Audio tracks are at the bottom of the timeline. Drag to position, split to trim. Use volume slider for levels.';
+  return 'I can help with editing, effects, color grading, transitions, and export. Try asking about specific tools or effects.';
+}
+
+function showExportModal() { document.getElementById('exportModal').classList.add('show'); }
+function showImportModal() { document.getElementById('importModal').classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function doExport() { closeModal('exportModal'); addZioMsg('ai', 'Export started. Rendering to MP4...'); }
+function doImport() { closeModal('importModal'); }
+
+// Voice
+let recognition = null;
+function toggleVoice() {
+  const btn = document.getElementById('voiceBtn');
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    addZioMsg('ai', 'Voice not supported. Try Chrome or Edge.');
+    return;
+  }
+  if (recognition && recognition.running) { recognition.stop(); btn.classList.remove('on'); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+  recognition.onstart = () => btn.classList.add('on');
+  recognition.onend = () => btn.classList.remove('on');
+  recognition.onresult = (e) => {
+    document.getElementById('zioInput').value = e.results[0][0].transcript;
+    sendZio();
+  };
+  recognition.onerror = () => btn.classList.remove('on');
+  recognition.start();
+}
+
+initTimeline();
+drawPreview();
+</script>
+</body>
+</html>

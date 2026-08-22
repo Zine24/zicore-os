@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZICORE — X-Wing Alliance Flight Sim</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Courier New',monospace;color:#0f0}
+canvas{display:block}
+#hud{position:fixed;top:0;left:0;right:0;height:40px;background:rgba(0,0,0,0.8);border-bottom:1px solid #0f0;display:flex;align-items:center;padding:0 12px;gap:16px;z-index:10}
+#hud span{font-size:10px;letter-spacing:2px}
+.hud-item{color:#0f0}
+.hud-val{color:#ff0;font-weight:bold}
+#status{position:fixed;bottom:0;left:0;right:0;height:30px;background:rgba(0,0,0,0.8);border-top:1px solid #0f0;display:flex;align-items:center;padding:0 12px;gap:12px;z-index:10}
+#controls{position:fixed;bottom:40px;left:10px;font-size:9px;color:#0f0;z-index:10;background:rgba(0,0,0,0.7);padding:8px;border:1px solid #0f0}
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span class="hud-item">SHIP: <span class="hud-val">X-WING</span></span>
+  <span class="hud-item">SPEED: <span class="hud-val" id="hSpeed">0</span></span>
+  <span class="hud-item">ALT: <span class="hud-val" id="hAlt">0</span></span>
+  <span class="hud-item">FUEL: <span class="hud-val" id="hFuel">100%</span></span>
+  <span class="hud-item">SHIELDS: <span class="hud-val" id="hShield">100%</span></span>
+  <span class="hud-item">WEAPON: <span class="hud-val" id="hWeapon">LASER</span></span>
+  <span class="hud-item">TARGET: <span class="hud-val" id="hTarget">NONE</span></span>
+</div>
+<canvas id="game"></canvas>
+<div id="crosshair">
+  <svg width="60" height="60" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="15" fill="none" stroke="#0f0" stroke-width="1"/>
+    <line x1="30" y1="5" x2="30" y2="15" stroke="#0f0" stroke-width="1"/>
+    <line x1="30" y1="45" x2="30" y2="55" stroke="#0f0" stroke-width="1"/>
+    <line x1="5" y1="30" x2="15" y2="30" stroke="#0f0" stroke-width="1"/>
+    <line x1="45" y1="30" x2="55" y2="30" stroke="#0f0" stroke-width="1"/>
+    <circle cx="30" cy="30" r="2" fill="#0f0"/>
+  </svg>
+</div>
+<div id="controls">
+  <div>W/S — PITCH</div>
+  <div>A/D — ROLL</div>
+  <div>↑↓ — THRUST</div>
+  <div>SPACE — FIRE LASER</div>
+  <div>F — TOGGLE S-FOILS</div>
+  <div>G — SHIELDS</div>
+  <div>R — TARGET LOCK</div>
+  <div>X — HYPERDRIVE</div>
+</div>
+<div id="status">
+  <span style="color:#0f0;font-size:9px;letter-spacing:2px">ZICORE X-WING ALLIANCE SIM</span>
+  <span style="color:#0f0;font-size:8px">S-FOILS: <span id="sfoil">CLOSED</span></span>
+  <span style="color:#0f0;font-size:8px">WING: <span id="wing">RED 2</span></span>
+  <span style="color:#0f0;font-size:8px">FPS: <span id="fps">60</span></span>
+</div>
+
+<script>
+var c=document.getElementById('game'),ctx=c.getContext('2d');
+var W,H;
+function resize(){W=c.width=innerWidth;H=c.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+var state={
+  x:0,y:0,z:0,
+  pitch:0,yaw:0,roll:0,
+  speed:0,maxSpeed:800,
+  fuel:100,shield:100,
+  thrust:0,
+  sfoils:false,
+  weapon:'LASER',
+  target:null,
+  hyperdrive:false,
+  stars:[],
+  projectiles:[],
+  enemies:[],
+  time:0,
+  running:true
+};
+
+// Generate starfield
+for(var i=0;i<500;i++){
+  state.stars.push({x:Math.random()*4000-2000,y:Math.random()*4000-2000,z:Math.random()*2000,s:Math.random()*2+0.5,b:Math.random()});
+}
+
+// Generate TIE Fighters
+for(var i=0;i<8;i++){
+  state.enemies.push({
+    x:Math.random()*2000-1000,
+    y:Math.random()*1000-500,
+    z:Math.random()*2000,
+    speed:200+Math.random()*200,
+    health:100,
+    alive:true
+  });
+}
+
+var keys={};
+document.addEventListener('keydown',function(e){keys[e.key]=true;e.preventDefault()});
+document.addEventListener('keyup',function(e){keys[e.key]=false});
+
+function fire(){
+  if(state.fuel<2)return;
+  state.projectiles.push({
+    x:state.x,y:state.y,z:state.z+50,
+    vx:0,vy:0,vz:1200,
+    life:2
+  });
+  state.fuel-=0.1;
+}
+
+function update(dt){
+  if(!state.running)return;
+  state.time+=dt;
+
+  // Pitch
+  if(keys['w'])state.pitch-=1.5*dt;
+  if(keys['s'])state.pitch+=1.5*dt;
+  state.pitch=Math.max(-90,Math.min(90,state.pitch));
+
+  // Roll
+  if(keys['a'])state.roll-=2*dt;
+  if(keys['d'])state.roll+=2*dt;
+
+  // Thrust
+  if(keys['ArrowUp'])state.thrust=Math.min(100,state.thrust+20*dt);
+  if(keys['ArrowDown'])state.thrust=Math.max(0,state.thrust-20*dt);
+
+  // Speed
+  state.speed+=state.thrust*0.8*dt;
+  state.speed*=0.998;
+
+  // Movement
+  var rad=state.pitch*Math.PI/180;
+  state.z+=Math.cos(rad)*state.speed*dt;
+  state.y+=Math.sin(rad)*state.speed*dt;
+
+  // Fuel
+  state.fuel=Math.max(0,state.fuel-state.thrust*0.005*dt);
+
+  // S-Foils
+  if(keys['f']&&!state._f){state.sfoils=!state.sfoils;document.getElementById('sfoil').textContent=state.sfoils?'OPEN':'CLOSED';}
+  state._f=keys['f'];
+
+  // Shields
+  if(keys['g']&&!state._g){state.shield=Math.min(100,state.shield+10);}
+  state._g=keys['g'];
+
+  // Fire
+  if(keys[' ']&&state.time%0.1<dt)fire();
+
+  // Target lock
+  if(keys['r']&&!state._r){
+    var closest=null,closestDist=Infinity;
+    state.enemies.forEach(function(e){
+      if(!e.alive)return;
+      var dx=e.x-state.x,dy=e.y-state.y,dz=e.z-state.z;
+      var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(dist<closestDist){closestDist=dist;closest=e;}
+    });
+    state.target=closest;
+    document.getElementById('hTarget').textContent=closest?'TIE-'+Math.floor(Math.random()*99):'NONE';
+  }
+  state._r=keys['r'];
+
+  // Hyperdrive
+  if(keys['x']&&!state._x){
+    state.hyperdrive=!state.hyperdrive;
+    log(state.hyperdrive?'[HYPERDRIVE] Engaged! Jumping to hyperspace...':'[HYPERDRIVE] Disengaged');
+  }
+  state._x=keys['x'];
+
+  // Update projectiles
+  state.projectiles.forEach(function(p){
+    p.z+=p.vz*dt;
+    p.life-=dt;
+  });
+  state.projectiles=state.projectiles.filter(function(p){return p.life>0;});
+
+  // Check hits
+  state.projectiles.forEach(function(p){
+    state.enemies.forEach(function(e){
+      if(!e.alive)return;
+      var dx=p.x-e.x,dy=p.y-e.y,dz=p.z-e.z;
+      if(Math.sqrt(dx*dx+dy*dy+dz*dz)<30){
+        e.health-=25;
+        if(e.health<=0){e.alive=false;log('[KILL] TIE Fighter destroyed!');}
+      }
+    });
+  });
+
+  // Update enemies
+  state.enemies.forEach(function(e){
+    if(!e.alive)return;
+    e.x+=Math.sin(state.time*0.5+e.x)*50*dt;
+    e.y+=Math.cos(state.time*0.3+e.y)*30*dt;
+  });
+
+  // HUD
+  document.getElementById('hSpeed').textContent=Math.floor(state.speed);
+  document.getElementById('hAlt').textContent=Math.floor(state.y);
+  document.getElementById('hFuel').textContent=Math.floor(state.fuel)+'%';
+  document.getElementById('hShield').textContent=Math.floor(state.shield)+'%';
+}
+
+function draw(){
+  ctx.fillStyle='#000008';
+  ctx.fillRect(0,0,W,H);
+
+  // Stars
+  state.stars.forEach(function(s){
+    var px=(s.x-state.x*0.1)%W;if(px<0)px+=W;
+    var py=(s.y-state.y*0.1)%H;if(py<0)py+=H;
+    var brightness=Math.floor(150+s.b*105);
+    ctx.fillStyle='rgb('+brightness+','+brightness+','+Math.floor(brightness*0.8)+')';
+    ctx.fillRect(px,py,s.s,s.s);
+  });
+
+  // Grid
+  ctx.strokeStyle='rgba(0,255,0,0.1)';
+  ctx.lineWidth=0.5;
+  for(var i=0;i<W;i+=60){
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();
+  }
+  for(var i=0;i<H;i+=60){
+    ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(W,i);ctx.stroke();
+  }
+
+  // X-Wing (simplified)
+  var cx=W/2,cy=H/2;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(state.roll*Math.PI/180*0.3);
+
+  // Fuselage
+  ctx.strokeStyle='#0f0';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(0,-40);ctx.lineTo(-8,0);ctx.lineTo(0,30);ctx.lineTo(8,0);ctx.closePath();
+  ctx.stroke();
+
+  // S-foils
+  var wingSpan=state.sfoils?50:30;
+  ctx.beginPath();
+  ctx.moveTo(-15,-wingSpan);ctx.lineTo(-5,-10);ctx.stroke();
+  ctx.moveTo(15,-wingSpan);ctx.lineTo(5,-10);ctx.stroke();
+  ctx.moveTo(-15,wingSpan);ctx.lineTo(-5,10);ctx.stroke();
+  ctx.moveTo(15,wingSpan);ctx.lineTo(5,10);ctx.stroke();
+
+  // Laser cannons
+  ctx.fillStyle='#f00';
+  ctx.fillRect(-16,-wingSpan-3,3,6);
+  ctx.fillRect(13,-wingSpan-3,3,6);
+  ctx.fillRect(-16,wingSpan-3,3,6);
+  ctx.fillRect(13,wingSpan-3,3,6);
+
+  // Engine glow
+  ctx.fillStyle='rgba(0,100,255,0.5)';
+  ctx.beginPath();ctx.arc(-10,25,4,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(10,25,4,0,Math.PI*2);ctx.fill();
+
+  ctx.restore();
+
+  // Projectiles
+  ctx.fillStyle='#f00';
+  state.projectiles.forEach(function(p){
+    var pz=(p.z-state.z);
+    if(pz>0&&pz<1000){
+      var scale=1000/pz;
+      ctx.fillRect(cx-1*scale,cy-1*scale,2*scale,4*scale);
+    }
+  });
+
+  // Enemies
+  state.enemies.forEach(function(e){
+    if(!e.alive)return;
+    var dz=e.z-state.z;
+    if(dz>0&&dz<1500){
+      var scale=1500/dz;
+      var ex=cx+(e.x-state.x)*scale;
+      var ey=cy+(e.y-state.y)*scale;
+      // TIE Fighter
+      ctx.strokeStyle='#888';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(ex-10*scale,ey);ctx.lineTo(ex,ey-8*scale);ctx.lineTo(ex+10*scale,ey);
+      ctx.lineTo(ex,ey+8*scale);ctx.closePath();ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex-15*scale,ey);ctx.lineTo(ex+15*scale,ey);ctx.stroke();
+      ctx.fillStyle='#ff0';
+      ctx.beginPath();ctx.arc(ex,ey,2*scale,0,Math.PI*2);ctx.fill();
+      // Health bar
+      ctx.fillStyle='#f00';ctx.fillRect(ex-10*scale,ey-12*scale,20*scale*e.health/100,1);
+    }
+  });
+
+  // Hyperdrive effect
+  if(state.hyperdrive){
+    ctx.strokeStyle='rgba(100,150,255,0.3)';
+    ctx.lineWidth=1;
+    for(var i=0;i<20;i++){
+      var sx=Math.random()*W,sy=Math.random()*H;
+      ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(W/2,H/2);ctx.stroke();
+    }
+  }
+}
+
+function log(msg){
+  console.log(msg);
+}
+
+var lastTime=0,fpsCount=0,lastFps=0;
+function loop(t){
+  var dt=Math.min((t-lastTime)/1000,0.05);
+  lastTime=t;
+  update(dt);draw();
+  fpsCount++;
+  if(t-lastFps>1000){document.getElementById('fps').textContent=fpsCount;fpsCount=0;lastFps=t;}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

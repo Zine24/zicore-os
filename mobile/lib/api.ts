@@ -1,0 +1,166 @@
+import axios from 'axios';
+import Constants from 'expo-constants';
+import { authStorage } from './auth';
+
+const BASE_URL =
+  (Constants.expoConfig?.extra?.apiUrl as string) || 'https://apk.zicore.space';
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Inject token on every request
+api.interceptors.request.use(async (config) => {
+  const token = await authStorage.getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Handle 401 globally
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    if (error.response?.status === 401) {
+      await authStorage.removeToken();
+      // Navigation will handle redirect via AuthGate
+    }
+    return Promise.reject(error);
+  }
+);
+
+/* ── Auth ─── */
+export const authAPI = {
+  login: (email: string, password: string) =>
+    api.post('/api/sso/login', { email, password }),
+
+  register: (name: string, email: string, password: string) =>
+    api.post('/api/sso/register', { name, email, password }),
+
+  me: () => api.get('/api/sso/me'),
+
+  logout: () => api.post('/api/sso/logout'),
+
+  changePassword: (old_password: string, new_password: string) =>
+    api.post('/api/sso/change-password', { old_password, new_password }),
+
+  sessions: () => api.get('/api/sso/sessions'),
+
+  plans: () => api.get('/api/sso/plans'),
+
+  stats: () => api.get('/api/sso/admin/stats'),
+};
+
+/* ── System ─── */
+export const systemAPI = {
+  stats: () => api.get('/api/system/stats'),
+  status: () => api.get('/api/status'),
+  nodeStatus: () => api.get('/api/node/status'),
+};
+
+/* ── ZIO Chat ─── */
+export const chatAPI = {
+  send: (message: string, sessionId?: string) =>
+    api.post('/api/chat', { message, session_id: sessionId }),
+
+  sendProvider: (provider: string, message: string) =>
+    api.post('/api/provider/chat', { provider, message }),
+};
+
+/* ── Voice ─── */
+export const voiceAPI = {
+  tts: (text: string, lang = 'es') =>
+    api.post('/api/tts', { text, lang }, { responseType: 'blob', timeout: 60000 }),
+
+  stt: (audioUri: string, lang = 'es') => {
+    const form = new FormData();
+    form.append('audio', { uri: audioUri, type: 'audio/m4a', name: 'recording.m4a' } as any);
+    form.append('lang', lang);
+    return api.post('/api/stt', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+  },
+};
+
+/* ── Missions ─── */
+export const missionsAPI = {
+  list: () => api.get('/api/missions'),
+  get: (id: string) => api.get(`/api/missions/${id}`),
+  create: (data: any) => api.post('/api/missions', data),
+  update: (id: string, data: any) => api.post(`/api/missions/${id}`, data),
+  delete: (id: string) => api.delete(`/api/missions/${id}`),
+};
+
+/* ── Telemetry ─── */
+export const telemetryAPI = {
+  current: () => api.get('/api/telemetry'),
+  modules: () => api.get('/api/telemetry/modules'),
+};
+
+/* ── Admin ─── */
+export const adminAPI = {
+  users: () => api.get('/api/sso/admin/users'),
+  updateUser: (id: number, data: any) => api.put(`/api/sso/admin/user/${id}`, data),
+  ollamaStatus: () => api.get('/api/ollama/status'),
+};
+
+/* ── ZiVR ─── */
+export const zivrAPI = {
+  config: () => api.get('/api/zivr/config'),
+  generate: (prompt: string) => api.post('/api/zivr/generate', { prompt }),
+  assets: () => api.get('/api/zivr/assets'),
+};
+
+/* ── Geolocation (GeoTrack) ─── */
+export const geoAPI = {
+  ip: () => api.get('/api/geo/ip'),
+  report: (data: {
+    lat: number;
+    lon: number;
+    accuracy?: number | null;
+    altitude?: number | null;
+    speed?: number | null;
+    heading?: number | null;
+    source?: 'gps' | 'ip' | 'manual';
+    app?: 'web' | 'mobile' | 'apk' | 'api';
+    device_id?: string | null;
+  }) => api.post('/api/geo/report', data),
+  latest: () => api.get('/api/geo/latest'),
+  history: (limit = 50) => api.get(`/api/geo/history?limit=${limit}`),
+  users: () => api.get('/api/geo/users'),
+  stats: () => api.get('/api/geo/stats'),
+
+  // Bookmarks
+  bookmarks: () => api.get('/api/geo/bookmarks'),
+  createBookmark: (data: {
+    name: string;
+    lat: number;
+    lon: number;
+    altitude?: number | null;
+    icon?: string;
+    color?: string;
+    notes?: string;
+  }) => api.post('/api/geo/bookmarks', data),
+  updateBookmark: (id: number, data: {
+    name?: string;
+    lat?: number;
+    lon?: number;
+    icon?: string;
+    color?: string;
+    notes?: string;
+  }) => api.put(`/api/geo/bookmarks/${id}`, data),
+  deleteBookmark: (id: number) => api.delete(`/api/geo/bookmarks/${id}`),
+
+  // Tracking sessions
+  startTracking: (interval = 60) => api.post('/api/geo/tracking/start', { interval }),
+  stopTracking: () => api.post('/api/geo/tracking/stop'),
+  activeTracking: () => api.get('/api/geo/tracking/active'),
+  trackingHistory: (limit = 20) => api.get(`/api/geo/tracking/history?limit=${limit}`),
+};
+
+export { BASE_URL };
+export default api;

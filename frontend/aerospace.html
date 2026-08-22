@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Aerospace — Command Center</title>
+<meta name="description" content="ZICORE Aerospace — Advanced aerospace operations, vehicle design, orbital mechanics, propulsion systems.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◇</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#03050a;--bg2:#060a14;--bg3:#0a1020;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--amber:#ffb300;--red:#ff3d71;
+  --text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;
+  --border:rgba(0,229,255,0.08);--glow:rgba(0,229,255,0.15);
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:6px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+
+/* ── ANIMATED BACKGROUND ── */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,0.015) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 50%,black 30%,transparent 70%);
+}
+.bg-scan{position:fixed;top:0;left:0;right:0;height:1px;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,0.15),transparent);
+  animation:scanline 8s linear infinite;
+}
+@keyframes scanline{0%{top:-1px}100%{top:100vh}}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 15px rgba(0,229,255,0.05)}50%{box-shadow:0 0 30px rgba(0,229,255,0.12)}}
+@keyframes hexSpin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex-direction:column;height:100vh;position:relative;z-index:2}
+.app-body{display:flex;flex:1;min-height:0}
+.app-col{display:flex;flex-direction:column;flex:1;min-width:0}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:260px;flex-shrink:0;
+  background:rgba(6,10,20,0.95);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:width .25s ease;backdrop-filter:blur(20px);
+}
+.sidebar.rail{width:54px}
+.sb-head{display:flex;align-items:center;justify-content:space-between;padding:10px 10px 6px 16px}
+.sb-brand{font-size:13px;font-weight:800;letter-spacing:3px;color:var(--text);text-transform:uppercase}
+.sb-brand b{color:var(--cyan)}
+.sb-rail-btn{
+  width:28px;height:28px;border-radius:6px;background:transparent;border:1px solid transparent;
+  color:var(--text-dim);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;
+}
+.sb-rail-btn:hover{border-color:var(--border);color:var(--cyan)}
+.sb-menu{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:1px;padding:6px;min-height:0}
+.sb-menu::-webkit-scrollbar{width:3px}
+.sb-menu::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.1);border-radius:2px}
+.sb-section-label{padding:12px 8px 4px;font-size:7px;text-transform:uppercase;letter-spacing:3px;color:var(--text-faint)}
+.sb-item{
+  display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border-radius:4px;
+  background:transparent;border:none;color:var(--text-dim);font-size:11px;letter-spacing:0.5px;
+  cursor:pointer;text-align:left;transition:all .15s;font-family:var(--font);text-decoration:none;
+}
+.sb-item .ic{width:18px;text-align:center;font-size:12px}
+.sb-item:hover{background:rgba(0,229,255,0.05);color:var(--text)}
+.sb-item.active{background:rgba(124,77,255,0.08);color:var(--purple)}
+.sidebar.rail .sb-brand,.sidebar.rail .sb-section-label,.sidebar.rail .sb-item .lb{display:none}
+.sidebar.rail .sb-head{justify-content:center;padding:10px 0 6px}
+.sidebar.rail .sb-rail-btn{width:32px;height:32px;font-size:13px}
+.sidebar.rail .sb-item{justify-content:center;padding:9px 0}
+.sidebar.rail .sb-item .ic{font-size:14px;width:auto}
+
+/* ── TOP BAR ── */
+.topbar{
+  height:42px;flex-shrink:0;
+  background:rgba(6,10,20,0.9);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;
+  z-index:100;backdrop-filter:blur(20px);
+}
+.topbar-logo{display:flex;align-items:center;gap:8px;text-decoration:none;padding-right:12px;border-right:1px solid var(--border)}
+.topbar-hex{width:20px;height:20px;position:relative;transform-style:preserve-3d;animation:hexSpin 10s linear infinite}
+.topbar-hex-face{
+  position:absolute;width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:7px;font-weight:700;color:var(--cyan);
+  background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(124,77,255,0.03));
+  border:1px solid rgba(0,229,255,0.1);
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  backface-visibility:visible;
+}
+.topbar-hex-face:nth-child(1){transform:rotateY(0deg)translateZ(10px)}
+.topbar-hex-face:nth-child(2){transform:rotateY(60deg)translateZ(10px)}
+.topbar-hex-face:nth-child(3){transform:rotateY(120deg)translateZ(10px)}
+.topbar-hex-face:nth-child(4){transform:rotateY(180deg)translateZ(10px)}
+.topbar-hex-face:nth-child(5){transform:rotateY(240deg)translateZ(10px)}
+.topbar-hex-face:nth-child(6){transform:rotateY(300deg)translateZ(10px)}
+.topbar-title{font-size:11px;font-weight:600;letter-spacing:4px;color:var(--purple);text-transform:uppercase}
+.topbar-nav{display:flex;gap:2px;margin-left:12px}
+.topbar-tab{
+  font-size:8px;letter-spacing:2px;color:var(--text-dim);
+  padding:5px 10px;cursor:pointer;text-transform:uppercase;
+  border:1px solid transparent;border-radius:3px;
+  transition:all 0.2s;background:transparent;font-family:var(--font);
+}
+.topbar-tab:hover{color:var(--text);border-color:var(--border)}
+.topbar-tab.active{color:var(--cyan);border-color:rgba(0,229,255,0.15);background:rgba(0,229,255,0.04)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.topbar-time{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--cyan);opacity:0.7}
+.topbar-status{display:flex;align-items:center;gap:6px}
+.topbar-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 3s ease-in-out infinite}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;overflow-y:auto;padding:24px 32px}
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-track{background:transparent}
+.main::-webkit-scrollbar-thumb{background:rgba(124,77,255,0.15);border-radius:2px}
+
+/* ── SECTION HEADERS ── */
+.section-header{margin-bottom:28px;animation:fadeUp 0.5s ease}
+.section-tag{font-family:var(--mono);font-size:8px;letter-spacing:4px;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px}
+.section-title{font-size:24px;font-weight:300;letter-spacing:-0.5px;color:var(--text);margin-bottom:4px}
+.section-desc{font-size:12px;color:var(--text-dim);max-width:550px;line-height:1.6}
+
+/* ── STAT CARDS (top row) ── */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px}
+.stat-card{
+  background:rgba(6,10,20,0.6);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;position:relative;overflow:hidden;
+  transition:all 0.3s;
+}
+.stat-card:hover{border-color:rgba(0,229,255,0.15);box-shadow:0 0 20px rgba(0,229,255,0.04)}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity 0.3s}
+.stat-card:hover::after{opacity:0.4}
+.stat-label{font-size:8px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px}
+.stat-value{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text)}
+.stat-sub{font-size:10px;color:var(--text-dim);margin-top:4px}
+.stat-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:24px;opacity:0.15}
+
+/* ── MODULE GRID ── */
+.mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:20px}
+.mod-card{
+  background:rgba(6,10,20,0.5);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;position:relative;overflow:hidden;
+  transition:all 0.3s cubic-bezier(0.16,1,0.3,1);cursor:pointer;
+}
+.mod-card:hover{border-color:rgba(124,77,255,0.2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,77,255,0.06)}
+.mod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:0;transition:opacity 0.3s}
+.mod-card:hover::before{opacity:0.5}
+.mod-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.mod-icon{font-size:20px;opacity:0.8}
+.mod-name{font-size:13px;font-weight:500;letter-spacing:0.5px;color:var(--text)}
+.mod-desc{font-size:11px;color:var(--text-dim);line-height:1.5}
+.mod-status{
+  display:inline-block;margin-top:12px;
+  font-family:var(--mono);font-size:7px;letter-spacing:2px;
+  padding:2px 6px;border-radius:2px;
+}
+.mod-status.ready{color:var(--green);border:1px solid rgba(0,255,136,0.15);background:rgba(0,255,136,0.03)}
+.mod-status.dev{color:var(--amber);border:1px solid rgba(255,179,0,0.15);background:rgba(255,179,0,0.03)}
+.mod-status.planned{color:var(--text-faint);border:1px solid var(--border);background:rgba(255,255,255,0.01)}
+.mod-action{
+  position:absolute;right:12px;bottom:12px;
+  font-size:8px;letter-spacing:1px;color:var(--text-dim);
+  padding:3px 8px;border:1px solid var(--border);border-radius:3px;
+  opacity:0;transition:opacity 0.3s;text-transform:uppercase;
+}
+.mod-card:hover .mod-action{opacity:1}
+
+/* ── STATUS BAR ── */
+.statusbar{
+  height:26px;flex-shrink:0;
+  background:rgba(6,10,20,0.95);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:10px;
+  font-family:var(--mono);font-size:7px;letter-spacing:2px;color:var(--text-faint);
+}
+.status-dot{width:4px;height:4px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)}
+.status-right{margin-left:auto;display:flex;gap:6px}
+.status-pill{padding:1px 5px;border:1px solid var(--border);border-radius:2px;font-size:6px}
+.status-pill.on{color:var(--cyan);border-color:rgba(0,229,255,0.12)}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-scan"></div>
+
+<div class="app">
+  <div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="sb-brand">Z<b>i</b>Core</div>
+      <button class="sb-rail-btn" id="sbRailBtn" title="Colapsar" onclick="toggleRail()">◀</button>
+    </div>
+    <nav class="sb-menu">
+      <div class="sb-section-label">Principal</div>
+      <a class="sb-item" href="/mission-control"><span class="ic">🎛</span><span class="lb">Mission Control</span></a>
+      <a class="sb-item" href="/dashboard"><span class="ic">🖥</span><span class="lb">Content Creator</span></a>
+      <a class="sb-item" href="/zio"><span class="ic">🧠</span><span class="lb">ZIO Agent</span></a>
+      <a class="sb-item active" href="/aerospace"><span class="ic">🚀</span><span class="lb">Aerospace</span></a>
+      <a class="sb-item" href="/materializer"><span class="ic">🧊</span><span class="lb">Materializer</span></a>
+      <a class="sb-item" href="/engineering"><span class="ic">⚙</span><span class="lb">Engineering</span></a>
+      <a class="sb-item" href="/flight-sim"><span class="ic">✈</span><span class="lb">Flight Sim</span></a>
+      <div class="sb-section-label">Estaciones</div>
+      <a class="sb-item" href="/games"><span class="ic">🎮</span><span class="lb">Game Center</span></a>
+      <a class="sb-item" href="/multimedia"><span class="ic">🎬</span><span class="lb">Multimedia</span></a>
+      <a class="sb-item" href="/zmmx"><span class="ic">📡</span><span class="lb">ZMMX Media</span></a>
+      <a class="sb-item" href="/mail"><span class="ic">📧</span><span class="lb">Mail</span></a>
+      <a class="sb-item" href="/zicodex"><span class="ic">📚</span><span class="lb">ZiCodex</span></a>
+      <a class="sb-item" href="/geo"><span class="ic">📍</span><span class="lb">GeoTrack</span></a>
+      <a class="sb-item" href="/videochat"><span class="ic">🎥</span><span class="lb">Comms</span></a>
+      <a class="sb-item" href="/vr-monitor"><span class="ic">🧿</span><span class="lb">VR Monitor</span></a>
+      <div class="sb-section-label">Sistema</div>
+      <a class="sb-item" href="/settings"><span class="ic">⚙</span><span class="lb">Settings</span></a>
+      <a class="sb-item" href="/"><span class="ic">⌂</span><span class="lb">Menú Principal</span></a>
+    </nav>
+  </aside>
+
+  <div class="app-col">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <a class="topbar-logo" href="/">
+      <div class="topbar-hex">
+        <div class="topbar-hex-face">Z</div>
+        <div class="topbar-hex-face">Z</div>
+        <div class="topbar-hex-face">Z</div>
+        <div class="topbar-hex-face">Z</div>
+        <div class="topbar-hex-face">Z</div>
+        <div class="topbar-hex-face">Z</div>
+      </div>
+      <span class="topbar-title">Aerospace</span>
+    </a>
+    <div class="topbar-nav">
+      <button class="topbar-tab active" onclick="showTab('vehicles',this)">Vehículos</button>
+      <button class="topbar-tab" onclick="showTab('propulsion',this)">Propulsión</button>
+      <button class="topbar-tab" onclick="showTab('orbital',this)">Órbita</button>
+      <button class="topbar-tab" onclick="showTab('engineering',this)">Ingeniería</button>
+      <button class="topbar-tab" onclick="showTab('missions',this)">Misiones</button>
+      <button class="topbar-tab" onclick="showTab('observatory',this)">Observatorio</button>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-status"><div class="topbar-dot"></div><span style="font-size:8px;letter-spacing:1px;color:var(--text-dim)">ONLINE</span></div>
+      <div class="topbar-time" id="clock"></div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main" id="main">
+
+    <!-- ═══ VEHICLES TAB ═══ -->
+    <div id="tab-vehicles">
+      <div class="section-header">
+        <div class="section-tag">001 — Vehículos Espaciales</div>
+        <div class="section-title">Diseño de Vehículos</div>
+        <div class="section-desc">Plantillas ilimitadas de vehículos aeroespaciales. Cada vehículo soporta masa, dimensiones, propulsión, combustible, payload, tripulación y más.</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Vehículos Activos</div>
+          <div class="stat-value" id="s-vehicles">0</div>
+          <div class="stat-sub">Plantillas configuradas</div>
+          <div class="stat-icon">🚀</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Propulsiones</div>
+          <div class="stat-value" id="s-propulsion">6</div>
+          <div class="stat-sub">Tipos disponibles</div>
+          <div class="stat-icon">🔥</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cuerpos Celestes</div>
+          <div class="stat-value">9</div>
+          <div class="stat-sub">Simulables</div>
+          <div class="stat-icon">🌍</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Misiones</div>
+          <div class="stat-value" id="s-missions">0</div>
+          <div class="stat-sub">En planeación</div>
+          <div class="stat-icon">📋</div>
+        </div>
+      </div>
+
+      <div class="mods">
+        <div class="mod-card" onclick="window.open('/vehicle-designer','_blank')">
+          <div class="mod-head"><span class="mod-icon">🚀</span><span class="mod-name">Launch Vehicles</span></div>
+          <div class="mod-desc">Cohetes reutilizables, heavy lift, small sat. Diseño completo de etapas, configuración de motores y performance.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card" onclick="window.open('/vehicle-designer','_blank')">
+          <div class="mod-head"><span class="mod-icon">🛸</span><span class="mod-name">Crew Capsules</span></div>
+          <div class="mod-desc">Cápsulas tripuladas, spaceplanes, transferencia de tripulación. Soporte vital, escape, re-entry.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🌙</span><span class="mod-name">Lunar Vehicles</span></div>
+          <div class="mod-desc">Lander lunar, orbitador, rovers de superficie. Descenso guiado, EVA, extracción de recursos.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🔴</span><span class="mod-name">Mars Vehicles</span></div>
+          <div class="mod-desc">Lander marciano, hábitat superficial. Propulsión nuclear para tránsito, ISRU en superficie.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+        <div class="mod-card" onclick="window.open('/vehicle-designer','_blank')">
+          <div class="mod-head"><span class="mod-icon">🛰️</span><span class="mod-name">Satellites</span></div>
+          <div class="mod-desc">Satélites de recon, EO/IR, comunicaciones, navegación. Configuración de órbita y payload.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">✈️</span><span class="mod-name">Spaceplanes</span></div>
+          <div class="mod-desc">Vehículos hipersónicos, VTOL, spaceplanes reutilizables. Aerodinámica, materiales, thermal protection.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PROPULSION TAB ═══ -->
+    <div id="tab-propulsion" style="display:none">
+      <div class="section-header">
+        <div class="section-tag">002 — Propulsión</div>
+        <div class="section-title">Lab de Propulsión</div>
+        <div class="section-desc">Todos los sistemas de propulsión soportados — desde química hasta experimental.</div>
+      </div>
+      <div class="mods">
+        <div class="mod-card" onclick="window.open('/propulsion-lab','_blank')">
+          <div class="mod-head"><span class="mod-icon">🔥</span><span class="mod-name">Química</span></div>
+          <div class="mod-desc">LOX/RP1, LOX/LH2, Methalox, Hipergólico, Sólido, Híbrido. Isp, thrust-to-weight, chamber pressure.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card" onclick="window.open('/propulsion-lab','_blank')">
+          <div class="mod-head"><span class="mod-icon">⚡</span><span class="mod-name">Eléctrica</span></div>
+          <div class="mod-desc">Ion, Hall Effect, VASIMR, MPD. Empuje bajo, alto Isp. Misiones de largo plazo.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">☢️</span><span class="mod-name">Nuclear</span></div>
+          <div class="mod-desc">Nuclear Thermal (NTR), Nuclear Electric (NEP). Potencia extrema, misiones interplanetarias.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">💫</span><span class="mod-name">Fusión / Avanzada</span></div>
+          <div class="mod-desc">Fusión, Antimateria, Fotón, Solar Sail, Beamed. Propulsión del futuro, placeholders activos.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ORBITAL TAB ═══ -->
+    <div id="tab-orbital" style="display:none">
+      <div class="section-header">
+        <div class="section-tag">003 — Mecánica Orbital</div>
+        <div class="section-title">Órbita y Trayectoria</div>
+        <div class="section-desc">Cálculos orbitales, transferencias, assistencias gravitacionales.</div>
+      </div>
+      <div class="mods">
+        <div class="mod-card" onclick="window.open('/orbital-mechanics','_blank')">
+          <div class="mod-head"><span class="mod-icon">🌍</span><span class="mod-name">Orbital Mechanics</span></div>
+          <div class="mod-desc">Hohmann, bi-elíptica, asistencia gravitacional. Cálculo de delta-v, periapsis, apoapsis.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">📐</span><span class="mod-name">Trajectory Optimizer</span></div>
+          <div class="mod-desc">Delta-V minimización, transfers, escape velocity. Solver numérico con constraints.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🛰️</span><span class="mod-name">Constellation Manager</span></div>
+          <div class="mod-desc">Control de múltiples satélites, formaciones, cobertura global.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">⚠️</span><span class="mod-name">Debris Tracking</span></div>
+          <div class="mod-desc">Seguimiento de objetos en órbita, alertas de colisión, maniobras evasivas.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ENGINEERING TAB ═══ -->
+    <div id="tab-engineering" style="display:none">
+      <div class="section-header">
+        <div class="section-tag">004 — Ingeniería</div>
+        <div class="section-title">Análisis Estructural</div>
+        <div class="section-desc">Cálculos de ingeniería aeroespacial — estrés, fatiga, aerodinámica, propulsores.</div>
+      </div>
+      <div class="mods">
+        <div class="mod-card" onclick="window.open('/engineering','_blank')">
+          <div class="mod-head"><span class="mod-icon">🏗️</span><span class="mod-name">Structural Analysis</span></div>
+          <div class="mod-desc">Estrés, buckling, fatiga, factores de seguridad. FEA placeholders, materiales compuestos.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">💨</span><span class="mod-name">Aerodynamics</span></div>
+          <div class="mod-desc">Lift, drag, Mach number, heating rate. CFD placeholders, coeficientes aerodinámicos.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">📦</span><span class="mod-name">Payload Bay</span></div>
+          <div class="mod-desc">Mass budget, volume, deployment sequences. Coordinación con misiones.</div>
+          <div class="mod-status dev">DESARROLLO</div>
+          <div class="mod-action">CONFIG →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🔌</span><span class="mod-name">Power Management</span></div>
+          <div class="mod-desc">Solar panels, batteries, RTG, reactores. Balance energético, generación vs consumo.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MISSIONS TAB ═══ -->
+    <div id="tab-missions" style="display:none">
+      <div class="section-header">
+        <div class="section-tag">005 — Misiones</div>
+        <div class="section-title">Control de Misiones</div>
+        <div class="section-desc">Planificación, ejecución y análisis de misiones espaciales.</div>
+      </div>
+      <div class="mods">
+        <div class="mod-card" onclick="window.open('/mission-control','_blank')">
+          <div class="mod-head"><span class="mod-icon">📋</span><span class="mod-name">Mission Planner</span></div>
+          <div class="mod-desc">Secuencias, timelines, eventos. Planificación reversible con validación automática.</div>
+          <div class="mod-status ready">LISTO</div>
+          <div class="mod-action">ABRIR →</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🚀</span><span class="mod-name">Launch Operations</span></div>
+          <div class="mod-desc">Cuenta regresiva, Go/No-Go, checklists. Integración con Launch Pad.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">📡</span><span class="mod-name">Ground Station</span></div>
+          <div class="mod-desc">Antenas, telemetría, seguimiento. Comunicación deep-space.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+        <div class="mod-card">
+          <div class="mod-head"><span class="mod-icon">🔄</span><span class="mod-name">Digital Twin</span></div>
+          <div class="mod-desc">Sincronización en tiempo real del vehículo. Telemetría → simulación → predicción.</div>
+          <div class="mod-status planned">PLANIFICADO</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ OBSERVATORY TAB ═══ -->
+    <div id="tab-observatory" style="display:none">
+      <div class="section-header">
+        <div class="section-tag">006 — Observatorio Espacial</div>
+        <div class="section-title">Visores del Cosmos</div>
+        <div class="section-desc">Explora el universo con visores interactivos de cuerpos celestes, galaxias, estrellas y objetos cósmicos.</div>
+      </div>
+
+      <div id="obs-viewer" style="display:none;margin-bottom:28px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:rgba(6,10,20,0.6)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="obs-icon" style="font-size:20px"></span>
+            <div>
+              <div id="obs-title" style="font-size:14px;font-weight:600;color:var(--text)"></div>
+              <div id="obs-subtitle" style="font-size:10px;color:var(--text-dim)"></div>
+            </div>
+          </div>
+          <button onclick="closeObsViewer()" style="background:none;border:1px solid var(--border);color:var(--text-dim);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:10px;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">✕ Cerrar</button>
+        </div>
+        <div style="display:flex">
+          <div id="obs-canvas-wrap" style="flex:1;height:350px;position:relative;background:#000;display:flex;align-items:center;justify-content:center">
+            <canvas id="obsCanvas" style="width:100%;height:100%"></canvas>
+          </div>
+          <div id="obs-sidebar" style="width:240px;padding:14px;border-left:1px solid var(--border);overflow-y:auto;max-height:350px">
+            <div id="obs-facts"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:8px;letter-spacing:3px;color:var(--text-faint);margin-bottom:12px;text-transform:uppercase">Cuerpos Celestes</div>
+      <div id="obs-celestial" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:28px"></div>
+
+      <div style="font-size:8px;letter-spacing:3px;color:var(--text-faint);margin-bottom:12px;text-transform:uppercase">Objetos Cósmicos</div>
+      <div id="obs-cosmic" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:28px"></div>
+
+      <div style="font-size:8px;letter-spacing:3px;color:var(--text-faint);margin-bottom:12px;text-transform:uppercase">Instrumentos</div>
+      <div id="obs-instruments" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px"></div>
+    </div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="status-dot"></div>
+    <span>AEROSPACE</span>
+    <span style="opacity:0.4">|</span>
+    <span id="sb-ollama">OLLAMA: --</span>
+    <span style="opacity:0.4">|</span>
+    <span id="sb-cpu">CPU: --</span>
+    <span style="opacity:0.4">|</span>
+    <span id="sb-ram">RAM: --</span>
+    <div class="status-right">
+      <div class="status-pill on" id="sp-vehicles">VEHICLES</div>
+      <div class="status-pill" id="sp-propulsion">PROPULSION</div>
+      <div class="status-pill" id="sp-orbital">ORBITAL</div>
+      <div class="status-pill" id="sp-engineering">ENGINEERING</div>
+      <div class="status-pill" id="sp-missions">MISSIONS</div>
+      <div class="status-pill on" id="sp-observatory">OBSERVATORY</div>
+    </div>
+  </div>
+  </div><!-- /app-col -->
+  </div><!-- /app-body -->
+</div>
+
+<script>
+/* ── Sidebar Rail ── */
+function toggleRail(){
+  var sb=document.getElementById('sidebar');
+  var rail=sb.classList.toggle('rail');
+  document.getElementById('sbRailBtn').textContent=rail?'▶':'◀';
+  document.getElementById('sbRailBtn').title=rail?'Expandir panel':'Colapsar panel';
+  try{localStorage.setItem('zc_aero_rail',rail?'1':'0')}catch(e){}
+}
+(function(){try{if(localStorage.getItem('zc_aero_rail')==='1')toggleRail();}catch(e){}})();
+
+/* ── Tabs ── */
+function showTab(name,el){
+  document.querySelectorAll('[id^="tab-"]').forEach(function(e){e.style.display='none'});
+  document.getElementById('tab-'+name).style.display='block';
+  document.querySelectorAll('.topbar-tab').forEach(function(t){t.classList.remove('active')});
+  if(el)el.classList.add('active');
+  // Update status pills
+  document.querySelectorAll('[id^="sp-"]').forEach(function(p){p.classList.remove('on')});
+  var pill=document.getElementById('sp-'+name);
+  if(pill)pill.classList.add('on');
+}
+
+/* ── Clock ── */
+setInterval(function(){
+  var n=new Date();
+  document.getElementById('clock').textContent=
+    String(n.getHours()).padStart(2,'0')+':'+
+    String(n.getMinutes()).padStart(2,'0')+':'+
+    String(n.getSeconds()).padStart(2,'0');
+},1000);
+
+/* ── Live Stats ── */
+function updateStats(){
+  fetch('/api/vr-monitor/stats').then(function(r){return r.json()}).then(function(d){
+    if(d.cpu!==undefined){
+      document.getElementById('sb-cpu').textContent='CPU: '+d.cpu+'%';
+      document.getElementById('sb-ram').textContent='RAM: '+d.mem+'%';
+      document.getElementById('sb-ollama').textContent='OLLAMA: '+(d.ollama?'ON':'OFF');
+    }
+  }).catch(function(){});
+}
+updateStats();
+setInterval(updateStats,15000);
+
+/* ── Observatory DB ── */
+var OBS_DB=[
+  {id:'sun',cat:'celestial',name:'Sol',icon:'☀️',color:'#FDB813',subtitle:'Estrella tipo G2V — Centro del Sistema Solar',
+   facts:{'Tipo':'Enana amarilla (G2V)','Edad':'4,600 millones de años','Masa':'1.989 × 10³⁰ kg','Temperatura superficie':'5,500°C','Temperatura núcleo':'15 millones °C','Diámetro':'1,392,684 km','Composición':'73% H, 25% He','Luminosidad':'3.828 × 10²⁶ W'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.35;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx,cy,0,cx,cy,r*1.5);g.addColorStop(0,'#fff8e1');g.addColorStop(0.2,'#FDB813');g.addColorStop(0.5,'#ff8f00');g.addColorStop(0.8,'#e65100');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r*1.5,0,Math.PI*2);ctx.fill();for(var i=0;i<8;i++){var a=Math.random()*Math.PI*2,d=r*(1+Math.random()*0.4),flame=r*0.15*(0.5+Math.random()*0.5);var fg=ctx.createRadialGradient(cx+Math.cos(a)*d,cy+Math.sin(a)*d,0,cx+Math.cos(a)*d,cy+Math.sin(a)*d,flame);fg.addColorStop(0,'rgba(255,183,77,0.6)');fg.addColorStop(1,'transparent');ctx.fillStyle=fg;ctx.beginPath();ctx.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,flame,0,Math.PI*2);ctx.fill()}var tg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*2.5);tg.addColorStop(0,'rgba(255,183,77,0.1)');tg.addColorStop(1,'transparent');ctx.fillStyle=tg;ctx.beginPath();ctx.arc(cx,cy,r*2.5,0,Math.PI*2);ctx.fill()}},
+  {id:'mercury',cat:'celestial',name:'Mercurio',icon:'🪨',color:'#8c7e6d',subtitle:'Planeta rocoso — El más pequeño del sistema solar',
+   facts:{'Tipo':'Rocoso','Diámetro':'4,879 km','Distancia al Sol':'57.9M km','Período orbital':'88 días','Temperatura':'-180°C a 430°C','Lunas':'0'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);g.addColorStop(0,'#a09080');g.addColorStop(0.5,'#8c7e6d');g.addColorStop(1,'#5a4e42');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();for(var i=0;i<12;i++){var cr=r*0.08+Math.random()*r*0.12,ca=Math.random()*Math.PI*2,cd=r*0.3+Math.random()*r*0.5;ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.arc(cx+Math.cos(ca)*cd,cy+Math.sin(ca)*cd,cr,0,Math.PI*2);ctx.stroke()}}},
+  {id:'venus',cat:'celestial',name:'Venus',icon:'🌋',color:'#e8cda0',subtitle:'El planeta caliente — Rotación retrógrada',
+   facts:{'Tipo':'Rocoso','Diámetro':'12,104 km','Temperatura':'462°C','Presión':'92 atm','Atmósfera':'CO₂ densa','Rotación':'Retrógrada (243 días)','Lunas':'0'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,'#f0dfb0');g.addColorStop(0.6,'#e8cda0');g.addColorStop(1,'#b89a60');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();for(var i=0;i<6;i++){var sy=cy-r*0.6+i*r*0.2;ctx.strokeStyle='rgba(200,180,140,0.3)';ctx.lineWidth=3+Math.random()*4;ctx.beginPath();ctx.moveTo(cx-r*0.9,sy);ctx.bezierCurveTo(cx-r*0.3,sy-10,cx+r*0.3,sy+10,cx+r*0.9,sy);ctx.stroke()}ctx.lineWidth=1}},
+  {id:'earth',cat:'celestial',name:'Tierra',icon:'🌍',color:'#4a90d9',subtitle:'Nuestro hogar — El planeta azul',
+   facts:{'Tipo':'Rocoso','Diámetro':'12,742 km','Gravedad':'9.81 m/s²','Atmósfera':'N₂ 78%, O₂ 21%','Agua':'71% superficie','Luna':'1 natural','Edad':'4,540M años'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.28;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);g.addColorStop(0,'#6db3f2');g.addColorStop(0.4,'#4a90d9');g.addColorStop(0.7,'#2d6bb5');g.addColorStop(1,'#1a3a6e');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2d8a4e';ctx.beginPath();ctx.ellipse(cx-r*0.2,cy-r*0.1,r*0.35,r*0.4,0.3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(cx+r*0.3,cy+r*0.2,r*0.2,r*0.25,-0.2,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.ellipse(cx+r*0.1,cy-r*0.4,r*0.5,r*0.15,0.2,0,Math.PI*2);ctx.fill()}},
+  {id:'moon',cat:'celestial',name:'Luna',icon:'🌙',color:'#c8c8c8',subtitle:'Satélite natural de la Tierra',
+   facts:{'Diámetro':'3,474 km','Distancia':'384,400 km','Gravedad':'1.62 m/s²','Temperatura':'-173°C a 127°C','Agua':'Confirmada en polos','Apollo':'6 misiones (1969-72)'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.2,cy-r*0.2,0,cx,cy,r);g.addColorStop(0,'#e8e8e8');g.addColorStop(0.6,'#c8c8c8');g.addColorStop(1,'#888');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(80,80,80,0.4)';[[cx-r*0.3,cy-r*0.2,r*0.12],[cx+r*0.1,cy+r*0.15,r*0.08],[cx-r*0.1,cy+r*0.3,r*0.1],[cx+r*0.25,cy-r*0.1,r*0.06]].forEach(function(m){ctx.beginPath();ctx.arc(m[0],m[1],m[2],0,Math.PI*2);ctx.fill()})}},
+  {id:'mars',cat:'celestial',name:'Marte',icon:'🔴',color:'#c1440e',subtitle:'El planeta rojo — Próximo destino humano',
+   facts:{'Diámetro':'6,779 km','Atmósfera':'CO₂ delgada','Olympus Mons':'21.9 km','Valles Marineris':'4,000 km','Lunas':'2 (Phobos, Deimos)','Agua':'Hielo en polos'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,0,cx,cy,r);g.addColorStop(0,'#e07040');g.addColorStop(0.5,'#c1440e');g.addColorStop(1,'#8b2500');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(200,200,200,0.4)';ctx.beginPath();ctx.ellipse(cx,cy-r*0.8,r*0.3,r*0.08,0.1,0,Math.PI*2);ctx.fill()}},
+  {id:'jupiter',cat:'celestial',name:'Júpiter',icon:'🟤',color:'#c88b3a',subtitle:'El gigante gaseoso — Rey de los planetas',
+   facts:{'Diámetro':'139,820 km','Masa':'318x Tierra','Atmósfera':'H₂ 90%, He 10%','Gran Mancha Roja':'Tormenta 350+ años','Lunas':'95','Rotación':'9.9 horas'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.35;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.2,0,cx,cy,r);g.addColorStop(0,'#e0b060');g.addColorStop(0.5,'#c88b3a');g.addColorStop(1,'#6b4513');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();var bands=[[cy-r*0.6,'#d4a050',4],[cy-r*0.3,'#b88030',6],[cy,'#c89040',5],[cy+r*0.3,'#a07020',6],[cy+r*0.6,'#d0a050',4]];bands.forEach(function(b){ctx.strokeStyle=b[1];ctx.lineWidth=b[2];ctx.beginPath();ctx.moveTo(cx-r*0.95,b[0]);ctx.bezierCurveTo(cx-r*0.3,b[0]-8,cx+r*0.3,b[0]+8,cx+r*0.95,b[0]);ctx.stroke()});ctx.fillStyle='#c04020';ctx.beginPath();ctx.ellipse(cx+r*0.3,cy+r*0.15,r*0.12,r*0.07,0,0,Math.PI*2);ctx.fill();ctx.lineWidth=1}},
+  {id:'saturn',cat:'celestial',name:'Saturno',icon:'🪐',color:'#e8d5a3',subtitle:'El señor de los anillos',
+   facts:{'Diámetro':'116,460 km','Anillos':'282,000 km','Densidad':'0.687 g/cm³ (flota)','Lunas':'146','Vientos':'1,800 km/h','Atmósfera':'H₂ 96%'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.22;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(cx,cy);ctx.rotate(0.4);var ringG=ctx.createRadialGradient(0,0,r*1.2,0,0,r*2.2);ringG.addColorStop(0,'rgba(210,190,150,0.7)');ringG.addColorStop(0.3,'rgba(180,160,120,0.5)');ringG.addColorStop(0.5,'rgba(140,120,90,0.1)');ringG.addColorStop(0.7,'rgba(180,160,120,0.4)');ringG.addColorStop(1,'rgba(140,120,90,0.2)');ctx.fillStyle=ringG;ctx.beginPath();ctx.ellipse(0,0,r*2.2,r*0.6,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(0,0,0,0.8)';ctx.beginPath();ctx.ellipse(0,0,r*1.8,r*0.45,0,0,Math.PI*2);ctx.fill();var pg=ctx.createRadialGradient(-r*0.2,-r*0.15,0,0,0,r);pg.addColorStop(0,'#f0e0b0');pg.addColorStop(0.5,'#e8d5a3');pg.addColorStop(1,'#a08050');ctx.fillStyle=pg;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.restore()}},
+  {id:'neptune',cat:'celestial',name:'Neptuno',icon:'🔵',color:'#3050c0',subtitle:'El gigante de hielo — Vientos más rápidos',
+   facts:{'Diámetro':'49,528 km','Temperatura':'-214°C','Vientos':'2,100 km/h','Lunas':'16','Distancia':'4,500M km','Año':'165 años terrestres'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.25;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);var g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.2,0,cx,cy,r);g.addColorStop(0,'#5070e0');g.addColorStop(0.5,'#3050c0');g.addColorStop(1,'#1a2a70');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(100,140,240,0.3)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-r*0.9,cy-r*0.1);ctx.bezierCurveTo(cx-r*0.3,cy+5,cx+r*0.3,cy-5,cx+r*0.9,cy-r*0.1);ctx.stroke();ctx.lineWidth=1}},
+  {id:'blackhole_sgr',cat:'cosmic',name:'Sagittarius A*',icon:'🕳️',color:'#000',subtitle:'Agujero negro supermasivo — Centro de la Vía Láctea',
+   facts:{'Masa':'4 millones masas solares','Horizonte':'~24 millones km','Distancia':'26,000 años luz','Primera imagen':'2022 (EHT)'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<200;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.3)+0.1)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.5,Math.random()*1.5)}var rg=ctx.createRadialGradient(cx,cy,30,cx,cy,180);rg.addColorStop(0,'transparent');rg.addColorStop(0.4,'rgba(255,100,0,0.02)');rg.addColorStop(0.6,'rgba(255,100,0,0.15)');rg.addColorStop(0.7,'rgba(255,60,0,0.4)');rg.addColorStop(0.85,'rgba(200,40,0,0.6)');rg.addColorStop(1,'transparent');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,180,0,Math.PI*2);ctx.fill();var eg=ctx.createRadialGradient(cx,cy,0,cx,cy,25);eg.addColorStop(0,'#000');eg.addColorStop(0.7,'#000');eg.addColorStop(1,'rgba(255,80,0,0.8)');ctx.fillStyle=eg;ctx.beginPath();ctx.arc(cx,cy,25,0,Math.PI*2);ctx.fill()}},
+  {id:'andromeda',cat:'cosmic',name:'Andrómeda',icon:'🌀',color:'#aabbcc',subtitle:'Galaxia espiral — Nuestra vecina galáctica',
+   facts:{'Tipo':'SA(s)b','Diámetro':'220,000 años luz','Estrellas':'~1 billón','Distancia':'2.537M años luz','Colisión':'Con Vía Láctea en ~4,500M años'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<300;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.2)+0.05)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.2,Math.random()*1.2)}ctx.save();ctx.translate(cx,cy);ctx.rotate(0.3);for(var arm=0;arm<2;arm++){ctx.strokeStyle='rgba(150,180,220,0.15)';ctx.lineWidth=20;ctx.beginPath();for(var t=0;t<200;t++){var angle=t*0.06+arm*Math.PI,r=5+t*0.8;var x=Math.cos(angle)*r,y=Math.sin(angle)*r*0.4;if(t===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}ctx.stroke()}var cg=ctx.createRadialGradient(0,0,0,0,0,40);cg.addColorStop(0,'rgba(255,230,180,0.6)');cg.addColorStop(0.5,'rgba(200,200,255,0.2)');cg.addColorStop(1,'transparent');ctx.fillStyle=cg;ctx.beginPath();ctx.arc(0,0,40,0,Math.PI*2);ctx.fill();ctx.restore()}},
+  {id:'crab',cat:'cosmic',name:'Nebulosa del Cangrejo',icon:'💥',color:'#ff6040',subtitle:'Remanente de supernova — Púlsar central',
+   facts:{'Tipo':'Remanente + púlsar','Distancia':'6,500 años luz','Explosión':'1054 (astrónomos chinos)','Púlsar':'30 rotaciones/seg'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<150;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.15)+0.05)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.5,Math.random()*1.5)}var ng=ctx.createRadialGradient(cx,cy,0,cx,cy,120);ng.addColorStop(0,'rgba(255,100,50,0.4)');ng.addColorStop(0.3,'rgba(255,60,30,0.2)');ng.addColorStop(0.6,'rgba(200,40,80,0.1)');ng.addColorStop(1,'transparent');ctx.fillStyle=ng;ctx.beginPath();ctx.arc(cx,cy,120,0,Math.PI*2);ctx.fill();for(var j=0;j<8;j++){var a=j*Math.PI/4,ir=30,or=100;ctx.strokeStyle='rgba(255,120,60,'+(0.15+Math.random()*0.15)+')';ctx.lineWidth=2+Math.random()*3;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*ir,cy+Math.sin(a)*ir);ctx.lineTo(cx+Math.cos(a)*or,cy+Math.sin(a)*or);ctx.stroke()}var pg=ctx.createRadialGradient(cx,cy,0,cx,cy,6);pg.addColorStop(0,'#fff');pg.addColorStop(0.5,'#aaf');pg.addColorStop(1,'transparent');ctx.fillStyle=pg;ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill()}},
+  {id:'pillars',cat:'cosmic',name:'Pilares de la Creación',icon:'🌌',color:'#8b6040',subtitle:'Columnas de gas — Cuna de estrellas',
+   facts:{'Ubicación':'Nebulosa del Águila (M16)','Distancia':'7,000 años luz','Tamaño':'~5 años luz','Descubrimiento':'1995 (Hubble)'},
+   render:function(c){var ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);for(var i=0;i<100;i++){ctx.fillStyle='rgba(255,255,255,'+((Math.random()*0.2)+0.05)+')';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*1.5,Math.random()*1.5)}function pillar(x,y,w2,h2,color){var g=ctx.createLinearGradient(x,y+h2,x,y);g.addColorStop(0,color);g.addColorStop(0.5,color.replace('0.4','0.25'));g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(x-w2/2,y+h2);ctx.bezierCurveTo(x-w2/2,y+h2*0.6,x-w2*0.8,y+h2*0.3,x-w2*0.3,y);ctx.bezierCurveTo(x,y-h2*0.1,x+w2*0.3,y,x+w2*0.3,y);ctx.bezierCurveTo(x+w2*0.8,y+h2*0.3,x+w2/2,y+h2*0.6,x+w2/2,y+h2);ctx.fill()}pillar(w*0.35,h*0.15,40,h*0.55,'rgba(139,96,64,0.4)');pillar(w*0.5,h*0.2,35,h*0.5,'rgba(120,80,50,0.35)');pillar(w*0.62,h*0.25,30,h*0.45,'rgba(100,70,45,0.3)');for(var s=0;s<30;s++){var sx=Math.random()*w,sy=Math.random()*h*0.3;ctx.fillStyle='rgba(255,200,150,'+((Math.random()*0.4)+0.2)+')';ctx.beginPath();ctx.arc(sx,sy,Math.random()*2+0.5,0,Math.PI*2);ctx.fill()}}},
+  {id:'hubble',cat:'instruments',name:'Hubble',icon:'🔭',color:'#4080c0',subtitle:'Telescopio espacial — 35 años en órbita'},
+  {id:'jwst',cat:'instruments',name:'James Webb',icon:'🛰️',color:'#c8a020',subtitle:'Infrarrojo — Espejo de 6.5m'},
+  {id:'eht',cat:'instruments',name:'Event Horizon',icon:'📡',color:'#ff4040',subtitle:'Interferometría VLBI global'},
+  {id:'lofar',cat:'instruments',name:'LOFAR',icon:'📻',color:'#80ff80',subtitle:'Radio de baja frecuencia'},
+  {id:'lsst',cat:'instruments',name:'Vera C. Rubin',icon:'🌐',color:'#c0c0ff',subtitle:'Sondeo del cielo — 10 años'}
+];
+
+function renderObsCards(){
+  var celestial=OBS_DB.filter(function(o){return o.cat==='celestial'});
+  var cosmic=OBS_DB.filter(function(o){return o.cat==='cosmic'});
+  var instruments=OBS_DB.filter(function(o){return o.cat==='instruments'});
+  document.getElementById('obs-celestial').innerHTML=celestial.map(obsCard).join('');
+  document.getElementById('obs-cosmic').innerHTML=cosmic.map(obsCard).join('');
+  document.getElementById('obs-instruments').innerHTML=instruments.map(obsCard).join('');
+}
+function obsCard(o){
+  return '<div onclick="openObs(\''+o.id+'\')" style="background:rgba(6,10,20,0.5);border:1px solid var(--border);border-radius:6px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\''+o.color+'40\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'none\'">'+
+    '<div style="font-size:24px;margin-bottom:6px">'+o.icon+'</div>'+
+    '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px">'+o.name+'</div>'+
+    '<div style="font-size:9px;color:var(--text-dim);line-height:1.4">'+o.subtitle+'</div>'+
+    '</div>';
+}
+var obsAnimFrame=null;
+function openObs(id){
+  var o=OBS_DB.find(function(x){return x.id===id});if(!o)return;
+  document.getElementById('obs-viewer').style.display='block';
+  document.getElementById('obs-icon').textContent=o.icon;
+  document.getElementById('obs-title').textContent=o.name;
+  document.getElementById('obs-subtitle').textContent=o.subtitle;
+  var factsHtml='';Object.keys(o.facts||{}).forEach(function(k){factsHtml+='<div style="margin-bottom:10px"><div style="font-size:7px;letter-spacing:1.5px;color:var(--text-faint);text-transform:uppercase;margin-bottom:2px">'+k+'</div><div style="font-size:11px;color:var(--text)">'+o.facts[k]+'</div></div>'});
+  document.getElementById('obs-facts').innerHTML=factsHtml;
+  var cv=document.getElementById('obsCanvas');cv.width=cv.parentElement.clientWidth;cv.height=cv.parentElement.clientHeight;
+  if(obsAnimFrame)cancelAnimationFrame(obsAnimFrame);
+  if(o.render){
+    var lastFrame=0;
+    function animate(t){
+      if(t-lastFrame>50){o.render(cv);lastFrame=t}
+      obsAnimFrame=requestAnimationFrame(animate);
+    }
+    obsAnimFrame=requestAnimationFrame(animate);
+  }
+  document.getElementById('obs-viewer').scrollIntoView({behavior:'smooth'});
+}
+function closeObsViewer(){
+  document.getElementById('obs-viewer').style.display='none';
+  if(obsAnimFrame)cancelAnimationFrame(obsAnimFrame);
+}
+renderObsCards();
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+/* ═══════════════════════════════════════════════════════════════
+   ZICORE Library — Global Sidebar Overlay
+   Persistent asset library with continuous playback player
+   ═══════════════════════════════════════════════════════════════ */
+
+/* FAB Toggle Button */
+.zlib-fab{position:fixed;bottom:20px;right:20px;z-index:10001;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(124,77,255,0.1));border:1px solid rgba(0,229,255,0.25);color:#00e5ff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .3s cubic-bezier(.4,0,.2,1);box-shadow:0 4px 20px rgba(0,0,0,.4);backdrop-filter:blur(12px)}
+.zlib-fab:hover{border-color:rgba(0,229,255,0.5);box-shadow:0 4px 30px rgba(0,229,255,0.15);transform:scale(1.08)}
+.zlib-fab.open{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.4)}
+.zlib-fab svg{width:20px;height:20px}
+
+/* Backdrop */
+.zlib-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);opacity:0;pointer-events:none;transition:opacity .3s}
+.zlib-backdrop.open{opacity:1;pointer-events:auto}
+
+/* Sidebar Panel */
+.zlib-panel{position:fixed;top:0;right:0;bottom:0;width:340px;min-width:340px;z-index:10000;background:rgba(8,12,20,0.97);border-left:1px solid rgba(0,229,255,0.08);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(20px)}
+.zlib-panel.open{transform:translateX(0)}
+
+/* Header */
+.zlib-header{padding:12px 16px;border-bottom:1px solid rgba(0,229,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.zlib-header-title{font-size:10px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#00e5ff,#7c4dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;flex-shrink:0}
+.zlib-header-count{font-size:8px;color:#607080;letter-spacing:1px;margin-left:auto;flex-shrink:0}
+.zlib-header-close{background:none;border:none;color:#607080;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:all .15s;flex-shrink:0}
+.zlib-header-close:hover{color:#ff3333;background:rgba(255,51,51,0.08)}
+
+/* Tabs */
+.zlib-tabs{display:flex;border-bottom:1px solid rgba(0,229,255,0.08);flex-shrink:0;overflow-x:auto}
+.zlib-tabs::-webkit-scrollbar{display:none}
+.zlib-tab{flex:1;padding:8px 4px;text-align:center;font-size:8px;letter-spacing:1px;color:#607080;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.zlib-tab:hover{color:#c8d0dc}
+.zlib-tab.active{color:#00e5ff;border-bottom-color:#00e5ff}
+
+/* Search */
+.zlib-search{padding:8px 16px;border-bottom:1px solid rgba(0,229,255,0.06);flex-shrink:0}
+.zlib-search input{width:100%;padding:7px 10px 7px 28px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.08);border-radius:4px;color:#c8d0dc;font-size:11px;outline:none;transition:border-color .2s}
+.zlib-search input:focus{border-color:rgba(0,229,255,0.25)}
+.zlib-search input::placeholder{color:#303848}
+.zlib-search-wrap{position:relative}
+.zlib-search-wrap::before{content:'\u2315';position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#303848;font-size:12px;pointer-events:none}
+
+/* Asset Grid */
+.zlib-assets{flex:1;overflow-y:auto;padding:8px}
+.zlib-assets::-webkit-scrollbar{width:3px}
+.zlib-assets::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.1);border-radius:2px}
+.zlib-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.zlib-card{background:rgba(15,21,37,0.6);border:1px solid rgba(0,229,255,0.06);border-radius:4px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.zlib-card:hover{border-color:rgba(0,229,255,0.2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.zlib-card.playing{border-color:rgba(0,229,255,0.4);box-shadow:0 0 12px rgba(0,229,255,0.1)}
+.zlib-card-thumb{height:64px;display:flex;align-items:center;justify-content:center;background:rgba(10,14,26,0.8);overflow:hidden;position:relative}
+.zlib-card-thumb img{width:100%;height:100%;object-fit:cover}
+.zlib-card-thumb .zlib-type-icon{font-size:22px;opacity:0.4}
+.zlib-card-playing{position:absolute;top:4px;right:4px;width:14px;height:14px;border-radius:50%;background:rgba(0,229,255,0.8);display:none;align-items:center;justify-content:center;font-size:7px;color:#000}
+.zlib-card.playing .zlib-card-playing{display:flex}
+.zlib-card-info{padding:6px 8px}
+.zlib-card-name{font-size:9px;color:#c8d0dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.zlib-card-meta{font-size:7px;color:#303848;letter-spacing:0.5px;margin-top:2px;display:flex;align-items:center;gap:4px}
+.zlib-card-badge{font-size:6px;padding:1px 4px;border-radius:2px;background:rgba(0,229,255,0.08);color:#00e5ff;letter-spacing:0.5px;text-transform:uppercase}
+.zlib-card-badge.audio{background:rgba(0,255,136,0.08);color:#00ff88}
+.zlib-card-badge.video{background:rgba(124,77,255,0.08);color:#7c4dff}
+.zlib-card-badge.image{background:rgba(255,145,0,0.08);color:#ff9100}
+.zlib-card-badge.threed{background:rgba(255,51,51,0.08);color:#ff3333}
+
+/* Empty State */
+.zlib-empty{text-align:center;padding:40px 20px;color:#303848}
+.zlib-empty-icon{font-size:28px;margin-bottom:8px;opacity:0.3}
+.zlib-empty-text{font-size:10px;letter-spacing:1px}
+
+/* Player */
+.zlib-player{border-top:1px solid rgba(0,229,255,0.08);background:rgba(6,8,14,0.95);padding:8px 12px;flex-shrink:0}
+.zlib-player-info{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.zlib-player-thumb{width:28px;height:28px;border-radius:3px;background:rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;overflow:hidden}
+.zlib-player-thumb img{width:100%;height:100%;object-fit:cover}
+.zlib-player-track{flex:1;min-width:0}
+.zlib-player-name{font-size:9px;color:#c8d0dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zlib-player-type{font-size:7px;color:#607080;letter-spacing:1px}
+.zlib-player-controls{display:flex;align-items:center;gap:2px;justify-content:center;margin-bottom:6px}
+.zlib-ctrl-btn{background:none;border:none;color:#607080;cursor:pointer;padding:4px;border-radius:3px;transition:all .15s;display:flex;align-items:center;justify-content:center;width:28px;height:28px}
+.zlib-ctrl-btn:hover{color:#c8d0dc;background:rgba(255,255,255,0.04)}
+.zlib-ctrl-btn.active{color:#00e5ff}
+.zlib-ctrl-btn.play-btn{width:32px;height:32px;color:#00e5ff;border:1px solid rgba(0,229,255,0.2);border-radius:50%}
+.zlib-ctrl-btn.play-btn:hover{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.4)}
+.zlib-ctrl-btn svg{width:14px;height:14px}
+.zlib-ctrl-btn.play-btn svg{width:16px;height:16px}
+.zlib-player-seek{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.zlib-seek-slider{flex:1;-webkit-appearance:none;height:3px;background:rgba(0,229,255,0.1);border-radius:2px;outline:none}
+.zlib-seek-slider::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#00e5ff;cursor:pointer;box-shadow:0 0 5px rgba(0,229,255,0.3)}
+.zlib-player-time{font-size:7px;color:#607080;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;min-width:60px;text-align:center}
+.zlib-player-volume{display:flex;align-items:center;gap:4px}
+.zlib-vol-slider{width:60px;-webkit-appearance:none;height:2px;background:rgba(0,229,255,0.1);border-radius:1px;outline:none}
+.zlib-vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;border-radius:50%;background:#607080;cursor:pointer}
+.zlib-vol-slider::-webkit-slider-thumb:hover{background:#00e5ff}
+.zlib-player-row{display:flex;align-items:center;gap:6px}
+
+/* Loading */
+.zlib-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:#303848;font-size:9px;letter-spacing:1px}
+.zlib-loading::after{content:'';width:16px;height:16px;border:2px solid rgba(0,229,255,0.1);border-top-color:#00e5ff;border-radius:50%;animation:zlibSpin .8s linear infinite;margin-right:8px}
+@keyframes zlibSpin{to{transform:rotate(360deg)}}
+
+/* Responsive */
+@media(max-width:480px){
+  .zlib-panel{width:100%;min-width:100%}
+  .zlib-grid{grid-template-columns:1fr}
+}

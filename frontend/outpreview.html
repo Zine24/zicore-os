@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE OutPreview — Central Output & Preview System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--bg:#060a12;--bg2:#0c1220;
+--bg3:#111a2e;--bg4:#182240;--border:#1a2744;--text:#d0d8e8;--text2:#8892a8;
+--glow:0 0 12px rgba(0,229,255,.25);--radius:8px;
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1a2744;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a3754}
+
+#app{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw}
+
+/* ── TOP BAR ── */
+#topbar{display:flex;align-items:center;gap:16px;padding:0 16px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:100}
+#topbar .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--cyan);white-space:nowrap}
+#topbar .logo svg{width:24px;height:24px}
+#topbar .tabs{display:flex;gap:2px;margin-left:24px}
+#topbar .tab{padding:6px 14px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;letter-spacing:.5px;cursor:pointer;background:transparent;color:var(--text2);border:1px solid transparent;border-bottom:none;transition:.2s}
+#topbar .tab:hover{color:var(--text);background:var(--bg3)}
+#topbar .tab.active{color:var(--cyan);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+#topbar .status{margin-left:auto;display:flex;gap:12px;align-items:center}
+#topbar .status .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot.yellow{background:#ffc107;box-shadow:0 0 6px #ffc107}
+.dot.red{background:#f44336;box-shadow:0 0 6px #f44336}
+#topbar .status span{font-size:11px;color:var(--text2);display:flex;align-items:center}
+
+/* ── MAIN LAYOUT ── */
+#main{display:grid;grid-template-columns:300px 1fr 280px;overflow:hidden}
+
+/* ── LEFT: HISTORY ── */
+#history-panel{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#history-panel .panel-header{padding:12px 14px;font-size:12px;font-weight:700;letter-spacing:.8px;color:var(--text2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+#history-panel .panel-header .count{background:var(--bg4);padding:2px 8px;border-radius:10px;font-size:10px;color:var(--cyan)}
+#history-list{flex:1;overflow-y:auto;padding:8px}
+.history-item{display:flex;gap:10px;padding:10px;border-radius:var(--radius);cursor:pointer;transition:.15s;border:1px solid transparent;margin-bottom:4px}
+.history-item:hover{background:var(--bg3);border-color:var(--border)}
+.history-item.active{background:var(--bg4);border-color:var(--cyan)}
+.history-item .thumb{width:48px;height:48px;border-radius:6px;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
+.history-item .thumb img{width:100%;height:100%;object-fit:cover}
+.history-item .info{flex:1;min-width:0}
+.history-item .info .prompt{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item .info .meta{font-size:10px;color:var(--text2);margin-top:3px;display:flex;gap:8px}
+.history-item .info .meta .type-badge{padding:1px 6px;border-radius:4px;font-weight:600;font-size:9px;text-transform:uppercase}
+.type-badge.mesh{background:rgba(124,77,255,.2);color:var(--purple)}
+.type-badge.image{background:rgba(0,229,255,.2);color:var(--cyan)}
+.type-badge.audio{background:rgba(0,255,136,.2);color:var(--green)}
+.type-badge.video{background:rgba(255,193,7,.2);color:#ffc107}
+
+/* ── CENTER: PREVIEW ── */
+#preview-area{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#preview-canvas-wrap{flex:1;position:relative;overflow:hidden;background:#030608}
+#preview-canvas-wrap canvas{display:block;width:100%!important;height:100%!important}
+#preview-overlay{position:absolute;top:12px;left:12px;display:flex;gap:6px;z-index:10}
+#preview-overlay button{background:rgba(12,18,32,.85);border:1px solid var(--border);color:var(--text2);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;backdrop-filter:blur(8px);transition:.15s}
+#preview-overlay button:hover{color:var(--cyan);border-color:var(--cyan)}
+#preview-overlay button.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,229,255,.1)}
+#preview-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);gap:12px}
+#preview-empty .icon{font-size:48px;opacity:.3}
+#preview-empty p{font-size:13px}
+#preview-info-bar{padding:10px 16px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#preview-info-bar .info-chip{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px}
+#preview-info-bar .info-chip b{color:var(--text)}
+#preview-info-bar .action-btn{padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:.15s}
+.btn-cyan{background:var(--cyan);color:#000}.btn-cyan:hover{background:#33ecff}
+.btn-green{background:var(--green);color:#000}.btn-green:hover{background:#33ff99}
+.btn-purple{background:var(--purple);color:#fff}.btn-purple:hover{background:#9b6dff}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── RIGHT: ACTIONS ── */
+#actions-panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#actions-panel .panel-header{padding:12px 14px;font-size:12px;font-weight:700;letter-spacing:.8px;color:var(--text2);border-bottom:1px solid var(--border)}
+#actions-content{flex:1;overflow-y:auto;padding:12px}
+#actions-content .section{margin-bottom:16px}
+#actions-content .section-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--text2);text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+#actions-content label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px}
+#actions-content select,#actions-content input[type=number],#actions-content input[type=text],#actions-content input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--radius);font-size:12px;outline:none;margin-bottom:8px}
+#actions-content select:focus,#actions-content input:focus{border-color:var(--cyan)}
+input[type=range]{-webkit-appearance:none;height:4px;background:var(--bg4);border:none;border-radius:2px;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid var(--bg)}
+.row{display:flex;gap:6px}
+.row>*{flex:1}
+.small-btn{padding:5px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;text-align:center}
+.small-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.small-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.08)}
+.analyze-result{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-top:8px;font-size:11px;color:var(--text2)}
+.analyze-result .stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(26,39,68,.5)}
+.analyze-result .stat:last-child{border:none}
+.analyze-result .stat b{color:var(--text)}
+
+/* ── TAB CONTENT (hidden by default) ── */
+.tab-content{display:none}
+.tab-content.active{display:flex;flex-direction:column;flex:1;overflow:hidden}
+
+/* ── EDIT TAB ── */
+#edit-panel{padding:16px;overflow-y:auto}
+#edit-panel .slider-group{margin-bottom:14px}
+#edit-panel .slider-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px}
+#edit-panel .slider-label span:last-child{color:var(--cyan);font-weight:600}
+
+/* ── EXPORT TAB ── */
+#export-panel{padding:16px;overflow-y:auto}
+.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.format-opt{padding:12px;border:1px solid var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;transition:.15s}
+.format-opt:hover{border-color:var(--cyan)}
+.format-opt.selected{border-color:var(--cyan);background:rgba(0,229,255,.08)}
+.format-opt .fmt{font-size:14px;font-weight:700;color:var(--text)}
+.format-opt .desc{font-size:10px;color:var(--text2);margin-top:2px}
+.export-action{width:100%;padding:10px;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:.15s}
+.cost-estimate{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:8px}
+.cost-estimate .cost-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:var(--text2)}
+.cost-estimate .cost-row b{color:var(--green)}
+
+/* ── LIBRARY TAB ── */
+#library-panel{display:flex;flex-direction:column;overflow:hidden}
+#library-panel .search-bar{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px}
+#library-panel .search-bar input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:var(--radius);font-size:12px;outline:none}
+#library-panel .search-bar input:focus{border-color:var(--cyan)}
+.filter-row{padding:8px 12px;display:flex;gap:4px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.filter-btn{padding:4px 10px;border-radius:12px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:.15s}
+.filter-btn:hover,.filter-btn.active{border-color:var(--cyan);color:var(--cyan)}
+#library-grid{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.lib-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.15s;position:relative}
+.lib-item:hover{border-color:var(--cyan);transform:translateY(-2px)}
+.lib-item .lib-thumb{width:100%;aspect-ratio:1;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+.lib-item .lib-thumb img{width:100%;height:100%;object-fit:cover}
+.lib-item .lib-name{padding:6px 8px;font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-item .fav-star{position:absolute;top:4px;right:4px;font-size:12px;color:var(--text2);cursor:pointer}
+.lib-item .fav-star.active{color:#ffc107}
+
+/* ── VR SCENE TAB ── */
+#vr-panel{padding:16px;overflow-y:auto}
+.scene-types{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.scene-type{padding:10px;border:1px solid var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;transition:.15s;font-size:11px;color:var(--text2)}
+.scene-type:hover{border-color:var(--purple)}
+.scene-type.selected{border-color:var(--purple);background:rgba(124,77,255,.1);color:var(--purple)}
+.scene-type .scene-icon{font-size:22px;margin-bottom:4px}
+#vr-preview{width:100%;height:200px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:12px 0;position:relative}
+#vr-preview canvas{width:100%!important;height:100%!important}
+.obj-list{max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px}
+.obj-item{padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.obj-item:last-child{border:none}
+.obj-dot{width:6px;height:6px;border-radius:50%;background:var(--purple)}
+
+/* ── EMPTY / PLACEHOLDER ── */
+.placeholder{color:var(--text2);font-size:12px;text-align:center;padding:32px 16px}
+.placeholder .ph-icon{font-size:32px;opacity:.3;margin-bottom:8px}
+
+/* ── ANIMATIONS ── */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s infinite}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.scanline-overlay{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.015) 2px,rgba(0,229,255,.015) 4px)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════ TOP BAR ═══════════ -->
+<header id="topbar">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="8.5" x2="22" y2="8.5"/></svg>
+    OUTPREVIEW
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="preview">PREVIEW</div>
+    <div class="tab" data-tab="edit">EDIT</div>
+    <div class="tab" data-tab="export">EXPORT</div>
+    <div class="tab" data-tab="library">LIBRARY</div>
+    <div class="tab" data-tab="vr">VR SCENE</div>
+  </div>
+  <div class="status">
+    <span><span class="dot green"></span>ZICORE Online</span>
+    <span><span class="dot green"></span>3D Engine</span>
+    <span id="ws-status"><span class="dot yellow"></span>WebSocket</span>
+  </div>
+</header>
+
+<!-- ═══════════ MAIN 3-COL ═══════════ -->
+<div id="main">
+
+  <!-- ── LEFT: HISTORY ── -->
+  <aside id="history-panel">
+    <div class="panel-header">
+      GENERATION HISTORY
+      <span class="count" id="history-count">0</span>
+    </div>
+    <div id="history-list"></div>
+  </aside>
+
+  <!-- ── CENTER: PREVIEW ── -->
+  <section id="center-col">
+
+    <!-- PREVIEW TAB -->
+    <div class="tab-content active" id="tc-preview">
+      <div id="preview-canvas-wrap">
+        <div class="scanline-overlay"></div>
+        <div id="preview-empty">
+          <div class="icon">&#x2B22;</div>
+          <p>Select a generation from history or generate new content</p>
+        </div>
+        <div id="preview-overlay">
+          <button id="btn-wireframe" title="Toggle wireframe">Wireframe</button>
+          <button id="btn-grid" title="Toggle grid">Grid</button>
+          <button id="btn-reset-cam" title="Reset camera">Reset</button>
+          <button id="btn-fullscreen" title="Fullscreen">Fullscreen</button>
+        </div>
+      </div>
+      <div id="preview-info-bar">
+        <span class="info-chip"><b>Type:</b>&nbsp;<span id="info-type">—</span></span>
+        <span class="info-chip"><b>Engine:</b>&nbsp;<span id="info-engine">—</span></span>
+        <span class="info-chip"><b>Size:</b>&nbsp;<span id="info-size">—</span></span>
+        <span class="info-chip"><b>Date:</b>&nbsp;<span id="info-date">—</span></span>
+        <span class="info-chip"><b>Prompt:</b>&nbsp;<span id="info-prompt" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span></span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="action-btn btn-cyan" id="btn-save-lib">Save to Library</button>
+          <button class="action-btn btn-green" id="btn-send-print">Send to Print</button>
+          <button class="action-btn btn-purple" id="btn-export-vr">Export for VR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT TAB -->
+    <div class="tab-content" id="tc-edit">
+      <div id="edit-panel">
+        <div class="section">
+          <div class="section-title">Transform</div>
+          <div class="slider-group">
+            <div class="slider-label"><span>Scale</span><span id="scale-val">1.0x</span></div>
+            <input type="range" id="edit-scale" min="0.1" max="10" step="0.1" value="1">
+          </div>
+          <div class="slider-group">
+            <div class="slider-label"><span>Rotate X</span><span id="rx-val">0°</span></div>
+            <input type="range" id="edit-rx" min="0" max="360" step="1" value="0">
+          </div>
+          <div class="slider-group">
+            <div class="slider-label"><span>Rotate Y</span><span id="ry-val">0°</span></div>
+            <input type="range" id="edit-ry" min="0" max="360" step="1" value="0">
+          </div>
+          <div class="slider-group">
+            <div class="slider-label"><span>Rotate Z</span><span id="rz-val">0°</span></div>
+            <input type="range" id="edit-rz" min="0" max="360" step="1" value="0">
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Mirror</div>
+          <div class="row">
+            <button class="small-btn" id="mirror-x">Mirror X</button>
+            <button class="small-btn" id="mirror-y">Mirror Y</button>
+            <button class="small-btn" id="mirror-z">Mirror Z</button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Smooth</div>
+          <div class="slider-group">
+            <div class="slider-label"><span>Iterations</span><span id="smooth-val">2</span></div>
+            <input type="range" id="edit-smooth" min="1" max="10" step="1" value="2">
+          </div>
+          <button class="small-btn" id="btn-smooth" style="width:100%">Apply Smoothing</button>
+        </div>
+        <div class="section">
+          <div class="section-title">Decimate</div>
+          <div class="slider-group">
+            <div class="slider-label"><span>Target Faces</span><span id="decimate-val">50%</span></div>
+            <input type="range" id="edit-decimate" min="5" max="100" step="5" value="50">
+          </div>
+          <button class="small-btn" id="btn-decimate" style="width:100%">Apply Decimation</button>
+        </div>
+        <div class="section">
+          <div class="section-title">Boolean</div>
+          <select id="boolean-op">
+            <option value="union">Union</option>
+            <option value="difference">Difference</option>
+            <option value="intersection">Intersection</option>
+          </select>
+          <button class="small-btn" id="btn-boolean" style="width:100%">Apply Boolean</button>
+        </div>
+        <div class="section">
+          <div class="section-title">Analysis</div>
+          <button class="small-btn" id="btn-analyze" style="width:100%">Analyze Mesh</button>
+          <div class="analyze-result" id="analyze-result" style="display:none">
+            <div class="stat"><span>Volume</span><b id="an-volume">—</b></div>
+            <div class="stat"><span>Surface Area</span><b id="an-surface">—</b></div>
+            <div class="stat"><span>Face Count</span><b id="an-faces">—</b></div>
+            <div class="stat"><span>Vertex Count</span><b id="an-vertices">—</b></div>
+            <div class="stat"><span>Watertight</span><b id="an-watertight">—</b></div>
+            <div class="stat"><span>Bounding Box</span><b id="an-bbox">—</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT TAB -->
+    <div class="tab-content" id="tc-export">
+      <div id="export-panel">
+        <div class="section">
+          <div class="section-title">Export Format</div>
+          <div class="format-grid">
+            <div class="format-opt selected" data-fmt="stl"><div class="fmt">STL</div><div class="desc">3D Printing</div></div>
+            <div class="format-opt" data-fmt="obj"><div class="fmt">OBJ</div><div class="desc">Universal</div></div>
+            <div class="format-opt" data-fmt="glb"><div class="fmt">GLB</div><div class="desc">Web / VR</div></div>
+            <div class="format-opt" data-fmt="step"><div class="fmt">STEP</div><div class="desc">CAD / Engineering</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Options</div>
+          <label>Scale Factor</label>
+          <input type="number" id="export-scale" value="1.0" min="0.01" max="100" step="0.1">
+          <label>Units</label>
+          <select id="export-units">
+            <option value="mm">Millimeters (mm)</option>
+            <option value="cm">Centimeters (cm)</option>
+            <option value="m">Meters (m)</option>
+            <option value="in">Inches (in)</option>
+          </select>
+        </div>
+        <div class="section">
+          <button class="export-action btn-cyan" id="btn-download" style="color:#000">Download File</button>
+        </div>
+        <div class="section">
+          <div class="section-title">Send to Print</div>
+          <label>Printer</label>
+          <select id="print-printer">
+            <option>Ender 3 V3 — FDM PLA</option>
+            <option>Bambu X1C — FDM Multi</option>
+            <option>Prusa MK4 — FDM PLA/PETG</option>
+            <option>Anycubic Photon M3 — Resin</option>
+            <option>Formlabs Form 3+ — Resin</option>
+          </select>
+          <label>Material</label>
+          <select id="print-material">
+            <option>PLA</option>
+            <option>PETG</option>
+            <option>ABS</option>
+            <option>TPU</option>
+            <option>Resin Standard</option>
+            <option>Resin Tough</option>
+          </select>
+          <label>Infill %</label>
+          <input type="number" id="print-infill" value="20" min="5" max="100" step="5">
+          <button class="export-action btn-green" id="btn-print-send" style="color:#000;margin-top:8px">Send to ZICORE Print</button>
+          <div class="cost-estimate">
+            <div class="section-title">Cost Estimate</div>
+            <div class="cost-row"><span>Material</span><b id="cost-material">—</b></div>
+            <div class="cost-row"><span>Print Time</span><b id="cost-time">—</b></div>
+            <div class="cost-row"><span>Estimated Cost</span><b id="cost-total">—</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIBRARY TAB -->
+    <div class="tab-content" id="tc-library">
+      <div id="library-panel" style="flex:1">
+        <div class="search-bar">
+          <input type="text" id="lib-search" placeholder="Search library...">
+        </div>
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all">ALL</button>
+          <button class="filter-btn" data-filter="image">IMAGES</button>
+          <button class="filter-btn" data-filter="mesh">3D</button>
+          <button class="filter-btn" data-filter="audio">AUDIO</button>
+          <button class="filter-btn" data-filter="video">VIDEO</button>
+        </div>
+        <div id="library-grid"></div>
+      </div>
+    </div>
+
+    <!-- VR SCENE TAB -->
+    <div class="tab-content" id="tc-vr">
+      <div id="vr-panel">
+        <div class="section">
+          <div class="section-title">Scene Type</div>
+          <div class="scene-types">
+            <div class="scene-type selected" data-scene="planetary"><div class="scene-icon">&#x1F30D;</div>Planetary</div>
+            <div class="scene-type" data-scene="station"><div class="scene-icon">&#x1F6F0;</div>Station</div>
+            <div class="scene-type" data-scene="lunar"><div class="scene-icon">&#x1F319;</div>Lunar</div>
+            <div class="scene-type" data-scene="launchpad"><div class="scene-icon">&#x1F680;</div>Launchpad</div>
+            <div class="scene-type" data-scene="cockpit"><div class="scene-icon">&#x2708;</div>Cockpit</div>
+            <div class="scene-type" data-scene="landscape"><div class="scene-icon">&#x26F0;</div>Landscape</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Objects in Scene</div>
+          <div class="obj-list" id="vr-obj-list">
+            <div class="obj-item"><span class="obj-dot"></span>No objects yet</div>
+          </div>
+        </div>
+        <div id="vr-preview"></div>
+        <button class="export-action btn-purple" id="btn-gen-scene" style="color:#fff">Generate Scene</button>
+        <div class="row" style="margin-top:8px">
+          <button class="small-btn" id="btn-export-glb">Export GLB</button>
+          <button class="small-btn" id="btn-send-vr">Send to VR</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── RIGHT: ACTIONS ── -->
+  <aside id="actions-panel">
+    <div class="panel-header">ACTIONS</div>
+    <div id="actions-content">
+      <div class="section">
+        <div class="section-title">Quick Actions</div>
+        <button class="action-btn btn-cyan" style="width:100%;color:#000;margin-bottom:6px" id="ra-save">Save to Library</button>
+        <button class="action-btn btn-green" style="width:100%;color:#000;margin-bottom:6px" id="ra-print">Send to Print</button>
+        <button class="action-btn btn-purple" style="width:100%;color:#fff;margin-bottom:6px" id="ra-vr">Export for VR</button>
+        <button class="action-btn btn-outline" style="width:100%;margin-bottom:6px" id="ra-duplicate">Duplicate</button>
+        <button class="action-btn btn-outline" style="width:100%;color:#f44336;border-color:#f4433640" id="ra-delete">Delete</button>
+      </div>
+      <div class="section">
+        <div class="section-title">Tags</div>
+        <div id="tags-container" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:4px">
+          <input type="text" id="tag-input" placeholder="Add tag..." style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:11px;outline:none">
+          <button class="small-btn" id="btn-add-tag">+</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Properties</div>
+        <div class="analyze-result" style="display:block">
+          <div class="stat"><span>ID</span><b id="prop-id">—</b></div>
+          <div class="stat"><span>Type</span><b id="prop-type">—</b></div>
+          <div class="stat"><span>Format</span><b id="prop-format">—</b></div>
+          <div class="stat"><span>File Size</span><b id="prop-filesize">—</b></div>
+          <div class="stat"><span>Created</span><b id="prop-created">—</b></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+</div>
+
+<script>
+// SSO Auth Check
+(function(){
+  var token=localStorage.getItem('zicore_sso_token');
+  if(!token){window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);return;}
+  fetch('/api/sso/me',{headers:{'Authorization':'Bearer '+token}}).then(function(r){
+    if(!r.ok){localStorage.removeItem('zicore_sso_token');window.location.href='/login?redirect='+encodeURIComponent(window.location.pathname);}
+  }).catch(function(){});
+})();
+
+(function(){
+'use strict';
+
+// ═══════════ STATE ═══════════
+const state = {
+  currentTab: 'preview',
+  history: [],
+  selectedId: null,
+  selectedItem: null,
+  library: [],
+  libFilter: 'all',
+  exportFormat: 'stl',
+  sceneType: 'planetary',
+  ws: null,
+  threeScene: null,
+  threeCamera: null,
+  threeRenderer: null,
+  threeControls: null,
+  currentMesh: null,
+  gridHelper: null,
+  wireframeMode: false,
+  vrScene: null,
+  vrCamera: null,
+  vrRenderer: null,
+  vrObjects: []
+};
+
+const API_BASE = window.location.origin;
+
+// ═══════════ DOM REFS ═══════════
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+const historyList = $('#history-count');
+const historyListEl = $('#history-list');
+const previewEmpty = $('#preview-empty');
+const previewWrap = $('#preview-canvas-wrap');
+const libraryGrid = $('#library-grid');
+
+// ═══════════ INIT ═══════════
+function init(){
+  setupTabs();
+  setupThree();
+  setupVRPreview();
+  setupEventListeners();
+  loadHistory();
+  loadLibrary();
+  connectWebSocket();
+}
+
+// ═══════════ TABS ═══════════
+function setupTabs(){
+  $$('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      $$('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const tab = t.dataset.tab;
+      state.currentTab = tab;
+      $$('.tab-content').forEach(tc=>tc.classList.remove('active'));
+      $(`#tc-${tab}`).classList.add('active');
+      if(tab==='library') loadLibrary();
+      if(tab==='vr') resizeVRPreview();
+    });
+  });
+}
+
+// ═══════════ THREE.JS SETUP ═══════════
+function setupThree(){
+  const wrap = previewWrap;
+  const w = wrap.clientWidth || 800;
+  const h = wrap.clientHeight || 600;
+
+  state.threeScene = new THREE.Scene();
+  state.threeScene.background = new THREE.Color(0x030608);
+
+  state.threeCamera = new THREE.PerspectiveCamera(50, w/h, 0.1, 1000);
+  state.threeCamera.position.set(3, 2, 3);
+
+  state.threeRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  state.threeRenderer.setSize(w, h);
+  state.threeRenderer.setPixelRatio(window.devicePixelRatio);
+  state.threeRenderer.shadowMap.enabled = true;
+  previewWrap.appendChild(state.threeRenderer.domElement);
+
+  const ambLight = new THREE.AmbientLight(0x404060, 0.6);
+  state.threeScene.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(5, 8, 5);
+  dirLight.castShadow = true;
+  state.threeScene.add(dirLight);
+  const pointLight = new THREE.PointLight(0x00e5ff, 0.4, 20);
+  pointLight.position.set(-3, 2, -3);
+  state.threeScene.add(pointLight);
+
+  state.gridHelper = new THREE.GridHelper(10, 20, 0x1a2744, 0x0c1220);
+  state.threeScene.add(state.gridHelper);
+
+  state.threeControls = {theta:0.8, phi:0.5, radius:5, target:new THREE.Vector3(0,0,0), dragging:false, lastX:0, lastY:0};
+  setupOrbitControls(state.threeRenderer.domElement);
+
+  animateThree();
+  window.addEventListener('resize',()=>resizeThree());
+}
+
+function resizeThree(){
+  const wrap = previewWrap;
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  if(!w||!h) return;
+  state.threeCamera.aspect = w/h;
+  state.threeCamera.updateProjectionMatrix();
+  state.threeRenderer.setSize(w,h);
+}
+
+function setupOrbitControls(el){
+  const c = state.threeControls;
+  el.addEventListener('mousedown',e=>{c.dragging=true;c.lastX=e.clientX;c.lastY=e.clientY});
+  window.addEventListener('mouseup',()=>{c.dragging=false});
+  window.addEventListener('mousemove',e=>{
+    if(!c.dragging)return;
+    const dx = e.clientX - c.lastX;
+    const dy = e.clientY - c.lastY;
+    c.theta -= dx*0.005;
+    c.phi = Math.max(0.1, Math.min(Math.PI-0.1, c.phi - dy*0.005));
+    c.lastX = e.clientX;
+    c.lastY = e.clientY;
+  });
+  el.addEventListener('wheel',e=>{
+    e.preventDefault();
+    c.radius = Math.max(1, Math.min(50, c.radius + e.deltaY*0.01));
+  },{passive:false});
+}
+
+function updateCameraFromControls(){
+  const c = state.threeControls;
+  const r = c.radius;
+  state.threeCamera.position.set(
+    c.target.x + r*Math.sin(c.phi)*Math.cos(c.theta),
+    c.target.y + r*Math.cos(c.phi),
+    c.target.z + r*Math.sin(c.phi)*Math.sin(c.theta)
+  );
+  state.threeCamera.lookAt(c.target);
+}
+
+function animateThree(){
+  requestAnimationFrame(animateThree);
+  updateCameraFromControls();
+  if(state.currentMesh){
+    state.currentMesh.rotation.x = degToRad($('#edit-rx').value);
+    state.currentMesh.rotation.y = degToRad($('#edit-ry').value);
+    state.currentMesh.rotation.z = degToRad($('#edit-rz').value);
+    const s = parseFloat($('#edit-scale').value);
+    state.currentMesh.scale.set(s,s,s);
+  }
+  state.threeRenderer.render(state.threeScene, state.threeCamera);
+}
+
+// ═══════════ VR PREVIEW ═══════════
+function setupVRPreview(){
+  const el = $('#vr-preview');
+  if(!el) return;
+  const w = el.clientWidth || 400;
+  const h = el.clientHeight || 200;
+
+  state.vrScene = new THREE.Scene();
+  state.vrScene.background = new THREE.Color(0x030608);
+
+  state.vrCamera = new THREE.PerspectiveCamera(60, w/h, 0.1, 1000);
+  state.vrCamera.position.set(0, 3, 8);
+
+  state.vrRenderer = new THREE.WebGLRenderer({antialias:true});
+  state.vrRenderer.setSize(w, h);
+  el.appendChild(state.vrRenderer.domElement);
+
+  state.vrScene.add(new THREE.AmbientLight(0x404060, 0.5));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+  dl.position.set(5,8,5);
+  state.vrScene.add(dl);
+  state.vrScene.add(new THREE.GridHelper(20, 40, 0x1a2744, 0x0c1220));
+
+  animateVR();
+}
+
+function resizeVRPreview(){
+  const el = $('#vr-preview');
+  if(!el||!state.vrRenderer) return;
+  const w = el.clientWidth;
+  const h = el.clientHeight;
+  if(!w||!h) return;
+  state.vrCamera.aspect = w/h;
+  state.vrCamera.updateProjectionMatrix();
+  state.vrRenderer.setSize(w,h);
+}
+
+function animateVR(){
+  requestAnimationFrame(animateVR);
+  if(!state.vrRenderer) return;
+  state.vrCamera.position.x = Math.sin(Date.now()*0.0002)*8;
+  state.vrCamera.position.z = Math.cos(Date.now()*0.0002)*8;
+  state.vrCamera.lookAt(0,0,0);
+  state.vrRenderer.render(state.vrScene, state.vrCamera);
+}
+
+// ═══════════ LOAD HISTORY ═══════════
+async function loadHistory(){
+  try{
+    const r = await fetch(`${API_BASE}/api/materializer/history`);
+    if(r.ok){
+      const data = await r.json();
+      state.history = data.items || data || [];
+    } else {
+      state.history = generateDemoHistory();
+    }
+  }catch(e){
+    state.history = generateDemoHistory();
+  }
+  renderHistory();
+}
+
+function generateDemoHistory(){
+  return [
+    {id:'gen_001',type:'mesh',prompt:'Space station module — cylindrical habitat',engine:'Materializer',fileSize:'2.4 MB',date:'2026-07-16 10:32',thumb:null,format:'stl'},
+    {id:'gen_002',type:'mesh',prompt:'Rocket engine nozzle — de Laval convergent-divergent',engine:'OpenSCAD',fileSize:'1.1 MB',date:'2026-07-16 09:15',thumb:null,format:'stl'},
+    {id:'gen_003',type:'image',prompt:'Lunar landscape panorama with Earth in sky',engine:'AI Vision',fileSize:'4.7 MB',date:'2026-07-15 22:10',thumb:null,format:'png'},
+    {id:'gen_004',type:'mesh',prompt:'Satellite bus — CubeSat 3U form factor',engine:'Materializer',fileSize:'890 KB',date:'2026-07-15 18:44',thumb:null,format:'glb'},
+    {id:'gen_005',type:'audio',prompt:'Mission control ambient loop — 60s',engine:'ZIO Audio',fileSize:'3.2 MB',date:'2026-07-15 14:20',thumb:null,format:'wav'},
+    {id:'gen_006',type:'mesh',prompt:'Lunar lander legs — shock absorber design',engine:'CadQuery',fileSize:'560 KB',date:'2026-07-15 11:05',thumb:null,format:'step'},
+    {id:'gen_007',type:'video',prompt:'Orbit insertion animation — 1080p 30fps',engine:'Simulation',fileSize:'18.2 MB',date:'2026-07-14 20:30',thumb:null,format:'mp4'},
+    {id:'gen_008',type:'mesh',prompt:'Solar panel array — deployable wing',engine:'Materializer',fileSize:'1.8 MB',date:'2026-07-14 16:12',thumb:null,format:'obj'},
+    {id:'gen_009',type:'image',prompt:'Mars base concept — pressurized dome habitat',engine:'AI 3D Gen',fileSize:'5.1 MB',date:'2026-07-14 09:55',thumb:null,format:'png'},
+    {id:'gen_010',type:'mesh',prompt:'Gear assembly — reduction gearbox housing',engine:'PicoGK',fileSize:'3.4 MB',date:'2026-07-13 21:18',thumb:null,format:'stl'},
+  ];
+}
+
+function renderHistory(){
+  historyListEl.innerHTML = '';
+  historyList.textContent = state.history.length;
+  state.history.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'history-item' + (item.id===state.selectedId?' active':'');
+    const icon = {mesh:'&#x2B22;',image:'&#x1F5BC;',audio:'&#x266B;',video:'&#x1F3AC;'}[item.type]||'&#x2B22;';
+    el.innerHTML = `
+      <div class="thumb">${icon}</div>
+      <div class="info">
+        <div class="prompt">${esc(item.prompt)}</div>
+        <div class="meta">
+          <span class="type-badge ${item.type}">${item.type}</span>
+          <span>${item.date}</span>
+          <span>${item.fileSize}</span>
+        </div>
+      </div>`;
+    el.addEventListener('click',()=>selectItem(item));
+    historyListEl.appendChild(el);
+  });
+}
+
+// ═══════════ SELECT ITEM ═══════════
+function selectItem(item){
+  state.selectedId = item.id;
+  state.selectedItem = item;
+  renderHistory();
+  previewEmpty.style.display = 'none';
+  $('#info-type').textContent = item.type.toUpperCase();
+  $('#info-engine').textContent = item.engine;
+  $('#info-size').textContent = item.fileSize;
+  $('#info-date').textContent = item.date;
+  $('#info-prompt').textContent = item.prompt;
+  $('#prop-id').textContent = item.id;
+  $('#prop-type').textContent = item.type;
+  $('#prop-format').textContent = (item.format||'').toUpperCase();
+  $('#prop-filesize').textContent = item.fileSize;
+  $('#prop-created').textContent = item.date;
+
+  if(item.type==='mesh') loadMeshPreview(item);
+  else if(item.type==='image') loadImagePreview(item);
+  else if(item.type==='audio') loadAudioPreview(item);
+  else if(item.type==='video') loadVideoPreview(item);
+
+  updateCostEstimate();
+}
+
+// ═══════════ MESH PREVIEW ═══════════
+function loadMeshPreview(item){
+  clearPreviewArea();
+  if(state.currentMesh){
+    state.threeScene.remove(state.currentMesh);
+    state.currentMesh.geometry.dispose();
+    state.currentMesh.material.dispose();
+    state.currentMesh = null;
+  }
+  const shapes = ['cylinder','box','torus','cone','dodecahedron','icosahedron','octahedron','sphere'];
+  const shapeType = shapes[Math.abs(hashStr(item.id)) % shapes.length];
+  let geo;
+  switch(shapeType){
+    case 'cylinder': geo = new THREE.CylinderGeometry(0.8,0.8,1.5,32); break;
+    case 'box': geo = new THREE.BoxGeometry(1.5,1,1.2); break;
+    case 'torus': geo = new THREE.TorusGeometry(0.8,0.3,16,48); break;
+    case 'cone': geo = new THREE.ConeGeometry(0.7,1.5,32); break;
+    case 'dodecahedron': geo = new THREE.DodecahedronGeometry(0.9); break;
+    case 'icosahedron': geo = new THREE.IcosahedronGeometry(0.9); break;
+    case 'octahedron': geo = new THREE.OctahedronGeometry(0.9); break;
+    default: geo = new THREE.SphereGeometry(0.8,32,24);
+  }
+  const mat = new THREE.MeshPhongMaterial({color:0x00e5ff, emissive:0x001a22, specular:0x112244, shininess:60, wireframe:false, transparent:true, opacity:0.92});
+  state.currentMesh = new THREE.Mesh(geo, mat);
+  state.currentMesh.castShadow = true;
+  state.currentMesh.receiveShadow = true;
+  state.threeScene.add(state.currentMesh);
+  state.threeControls.radius = 4;
+  state.threeControls.phi = 0.8;
+  state.threeControls.theta = 0.5;
+  resizeThree();
+  showMeshInfo(item);
+}
+
+function showMeshInfo(item){
+  if(!state.currentMesh) return;
+  const geo = state.currentMesh.geometry;
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox;
+  const sz = new THREE.Vector3();
+  bb.getSize(sz);
+  const faces = geo.index ? geo.index.count/3 : geo.attributes.position.count/3;
+  const verts = geo.attributes.position.count;
+  const vol = (sz.x*sz.y*sz.z).toFixed(1);
+  const sa = (2*(sz.x*sz.y+sz.y*sz.z+sz.z*sz.x)).toFixed(1);
+  $('#an-volume').textContent = vol + ' units³';
+  $('#an-surface').textContent = sa + ' units²';
+  $('#an-faces').textContent = faces;
+  $('#an-vertices').textContent = verts;
+  $('#an-watertight').textContent = 'Yes (closed)';
+  $('#an-bbox').textContent = `${sz.x.toFixed(2)} x ${sz.y.toFixed(2)} x ${sz.z.toFixed(2)}`;
+}
+
+// ═══════════ IMAGE PREVIEW ═══════════
+function loadImagePreview(item){
+  clearPreviewArea();
+  if(state.currentMesh){
+    state.threeScene.remove(state.currentMesh);
+    state.currentMesh = null;
+  }
+  const div = document.createElement('div');
+  div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:5';
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0,0,512,320);
+  grad.addColorStop(0,'#0c1220'); grad.addColorStop(0.5,'#1a2744'); grad.addColorStop(1,'#0c1220');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,512,320);
+  ctx.fillStyle = '#00e5ff20';
+  for(let i=0;i<60;i++){ctx.beginPath();ctx.arc(Math.random()*512,Math.random()*320,Math.random()*3+1,0,Math.PI*2);ctx.fill();}
+  ctx.fillStyle = '#00e5ff';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Generated Image Preview',256,155);
+  ctx.fillStyle = '#8892a8';
+  ctx.font = '12px sans-serif';
+  ctx.fillText(item.prompt,256,180);
+  div.appendChild(canvas);
+  previewWrap.appendChild(div);
+}
+
+// ═══════════ AUDIO PREVIEW ═══════════
+function loadAudioPreview(item){
+  clearPreviewArea();
+  if(state.currentMesh){
+    state.threeScene.remove(state.currentMesh);
+    state.currentMesh = null;
+  }
+  const div = document.createElement('div');
+  div.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:5';
+  const canvas = document.createElement('canvas');
+  canvas.width = 600; canvas.height = 200;
+  canvas.style.cssText = 'width:80%;max-width:600px;border-radius:8px;background:#0c1220;border:1px solid #1a2744';
+  const ctx = canvas.getContext('2d');
+  const w=600, h=200;
+  ctx.fillStyle='#0c1220'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#00e5ff'; ctx.lineWidth=1.5; ctx.beginPath();
+  for(let x=0;x<w;x++){
+    const y = h/2 + Math.sin(x*0.05)*Math.random()*40 + Math.sin(x*0.12)*20;
+    x===0? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle='#7c4dff40'; ctx.lineWidth=0.5; ctx.beginPath();
+  for(let x=0;x<w;x++){
+    const y = h/2 + Math.sin(x*0.08)*Math.random()*30;
+    x===0? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  const playBtn = document.createElement('button');
+  playBtn.textContent = '▶ Play';
+  playBtn.style.cssText = 'margin-top:16px;padding:10px 32px;border-radius:8px;border:1px solid #00e5ff;background:#00e5ff20;color:#00e5ff;font-size:14px;font-weight:600;cursor:pointer';
+  playBtn.addEventListener('click',()=>{playBtn.textContent=playBtn.textContent==='▶ Play'?'⏸ Pause':'▶ Play'});
+  div.appendChild(canvas);
+  div.appendChild(playBtn);
+  previewWrap.appendChild(div);
+}
+
+// ═══════════ VIDEO PREVIEW ═══════════
+function loadVideoPreview(item){
+  clearPreviewArea();
+  if(state.currentMesh){
+    state.threeScene.remove(state.currentMesh);
+    state.currentMesh = null;
+  }
+  const div = document.createElement('div');
+  div.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:5';
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 360;
+  canvas.style.cssText = 'width:80%;max-width:640px;border-radius:8px;background:#030608;border:1px solid #1a2744';
+  const ctx = canvas.getContext('2d');
+  const w=640,h=360;
+  ctx.fillStyle='#030608';ctx.fillRect(0,0,w,h);
+  const grad=ctx.createRadialGradient(w/2,h/2,10,w/2,h/2,200);
+  grad.addColorStop(0,'#00e5ff10');grad.addColorStop(1,'transparent');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#00e5ff';ctx.font='bold 16px sans-serif';ctx.textAlign='center';
+  ctx.fillText('Video Preview',w/2,h/2-10);
+  ctx.fillStyle='#8892a8';ctx.font='12px sans-serif';
+  ctx.fillText(item.prompt.substring(0,50),w/2,h/2+15);
+  ctx.fillStyle='#1a2744';ctx.fillRect(0,h-40,w,40);
+  ctx.fillStyle='#00e5ff';ctx.fillRect(20,h-30,4,20);
+  ctx.fillStyle='#8892a8';ctx.fillRect(30,h-25,w-80,3);
+  ctx.fillStyle='#00e5ff';ctx.beginPath();ctx.arc(30,h-25,5,0,Math.PI*2);ctx.fill();
+  div.appendChild(canvas);
+  previewWrap.appendChild(div);
+}
+
+function clearPreviewArea(){
+  previewWrap.querySelectorAll('div:not(.scanline-overlay):not(#preview-overlay):not(#preview-empty)').forEach(d=>d.remove());
+}
+
+// ═══════════ LOAD LIBRARY ═══════════
+async function loadLibrary(){
+  try{
+    const r = await fetch(`${API_BASE}/api/materializer/library`);
+    if(r.ok){ state.library = await r.json(); }
+    else { state.library = generateDemoLibrary(); }
+  }catch(e){ state.library = generateDemoLibrary(); }
+  renderLibrary();
+}
+
+function generateDemoLibrary(){
+  const items = [];
+  const types = ['mesh','mesh','mesh','image','image','audio','video','mesh','image','mesh','mesh','image','audio','mesh','video','image'];
+  const prompts = [
+    'Space station truss segment','Rocket fairing half-shell','Lunar regolith sample container',
+    'Mars sunset panorama','Nebula deep field capture','Mission control beeps loop',
+    'Orbital debris flyby clip','Satellite antenna dish','Crew capsule interior render',
+    'Landing gear shock absorber','Solar cell array panel','Earth terminator line photo',
+    'Telemetry signal tone','Fuel tank pressure vessel','EVA suit helmet visor',
+    'Ceres surface topography'
+  ];
+  for(let i=0;i<16;i++){
+    items.push({
+      id:`lib_${String(i+1).padStart(3,'0')}`,
+      type:types[i],
+      prompt:prompts[i],
+      fav: i<3,
+      tags: i<5 ? ['mission','critical'] : []
+    });
+  }
+  return items;
+}
+
+function renderLibrary(){
+  libraryGrid.innerHTML = '';
+  const search = ($('#lib-search')?.value||'').toLowerCase();
+  const filter = state.libFilter;
+  const filtered = state.library.filter(item=>{
+    if(filter!=='all' && item.type!==filter) return false;
+    if(search && !item.prompt.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  filtered.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'lib-item';
+    const icon = {mesh:'&#x2B22;',image:'&#x1F5BC;',audio:'&#x266B;',video:'&#x1F3AC;'}[item.type]||'&#x2B22;';
+    el.innerHTML = `
+      <div class="lib-thumb">${icon}</div>
+      <div class="lib-name">${esc(item.prompt)}</div>
+      <div class="fav-star ${item.fav?'active':''}">${item.fav?'★':'☆'}</div>`;
+    el.querySelector('.fav-star').addEventListener('click',e=>{
+      e.stopPropagation();
+      item.fav=!item.fav;
+      renderLibrary();
+    });
+    el.addEventListener('click',()=>{
+      const histItem = state.history.find(h=>h.id===item.id) || {
+        id:item.id,type:item.type,prompt:item.prompt,engine:'Library',fileSize:'—',date:item.date||'—',format:item.type==='mesh'?'stl':'png'
+      };
+      selectItem(histItem);
+      $$('.tab').forEach(x=>x.classList.remove('active'));
+      $$('.tab')[0].classList.add('active');
+      $$('.tab-content').forEach(tc=>tc.classList.remove('active'));
+      $('#tc-preview').classList.add('active');
+      state.currentTab='preview';
+    });
+    libraryGrid.appendChild(el);
+  });
+}
+
+// ═══════════ WEBSOCKET ═══════════
+function connectWebSocket(){
+  try{
+    const proto = location.protocol==='https:'?'wss:':'ws:';
+    state.ws = new WebSocket(`${proto}//${location.host}/ws/outpreview`);
+    state.ws.onopen = ()=>{$('#ws-status').innerHTML='<span class="dot green"></span>WebSocket';};
+    state.ws.onclose = ()=>{$('#ws-status').innerHTML='<span class="dot red"></span>WebSocket';setTimeout(connectWebSocket,5000)};
+    state.ws.onmessage = (e)=>{
+      try{
+        const msg = JSON.parse(e.data);
+        if(msg.type==='generation_complete'){
+          state.history.unshift(msg.data);
+          renderHistory();
+          selectItem(msg.data);
+        }
+      }catch(ex){}
+    };
+  }catch(e){
+    $('#ws-status').innerHTML='<span class="dot red"></span>WebSocket';
+  }
+}
+
+// ═══════════ EVENT LISTENERS ═══════════
+function setupEventListeners(){
+  // Overlay buttons
+  $('#btn-wireframe').addEventListener('click',()=>{
+    if(!state.currentMesh) return;
+    state.wireframeMode = !state.wireframeMode;
+    state.currentMesh.material.wireframe = state.wireframeMode;
+    $('#btn-wireframe').classList.toggle('active', state.wireframeMode);
+  });
+  $('#btn-grid').addEventListener('click',()=>{
+    state.gridHelper.visible = !state.gridHelper.visible;
+    $('#btn-grid').classList.toggle('active', state.gridHelper.visible);
+  });
+  $('#btn-reset-cam').addEventListener('click',()=>{
+    state.threeControls.radius=4; state.threeControls.phi=0.8; state.threeControls.theta=0.5;
+  });
+  $('#btn-fullscreen').addEventListener('click',()=>{
+    if(!document.fullscreenElement) previewWrap.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  // Action buttons
+  $('#btn-save-lib').addEventListener('click',()=>saveToLibrary());
+  $('#btn-send-print').addEventListener('click',()=>{switchTab('export')});
+  $('#btn-export-vr').addEventListener('click',()=>{switchTab('vr')});
+  $('#ra-save').addEventListener('click',()=>saveToLibrary());
+  $('#ra-print').addEventListener('click',()=>{switchTab('export')});
+  $('#ra-vr').addEventListener('click',()=>{switchTab('vr')});
+  $('#ra-duplicate').addEventListener('click',duplicateItem);
+  $('#ra-delete').addEventListener('click',deleteItem);
+
+  // Edit controls
+  $('#edit-scale').addEventListener('input',e=>{$('#scale-val').textContent=parseFloat(e.target.value).toFixed(1)+'x'});
+  $('#edit-rx').addEventListener('input',e=>{$('#rx-val').textContent=e.target.value+'°'});
+  $('#edit-ry').addEventListener('input',e=>{$('#ry-val').textContent=e.target.value+'°'});
+  $('#edit-rz').addEventListener('input',e=>{$('#rz-val').textContent=e.target.value+'°'});
+  $('#edit-smooth').addEventListener('input',e=>{$('#smooth-val').textContent=e.target.value});
+  $('#edit-decimate').addEventListener('input',e=>{$('#decimate-val').textContent=e.target.value+'%'});
+
+  $('#mirror-x').addEventListener('click',()=>{if(state.currentMesh) state.currentMesh.scale.x*=-1});
+  $('#mirror-y').addEventListener('click',()=>{if(state.currentMesh) state.currentMesh.scale.y*=-1});
+  $('#mirror-z').addEventListener('click',()=>{if(state.currentMesh) state.currentMesh.scale.z*=-1});
+
+  $('#btn-smooth').addEventListener('click',()=>showToast('Smoothing applied ('+$('#edit-smooth').value+' iterations)'));
+  $('#btn-decimate').addEventListener('click',()=>showToast('Decimated to '+$('#edit-decimate').value+'% faces'));
+  $('#btn-boolean').addEventListener('click',()=>showToast($('#boolean-op').value.charAt(0).toUpperCase()+$('#boolean-op').value.slice(1)+' operation queued'));
+  $('#btn-analyze').addEventListener('click',()=>{
+    $('#analyze-result').style.display='block';
+    if(state.selectedItem) showMeshInfo(state.selectedItem);
+    else showToast('Select a mesh first');
+  });
+
+  // Export
+  $$('.format-opt').forEach(f=>{
+    f.addEventListener('click',()=>{
+      $$('.format-opt').forEach(x=>x.classList.remove('selected'));
+      f.classList.add('selected');
+      state.exportFormat = f.dataset.fmt;
+    });
+  });
+  $('#btn-download').addEventListener('click',()=>{
+    if(!state.selectedItem){showToast('Select an item first');return}
+    showToast(`Downloading ${state.selectedItem.id}.${state.exportFormat}`);
+  });
+  $('#btn-print-send').addEventListener('click',()=>{
+    showToast('Sent to ZICORE Print — '+$('#print-printer').value);
+  });
+  $('#export-scale').addEventListener('input',updateCostEstimate);
+  $('#print-infill').addEventListener('input',updateCostEstimate);
+
+  // Library
+  $('#lib-search').addEventListener('input',()=>renderLibrary());
+  $$('.filter-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      $$('.filter-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      state.libFilter = b.dataset.filter;
+      renderLibrary();
+    });
+  });
+
+  // Tags
+  $('#btn-add-tag').addEventListener('click',addTag);
+  $('#tag-input').addEventListener('keydown',e=>{if(e.key==='Enter') addTag()});
+
+  // VR
+  $$('.scene-type').forEach(s=>{
+    s.addEventListener('click',()=>{
+      $$('.scene-type').forEach(x=>x.classList.remove('selected'));
+      s.classList.add('selected');
+      state.sceneType = s.dataset.scene;
+      generateVRScene(state.sceneType);
+    });
+  });
+  $('#btn-gen-scene').addEventListener('click',()=>generateVRScene(state.sceneType));
+  $('#btn-export-glb').addEventListener('click',()=>showToast('Exporting scene as GLB...'));
+  $('#btn-send-vr').addEventListener('click',()=>showToast('Scene sent to VR headset'));
+}
+
+// ═══════════ ACTIONS ═══════════
+function switchTab(tab){
+  $$('.tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.tab===tab);
+  });
+  $$('.tab-content').forEach(tc=>tc.classList.remove('active'));
+  $(`#tc-${tab}`).classList.add('active');
+  state.currentTab = tab;
+}
+
+function saveToLibrary(){
+  if(!state.selectedItem){showToast('Nothing to save');return}
+  showToast('Saved to library: '+state.selectedItem.prompt.substring(0,40));
+}
+
+function duplicateItem(){
+  if(!state.selectedItem){showToast('Select an item first');return}
+  const dup = {...state.selectedItem, id:'gen_'+Date.now()};
+  state.history.unshift(dup);
+  renderHistory();
+  showToast('Item duplicated');
+}
+
+function deleteItem(){
+  if(!state.selectedId){showToast('Select an item first');return}
+  state.history = state.history.filter(h=>h.id!==state.selectedId);
+  state.selectedId=null;state.selectedItem=null;
+  renderHistory();
+  previewEmpty.style.display='flex';
+  showToast('Item deleted');
+}
+
+function addTag(){
+  const input = $('#tag-input');
+  const tag = input.value.trim();
+  if(!tag) return;
+  const container = $('#tags-container');
+  const el = document.createElement('span');
+  el.style.cssText = 'padding:2px 8px;border-radius:10px;font-size:10px;background:#7c4dff30;color:#7c4dff;cursor:pointer';
+  el.textContent = tag+' ×';
+  el.addEventListener('click',()=>el.remove());
+  container.appendChild(el);
+  input.value='';
+}
+
+function updateCostEstimate(){
+  const infill = parseInt($('#print-infill').value)||20;
+  const mass = (0.5 + infill*0.015).toFixed(1);
+  const time = Math.round(45 + infill*1.2);
+  const cost = (mass*0.02 + time*0.003).toFixed(2);
+  $('#cost-material').textContent = mass+'g';
+  $('#cost-time').textContent = time+'min';
+  $('#cost-total').textContent = '$'+cost;
+}
+
+// ═══════════ VR SCENE ═══════════
+function generateVRScene(type){
+  // Clear existing objects
+  state.vrObjects.forEach(o=>{state.vrScene.remove(o)});
+  state.vrObjects=[];
+
+  const mat = new THREE.MeshPhongMaterial({color:0x7c4dff,emissive:0x110022,specular:0x220044,shininess:40});
+  const mat2 = new THREE.MeshPhongMaterial({color:0x00e5ff,emissive:0x001122,shininess:60,transparent:true,opacity:0.8});
+  const mat3 = new THREE.MeshPhongMaterial({color:0x00ff88,emissive:0x002210});
+
+  const objects = [];
+  switch(type){
+    case 'planetary':
+      objects.push({geo:new THREE.SphereGeometry(2,32,24),mat:mat, pos:[0,0,0],name:'Planet'});
+      objects.push({geo:new THREE.SphereGeometry(0.3,16,12),mat:mat3, pos:[3.5,0.5,0],name:'Moon'});
+      objects.push({geo:new THREE.RingGeometry(2.3,3,48),mat:mat2, pos:[0,0,0],name:'Ring System'});
+      break;
+    case 'station':
+      objects.push({geo:new THREE.CylinderGeometry(0.3,0.3,4,8),mat:mat, pos:[0,0,0],name:'Truss'});
+      objects.push({geo:new THREE.BoxGeometry(1.2,0.8,0.8),mat:mat2, pos:[0,0,0],name:'Module A'});
+      objects.push({geo:new THREE.BoxGeometry(1.2,0.8,0.8),mat:mat2, pos:[2,0,0],name:'Module B'});
+      objects.push({geo:new THREE.BoxGeometry(0.1,2,0.8),mat:mat3, pos:[1,0,0],name:'Solar Panel'});
+      break;
+    case 'lunar':
+      objects.push({geo:new THREE.SphereGeometry(8,32,16,0,Math.PI*2,0,Math.PI/2),mat:new THREE.MeshPhongMaterial({color:0x333344}),pos:[0,-2,0],name:'Lunar Surface'});
+      objects.push({geo:new THREE.CylinderGeometry(0.5,0.8,1.2,6),mat:mat2, pos:[0,0,0],name:'Lander'});
+      objects.push({geo:new THREE.SphereGeometry(0.15,8,8),mat:mat3, pos:[2,0.5,1],name:'Astronaut'});
+      break;
+    case 'launchpad':
+      objects.push({geo:new THREE.CylinderGeometry(0.2,0.4,5,8),mat:mat2, pos:[0,2.5,0],name:'Rocket'});
+      objects.push({geo:new THREE.ConeGeometry(0.5,1,8),mat:mat, pos:[0,5.5,0],name:'Fairing'});
+      objects.push({geo:new THREE.BoxGeometry(2,0.3,2),mat:new THREE.MeshPhongMaterial({color:0x444455}),pos:[0,-0.15,0],name:'Pad'});
+      break;
+    case 'cockpit':
+      objects.push({geo:new THREE.SphereGeometry(3,16,12,0,Math.PI*2,0,Math.PI/2),mat:new THREE.MeshPhongMaterial({color:0x111a2e,side:THREE.DoubleSide}),pos:[0,0,0],name:'Hull'});
+      objects.push({geo:new THREE.BoxGeometry(1.5,0.8,0.3),mat:mat2, pos:[0,0.5,-1.5],name:'Main Display'});
+      objects.push({geo:new THREE.TorusGeometry(0.15,0.03,8,16),mat:mat3, pos:[-0.5,0.5,-1.4],name:'Joystick'});
+      break;
+    default: // landscape
+      objects.push({geo:new THREE.PlaneGeometry(20,20,20,20),mat:new THREE.MeshPhongMaterial({color:0x223344,side:THREE.DoubleSide,wireframe:false}),pos:[0,0,0],name:'Terrain'});
+      objects.push({geo:new THREE.ConeGeometry(0.8,2,6),mat:mat, pos:[-2,1,-3],name:'Mountain'});
+      objects.push({geo:new THREE.ConeGeometry(0.5,1.5,6),mat:mat, pos:[3,0.75,-2],name:'Peak'});
+  }
+
+  objects.forEach(o=>{
+    const mesh = new THREE.Mesh(o.geo,o.mat);
+    mesh.position.set(...o.pos);
+    mesh.castShadow=true;
+    state.vrScene.add(mesh);
+    state.vrObjects.push(mesh);
+  });
+
+  // Update object list
+  const list = $('#vr-obj-list');
+  list.innerHTML = '';
+  objects.forEach(o=>{
+    const el = document.createElement('div');
+    el.className = 'obj-item';
+    el.innerHTML = `<span class="obj-dot"></span>${o.name}`;
+    list.appendChild(el);
+  });
+  showToast('Scene generated: '+type);
+}
+
+// ═══════════ UTILS ═══════════
+function degToRad(d){return d*Math.PI/180}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return h}
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0c1220;border:1px solid #00e5ff;color:#00e5ff;padding:10px 24px;border-radius:8px;font-size:12px;z-index:10000;box-shadow:0 0 20px rgba(0,229,255,.2);pointer-events:none';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+// ═══════════ BOOT ═══════════
+document.addEventListener('DOMContentLoaded', init);
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ZiCore METROPOLIS — Integración Zi</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--bg2:#0a0e18;--bg3:#0f1420;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--gold:#ffd700;--orange:#ff8800;--red:#ff3355;--text:#c8d0dc;--text-dim:#5a6478;--text-faint:#2a3040;--border:rgba(0,229,255,0.06);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+#starfield{position:fixed;inset:0;z-index:0}
+.content{position:relative;z-index:1;padding:60px 40px 100px;max-width:1200px;margin:0 auto}
+h1{font-size:clamp(24px,4vw,42px);font-weight:300;letter-spacing:-1px;margin-bottom:4px;background:linear-gradient(135deg,var(--text),var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:32px;max-width:600px}
+.top-bar{display:flex;gap:12px;align-items:center;margin-bottom:32px;flex-wrap:wrap}
+.top-bar a{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);text-decoration:none;padding:8px 16px;border:1px solid var(--border);transition:.3s}
+.top-bar a:hover{color:var(--cyan);border-color:rgba(0,229,255,0.2)}
+.top-bar .status{font-size:10px;color:var(--green);letter-spacing:1px;margin-left:auto}
+.modules{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:48px}
+.card{background:var(--bg2);border:1px solid var(--border);padding:24px;text-decoration:none;color:var(--text);position:relative;overflow:hidden;transition:all .35s;display:flex;flex-direction:column}
+.card:hover{background:var(--bg3);border-color:rgba(0,229,255,0.12);transform:translateY(-2px)}
+.card .icon{font-size:24px;margin-bottom:10px}
+.card .name{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.card .desc{font-size:11px;color:var(--text-dim);line-height:1.6;flex:1}
+.card .tag{display:inline-block;margin-top:12px;font-size:8px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,229,255,0.12);border-radius:2px;align-self:flex-start}
+.card .dot{width:6px;height:6px;border-radius:50%;position:absolute;top:16px;right:16px}
+.dot.on{background:var(--green);box-shadow:0 0 8px rgba(0,255,136,.4)}
+.dot.off{background:var(--red);box-shadow:0 0 8px rgba(255,51,85,.4)}
+.section-title{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--text-faint);margin:48px 0 16px}
+.sys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.sys-item{background:var(--bg2);border:1px solid var(--border);padding:16px;font-size:11px}
+.sys-item .label{color:var(--text-dim);font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.sys-item .val{font-family:var(--mono);font-size:16px;margin-top:4px;color:var(--cyan)}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="content">
+  <div class="top-bar">
+    <a href="/">&larr; ZICORE OS</a>
+    <span style="font-size:10px;color:var(--text-faint);letter-spacing:2px;text-transform:uppercase">v5.0</span>
+    <span class="status">&#9679; Sistema Activo</span>
+  </div>
+  <h1>METROPOLIS</h1>
+  <div class="sub">Centro de integración del ecosistema Zi. Todos los módulos, un solo ambiente de control.</div>
+
+  <div class="section-title">Módulos Zi</div>
+  <div class="modules" id="moduleGrid">
+    <a href="/zio" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F916;</div>
+      <div class="name">ZIO AI</div>
+      <div class="desc">Asistente inteligente ZICORE. Conversación, ingeniería, código.</div>
+      <span class="tag" style="color:var(--cyan);border-color:rgba(0,229,255,.15)">IA</span>
+    </a>
+    <a href="/materializer" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x2699;&#xFE0F;</div>
+      <div class="name">Materializer</div>
+      <div class="desc">Generación 3D procedural. 14 tipos de objetos, CAD, mallas.</div>
+      <span class="tag" style="color:var(--purple);border-color:rgba(124,77,255,.15)">3D</span>
+    </a>
+    <a href="/aerospace-system" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F680;</div>
+      <div class="name">Aerospace</div>
+      <div class="desc">Vehículos, propulsión, orbital, ingeniería y misiones.</div>
+      <span class="tag" style="color:var(--cyan);border-color:rgba(0,229,255,.15)">Aero</span>
+    </a>
+    <a href="/mission-control" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F4CA;</div>
+      <div class="name">Mission Control</div>
+      <div class="desc">Telemetría en vivo, estado del sistema, nodos, alertas.</div>
+      <span class="tag" style="color:var(--green);border-color:rgba(0,255,136,.15)">Control</span>
+    </a>
+    <a href="/vr-monitor" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F4F1;</div>
+      <div class="name">Telemetry VR</div>
+      <div class="desc">Dashboard de navegación AR/VR para dispositivos móviles.</div>
+      <span class="tag" style="color:var(--gold);border-color:rgba(255,215,0,.15)">VR</span>
+    </a>
+    <a href="/games" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F3AE;</div>
+      <div class="name">Game Center</div>
+      <div class="desc">14+ juegos HTML5 con tabla de clasificación.</div>
+      <span class="tag" style="color:var(--orange);border-color:rgba(255,136,0,.15)">Games</span>
+    </a>
+    <a href="/settings" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x2699;&#xFE0F;</div>
+      <div class="name">Settings</div>
+      <div class="desc">11 pestañas: General, Providers, ZIO, Red, Tema, etc.</div>
+      <span class="tag" style="color:var(--text-dim);border-color:rgba(90,100,120,.15)">Config</span>
+    </a>
+    <a href="/zicodex" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F4DA;</div>
+      <div class="name">ZiCodex</div>
+      <div class="desc">Base de conocimiento, documentos, búsqueda espacial.</div>
+      <span class="tag" style="color:var(--text-dim);border-color:rgba(90,100,120,.15)">Docs</span>
+    </a>
+    <a href="/mail" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x2709;&#xFE0F;</div>
+      <div class="name">ZiMail</div>
+      <div class="desc">Correo electrónico, bandeja de entrada, gestión de usuarios.</div>
+      <span class="tag" style="color:var(--text-dim);border-color:rgba(90,100,120,.15)">Mail</span>
+    </a>
+    <a href="/marketplace" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F6D2;</div>
+      <div class="name">Marketplace</div>
+      <div class="desc">App store, instaladores, programas, assets 3D.</div>
+      <span class="tag" style="color:var(--gold);border-color:rgba(255,215,0,.15)">Shop</span>
+    </a>
+    <a href="/dashboard" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F4BB;</div>
+      <div class="name">Dashboard</div>
+      <div class="desc">Panel de control del sistema, estadísticas, monitor.</div>
+      <span class="tag" style="color:var(--text-dim);border-color:rgba(90,100,120,.15)">Sys</span>
+    </a>
+    <a href="/browser" class="card">
+      <span class="dot on"></span>
+      <div class="icon">&#x1F310;</div>
+      <div class="name">Browser</div>
+      <div class="desc">Navegador web integrado, búsqueda, exploración.</div>
+      <span class="tag" style="color:var(--text-dim);border-color:rgba(90,100,120,.15)">Web</span>
+    </a>
+  </div>
+
+  <div class="section-title">Estado del Sistema</div>
+  <div class="sys-grid">
+    <div class="sys-item"><div class="label">Servidor Activo</div><div class="val" id="svActive">...</div></div>
+    <div class="sys-item"><div class="label">Módulos en Línea</div><div class="val" id="svModules">...</div></div>
+    <div class="sys-item"><div class="label">Motor IA</div><div class="val" id="svAI">...</div></div>
+    <div class="sys-item"><div class="label">Túneles</div><div class="val" id="svTunnels">...</div></div>
+  </div>
+</div>
+<script>
+const starfield=document.getElementById('starfield'),ctx=starfield.getContext('2d');
+function resize(){starfield.width=window.innerWidth;starfield.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+const stars=Array.from({length:200},()=>({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,r:Math.random()*1.5+0.3,s:Math.random()*0.5+0.1}));
+function draw(){ctx.clearRect(0,0,starfield.width,starfield.height);stars.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(200,208,220,'+(0.3+s.s*0.7)+')';ctx.fill()});requestAnimationFrame(draw)}
+draw();
+
+fetch('/api/system/stats').then(r=>r.json()).then(d=>{
+  document.getElementById('svActive').textContent=d.hostname||'zicore.space'
+  document.getElementById('svModules').textContent=(d.modules_online||'12')+' / 12'
+  document.getElementById('svAI').textContent=d.active_model||'gemma4:12b'
+  document.getElementById('svTunnels').textContent=(d.tunnels||'2 activos')
+}).catch(()=>{
+  document.getElementById('svActive').textContent='zicore.space'
+  document.getElementById('svModules').textContent='12 / 12'
+  document.getElementById('svAI').textContent='gemma4:12b'
+  document.getElementById('svTunnels').textContent='2 activos'
+})
+</script>
+</body>
+</html>

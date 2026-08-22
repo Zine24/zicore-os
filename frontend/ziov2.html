@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIO Agent V2 — Multimodal AI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04060c;--bg2:#0a0e18;--bg3:#0f1520;--bg4:#151c2c;
+  --cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3d3d;--orange:#ff9100;--yellow:#ffd600;
+  --text:#e0e6f0;--text2:#8892a4;--text3:#4a5568;
+  --glass:rgba(10,14,24,0.85);--border:rgba(0,229,255,0.12);
+  --glow:0 0 20px rgba(0,229,255,0.15);
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh}
+
+.header{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.header .logo{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.header .title{font-size:16px;font-weight:600;color:var(--cyan)}
+.header .subtitle{font-size:11px;color:var(--text2);margin-left:4px}
+.header .status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3)}
+.header .status .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.header .version{background:var(--bg3);padding:2px 8px;border-radius:10px;font-size:10px;color:var(--cyan);border:1px solid var(--border)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+.main{flex:1;display:flex;overflow:hidden}
+
+.chat{flex:1;display:flex;flex-direction:column;min-width:0}
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.messages::-webkit-scrollbar{width:6px}
+.messages::-webkit-scrollbar-track{background:transparent}
+.messages::-webkit-scrollbar-thumb{background:var(--text3);border-radius:3px}
+
+.msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;animation:fadeUp 0.2s ease;word-wrap:break-word}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(124,77,255,0.15));border:1px solid rgba(0,229,255,0.2);border-bottom-right-radius:4px}
+.msg.assistant{align-self:flex-start;background:var(--bg3);border:1px solid var(--border);border-bottom-left-radius:4px;max-width:85%}
+.msg.assistant .intent{display:inline-block;font-size:9px;color:var(--purple);background:rgba(124,77,255,0.1);padding:1px 6px;border-radius:8px;margin-bottom:4px}
+.msg.assistant .intent.code{color:var(--orange);background:rgba(255,145,0,0.1)}
+.msg.assistant .intent.file{color:var(--green);background:rgba(0,255,136,0.1)}
+.msg.system{align-self:center;font-size:11px;color:var(--text3);padding:4px 12px}
+.msg .time{font-size:9px;color:var(--text3);margin-top:4px}
+
+/* Thinking block */
+.msg.thinking{align-self:flex-start;background:rgba(124,77,255,0.05);border:1px solid rgba(124,77,255,0.2);border-radius:12px;border-bottom-left-radius:4px;max-width:85%;font-size:12px;color:var(--text2);font-style:italic}
+.msg.thinking .thinking-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--purple);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.msg.thinking .thinking-label .dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 1.5s infinite}
+.msg.thinking pre{background:#0a0e18;border:1px solid var(--border);border-radius:6px;padding:8px;margin:4px 0;overflow-x:auto;font-size:11px;font-family:'Cascadia Code','Fira Code',monospace;color:var(--text)}
+
+/* Code blocks in assistant messages */
+.msg.assistant pre{background:#0a0e18;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:8px 0;overflow-x:auto;font-size:12px;line-height:1.5;font-family:'Cascadia Code','Fira Code','JetBrains Mono',monospace;color:var(--cyan)}
+.msg.assistant code{font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;background:rgba(0,229,255,0.08);padding:1px 4px;border-radius:3px;color:var(--cyan)}
+.msg.assistant pre code{background:none;padding:0;color:inherit}
+
+/* Tool result blocks */
+.tool-result{background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:8px;padding:8px 12px;margin:8px 0;font-size:12px}
+.tool-result.error{background:rgba(255,61,61,0.05);border-color:rgba(255,61,61,0.2)}
+.tool-result .tool-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.tool-result .tool-label .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.tool-result.error .tool-label .dot{background:var(--red)}
+.tool-result pre{background:#0a0e18;border:1px solid var(--border);border-radius:6px;padding:8px;margin:4px 0;overflow-x:auto;font-size:11px;font-family:'Cascadia Code','Fira Code',monospace;color:var(--text)}
+.tool-result .meta{font-size:9px;color:var(--text3);margin-top:4px}
+
+.typing{align-self:flex-start;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;border-bottom-left-radius:4px;display:none}
+.typing.active{display:flex}
+.typing span{width:6px;height:6px;background:var(--cyan);border-radius:50%;margin:0 2px;animation:bounce 1.4s infinite}
+.typing span:nth-child(2){animation-delay:0.2s}
+.typing span:nth-child(3){animation-delay:0.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.input-area{padding:12px 20px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+.input-wrap{flex:1;position:relative}
+.input-wrap textarea{width:100%;min-height:40px;max-height:120px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:inherit;resize:none;outline:none;transition:border-color 0.2s}
+.input-wrap textarea:focus{border-color:var(--cyan);box-shadow:var(--glow)}
+.input-wrap textarea::placeholder{color:var(--text3)}
+.btn{padding:10px 16px;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s}
+.btn-send{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;display:flex;align-items:center;gap:6px}
+.btn-send:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,229,255,0.3)}
+.btn-send:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-icon{background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-size:16px;width:40px;height:40px;display:flex;align-items:center;justify-content:center}
+.btn-icon:hover{border-color:var(--cyan);color:var(--cyan)}
+.hint{font-size:10px;color:var(--text3);margin-top:6px;text-align:center}
+
+.sidebar{width:260px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
+.sidebar-header .btn-new{font-size:18px;color:var(--cyan);cursor:pointer;background:none;border:none;padding:2px 6px;border-radius:4px}
+.sidebar-header .btn-new:hover{background:var(--bg3)}
+.sidebar-section{padding:8px 14px}
+.sidebar-section h4{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.tool-card{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:var(--bg3);margin-bottom:4px;font-size:11px}
+.tool-card .cat{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tool-card .cat.vision{background:var(--cyan)}
+.tool-card .cat.speech{background:var(--purple)}
+.tool-card .cat.memory{background:var(--green)}
+.tool-card .cat.web{background:var(--red)}
+.tool-card .cat.code{background:var(--orange)}
+.tool-card .cat.file{background:var(--yellow)}
+.tool-card .name{color:var(--text)}
+.tool-card .ram{margin-left:auto;color:var(--text3);font-size:9px}
+
+.resources{padding:8px 14px;border-top:1px solid var(--border)}
+.res-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.res-row .label{color:var(--text3)}
+.res-row .val{color:var(--cyan);font-family:'Cascadia Code','Fira Code',monospace}
+.res-bar{height:4px;background:var(--bg);border-radius:2px;margin-bottom:8px;overflow:hidden}
+.res-bar .fill{height:100%;border-radius:2px;transition:width 0.5s}
+.res-bar .fill.ram{background:linear-gradient(90deg,var(--cyan),var(--purple))}
+.res-bar .fill.cpu{background:linear-gradient(90deg,var(--green),var(--cyan))}
+
+.sessions{padding:8px 14px;overflow-y:auto;flex:1}
+.session-item{padding:6px 8px;border-radius:6px;font-size:11px;color:var(--text2);cursor:pointer;margin-bottom:2px;transition:background 0.2s;position:relative}
+.session-item:hover,.session-item.active{background:var(--bg3);color:var(--text)}
+.session-item .sid{font-family:monospace;font-size:9px;color:var(--text3)}
+.session-item .session-name{font-size:11px;font-weight:500;color:var(--text);margin-bottom:2px}
+.session-item .session-meta{font-size:9px;color:var(--text3);display:flex;justify-content:space-between}
+.session-item.active{border-left:2px solid var(--cyan)}
+.session-item .btn-delete{position:absolute;top:4px;right:4px;font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:3px}
+.session-item .btn-delete:hover{color:var(--red);background:rgba(255,61,61,0.1)}
+
+/* New session modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:100;display:none}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.modal h3{font-size:14px;color:var(--cyan);margin-bottom:12px}
+.modal input{width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;margin-bottom:12px}
+.modal input:focus{border-color:var(--cyan)}
+.modal .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal .btn-cancel{background:var(--bg3);color:var(--text2);border:1px solid var(--border);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
+.modal .btn-create{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;border:none}
+
+.welcome{text-align:center;padding:60px 20px;animation:fadeUp 0.5s ease}
+.welcome h2{font-size:22px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.welcome p{color:var(--text2);font-size:13px;max-width:400px;margin:0 auto;line-height:1.6}
+.welcome .capabilities{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px}
+.cap-badge{padding:4px 10px;border-radius:12px;font-size:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+.cap-badge.code{border-color:rgba(255,145,0,0.3);color:var(--orange)}
+.cap-badge.file{border-color:rgba(255,214,0,0.3);color:var(--yellow)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">Z2</div>
+    <span class="title">ZIO Agent V2</span>
+    <span class="subtitle">Multimodal Agentic System</span>
+    <div class="status">
+      <span class="version">v2.1.0</span>
+      <span id="connStatus">connecting...</span>
+      <div class="dot" id="connDot"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="chat">
+      <div class="messages" id="messages">
+        <div class="welcome">
+          <h2>ZIO Agent V2</h2>
+          <p>Multimodal agentic system. Camera/image, code execution, file editing, vision, speech, 3D, web search, memory.</p>
+          <div class="capabilities">
+            <span class="cap-badge">Vision</span>
+            <span class="cap-badge">Speech</span>
+            <span class="cap-badge">Text-to-3D</span>
+            <span class="cap-badge">Memory</span>
+            <span class="cap-badge">Web Search</span>
+            <span class="cap-badge">TTS</span>
+            <span class="cap-badge code">Code Execute</span>
+            <span class="cap-badge file">File Edit</span>
+          </div>
+        </div>
+      </div>
+      <div class="typing" id="typing"><span></span><span></span><span></span></div>
+
+      <div class="input-area">
+        <div class="input-row">
+          <button class="btn btn-icon" id="btnImage" title="Attach image">🖼</button>
+          <div class="input-wrap">
+            <textarea id="input" placeholder="Ask ZIO anything..." rows="1"></textarea>
+          </div>
+          <button class="btn btn-send" id="btnSend" disabled>
+            <span>Send</span>
+            <span>▶</span>
+          </button>
+        </div>
+        <div class="hint">Enter to send · Shift+Enter for new line · Paste images directly</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span>Tools & Resources</span>
+      </div>
+      <div id="toolsList" class="sidebar-section"><h4>Tools</h4></div>
+
+      <div class="sidebar-header">Resources</div>
+      <div class="resources" id="resources">
+        <div class="res-row"><span class="label">RAM</span><span class="val" id="ramVal">--</span></div>
+        <div class="res-bar"><div class="fill ram" id="ramBar" style="width:0%"></div></div>
+        <div class="res-row"><span class="label">CPU</span><span class="val" id="cpuVal">--</span></div>
+        <div class="res-bar"><div class="fill cpu" id="cpuBar" style="width:0%"></div></div>
+        <div class="res-row"><span class="label">Jobs</span><span class="val" id="jobsVal">0</span></div>
+      </div>
+
+      <div class="sidebar-header">
+        <span>Sessions</span>
+        <button class="btn-new" id="btnNewSession" title="New session">+</button>
+      </div>
+      <div class="sessions" id="sessionsList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Session Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>New Session</h3>
+    <input type="text" id="sessionName" placeholder="Session name (optional)" maxlength="50">
+    <input type="text" id="sessionSystemPrompt" placeholder="System prompt (optional)" maxlength="500">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnModalCancel">Cancel</button>
+      <button class="btn-create" id="btnModalCreate">Create</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+
+<script>
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? `http://localhost:8201` : `${window.location.protocol}//${window.location.host}`;
+
+const messages = document.getElementById('messages');
+const input = document.getElementById('input');
+const btnSend = document.getElementById('btnSend');
+const typing = document.getElementById('typing');
+const fileInput = document.getElementById('fileInput');
+const modalOverlay = document.getElementById('modalOverlay');
+const sessionNameInput = document.getElementById('sessionName');
+const sessionSystemPromptInput = document.getElementById('sessionSystemPrompt');
+
+let sessionId = localStorage.getItem('zio_v2_session') || null;
+let sessionName = localStorage.getItem('zio_v2_session_name') || '';
+let systemPrompt = localStorage.getItem('zio_v2_system_prompt') || '';
+let ws = null;
+let pendingImage = null;
+let thinkingDiv = null;
+
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  btnSend.disabled = !input.value.trim() && !pendingImage;
+});
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+btnSend.addEventListener('click', sendMessage);
+document.getElementById('btnImage').addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingImage = reader.result;
+    addMessage('system', `Image attached: ${file.name}`);
+    btnSend.disabled = false;
+  };
+  reader.readAsDataURL(file);
+  fileInput.value = '';
+});
+
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const blob = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingImage = reader.result;
+        addMessage('system', 'Image pasted from clipboard');
+        btnSend.disabled = false;
+      };
+      reader.readAsDataURL(blob);
+      break;
+    }
+  }
+});
+
+function formatMarkdown(text) {
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+  return html;
+}
+
+function addMessage(role, text, meta = {}) {
+  const welcome = messages.querySelector('.welcome');
+  if (welcome) welcome.remove();
+
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  let html = '';
+  if (meta.intent) {
+    const intentClass = meta.intent.split('/')[0];
+    html += `<div class="intent ${intentClass}">${meta.intent}</div><br>`;
+  }
+  html += formatMarkdown(text);
+
+  if (meta.tool_results) {
+    for (const tr of meta.tool_results) {
+      if (!tr) continue;
+      const result = tr.result || tr;
+      const tool = tr.tool || 'tool';
+      const isErr = tr.status === 'error' || result?.error;
+      html += `<div class="tool-result ${isErr ? 'error' : ''}">`;
+      html += `<div class="tool-label"><div class="dot"></div>${tool}</div>`;
+      if (result?.stdout) {
+        html += `<pre><code>${escapeHtml(result.stdout.substring(0, 3000))}</code></pre>`;
+      }
+      if (result?.stderr) {
+        html += `<pre><code style="color:var(--red)">${escapeHtml(result.stderr.substring(0, 2000))}</code></pre>`;
+      }
+      if (result?.content) {
+        html += `<pre><code>${escapeHtml(result.content.substring(0, 3000))}</code></pre>`;
+      }
+      if (result?.error) {
+        html += `<pre><code style="color:var(--red)">${escapeHtml(result.error)}</code></pre>`;
+      }
+      const meta_parts = [];
+      if (result?.exit_code !== undefined && result.exit_code !== null) meta_parts.push(`exit: ${result.exit_code}`);
+      if (result?.execution_time_s) meta_parts.push(`${result.execution_time_s}s`);
+      if (result?.bytes_written) meta_parts.push(`${result.bytes_written} bytes`);
+      if (result?.bytes_changed) meta_parts.push(`${result.bytes_changed > 0 ? '+' : ''}${result.bytes_changed} bytes`);
+      if (result?.occurrences) meta_parts.push(`${result.occurrences} match(es)`);
+      if (tr.elapsed_s) meta_parts.push(`${tr.elapsed_s}s`);
+      if (meta_parts.length) html += `<div class="meta">${meta_parts.join(' · ')}</div>`;
+      html += `</div>`;
+    }
+  }
+
+  if (meta.elapsed) {
+    html += `<div class="time">${meta.elapsed}s</div>`;
+  }
+  div.innerHTML = html;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+  return div;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addThinkingBlock() {
+  const div = document.createElement('div');
+  div.className = 'msg thinking';
+  div.innerHTML = '<div class="thinking-label"><div class="dot"></div>Thinking...</div><div class="thinking-content"></div>';
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+  return div;
+}
+
+function updateThinkingBlock(div, thinkingText) {
+  if (!div) return;
+  const content = div.querySelector('.thinking-content');
+  if (content) {
+    content.innerHTML = formatMarkdown(thinkingText);
+    messages.scrollTop = messages.scrollHeight;
+  }
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text && !pendingImage) return;
+
+  addMessage('user', text + (pendingImage ? ' [image attached]' : ''));
+  input.value = '';
+  input.style.height = 'auto';
+  typing.classList.add('active');
+  btnSend.disabled = true;
+
+  const payload = {
+    message: text,
+    session_id: sessionId,
+    image: pendingImage,
+  };
+  pendingImage = null;
+
+  try {
+    const resp = await fetch(`${API}/api/agent/v2/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await resp.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      typing.classList.remove('active');
+      addMessage('system', `Error: Server returned non-JSON: ${text.substring(0, 200)}`);
+      btnSend.disabled = false;
+      return;
+    }
+
+    if (data.session_id) {
+      sessionId = data.session_id;
+      localStorage.setItem('zio_v2_session', sessionId);
+    }
+
+    typing.classList.remove('active');
+
+    if (data.thinking) {
+      addMessage('thinking', data.thinking);
+    }
+
+    const intent = data.intent ? `${data.intent.category}/${data.intent.action}` : '';
+    addMessage('assistant', data.response || data.error || 'No response', {
+      intent,
+      elapsed: data.elapsed_s,
+      tool_results: data.tool_results,
+    });
+  } catch (err) {
+    typing.classList.remove('active');
+    addMessage('system', `Error: ${err.message}`);
+  }
+  btnSend.disabled = false;
+  loadSessions();
+}
+
+async function loadTools() {
+  try {
+    const resp = await fetch(`${API}/api/agent/v2/tools`);
+    const data = await resp.json();
+    const container = document.getElementById('toolsList');
+    let html = '<h4>Tools</h4>';
+    for (const t of (data.tools || [])) {
+      html += `<div class="tool-card">
+        <div class="cat ${t.category}"></div>
+        <span class="name">${t.name}</span>
+        <span class="ram">${t.ram_required_gb}GB</span>
+      </div>`;
+    }
+    container.innerHTML = html;
+  } catch (e) {}
+}
+
+async function loadHealth() {
+  try {
+    const resp = await fetch(`${API}/api/agent/v2/health`);
+    const data = await resp.json();
+    const r = data.resources || {};
+    document.getElementById('ramVal').textContent = `${r.ram_used_gb || 0}/${r.ram_total_gb || 0} GB`;
+    document.getElementById('ramBar').style.width = `${r.ram_percent || 0}%`;
+    document.getElementById('cpuVal').textContent = `${r.cpu_percent || 0}% (${r.cpu_count || 0} cores)`;
+    document.getElementById('cpuBar').style.width = `${r.cpu_percent || 0}%`;
+    document.getElementById('jobsVal').textContent = data.jobs ? `${data.jobs.active_heavy}/${data.jobs.max_concurrent_heavy} heavy, ${data.jobs.queued} queued` : '0';
+  } catch (e) {}
+}
+
+async function loadSessions() {
+  try {
+    const resp = await fetch(`${API}/api/agent/v2/sessions`);
+    const data = await resp.json();
+    const container = document.getElementById('sessionsList');
+    const sessions = data.sessions || [];
+    let html = '';
+    for (const s of sessions.slice(0, 20)) {
+      const active = s.session_id === sessionId ? 'active' : '';
+      const name = s.name || s.session_id.substring(0, 8) + '...';
+      const count = s.message_count || 0;
+      const age = formatAge(s.created_at);
+      html += `<div class="session-item ${active}" onclick="switchSession('${s.session_id}')">
+        <div class="session-name">${escapeHtml(name)}</div>
+        <div class="session-meta">
+          <span>${count} msgs</span>
+          <span>${age}</span>
+        </div>
+        <button class="btn-delete" onclick="event.stopPropagation();deleteSession('${s.session_id}')" title="Delete">×</button>
+      </div>`;
+    }
+    container.innerHTML = html || '<div style="font-size:11px;color:var(--text3);padding:8px">No sessions yet. Click + to create one.</div>';
+  } catch (e) {}
+}
+
+function formatAge(ts) {
+  if (!ts) return '';
+  const diff = (Date.now() / 1000) - ts;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function switchSession(id) {
+  sessionId = id;
+  localStorage.setItem('zio_v2_session', id);
+  messages.innerHTML = '<div class="msg system">Switched session</div>';
+  loadSessions();
+}
+
+async function deleteSession(id) {
+  if (!confirm('Delete this session?')) return;
+  try {
+    await fetch(`${API}/api/agent/v2/sessions/${id}`, { method: 'DELETE' });
+    if (sessionId === id) {
+      sessionId = null;
+      localStorage.removeItem('zio_v2_session');
+      messages.innerHTML = '<div class="msg system">Session deleted</div>';
+    }
+    loadSessions();
+  } catch (e) {}
+}
+
+// New Session Modal
+document.getElementById('btnNewSession').addEventListener('click', () => {
+  sessionNameInput.value = '';
+  sessionSystemPromptInput.value = '';
+  modalOverlay.classList.add('active');
+  sessionNameInput.focus();
+});
+
+document.getElementById('btnModalCancel').addEventListener('click', () => {
+  modalOverlay.classList.remove('active');
+});
+
+document.getElementById('btnModalCreate').addEventListener('click', () => {
+  const name = sessionNameInput.value.trim() || 'New Session';
+  const sysPrompt = sessionSystemPromptInput.value.trim();
+
+  const customId = 'custom_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  sessionId = customId;
+  sessionName = name;
+  systemPrompt = sysPrompt;
+  localStorage.setItem('zio_v2_session', customId);
+  localStorage.setItem('zio_v2_session_name', name);
+  localStorage.setItem('zio_v2_system_prompt', sysPrompt);
+
+  modalOverlay.classList.remove('active');
+  messages.innerHTML = `<div class="msg system">Session "${escapeHtml(name)}" created${sysPrompt ? ' with custom system prompt' : ''}</div>`;
+  loadSessions();
+});
+
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+});
+
+function connectWS() {
+  const wsUrl = API.replace(/^http/, 'ws') + '/api/agent/v2/ws';
+  try {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      document.getElementById('connStatus').textContent = 'connected';
+      document.getElementById('connDot').style.background = 'var(--green)';
+    };
+    ws.onclose = () => {
+      document.getElementById('connStatus').textContent = 'disconnected';
+      document.getElementById('connDot').style.background = 'var(--red)';
+      setTimeout(connectWS, 5000);
+    };
+    ws.onerror = () => ws.close();
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'status' && data.status === 'processing') {
+          typing.classList.add('active');
+        } else if (data.type === 'thinking') {
+          const thinking = data.data?.thinking || '';
+          if (!thinkingDiv) {
+            thinkingDiv = addThinkingBlock();
+          }
+          updateThinkingBlock(thinkingDiv, thinking);
+        } else if (data.type === 'response') {
+          typing.classList.remove('active');
+          thinkingDiv = null;
+          const r = data.data || {};
+          const intent = r.intent ? `${r.intent.category}/${r.intent.action}` : '';
+          if (r.thinking) {
+            addMessage('thinking', r.thinking);
+          }
+          addMessage('assistant', r.response || 'No response', {
+            intent,
+            elapsed: r.elapsed_s,
+            tool_results: r.tool_results,
+          });
+        }
+      } catch (err) {}
+    };
+  } catch (e) {}
+}
+
+loadTools();
+loadHealth();
+loadSessions();
+connectWS();
+setInterval(loadHealth, 10000);
+</script>
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZICORE Console</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#04060c;font-family:'Cascadia Code','Fira Code','Consolas',monospace;color:#c8d0dc}
+:root{--glow:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff5555;--yellow:#ffb86c;--bg:#04060c;--panel:rgba(8,12,20,0.98);--border:rgba(0,229,255,0.1)}
+
+#topBar{
+  height:32px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.08);
+  display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;
+}
+#topBar .logo{font-size:9px;letter-spacing:4px;color:var(--glow);font-weight:700}
+#topBar .logo span{color:var(--purple)}
+#topBar .sep{width:1px;height:16px;background:rgba(0,229,255,0.06)}
+#topBar .subtitle{font-size:7px;letter-spacing:2px;color:#607080;text-transform:uppercase}
+#clock{margin-left:auto;font-size:9px;color:#607080;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.nav-btn{
+  font-size:7px;letter-spacing:2px;padding:3px 10px;border:1px solid rgba(0,229,255,0.1);
+  background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;text-decoration:none;transition:all .2s;
+}
+.nav-btn:hover{color:var(--glow);border-color:rgba(0,229,255,0.3)}
+
+/* SERVER TABS */
+#serverTabs{
+  display:flex;gap:0;background:rgba(4,6,12,0.99);border-bottom:1px solid rgba(0,229,255,0.06);flex-shrink:0;
+}
+.srv-tab{
+  padding:6px 16px;font-size:8px;letter-spacing:2px;color:#607080;cursor:pointer;
+  border-right:1px solid rgba(0,229,255,0.04);transition:all .2s;position:relative;
+  display:flex;align-items:center;gap:6px;
+}
+.srv-tab:hover{color:var(--glow);background:rgba(0,229,255,0.03)}
+.srv-tab.active{color:var(--glow);background:rgba(0,229,255,0.06)}
+.srv-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--glow)}
+.srv-tab .dot{width:6px;height:6px;border-radius:50%}
+.srv-tab .dot.on{background:var(--green);box-shadow:0 0 4px rgba(0,255,136,0.5)}
+.srv-tab .dot.off{background:var(--red);box-shadow:0 0 4px rgba(255,85,85,0.5)}
+.srv-tab .dot.checking{background:var(--yellow);animation:pulse 1s infinite}
+
+/* STATS BAR */
+#statsBar{
+  height:28px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.06);
+  display:flex;align-items:center;padding:0 12px;gap:16px;flex-shrink:0;
+}
+.stat{display:flex;align-items:center;gap:4px}
+.stat .label{font-size:7px;letter-spacing:1.5px;color:#607080;text-transform:uppercase}
+.stat .val{font-size:10px;font-weight:600;color:var(--glow);font-variant-numeric:tabular-nums}
+.stat .val.warn{color:var(--yellow)}
+.stat .val.danger{color:var(--red)}
+.stat .val.ok{color:var(--green)}
+
+/* TOOLBAR */
+#toolbar{
+  height:26px;background:rgba(8,10,18,0.99);border-bottom:1px solid rgba(0,229,255,0.04);
+  display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;
+}
+.tbtn{
+  font-size:6px;letter-spacing:2px;padding:2px 8px;border:1px solid rgba(0,229,255,0.08);
+  background:rgba(0,229,255,0.02);color:#607080;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+.tbtn:hover{color:var(--glow);border-color:rgba(0,229,255,0.2)}
+.tbtn.active{color:var(--glow);border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06)}
+#filterInput{
+  background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.08);color:#c8d0dc;
+  padding:2px 6px;font-size:8px;font-family:inherit;outline:none;width:120px;
+}
+#filterInput:focus{border-color:rgba(0,229,255,0.2)}
+#filterInput::placeholder{color:#303848}
+#autoScroll{margin-left:auto;font-size:7px;color:#607080;cursor:pointer;display:flex;align-items:center;gap:4px}
+#autoScroll input{accent-color:var(--glow)}
+#logCount{font-size:7px;color:#607080;letter-spacing:1px}
+
+/* MAIN LAYOUT */
+#main{flex:1;display:flex;overflow:hidden;min-height:0}
+
+/* LOG PANEL */
+#logPanel{
+  flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid rgba(0,229,255,0.06);
+}
+#logPanel .panel-header{
+  height:22px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04);
+  display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;
+}
+.panel-header .title{font-size:7px;letter-spacing:2px;color:var(--purple);text-transform:uppercase}
+#logContent{
+  flex:1;overflow-y:auto;padding:4px 8px;font-size:10px;line-height:1.6;
+  scrollbar-width:thin;scrollbar-color:rgba(0,229,255,0.1) transparent;
+}
+#logContent::-webkit-scrollbar{width:4px}
+#logContent::-webkit-scrollbar-track{background:transparent}
+#logContent::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
+.log-line{white-space:pre-wrap;word-break:break-all}
+.log-line .ts{color:#607080}
+.log-line .lvl-err{color:var(--red)}
+.log-line .lvl-warn{color:var(--yellow)}
+.log-line .lvl-info{color:#607080}
+.log-line .lvl-ok{color:var(--green)}
+.log-line .msg{color:#c8d0dc}
+
+/* SIDE PANELS */
+#sidePanels{
+  width:320px;display:flex;flex-direction:column;flex-shrink:0;min-width:0;
+}
+.side-panel{
+  flex:1;display:flex;flex-direction:column;min-height:0;
+  border-bottom:1px solid rgba(0,229,255,0.06);
+}
+.side-panel:last-child{border-bottom:none}
+.side-panel .panel-header{
+  height:22px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04);
+  display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;
+}
+.side-panel .panel-header .title{font-size:7px;letter-spacing:2px;color:var(--purple);text-transform:uppercase}
+.side-content{
+  flex:1;overflow-y:auto;padding:4px 6px;font-size:9px;line-height:1.5;
+  scrollbar-width:thin;scrollbar-color:rgba(0,229,255,0.1) transparent;
+}
+.side-content::-webkit-scrollbar{width:3px}
+.side-content::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
+.err-line{color:var(--red);white-space:pre-wrap;word-break:break-all}
+.proc-line{color:#c8d0dc;white-space:pre-wrap}
+.proc-line:hover{background:rgba(0,229,255,0.03)}
+
+/* SHELL PANEL */
+#shellPanel{
+  height:180px;border-top:2px solid rgba(0,229,255,0.1);display:flex;flex-direction:column;flex-shrink:0;
+  background:rgba(4,6,12,0.99);
+}
+#shellPanel .panel-header{
+  height:22px;background:rgba(6,8,14,0.99);border-bottom:1px solid rgba(0,229,255,0.04);
+  display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;
+}
+.panel-header .title{font-size:7px;letter-spacing:2px;color:var(--green);text-transform:uppercase}
+#shellTerminal{flex:1;overflow:hidden;padding:2px}
+#shellCmdBar{
+  height:28px;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;
+  border-top:1px solid rgba(0,229,255,0.06);
+}
+#shellPrompt{font-size:9px;color:var(--purple);flex-shrink:0}
+#shellInput{
+  flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.08);color:#c8d0dc;
+  padding:2px 6px;font-size:10px;font-family:inherit;outline:none;
+}
+#shellInput:focus{border-color:rgba(0,229,255,0.2)}
+#shellInput::placeholder{color:#303848}
+#shellSend{
+  padding:2px 10px;background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.12);
+  color:var(--glow);font-size:6px;letter-spacing:2px;cursor:pointer;font-family:inherit;
+}
+
+/* RESIZE HANDLE */
+#resizeHandle{
+  height:4px;cursor:ns-resize;background:transparent;flex-shrink:0;
+}
+#resizeHandle:hover{background:rgba(0,229,255,0.15)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+body{display:flex;flex-direction:column}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <div class="logo">ZI<span>CORE</span></div>
+  <div class="sep"></div>
+  <div class="subtitle">Console</div>
+  <a class="nav-btn" href="/shell">SHELL</a>
+  <a class="nav-btn" href="/admin">ADMIN</a>
+  <div id="clock"></div>
+</div>
+
+<div id="serverTabs"></div>
+<div id="statsBar">
+  <div class="stat"><span class="label">CPU</span><span class="val" id="stCpu">--</span></div>
+  <div class="stat"><span class="label">RAM</span><span class="val" id="stRam">--</span></div>
+  <div class="stat"><span class="label">DISK</span><span class="val" id="stDisk">--</span></div>
+  <div class="stat"><span class="label">UPTIME</span><span class="val" id="stUp">--</span></div>
+  <div class="stat"><span class="label">SERVICE</span><span class="val" id="stSvc">--</span></div>
+</div>
+
+<div id="toolbar">
+  <button class="tbtn" onclick="fetchLogs()">LOGS</button>
+  <button class="tbtn" onclick="fetchErrors()">ERRORS</button>
+  <button class="tbtn" onclick="fetchProcs()">PROCS</button>
+  <button class="tbtn" onclick="fetchServiceStatus()">SVC STATUS</button>
+  <input id="filterInput" placeholder="filter..." onkeydown="if(event.key==='Enter')fetchLogs()">
+  <label id="autoScroll"><input type="checkbox" checked onchange="autoScrollEnabled=this.checked">AUTO</label>
+  <span id="logCount">0 lines</span>
+</div>
+
+<div id="main">
+  <div id="logPanel">
+    <div class="panel-header"><span class="title">System Logs</span></div>
+    <div id="logContent"></div>
+  </div>
+  <div id="sidePanels">
+    <div class="side-panel">
+      <div class="panel-header"><span class="title">Errors / Warnings</span></div>
+      <div class="side-content" id="errorContent"><span style="color:#607080">Click ERRORS to load...</span></div>
+    </div>
+    <div class="side-panel">
+      <div class="panel-header"><span class="title">Processes</span></div>
+      <div class="side-content" id="procContent"><span style="color:#607080">Click PROCS to load...</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="resizeHandle"></div>
+
+<div id="shellPanel">
+  <div class="panel-header">
+    <span class="title">Shell</span>
+    <button class="tbtn" onclick="connectShell()" id="shellConnectBtn">CONNECT</button>
+    <button class="tbtn" onclick="disconnectShell()" id="shellDisconnectBtn" style="display:none">DISCONNECT</button>
+  </div>
+  <div id="shellTerminal"></div>
+  <div id="shellCmdBar">
+    <span class="prompt" id="shellPrompt">$</span>
+    <input id="shellInput" placeholder="Type command..." disabled autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')sendShellCmd()">
+    <button id="shellSend" onclick="sendShellCmd()" disabled>SEND</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<script>
+const SERVERS = {
+  '.85': {name:'.85 Primary', role:'Web Server', ip:'192.168.1.85', port:22, user:'z', pass:'Jilo1981', wsHost:null, sshHost:'192.168.1.85'},
+  '.68': {name:'.68 Ollama', role:'Ollama', ip:'192.168.1.68', port:22, user:'zinemotion', pass:'Jilo1981', wsHost:null, sshHost:'192.168.1.68'},
+  'vps': {name:'VPS Oracle', role:'ARM64', ip:'160.34.209.208', port:22, user:'oracle-admin', pass:'zicore2026', wsHost:'vps.zicore.space', sshHost:'127.0.0.1'}
+};
+
+let activeServer = '.85';
+let shellTerm = null;
+let shellFit = null;
+let shellWs = null;
+let shellConnected = false;
+let autoScrollEnabled = true;
+let refreshTimer = null;
+let logLines = [];
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toUTCString().slice(-12,-4) + ' UTC';
+}, 1000);
+
+// ─── Server Tabs ────────────────────────────────────────
+
+function renderTabs() {
+  const el = document.getElementById('serverTabs');
+  el.innerHTML = '';
+  for (const [key, info] of Object.entries(SERVERS)) {
+    const tab = document.createElement('div');
+    tab.className = 'srv-tab' + (key === activeServer ? ' active' : '');
+    tab.innerHTML = '<span class="dot checking" id="dot-' + key + '"></span>' + info.name;
+    tab.onclick = () => switchServer(key);
+    el.appendChild(tab);
+  }
+}
+
+function switchServer(key) {
+  activeServer = key;
+  logLines = [];
+  document.getElementById('logContent').innerHTML = '';
+  document.getElementById('errorContent').innerHTML = '<span style="color:#607080">Click ERRORS to load...</span>';
+  document.getElementById('procContent').innerHTML = '<span style="color:#607080">Click PROCS to load...</span>';
+  renderTabs();
+  fetchAll();
+}
+
+// ─── API Calls ──────────────────────────────────────────
+
+async function api(path) {
+  try {
+    const r = await fetch(path);
+    return await r.json();
+  } catch(e) {
+    return {success: false, error: e.message};
+  }
+}
+
+async function fetchAll() {
+  await Promise.all([fetchStats(), fetchServiceStatus()]);
+  fetchLogs();
+  fetchErrors();
+  fetchProcs();
+}
+
+async function fetchStats() {
+  const data = await api('/api/admin/servers');
+  const s = data[activeServer] || {};
+  const dot = document.getElementById('dot-' + activeServer);
+  if (dot) { dot.className = 'dot ' + (s.online !== false ? 'on' : 'off'); }
+
+  const cpu = s.cpu || '--';
+  const ram = s.ram || '--';
+  const ramPct = s.ram_pct || 0;
+  const disk = s.disk || '--';
+  const diskPct = s.disk_pct || 0;
+  const up = s.uptime || '--';
+
+  document.getElementById('stCpu').textContent = cpu;
+  const ramEl = document.getElementById('stRam');
+  ramEl.textContent = ram;
+  ramEl.className = 'val ' + (ramPct > 85 ? 'danger' : ramPct > 60 ? 'warn' : 'ok');
+  const diskEl = document.getElementById('stDisk');
+  diskEl.textContent = disk;
+  diskEl.className = 'val ' + (diskPct > 85 ? 'danger' : '');
+  document.getElementById('stUp').textContent = up;
+}
+
+async function fetchLogs() {
+  const filt = document.getElementById('filterInput').value.trim();
+  let path = '/api/admin/logs?server=' + activeServer + '&lines=120';
+  if (filt) path += '&filter=' + encodeURIComponent(filt);
+  const data = await api(path);
+  if (!data.success && !data.logs) {
+    appendLog('ERROR: ' + (data.error || 'Failed to fetch logs'), 'err');
+    return;
+  }
+  const lines = (data.logs || '').split('\n').filter(l => l.trim());
+  document.getElementById('logContent').innerHTML = '';
+  logLines = [];
+  for (const line of lines) {
+    appendLog(line, getLogLevel(line));
+  }
+  document.getElementById('logCount').textContent = logLines.length + ' lines';
+}
+
+async function fetchErrors() {
+  const data = await api('/api/admin/errors?server=' + activeServer + '&lines=200');
+  const el = document.getElementById('errorContent');
+  if (!data.success && !data.errors) {
+    el.innerHTML = '<span class="err-line">Failed: ' + (data.error || '') + '</span>';
+    return;
+  }
+  const lines = (data.errors || '').split('\n').filter(l => l.trim());
+  if (lines.length === 0) {
+    el.innerHTML = '<span style="color:var(--green);font-size:8px;letter-spacing:1px">No errors found</span>';
+    return;
+  }
+  el.innerHTML = '';
+  for (const line of lines) {
+    const div = document.createElement('div');
+    div.className = 'err-line';
+    div.textContent = line;
+    el.appendChild(div);
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+async function fetchProcs() {
+  const data = await api('/api/admin/processes?server=' + activeServer + '&filter=python');
+  const el = document.getElementById('procContent');
+  if (!data.success && !data.processes) {
+    el.innerHTML = '<span class="proc-line">Failed: ' + (data.error || '') + '</span>';
+    return;
+  }
+  const lines = (data.processes || '').split('\n').filter(l => l.trim());
+  el.innerHTML = '';
+  for (const line of lines) {
+    const div = document.createElement('div');
+    div.className = 'proc-line';
+    div.textContent = line;
+    el.appendChild(div);
+  }
+}
+
+async function fetchServiceStatus() {
+  const data = await api('/api/admin/service-status?server=' + activeServer);
+  const svcEl = document.getElementById('stSvc');
+  if (data.status) {
+    const firstLine = data.status.split('\n')[0].trim();
+    svcEl.textContent = firstLine;
+    svcEl.className = 'val ' + (firstLine === 'active' ? 'ok' : 'danger');
+  } else {
+    svcEl.textContent = data.error ? 'ERR' : '--';
+    svcEl.className = 'val danger';
+  }
+}
+
+// ─── Log Rendering ──────────────────────────────────────
+
+function getLogLevel(line) {
+  const l = line.toLowerCase();
+  if (l.includes('error') || l.includes('exception') || l.includes('traceback') || l.includes('critical') || l.includes('killed') || l.includes('segfault')) return 'err';
+  if (l.includes('warn')) return 'warn';
+  if (l.includes('started') || l.includes('running') || l.includes('success') || l.includes('ok') || l.includes('listening')) return 'ok';
+  return 'info';
+}
+
+function appendLog(text, level) {
+  const el = document.getElementById('logContent');
+  const div = document.createElement('div');
+  div.className = 'log-line';
+
+  const lvlClass = level === 'err' ? 'lvl-err' : level === 'warn' ? 'lvl-warn' : level === 'ok' ? 'lvl-ok' : 'lvl-info';
+
+  const match = text.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[^\s]*|\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})\s*(.*)/);
+  if (match) {
+    div.innerHTML = '<span class="ts">' + escHtml(match[1]) + '</span> <span class="' + lvlClass + '">' + escHtml(match[2]) + '</span>';
+  } else {
+    div.innerHTML = '<span class="' + lvlClass + '">' + escHtml(text) + '</span>';
+  }
+
+  el.appendChild(div);
+  logLines.push(text);
+  if (autoScrollEnabled) el.scrollTop = el.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Shell ──────────────────────────────────────────────
+
+function initShellTerm() {
+  if (shellTerm) return;
+  shellTerm = new Terminal({
+    cursorBlink: true, cursorStyle: 'bar', fontSize: 11,
+    fontFamily: "'Cascadia Code','Fira Code','Consolas',monospace",
+    theme: {
+      background:'#04060c', foreground:'#c8d0dc', cursor:'#00e5ff', cursorAccent:'#04060c',
+      selectionBackground:'rgba(0,229,255,0.2)', selectionForeground:'#ffffff',
+      black:'#0a0e16', red:'#ff5555', green:'#00ff88', yellow:'#ffb86c',
+      blue:'#61afef', magenta:'#7c4dff', cyan:'#00e5ff', white:'#c8d0dc',
+      brightBlack:'#607080', brightRed:'#ff6e6e', brightGreen:'#50fa7b',
+      brightYellow:'#ffb86c', brightBlue:'#79c0ff', brightMagenta:'#bd93f9',
+      brightCyan:'#00e5ff', brightWhite:'#ffffff',
+    },
+    scrollback: 5000, convertEol: true,
+  });
+  shellFit = new FitAddon.FitAddon();
+  shellTerm.loadAddon(shellFit);
+  shellTerm.open(document.getElementById('shellTerminal'));
+  shellFit.fit();
+
+  shellTerm.writeln('\x1b[38;2;0;255;136m  Shell ready. Click CONNECT or select server.\x1b[0m');
+
+  shellTerm.onData(function(data) {
+    if (shellConnected && shellWs && shellWs.readyState === WebSocket.OPEN) {
+      shellWs.send(JSON.stringify({ type: 'input', data: data }));
+    }
+  });
+
+  shellTerm.onResize(function(dims) {
+    if (shellConnected && shellWs && shellWs.readyState === WebSocket.OPEN) {
+      shellWs.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+    }
+  });
+
+  new ResizeObserver(function() { if (shellFit) shellFit.fit(); }).observe(document.getElementById('shellTerminal'));
+}
+
+function getWsUrl(serverKey) {
+  const info = SERVERS[serverKey];
+  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  if (info.wsHost) return wsProto + '//' + info.wsHost + '/ws/shell';
+  return wsProto + '//' + location.host + '/ws/shell';
+}
+
+function connectShell() {
+  if (shellConnected) return;
+  initShellTerm();
+  const info = SERVERS[activeServer];
+  shellTerm.clear();
+
+  document.getElementById('shellConnectBtn').style.display = 'none';
+  document.getElementById('shellDisconnectBtn').style.display = '';
+  document.getElementById('shellInput').disabled = false;
+  document.getElementById('shellSend').disabled = false;
+  document.getElementById('shellPrompt').textContent = info.user + '@' + activeServer + ' $';
+
+  const ws = new WebSocket(getWsUrl(activeServer));
+  shellWs = ws;
+
+  ws.onopen = function() {
+    ws.send(JSON.stringify({ type: 'connect', host: info.sshHost, port: info.port, user: info.user, password: info.pass }));
+  };
+
+  ws.onmessage = function(evt) {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'connected') {
+        shellConnected = true;
+        shellTerm.focus();
+        shellFit.fit();
+        const dims = shellFit.proposeDimensions();
+        if (dims) ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+      }
+      if (msg.type === 'output') shellTerm.write(msg.data);
+      if (msg.type === 'disconnected') {
+        shellConnected = false;
+        shellTerm.writeln('\r\n\x1b[33m[Session ended]\x1b[0m');
+        resetShellUI();
+      }
+      if (msg.type === 'error') {
+        shellConnected = false;
+        shellTerm.writeln('\r\n\x1b[31m[Error: ' + (msg.message || '') + ']\x1b[0m');
+        resetShellUI();
+      }
+    } catch(e) {}
+  };
+
+  ws.onclose = function() {
+    if (shellConnected) {
+      shellConnected = false;
+      shellTerm.writeln('\r\n\x1b[33m[Connection closed]\x1b[0m');
+      resetShellUI();
+    }
+  };
+
+  ws.onerror = function() {
+    shellConnected = false;
+    shellTerm.writeln('\r\n\x1b[31m[WebSocket error]\x1b[0m');
+    resetShellUI();
+  };
+}
+
+function disconnectShell() {
+  if (shellWs) {
+    shellWs.send(JSON.stringify({ type: 'disconnect' }));
+    shellWs.close();
+  }
+  shellConnected = false;
+  resetShellUI();
+}
+
+function resetShellUI() {
+  document.getElementById('shellConnectBtn').style.display = '';
+  document.getElementById('shellDisconnectBtn').style.display = 'none';
+  document.getElementById('shellInput').disabled = true;
+  document.getElementById('shellSend').disabled = true;
+  document.getElementById('shellPrompt').textContent = '$';
+}
+
+function sendShellCmd() {
+  const input = document.getElementById('shellInput');
+  const cmd = input.value.trim();
+  if (!cmd || !shellConnected || !shellWs || shellWs.readyState !== WebSocket.OPEN) return;
+  shellWs.send(JSON.stringify({ type: 'input', data: cmd + '\n' }));
+  input.value = '';
+  input.focus();
+}
+
+// ─── Resize Handle ──────────────────────────────────────
+
+(function() {
+  const handle = document.getElementById('resizeHandle');
+  const shell = document.getElementById('shellPanel');
+  let dragging = false, startY, startH;
+  handle.addEventListener('mousedown', function(e) {
+    dragging = true; startY = e.clientY; startH = shell.offsetHeight;
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  function onMove(e) {
+    if (!dragging) return;
+    const h = Math.max(80, Math.min(500, startH - (e.clientY - startY)));
+    shell.style.height = h + 'px';
+    if (shellFit) shellFit.fit();
+  }
+  function onUp() {
+    dragging = false;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+})();
+
+// ─── Init ───────────────────────────────────────────────
+
+renderTabs();
+fetchAll();
+initShellTerm();
+
+setInterval(fetchStats, 10000);
+setInterval(fetchLogs, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#7c4dff"/>
+    </linearGradient>
+    <linearGradient id="gradInv" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#7c4dff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background dark circle -->
+  <circle cx="200" cy="200" r="195" fill="#080c16" stroke="url(#grad)" stroke-width="2"/>
+
+  <!-- Outer hexagon -->
+  <polygon points="200,20 312,80 312,200 200,260 88,200 88,80"
+           fill="none" stroke="url(#grad)" stroke-width="3" opacity="0.9"/>
+
+  <!-- Inner hexagon -->
+  <polygon points="200,48 285,93 285,187 200,232 115,187 115,93"
+           fill="none" stroke="url(#grad)" stroke-width="1.2" opacity="0.35"/>
+
+  <!-- Scanline overlay (subtle) -->
+  <clipPath id="hexClip">
+    <polygon points="200,20 312,80 312,200 200,260 88,200 88,80"/>
+  </clipPath>
+
+  <!-- Chat/signal arcs - communication motif -->
+  <g stroke="url(#grad)" fill="none" stroke-width="2" opacity="0.5" clip-path="url(#hexClip)">
+    <path d="M140,140 Q200,120 260,140"/>
+    <path d="M125,165 Q200,140 275,165"/>
+    <path d="M110,190 Q200,160 290,190"/>
+  </g>
+
+  <!-- Zi lettering -->
+  <text x="200" y="176" text-anchor="middle" font-size="80" font-weight="900"
+        fill="url(#grad)" font-family="Segoe UI,system-ui,-apple-system,sans-serif"
+        letter-spacing="2">ZI</text>
+
+  <!-- CHAT label -->
+  <text x="200" y="222" text-anchor="middle" font-size="22" font-weight="700"
+        fill="#7a8ba8" font-family="Segoe UI,system-ui,-apple-system,sans-serif"
+        letter-spacing="6">CHAT</text>
+
+  <!-- Pulse ring -->
+  <circle cx="200" cy="200" r="170" fill="none" stroke="url(#grad)" stroke-width="0.5" opacity="0.2"/>
+</svg>
