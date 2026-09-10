@@ -3,18 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZICORE System v5.0</title>
+<title>ZICORE — Digital Aerospace Operating System</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#04060c;--bg2:#0a0e1a;--bg3:#0f1525;--bg4:#141c30;--cyan:#00e5ff;--purple:#7c4dff;--green:#00ff88;--red:#ff3333;--orange:#ff8800;--yellow:#ffcc00;--text:#c8d6e5;--text2:#667788;--border:#1a2540;--glass:rgba(10,14,26,0.92)}
 @font-face{font-family:'Mono';src:local('Cascadia Code'),local('Consolas'),local('monospace')}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw;-webkit-overflow-scrolling:touch}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
 canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
 .grain{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .scanline{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.01) 2px,rgba(0,229,255,.01) 4px)}
 
-.app{position:relative;z-index:2;display:grid;grid-template-columns:220px 1fr;grid-template-rows:48px 1fr 28px;height:100vh;width:100vw;transition:grid-template-columns .25s ease}
-.app.rail-mode{grid-template-columns:54px 1fr}
+.app{position:relative;z-index:2;display:grid;grid-template-columns:220px 1fr;grid-template-rows:48px 1fr 28px;height:100vh;width:100vw}
 .topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--glass);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);z-index:10}
 .topbar .logo{width:26px;height:26px;flex-shrink:0}
 .topbar .logo svg{width:100%;height:100%}
@@ -27,23 +26,11 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* SIDEBAR */
-.sidebar{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;backdrop-filter:blur(16px);width:220px;transition:width .25s ease;flex-shrink:0}
+.sidebar{background:var(--glass);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(16px);width:220px}
 .sidebar::-webkit-scrollbar{width:3px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.sidebar.rail{width:54px}
-.sidebar.rail .sb-section{padding:10px 0 4px;justify-content:center;letter-spacing:0}
-.sidebar.rail .sb-section .chevron{display:none}
-.sidebar.rail .sb-section .sec-label{display:none}
-.sidebar.rail .sb-item{padding:9px 0;justify-content:center;margin:1px 2px;gap:0;border-left:none;border-radius:4px}
-.sidebar.rail .sb-item .lb{display:none}
-.sidebar.rail .sb-item .ico{margin:0}
-.sidebar.rail .sb-item.active{border-left:none}
-.sidebar.rail .sb-zio{margin:8px 4px 4px;padding:9px 0!important;justify-content:center}
-.sidebar.rail .sb-zio .lb{display:none}
-.sidebar.rail .sb-zio .ico{margin:0}
-.sidebar.rail .sb-divider{margin:6px 8px}
 .sb-section{padding:14px 16px 6px;font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;font-weight:700}
-.sb-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;font-size:12px;color:var(--text2);border-radius:0 4px 4px 0;margin:1px 6px;white-space:nowrap}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;font-size:12px;color:var(--text2);border-radius:0 4px 4px 0;margin:1px 6px}
 .sb-item:hover{background:rgba(0,229,255,.06);color:var(--text);border-left-color:rgba(0,229,255,0.3)}
 .sb-item.active{background:rgba(0,229,255,.08);color:var(--cyan);border-left-color:var(--cyan)}
 .sb-item .ico{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border-radius:4px;background:rgba(0,229,255,0.04)}
@@ -171,90 +158,37 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 .welcome .wcard.c5:hover{border-color:rgba(200,0,255,.3)}.welcome .wcard.c5 .wc-name{color:#C800FF}
 .welcome .wcard.c7:hover{border-color:rgba(124,77,255,.3)}.welcome .wcard.c7 .wc-name{color:var(--purple)}
 
-/* ── MOBILE HAMBURGER ── */
-#hamburgerBtn{display:none;width:44px;height:44px;min-width:44px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;align-items:center;justify-content:center;padding:0}
-#sidebarOverlay{display:none;position:fixed;top:48px;left:0;right:0;bottom:28px;background:rgba(0,0,0,.6);z-index:49}
-
-/* ── RESPONSIVE: Tablet (768px) ── */
-@media (max-width: 768px) {
-  .app{grid-template-columns:1fr !important}
-  .app.rail-mode{grid-template-columns:1fr !important}
-  .sidebar{position:fixed;top:48px;left:0;bottom:28px;z-index:50;width:260px !important;transform:translateX(-100%);transition:transform .25s ease;background:var(--bg2) !important}
-  .sidebar.mobile-open{transform:translateX(0)}
-  #hamburgerBtn{display:flex !important}
-  #sbRailBtn{display:none !important}
-  .topbar .tagline{display:none}
-  .topbar .sep{display:none}
-  .topbar .clock{font-size:9px}
-  .content{overflow-y:auto}
-  .welcome{padding:20px 16px;gap:12px}
-  .welcome h2{font-size:15px;letter-spacing:3px}
-  .welcome p{font-size:10px;max-width:300px}
-  .welcome .cards{gap:8px}
-  .welcome .wcard{min-width:100px;padding:12px 14px}
-  .welcome .wcard .wc-icon{font-size:18px}
-  .welcome .wcard .wc-name{font-size:9px}
-  .zmmx-tools{flex-wrap:wrap;gap:4px;padding:6px 10px}
-  .zmmx-tools input{width:140px}
-  .zmmx-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr)) !important}
-  .zmmx-player{padding:4px 10px}
-  .zmmx-player audio,.zmmx-player video{max-width:200px}
-  .statusbar{padding:0 10px;font-size:8px}
-  .statusbar .tag{font-size:7px}
-  #sbInfo{font-size:7px}
-  .topbar .logo{width:36px;height:36px;min-width:36px}
-  .topbar .logo svg{width:36px;height:36px}
-  .topbar .brand{font-size:10px;letter-spacing:2px}
-  .zmmx-overlay{bottom:0 !important}
-}
-
-/* ── RESPONSIVE: Phone (480px) ── */
-@media (max-width: 480px) {
-  .sidebar{width:240px !important}
-  .topbar{padding:0 8px;gap:6px}
-  .topbar .logo{width:30px;height:30px;min-width:30px}
-  .topbar .logo svg{width:30px;height:30px}
-  .topbar .brand{font-size:9px;letter-spacing:1.5px}
-  .topbar .clock{font-size:8px}
-  .topbar .dot{width:4px;height:4px}
-  .welcome .cards{flex-direction:column;align-items:center}
-  .welcome .wcard{width:100%;max-width:280px;min-width:auto}
-  .zmmx-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr)) !important}
-  .statusbar{gap:6px}
-  #sbInfo{display:none}
-}
-
-/* ── Touch targets (touchscreens) ── */
-@media (hover:none) and (pointer:coarse) {
-  .sb-item{min-height:44px;padding:12px 16px}
-  .sb-section{min-height:44px;padding:14px 16px}
-  .sb-zio{min-height:44px;padding:12px 14px !important}
-  .zmmx-btn{min-height:36px;min-width:36px;padding:6px 10px}
-  .wcard{min-height:44px}
-  .zmmx-card{min-height:44px}
-}
+.slogan{font-size:9px;letter-spacing:5px;margin-top:3px;font-weight:800;text-transform:uppercase;background:linear-gradient(90deg,var(--cyan),var(--purple),var(--cyan));background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sloganFlow 4s ease-in-out infinite}
+@keyframes sloganFlow{0%,100%{background-position:0% 0%}50%{background-position:100% 0%}}
+.logo{position:relative}
+.logo-halo{transform-origin:20px 21px;animation:logoHalo 6s ease-in-out infinite}
+@keyframes logoHalo{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+.logo-ring{transform-origin:20px 21px;animation:logoSpin 14s linear infinite}
+.logo-core{transform-origin:20px 21px;animation:logoCoreSpin 20s linear infinite reverse}
+.logo-orb{transform-origin:20px 21px;animation:logoSpin 6s linear infinite}
+.logo-z{animation:logoZ 3s ease-in-out infinite}
+@keyframes logoSpin{to{transform:rotate(360deg)}}
+@keyframes logoCoreSpin{to{transform:rotate(-360deg)}}
+@keyframes logoZ{0%,100%{opacity:.85}50%{opacity:1;filter:drop-shadow(0 0 4px rgba(0,229,255,.8))}}
 
 </style>
 </head>
 <body>
 <canvas id="starfield"></canvas>
+<div class="grain" style="position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:50;opacity:.04;background-image:url('assets/schwarchild-bridge.png');background-size:cover;background-position:center;mix-blend-mode:screen"></div>
 <div class="grain"></div>
 <div class="scanline"></div>
 
 <div class="app">
   <!-- Top Bar -->
   <div class="topbar">
-    <button id="hamburgerBtn" onclick="toggleMobileSidebar()" aria-label="Menu">&#9776;</button>
     <div class="logo" style="width:56px;height:56px;min-width:56px">
-      <svg viewBox="0 0 40 46" width="56" height="56"><polygon points="20,2 37,11 37,31 20,40 3,31 3,11" fill="none" stroke="url(#hg)" stroke-width="1.5"/>
-        <defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#7c4dff"/></linearGradient></defs>
-        <text x="20" y="26" text-anchor="middle" fill="url(#hg)" font-size="16" font-weight="700" font-family="sans-serif">Z</text></svg>
+      <img src="assets/logo-new.png" alt="ZICORE" style="width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(0,229,255,.5));animation:logoFloat 4s ease-in-out infinite">
     </div>
     <div>
       <div class="brand">ZICORE</div>
-      <div style="font-size:7px;color:var(--text2);letter-spacing:3px;margin-top:1px">CREANDO EL TIEMPO</div>
+      <div class="slogan">CREANDO EL TIEMPO</div>
     </div>
-    <button id="sbRailBtn" onclick="toggleRail()" style="width:28px;height:28px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;margin-left:4px" title="Colapsar panel">&#9664;</button>
     <div class="sep"></div>
     <div class="tagline" data-i18n="topbar.tagline">Digital Aerospace Operating System</div>
     <div class="spacer"></div>
@@ -266,12 +200,10 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <div class="clock" id="clock">--:--:--</div>
   </div>
 
-    <div id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
-
   <!-- Sidebar -->
-  <nav class="sidebar" id="sidebar">
+  <nav class="sidebar">
     <!-- ZIO Agent (TOP - before all sections) -->
-    <div class="sb-item sb-zio" onclick="showFrame('/zio','ZIO Agent')"><div class="ico"><svg viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="7" y="9.5" text-anchor="middle" fill="currentColor" font-size="6" font-weight="800" font-family="monospace">Z</text></svg></div><span style="font-weight:700;color:var(--cyan)">ZIO Agent</span><span style="font-size:8px;color:var(--green);margin-left:auto;font-family:monospace">LIVE</span></div>
+    <div class="sb-item sb-zio" onclick="openExternal('https://zcs.zicore.space/')"><div class="ico"><img src="assets/zichat-logo.jpg" style="width:14px;height:14px;border-radius:2px;object-fit:cover;border:1px solid var(--cyan)"></div><span style="font-weight:700;color:var(--cyan)">zichat</span><span style="font-size:8px;color:var(--green);margin-left:auto;font-family:monospace">LIVE</span></div>
     <div class="sb-divider"></div>
 
     <div class="sb-section" onclick="toggleSection(this)">◇ Aerospace <span class="chevron">&#9654;</span></div>
@@ -284,8 +216,6 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       <div class="sb-item" onclick="showFrame('/solar-navigation','Solar Navigation')"><div class="ico"><svg viewBox="0 0 14 14"><polygon points="7,1 9,5 13,5.5 10,8.5 11,13 7,10.5 3,13 4,8.5 1,5.5 5,5" fill="none" stroke="currentColor" stroke-width="1"/></svg></div> <span>Solar Navigation</span></div>
       <div class="sb-item" onclick="showFrame('/engineering','Engineering')"><div class="ico"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3 3l1.5 1.5M9.5 9.5L11 11M11 3L9.5 4.5M4.5 9.5L3 11" fill="none" stroke="currentColor" stroke-width="1"/></svg></div> <span>Engineering</span></div>
       <div class="sb-item" onclick="showFrame('/aerospace-engineering','Aero Engineering')"><div class="ico"><svg viewBox="0 0 14 14"><path d="M7 2L12 12M7 2L2 12M3 8h8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></div> <span>Aero Engineering</span></div>
-      <div class="sb-item" onclick="showFrame('/geo','GeoTrack')"><div class="ico"><svg viewBox="0 0 14 14"><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3 3l1.4 1.4M9.6 9.6L11 11M11 3L9.6 4.4M4.4 9.6L3 11" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1"/></svg></div> <span>GeoTrack</span></div>
-      <div class="sb-item" onclick="showFrame('/comms','ZSRI Comms')"><div class="ico"><svg viewBox="0 0 14 14"><path d="M1 4h9M1 7h7M1 10h5M12 4v6M10 7h4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></div> <span>Comms · ZSRI</span></div>
     </div>
     <div class="sb-divider"></div>
 
@@ -311,7 +241,16 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
     <div class="sb-section" onclick="toggleSection(this)">◈ ZiCoreMC <span class="chevron">&#9654;</span></div>
     <div class="sb-items">
-      <div class="sb-item" onclick="openExternal('https://mc.zicore.space/master-creator')" style="color:var(--purple)"><div class="ico" style="background:linear-gradient(135deg,rgba(124,77,255,.15),rgba(0,229,255,.15))!important"><svg viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="0.8"/></svg></div> <span>Master Creator</span></div>
+      <div class="sb-item" onclick="openExternal('https://ZiCoreMC.zicore.space')" style="color:var(--purple)"><div class="ico" style="background:linear-gradient(135deg,rgba(124,77,255,.15),rgba(0,229,255,.15))!important"><svg viewBox="0 0 14 14"><polygon points="7,1 13,4 13,10 7,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="0.8"/></svg></div> <span>Master Creator</span></div>
+      <div class="sb-item" onclick="openExternal('https://ZiCoreMC.zicore.space/nodes')" style="color:var(--purple)"><div class="ico"><svg viewBox="0 0 14 14"><circle cx="4" cy="5" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="10" cy="5" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="7" cy="10" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/><line x1="5.3" y1="5.8" x2="5.8" y2="8.8" stroke="currentColor" stroke-width="0.8"/><line x1="8.7" y1="5.8" x2="8.2" y2="8.8" stroke="currentColor" stroke-width="0.8"/></svg></div> <span>Nodes Dashboard</span></div>
+    </div>
+    <div class="sb-divider"></div>
+
+    <div class="sb-section" onclick="toggleSection(this)">◈ SCI-LAB <span class="chevron">&#9654;</span></div>
+    <div class="sb-items">
+      <div class="sb-item" onclick="showFrame('/sci-lab','SCI-LAB')" style="color:var(--cyan)"><div class="ico" style="background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(0,255,136,.15))!important"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="7" y1="1" x2="7" y2="4" stroke="currentColor" stroke-width="1"/><line x1="1" y1="7" x2="4" y2="7" stroke="currentColor" stroke-width="1"/><line x1="13" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1"/><path d="M7 7l3-2M7 7L4 5" fill="none" stroke="currentColor" stroke-width="0.8"/></svg></div> <span>SCI-LAB</span></div>
+      <div class="sb-item" onclick="showFrame('/sci-lab/workframe','WorkFrame')" style="color:var(--cyan)"><div class="ico"><svg viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="0.8"/><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="0.8"/></svg></div> <span>WorkFrame</span></div>
+      <div class="sb-item" onclick="showFrame('/sci-lab/workbench','Workbench')" style="color:var(--cyan)"><div class="ico"><svg viewBox="0 0 14 14"><path d="M2 12V8l5-5 2 2-5 5H2zM7 3l2-2 2 2-2 2M11 7l2-2 2 2-2 2" fill="none" stroke="currentColor" stroke-width="1"/></svg></div> <span>Workbench</span></div>
     </div>
     <div class="sb-divider"></div>
 
@@ -336,7 +275,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   <!-- Content -->
   <div class="content">
     <div class="content-header" id="contentHeader">
-      <div class="ch-title" id="chTitle">ZICORE System v5.0</div>
+      <div class="ch-title" id="chTitle">ZICORE OS</div>
       <div class="ch-spacer"></div>
       <div class="ch-badge badge-green">ONLINE</div>
     </div>
@@ -344,7 +283,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <!-- Welcome View -->
     <div class="welcome" id="welcomeView">
       <div class="hex">◈</div>
-      <h2 data-i18n="welcome.title">ZICORE System v5.0</h2>
+      <h2 data-i18n="welcome.title">ZICORE OS</h2>
       <p data-i18n="welcome.subtitle">Digital Aerospace Operating System. Un portal integral que conecta aerospace, ingeniería, creatividad y sistema distribuido.</p>
       <div class="cards">
         <div class="wcard c1" onclick="showFrame('/aerospace','Aerospace')"><div class="wc-icon">◇</div><div class="wc-name">Aerospace</div></div>
@@ -353,7 +292,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
         <div class="wcard c3" onclick="showFrame('/simulator','Simulator')"><div class="wc-icon">◈</div><div class="wc-name">Simulator</div></div>
         <div class="wcard c4" onclick="openZMMX()"><div class="wc-icon">📚</div><div class="wc-name">ZMMX</div></div>
         <div class="wcard c6" onclick="showFrame('/zicodex','ZiCodex')"><div class="wc-icon">📖</div><div class="wc-name">ZiCodex</div></div>
-        <div class="wcard c7" onclick="openExternal('https://mc.zicore.space/master-creator')" style="border-color:rgba(124,77,255,.3);background:rgba(124,77,255,.06)"><div class="wc-icon" style="color:var(--purple)">◈</div><div class="wc-name">ZiCoreMC</div></div>
+        <div class="wcard c7" onclick="openExternal('https://ZiCoreMC.zicore.space')" style="border-color:rgba(124,77,255,.3);background:rgba(124,77,255,.06)"><div class="wc-icon" style="color:var(--purple)">◈</div><div class="wc-name">ZiCoreMC</div></div>
       </div>
     </div>
 
@@ -444,7 +383,7 @@ canvas#starfield{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     <div class="spacer"></div>
     <span id="sbInfo">--</span>
     <div class="spacer"></div>
-    <span class="tag">ZICORE System v5.0</span>
+    <span class="tag">ZICORE OS v5.1</span>
     <span style="color:var(--text2);letter-spacing:1px">creando el tiempo</span>
   </div>
 </div>
@@ -489,17 +428,6 @@ window.fetch = function(url, opts) {
 // Clock
 function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-MX',{hour12:false})}
 setInterval(tick,1000);tick();
-
-// Sidebar Rail
-function toggleRail(){
-  var sb=document.getElementById('sidebar');
-  var rail=sb.classList.toggle('rail');
-  document.querySelector('.app').classList.toggle('rail-mode',rail);
-  document.getElementById('sbRailBtn').innerHTML=rail?'&#9654;':'&#9664;';
-  document.getElementById('sbRailBtn').title=rail?'Expandir panel':'Colapsar panel';
-  try{localStorage.setItem('zc_portal_rail',rail?'1':'0')}catch(e){}
-}
-(function(){try{if(localStorage.getItem('zc_portal_rail')==='1')toggleRail();}catch(e){}})();
 
 // Download counter
 function loadDownloads(){
@@ -745,52 +673,6 @@ window.addEventListener('message',function(e){
 
 // Expose functions
 window.zicorePortal={navigate:function(url,title){showFrame(url,title)},back:function(){showView('welcome')},openZMMX:openZMMX};
-
-// ── Mobile Sidebar ──
-function toggleMobileSidebar() {
-  var sb = document.getElementById('sidebar');
-  var ov = document.getElementById('sidebarOverlay');
-  if (sb.classList.contains('mobile-open')) {
-    closeMobileSidebar();
-  } else {
-    sb.classList.add('mobile-open');
-    ov.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-  }
-}
-function closeMobileSidebar() {
-  var sb = document.getElementById('sidebar');
-  var ov = document.getElementById('sidebarOverlay');
-  sb.classList.remove('mobile-open');
-  ov.style.display = 'none';
-  document.body.style.overflow = '';
-}
-// Close sidebar on nav item click (mobile)
-document.querySelectorAll('.sb-item, .sb-zio').forEach(function(el) {
-  el.addEventListener('click', function() {
-    if (window.innerWidth <= 768) closeMobileSidebar();
-  });
-});
-// Swipe from left edge to open sidebar
-(function() {
-  var sx = 0, sy = 0, swiping = false;
-  document.addEventListener('touchstart', function(e) {
-    if (e.touches[0].clientX < 20 && window.innerWidth <= 768) {
-      sx = e.touches[0].clientX; sy = e.touches[0].clientY; swiping = true;
-    }
-  }, { passive: true });
-  document.addEventListener('touchend', function(e) {
-    if (!swiping) return;
-    swiping = false;
-    var dx = e.changedTouches[0].clientX - sx;
-    if (dx > 60) toggleMobileSidebar();
-  }, { passive: true });
-})();
-// Escape key closes mobile sidebar
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeMobileSidebar();
-});
-
 </script>
 <script src="/js/zicore-i18n.js"></script>
 <script>ZICORE_I18N.init();</script>
